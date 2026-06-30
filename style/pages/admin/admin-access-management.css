@@ -1,0 +1,146 @@
+.admin-beta-access-card {
+  grid-column: 1 / -1;
+  overflow: hidden;
+}
+
+.admin-beta-access-console {
+  border: 1px solid rgba(216, 201, 184, 0.7);
+  border-radius: 12px;
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(250, 248, 239, 0.54)),
+    rgba(255, 255, 255, 0.48);
+}
+
+.admin-beta-access-form {
+  grid-template-columns: minmax(260px, 1.3fr) minmax(220px, 1fr) 150px auto;
+  align-items: end;
+}
+
+.admin-beta-access-submit {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  min-width: 104px;
+}
+
+.admin-beta-access-submit .replay-button {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.admin-super-admin-card {
+  grid-column: 1 / -1;
+}
+
+.admin-super-admin-card[hidden] {
+  display: none;
+}
+
+.admin-super-admin-form {
+  grid-template-columns: minmax(220px, 360px);
+}
+
+.admin-beta-access-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.admin-beta-access-table-head {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.45fr) 92px minmax(160px, 1fr) minmax(160px, 0.85fr) 76px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 12px 4px;
+  color: #9a8874;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-beta-access-row,
+.admin-super-admin-row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(216, 201, 184, 0.72);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-beta-access-row {
+  grid-template-columns: minmax(260px, 1.45fr) 92px minmax(160px, 1fr) minmax(160px, 0.85fr) 76px;
+  min-width: 0;
+}
+
+.admin-beta-access-row > *,
+.admin-beta-access-table-head > * {
+  min-width: 0;
+}
+
+.admin-super-admin-row {
+  grid-template-columns: minmax(220px, 1.2fr) 100px minmax(160px, 1fr) 150px auto;
+}
+
+.admin-super-admin-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-super-admin-root-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(178, 125, 46, 0.28);
+  border-radius: 10px;
+  color: #8c621f;
+  background: rgba(178, 125, 46, 0.1);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.admin-beta-access-email {
+  font-weight: 800;
+  color: #4d4339;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-beta-access-note {
+  color: #6f5f4f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-beta-access-meta {
+  color: #8c7a67;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.admin-beta-access-lifecycle {
+  color: #8c7a67;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-beta-access-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-beta-access-actions .replay-button {
+  min-width: 54px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+

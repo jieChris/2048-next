@@ -25,6 +25,7 @@
     awaitingGesture: false,
     resumeAfterVisibility: false,
     hasToggleBinding: false,
+    boundToggle: null,
     hasGestureBindings: false,
     hasVisibilityBinding: false,
     hasLanguageBinding: false
@@ -250,6 +251,8 @@
   }
 
   function syncBgmSettingsUI() {
+    bindToggle();
+
     var toggle = getElementById("bgm-toggle");
     var title = querySelector(getElementById("bgm-settings-row"), ".settings-toggle-title");
     var desc = getElementById("bgm-toggle-desc");
@@ -374,10 +377,11 @@
 
   function bindToggle() {
     var toggle = getElementById("bgm-toggle");
-    if (!toggle || state.hasToggleBinding) return false;
+    if (!toggle || state.boundToggle === toggle) return false;
     bindListener(toggle, "change", function () {
       setBgmEnabled(!!toRecord(toggle).checked);
     });
+    state.boundToggle = toggle;
     state.hasToggleBinding = true;
     return true;
   }

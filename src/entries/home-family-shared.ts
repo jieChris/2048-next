@@ -1,4 +1,4 @@
-import { playLegacyScripts } from "./play-runtime-scripts";
+import { playBundledScripts, playLegacyScripts } from "./play-runtime-scripts";
 import { replayLegacyScripts } from "./replay-runtime-scripts";
 import {
   readStorageFlagFromContext,
@@ -255,6 +255,12 @@ export function resolveHomeFamilyScriptsByCapabilities(
 ): readonly string[] {
   const scripts: string[] = [];
   for (const capability of capabilities) {
+    if (capability === "play") {
+      for (const url of playBundledScripts) {
+        scripts.push(url);
+      }
+      continue;
+    }
     const group = HOME_FAMILY_CAPABILITY_SCRIPTS[capability];
     if (!group || group.length <= 0) continue;
     for (const url of group) {

@@ -1,16 +1,23 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { defineConfig, loadEnv, transformWithEsbuild, type Plugin } from "vite";
 import { resolve } from "path";
 
 const HOME_STANDARD_STARTUP_BUNDLE = "home_standard_startup_bundle.js";
 const HOME_STANDARD_DEFERRED_BUNDLE = "home_standard_deferred_bundle.js";
+const PLAY_STANDARD_BUNDLE = "play_standard_bundle.js";
+const LEGACY_BUNDLE_HASH_LENGTH = 12;
+const LEGACY_BUNDLE_CLEANUP_GLOBS = [
+  "home_standard_startup_bundle.*.js",
+  "home_standard_deferred_bundle.*.js",
+  "play_standard_bundle.*.js"
+] as const;
 const HOME_STANDARD_STARTUP_FILES = [
   "game_dialog_runtime.js",
   "seedrandom.js",
   "animframe_polyfill.js",
   "core_bootstrap_runtime.js",
   "keyboard_input_manager.js",
-  "theme_manager.js",
   "mode_catalog.js",
   "html_actuator.js",
   "grid.js",
@@ -48,6 +55,7 @@ const HOME_STANDARD_DEFERRED_FILES = [
   "core_timer_module_runtime.js",
   "core_timer_module_settings_host_runtime.js",
   "core_timer_module_settings_page_host_runtime.js",
+  "theme_manager.js",
   "core_theme_settings_runtime.js",
   "core_theme_settings_host_runtime.js",
   "core_theme_settings_page_host_runtime.js",
@@ -107,7 +115,20 @@ const HOME_STANDARD_DEFERRED_FILES = [
   "core_i18n_runtime.js"
 ];
 
-async function readHomeStandardBundle(fileNames: readonly string[]): Promise<string> {
+interface LegacyBundleSnapshot {
+  readonly baseFileName: string;
+  readonly fileName: string;
+  readonly publicUrl: string;
+  readonly content: string;
+}
+
+interface LegacyBundleSnapshots {
+  readonly homeStartup: LegacyBundleSnapshot;
+  readonly homeDeferred: LegacyBundleSnapshot;
+  readonly playStandard: LegacyBundleSnapshot;
+}
+
+async function readLegacyScriptBundleSource(fileNames: readonly string[]): Promise<string> {
   const chunks = [];
   for (const fileName of fileNames) {
     const filePath = resolve(__dirname, "js", fileName);
@@ -117,42 +138,133 @@ async function readHomeStandardBundle(fileNames: readonly string[]): Promise<str
   return chunks.join("\n");
 }
 
-function copyRootLegacyScriptsPlugin(): Plugin {
+async function minifyLegacyScriptBundle(fileNames: readonly string[]): Promise<string> {
+  const source = await readLegacyScriptBundleSource(fileNames);
+  const result = await transformWithEsbuild(source, "legacy-bundle.js", {
+    loader: "js",
+    minify: true,
+    target: "es2018"
+  });
+  return `${result.code.trim()}\n`;
+}
+
+async function readPlayRuntimeScriptFileNames(): Promise<string[]> {
+  const manifestPath = resolve(__dirname, "src", "entries", "play-runtime-scripts.ts");
+  const manifest = await readFile(manifestPath, "utf8");
+  return Array.from(
+    manifest.matchAll(/from "\.\.\/\.\.\/js\/([^"]+\.js)\?url";/g),
+    (match) => match[1]
+  );
+}
+
+function hashLegacyBundleContent(content: string): string {
+  return createHash("sha256")
+    .update(content)
+    .digest("hex")
+    .slice(0, LEGACY_BUNDLE_HASH_LENGTH);
+}
+
+function createLegacyBundleSnapshot(baseFileName: string, content: string): LegacyBundleSnapshot {
+  const hash = hashLegacyBundleContent(content);
+  const fileName = `${baseFileName.replace(/\.js$/, "")}.${hash}.js`;
+  return {
+    baseFileName,
+    fileName,
+    publicUrl: `./js/${fileName}`,
+    content
+  };
+}
+
+async function createLegacyBundleSnapshots(): Promise<LegacyBundleSnapshots> {
+  const playRuntimeFiles = await readPlayRuntimeScriptFileNames();
+  const [homeStartupContent, homeDeferredContent, playStandardContent] = await Promise.all([
+    minifyLegacyScriptBundle(HOME_STANDARD_STARTUP_FILES),
+    minifyLegacyScriptBundle(HOME_STANDARD_DEFERRED_FILES),
+    minifyLegacyScriptBundle(playRuntimeFiles)
+  ]);
+
+  return {
+    homeStartup: createLegacyBundleSnapshot(HOME_STANDARD_STARTUP_BUNDLE, homeStartupContent),
+    homeDeferred: createLegacyBundleSnapshot(HOME_STANDARD_DEFERRED_BUNDLE, homeDeferredContent),
+    playStandard: createLegacyBundleSnapshot(PLAY_STANDARD_BUNDLE, playStandardContent)
+  };
+}
+
+async function writeLegacyBundleFile(
+  targetDir: string,
+  bundle: LegacyBundleSnapshot
+): Promise<void> {
+  await writeFile(resolve(targetDir, bundle.fileName), bundle.content, "utf8");
+  await writeFile(resolve(targetDir, bundle.baseFileName), bundle.content, "utf8");
+}
+
+async function removeStaleLegacyBundleFiles(
+  targetDir: string,
+  bundles: readonly LegacyBundleSnapshot[]
+): Promise<void> {
+  const currentBundleFiles = new Set<string>();
+  for (const bundle of bundles) {
+    currentBundleFiles.add(bundle.fileName);
+    currentBundleFiles.add(bundle.baseFileName);
+  }
+
+  const bundlePrefixes = LEGACY_BUNDLE_CLEANUP_GLOBS.map((glob) => glob.replace("*.js", ""));
+  const fileNames = await readdir(targetDir).catch(() => []);
+  await Promise.all(
+    fileNames.map(async (fileName) => {
+      if (currentBundleFiles.has(fileName)) return;
+      const isStaleBundle = bundlePrefixes.some(
+        (prefix) => fileName.startsWith(prefix) && fileName.endsWith(".js")
+      );
+      if (!isStaleBundle) return;
+      await rm(resolve(targetDir, fileName), { force: true });
+    })
+  );
+}
+
+function copyRootLegacyScriptsPlugin(legacyBundles: LegacyBundleSnapshots): Plugin {
   return {
     name: "copy-root-legacy-scripts",
+    transformIndexHtml(html) {
+      return html.replace(
+        "%HOME_STANDARD_STARTUP_BUNDLE_URL%",
+        legacyBundles.homeStartup.publicUrl.replace(/^\.\//, "")
+      );
+    },
     async closeBundle() {
       const sourceDir = resolve(__dirname, "js");
       const targetDir = resolve(__dirname, "dist", "js");
       await mkdir(targetDir, { recursive: true });
       await cp(sourceDir, targetDir, { recursive: true });
-      await writeFile(
-        resolve(targetDir, HOME_STANDARD_STARTUP_BUNDLE),
-        await readHomeStandardBundle(HOME_STANDARD_STARTUP_FILES),
-        "utf8"
-      );
-      await writeFile(
-        resolve(targetDir, HOME_STANDARD_DEFERRED_BUNDLE),
-        await readHomeStandardBundle(HOME_STANDARD_DEFERRED_FILES),
-        "utf8"
-      );
+      await removeStaleLegacyBundleFiles(targetDir, [
+        legacyBundles.homeStartup,
+        legacyBundles.homeDeferred,
+        legacyBundles.playStandard
+      ]);
+      await writeLegacyBundleFile(targetDir, legacyBundles.homeStartup);
+      await writeLegacyBundleFile(targetDir, legacyBundles.homeDeferred);
+      await writeLegacyBundleFile(targetDir, legacyBundles.playStandard);
     },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const pathName = req.url ? req.url.split("?")[0] : "";
-        const bundleFiles: Record<string, readonly string[]> = {
-          [`/js/${HOME_STANDARD_STARTUP_BUNDLE}`]: HOME_STANDARD_STARTUP_FILES,
-          [`/js/${HOME_STANDARD_DEFERRED_BUNDLE}`]: HOME_STANDARD_DEFERRED_FILES
+        const bundlesByPath: Record<string, LegacyBundleSnapshot> = {
+          [`/js/${legacyBundles.homeStartup.fileName}`]: legacyBundles.homeStartup,
+          [`/js/${legacyBundles.homeStartup.baseFileName}`]: legacyBundles.homeStartup,
+          [`/js/${legacyBundles.homeDeferred.fileName}`]: legacyBundles.homeDeferred,
+          [`/js/${legacyBundles.homeDeferred.baseFileName}`]: legacyBundles.homeDeferred,
+          [`/js/${legacyBundles.playStandard.fileName}`]: legacyBundles.playStandard,
+          [`/js/${legacyBundles.playStandard.baseFileName}`]: legacyBundles.playStandard
         };
-        const fileNames = bundleFiles[pathName];
-        if (!fileNames) {
+        const bundle = bundlesByPath[pathName];
+        if (!bundle) {
           next();
           return;
         }
         try {
-          const bundle = await readHomeStandardBundle(fileNames);
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-          res.end(bundle);
+          res.end(bundle.content);
         } catch (error) {
           next(error as Error);
         }
@@ -173,7 +285,8 @@ function copyOpenApiContractPlugin(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
+  const legacyBundles = await createLegacyBundleSnapshots();
   const env = loadEnv(mode, process.cwd(), "");
   const apiProxyTarget = (env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3000").trim();
   const apiProxy = {
@@ -202,7 +315,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "./",
-    plugins: [copyRootLegacyScriptsPlugin(), copyOpenApiContractPlugin()],
+    define: {
+      __HOME_STANDARD_STARTUP_BUNDLE_URL__: JSON.stringify(legacyBundles.homeStartup.publicUrl),
+      __HOME_STANDARD_DEFERRED_BUNDLE_URL__: JSON.stringify(legacyBundles.homeDeferred.publicUrl),
+      __PLAY_STANDARD_BUNDLE_URL__: JSON.stringify(legacyBundles.playStandard.publicUrl)
+    },
+    plugins: [copyRootLegacyScriptsPlugin(legacyBundles), copyOpenApiContractPlugin()],
     server: {
       proxy: apiProxy
     },

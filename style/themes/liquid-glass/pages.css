@@ -1,0 +1,245 @@
+@import url("../visual-theme-state.css");
+@import url("tokens-light.css");
+@import url("tokens-dark.css");
+
+:where(html[data-visual-theme="liquid-glass"]) {
+  --pp-bg: var(--app-page-bg);
+  --pp-bg-0: color-mix(in srgb, var(--lg-surface-base) 72%, transparent);
+  --pp-bg-1: var(--app-page-bg);
+  --pp-panel: var(--lg-surface-raised);
+  --pp-line: var(--lg-border);
+  --pp-ink: var(--app-text);
+  --pp-muted: var(--app-text-subtle);
+  --mode-page-bg: var(--app-page-bg);
+  --mode-surface: var(--lg-surface-raised);
+  --mode-surface-soft: var(--lg-surface-base);
+  --mode-line: var(--lg-border);
+  --mode-ink: var(--app-text);
+  --mode-ink-soft: var(--app-text-subtle);
+  --mode-primary: var(--lg-accent);
+  --mode-primary-press: var(--lg-accent-hover);
+  --mode-primary-tint: var(--lg-accent-muted);
+  --mode-shadow: rgba(0, 0, 0, 0.18);
+  --beta-bg: var(--app-page-bg);
+  --beta-panel: var(--lg-surface-raised);
+  --beta-ink: var(--app-text);
+  --beta-muted: var(--app-text-subtle);
+  --beta-line: var(--lg-border);
+  --beta-accent: var(--lg-accent);
+  --beta-accent-strong: var(--lg-accent-hover);
+  --beta-shadow: var(--lg-shadow-raised);
+  --page-bg: var(--app-page-bg);
+  --surface: var(--lg-surface-raised);
+  --surface-strong: var(--lg-surface-modal);
+  --surface-soft: var(--lg-surface-base);
+  --border: var(--lg-border);
+  --text: var(--app-text);
+  --muted: var(--app-text-subtle);
+  --accent: var(--lg-accent);
+  --accent-strong: var(--lg-accent-hover);
+  --shadow: var(--lg-shadow-raised);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) body,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="account-hub"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="admin-console"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="api-docs"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="beta-access"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="modes"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="palette-hub"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="stone-2k-monitor"],
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="user-profile"] {
+  color: var(--app-text);
+  background: var(--app-page-bg);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-select-page,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="modes"] .mode-select-page,
+:where(html[data-visual-theme="liquid-glass"]) .palette-page-shell,
+:where(html[data-visual-theme="liquid-glass"]) .account-page-shell,
+:where(html[data-visual-theme="liquid-glass"]) .admin-page-shell,
+:where(html[data-visual-theme="liquid-glass"]) .user-page-shell,
+:where(html[data-visual-theme="liquid-glass"]) .achievements-page-shell,
+:where(html[data-visual-theme="liquid-glass"]) .relay-page,
+:where(html[data-visual-theme="liquid-glass"]) .stone-monitor-shell,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-shell,
+:where(html[data-visual-theme="liquid-glass"]) .validator-shell,
+:where(html[data-visual-theme="liquid-glass"]) .preview-shell {
+  color: var(--app-text);
+  background: transparent;
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .card-surface,
+:where(html[data-visual-theme="liquid-glass"]) .account-auth-form-surface,
+:where(html[data-visual-theme="liquid-glass"]) .account-board-filter-row,
+:where(html[data-visual-theme="liquid-glass"]) .account-user-card,
+:where(html[data-visual-theme="liquid-glass"]) .account-guide-card,
+:where(html[data-visual-theme="liquid-glass"]) .admin-card,
+:where(html[data-visual-theme="liquid-glass"]) .admin-upload-panel,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-detail,
+:where(html[data-visual-theme="liquid-glass"]) .relay-panel,
+:where(html[data-visual-theme="liquid-glass"]) .relay-claim-card,
+:where(html[data-visual-theme="liquid-glass"]) .stone-access-card,
+:where(html[data-visual-theme="liquid-glass"]) .stone-hero,
+:where(html[data-visual-theme="liquid-glass"]) .stone-control-card,
+:where(html[data-visual-theme="liquid-glass"]) .stone-panel,
+:where(html[data-visual-theme="liquid-glass"]) .stone-stat-card,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-header,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-toolbar,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-section,
+:where(html[data-visual-theme="liquid-glass"]) .beta-entry-panel,
+:where(html[data-visual-theme="liquid-glass"]) .validator-hero,
+:where(html[data-visual-theme="liquid-glass"]) .validator-panel,
+:where(html[data-visual-theme="liquid-glass"]) .preview-panel,
+:where(html[data-visual-theme="liquid-glass"]) .leaderboard-card {
+  color: var(--app-text);
+  background: var(--lg-surface-raised);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-shadow-soft), var(--lg-inner-shadow);
+  -webkit-backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .account-board-table-wrap,
+:where(html[data-visual-theme="liquid-glass"]) .account-board-list,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-list,
+:where(html[data-visual-theme="liquid-glass"]) .admin-output,
+:where(html[data-visual-theme="liquid-glass"]) .admin-result-wrap,
+:where(html[data-visual-theme="liquid-glass"]) .admin-rescue-history,
+:where(html[data-visual-theme="liquid-glass"]) .relay-table,
+:where(html[data-visual-theme="liquid-glass"]) .relay-table-wrap,
+:where(html[data-visual-theme="liquid-glass"]) .stone-table-wrap,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-stat,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-server,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-operation,
+:where(html[data-visual-theme="liquid-glass"]) .palette-item,
+:where(html[data-visual-theme="liquid-glass"]) .theme-selection-col,
+:where(html[data-visual-theme="liquid-glass"]) .theme-preview-col,
+:where(html[data-visual-theme="liquid-glass"]) .board-selection-col {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .account-board-head-row,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-head-row,
+:where(html[data-visual-theme="liquid-glass"]) .admin-result-table th,
+:where(html[data-visual-theme="liquid-glass"]) .relay-table th,
+:where(html[data-visual-theme="liquid-glass"]) .stone-runs-table th {
+  color: var(--app-text);
+  background: var(--lg-surface-modal);
+  border-color: var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .account-board-row,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-item,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-row,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-card,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-showcase-slot,
+:where(html[data-visual-theme="liquid-glass"]) .admin-achievement-item,
+:where(html[data-visual-theme="liquid-glass"]) .relay-claim-item,
+:where(html[data-visual-theme="liquid-glass"]) .stone-runs-table tbody tr {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--lg-surface-base) 86%, transparent);
+  border-color: var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .account-board-row:hover,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-row:hover,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-card:hover,
+:where(html[data-visual-theme="liquid-glass"]) .admin-achievement-item:hover,
+:where(html[data-visual-theme="liquid-glass"]) .palette-item.is-active,
+:where(html[data-visual-theme="liquid-glass"]) .palette-item:hover,
+:where(html[data-visual-theme="liquid-glass"]) .mode-priority-card:hover,
+:where(html[data-visual-theme="liquid-glass"]) .mode-hub-btn:hover,
+:where(html[data-visual-theme="liquid-glass"]) .stone-runs-table tbody tr:hover {
+  background: var(--lg-accent-muted);
+  border-color: var(--lg-border-strong);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-priority-card,
+:where(html[data-visual-theme="liquid-glass"]) .mode-select-body,
+:where(html[data-visual-theme="liquid-glass"]) .mode-tab-bar,
+:where(html[data-visual-theme="liquid-glass"]) .mode-tab-panels,
+:where(html[data-visual-theme="liquid-glass"]) .mode-hub-btn,
+:where(html[data-visual-theme="liquid-glass"]) .mode-frequent-title,
+:where(html[data-visual-theme="liquid-glass"]) .palette-dimension-tabs,
+:where(html[data-visual-theme="liquid-glass"]) .palette-dimension-tab,
+:where(html[data-visual-theme="liquid-glass"]) .palette-board-btn {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-tab-button.is-active,
+:where(html[data-visual-theme="liquid-glass"]) .palette-dimension-tab.is-active,
+:where(html[data-visual-theme="liquid-glass"]) .palette-board-btn.is-active,
+:where(html[data-visual-theme="liquid-glass"]) .beta-tab.is-active,
+:where(html[data-visual-theme="liquid-glass"]) .validator-pill[aria-pressed="true"] {
+  color: var(--lg-text-on-strong);
+  background: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .account-input,
+:where(html[data-visual-theme="liquid-glass"]) .admin-input,
+:where(html[data-visual-theme="liquid-glass"]) .admin-textarea,
+:where(html[data-visual-theme="liquid-glass"]) .settings-select,
+:where(html[data-visual-theme="liquid-glass"]) .palette-name-input,
+:where(html[data-visual-theme="liquid-glass"]) .beta-input,
+:where(html[data-visual-theme="liquid-glass"]) .stone-access-input,
+:where(html[data-visual-theme="liquid-glass"]) .stone-field input,
+:where(html[data-visual-theme="liquid-glass"]) .stone-field select,
+:where(html[data-visual-theme="liquid-glass"]) .stone-field textarea,
+:where(html[data-visual-theme="liquid-glass"]) .validator-field input,
+:where(html[data-visual-theme="liquid-glass"]) .validator-field select,
+:where(html[data-visual-theme="liquid-glass"]) .validator-field textarea,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"] .replay-singleline-input {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .replay-metric-card,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"] .replay-metric-card,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"] .replay-imported-file-name,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"] .replay-diagnostics-panel,
+:where(html[data-visual-theme="liquid-glass"]) body[data-page="replay"] .replay-file-drop-panel {
+  color: var(--app-text);
+  background: var(--lg-surface-raised);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-shadow-soft), var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .panel-pill,
+:where(html[data-visual-theme="liquid-glass"]) .account-rank,
+:where(html[data-visual-theme="liquid-glass"]) .palette-chip,
+:where(html[data-visual-theme="liquid-glass"]) .relay-pill,
+:where(html[data-visual-theme="liquid-glass"]) .stone-hero-badge,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-status,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-version,
+:where(html[data-visual-theme="liquid-glass"]) .validator-badge,
+:where(html[data-visual-theme="liquid-glass"]) .beta-phase {
+  color: var(--lg-accent);
+  background: var(--lg-accent-muted);
+  border-color: var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .palette-subtitle,
+:where(html[data-visual-theme="liquid-glass"]) .account-auth-subtitle,
+:where(html[data-visual-theme="liquid-glass"]) .account-board-subtitle,
+:where(html[data-visual-theme="liquid-glass"]) .user-record-date,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-desc,
+:where(html[data-visual-theme="liquid-glass"]) .achievement-meta,
+:where(html[data-visual-theme="liquid-glass"]) .admin-card .panel-head p,
+:where(html[data-visual-theme="liquid-glass"]) .relay-head p,
+:where(html[data-visual-theme="liquid-glass"]) .stone-panel p,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-summary,
+:where(html[data-visual-theme="liquid-glass"]) .api-docs-operation-summary,
+:where(html[data-visual-theme="liquid-glass"]) .beta-copy,
+:where(html[data-visual-theme="liquid-glass"]) .validator-intro,
+:where(html[data-visual-theme="liquid-glass"]) .validator-field small {
+  color: var(--app-text-subtle);
+}

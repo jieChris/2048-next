@@ -1,0 +1,221 @@
+﻿body[data-page="admin-console"] {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--pp-ink);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(1200px 500px at 8% -20%, rgba(176, 153, 130, 0.33), transparent 68%),
+    radial-gradient(1000px 420px at 95% -24%, rgba(174, 157, 136, 0.25), transparent 70%),
+    linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
+}
+
+.admin-page-shell {
+  width: min(1440px, calc(100vw - 28px));
+}
+
+body[data-page="admin-console"][data-admin-access="checking"] .admin-page-shell,
+body[data-page="admin-console"][data-admin-access="denied"] .admin-page-shell {
+  visibility: hidden;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.admin-card {
+  padding: 14px;
+}
+
+.admin-query-card {
+  grid-row: span 2;
+}
+
+.admin-achievement-card {
+  grid-column: 1 / -1;
+}
+
+.admin-card h2,
+.admin-card p {
+  margin: 0;
+}
+
+.admin-card .panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.admin-card .panel-head p {
+  margin-top: 4px;
+  color: #8c7a67;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.admin-card h3 {
+  margin: 0;
+  color: #5a4b3f;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.panel-pill {
+  flex: 0 0 auto;
+  border: 1px solid #d8c9b8;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #7a6754;
+  background: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.panel-pill.admin-state-ok {
+  border-color: rgba(78, 139, 88, 0.35);
+  color: #3f7a49;
+  background: rgba(78, 139, 88, 0.1);
+}
+
+.panel-pill.admin-state-err {
+  border-color: rgba(194, 71, 59, 0.32);
+  color: #a83b32;
+  background: rgba(194, 71, 59, 0.08);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.admin-actions button:disabled,
+.admin-actions button[aria-busy="true"] {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.admin-rescue-grid {
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.admin-form-grid label,
+.admin-sql-label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: #6f5f4f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-input,
+.admin-textarea,
+body[data-page="admin-console"] .settings-select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid #d8c9b8;
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: #4d4339;
+  background-color: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  line-height: 1.35;
+  outline: none;
+}
+
+body[data-page="admin-console"] .settings-select {
+  height: 42px;
+  padding-right: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  appearance: auto;
+}
+
+.admin-input:focus,
+.admin-textarea:focus,
+body[data-page="admin-console"] .settings-select:focus {
+  border-color: #b49a7b;
+  box-shadow: 0 0 0 3px rgba(180, 154, 123, 0.16);
+}
+
+.admin-textarea {
+  min-height: 110px;
+  resize: vertical;
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-board-textarea {
+  min-height: 130px;
+}
+
+.admin-replay-textarea {
+  min-height: 96px;
+}
+
+.admin-file-input {
+  min-height: 42px;
+}
+
+.admin-upload-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(216, 201, 184, 0.82);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.admin-upload-panel .admin-upload-head {
+  margin-bottom: 10px;
+}
+
+.admin-output,
+.admin-result-wrap,
+.admin-rescue-history {
+  border: 1px solid #e1d5c7;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.admin-output {
+  min-height: 56px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-result-wrap {
+  max-height: 620px;
+  overflow: auto;
+}
+
+.admin-rescue-history {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.admin-rescue-history:empty {
+  display: none;
+}
+

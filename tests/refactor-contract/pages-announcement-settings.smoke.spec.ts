@@ -9,58 +9,47 @@ test.describe("Refactor Contract Smoke: settings storage delegation", () => {
       (window as any).__gameSettingsWriteMapCalls = 0;
       (window as any).__gameSettingsWritePayloadCalls = 0;
 
-      const runtimeTarget: Record<string, unknown> = {};
-      const runtimeProxy = new Proxy(runtimeTarget, {
-        set(target, prop, value) {
-          if (prop === "readStorageFlagFromContext" && typeof value === "function") {
-            target[prop] = function (opts: unknown) {
-              (window as any).__gameSettingsReadFlagCalls =
-                Number((window as any).__gameSettingsReadFlagCalls || 0) + 1;
-              return (value as (input: unknown) => unknown)(opts);
-            };
-            return true;
-          }
-          if (prop === "writeStorageFlagFromContext" && typeof value === "function") {
-            target[prop] = function (opts: unknown) {
-              (window as any).__gameSettingsWriteFlagCalls =
-                Number((window as any).__gameSettingsWriteFlagCalls || 0) + 1;
-              return (value as (input: unknown) => unknown)(opts);
-            };
-            return true;
-          }
-          if (prop === "readStorageJsonMapFromContext" && typeof value === "function") {
-            target[prop] = function (opts: unknown) {
-              (window as any).__gameSettingsReadMapCalls =
-                Number((window as any).__gameSettingsReadMapCalls || 0) + 1;
-              return (value as (input: unknown) => unknown)(opts);
-            };
-            return true;
-          }
-          if (prop === "writeStorageJsonMapFromContext" && typeof value === "function") {
-            target[prop] = function (opts: unknown) {
-              (window as any).__gameSettingsWriteMapCalls =
-                Number((window as any).__gameSettingsWriteMapCalls || 0) + 1;
-              return (value as (input: unknown) => unknown)(opts);
-            };
-            return true;
-          }
-          if (prop === "writeStorageJsonPayloadFromContext" && typeof value === "function") {
-            target[prop] = function (opts: unknown) {
-              (window as any).__gameSettingsWritePayloadCalls =
-                Number((window as any).__gameSettingsWritePayloadCalls || 0) + 1;
-              return (value as (input: unknown) => unknown)(opts);
-            };
-            return true;
-          }
-          target[prop] = value;
-          return true;
+      const trackedCalls: Record<string, string> = {
+        readStorageFlagFromContext: "__gameSettingsReadFlagCalls",
+        writeStorageFlagFromContext: "__gameSettingsWriteFlagCalls",
+        readStorageJsonMapFromContext: "__gameSettingsReadMapCalls",
+        writeStorageJsonMapFromContext: "__gameSettingsWriteMapCalls",
+        writeStorageJsonPayloadFromContext: "__gameSettingsWritePayloadCalls"
+      };
+      let runtimeValue: Record<string, unknown> | undefined;
+      const wrapRuntimeValue = (prop: string | symbol, value: unknown) => {
+        if (typeof prop !== "string" || typeof value !== "function" || !trackedCalls[prop]) {
+          return value;
         }
-      });
-
+        return function (opts: unknown) {
+          const key = trackedCalls[prop];
+          (window as any)[key] = Number((window as any)[key] || 0) + 1;
+          return (value as (input: unknown) => unknown)(opts);
+        };
+      };
+      const createRuntimeProxy = (source: unknown) => {
+        const target: Record<string, unknown> =
+          source && typeof source === "object" && !Array.isArray(source)
+            ? (source as Record<string, unknown>)
+            : {};
+        Object.keys(trackedCalls).forEach((prop) => {
+          target[prop] = wrapRuntimeValue(prop, target[prop]);
+        });
+        return new Proxy(target, {
+          set(target, prop, value) {
+            target[prop as string] = wrapRuntimeValue(prop, value);
+            return true;
+          }
+        });
+      };
       Object.defineProperty(window, "CoreGameSettingsStorageRuntime", {
         configurable: true,
-        writable: true,
-        value: runtimeProxy
+        get() {
+          return runtimeValue;
+        },
+        set(value) {
+          runtimeValue = createRuntimeProxy(value);
+        }
       });
     });
 

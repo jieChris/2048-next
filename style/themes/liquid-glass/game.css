@@ -1,0 +1,63 @@
+:where(html[data-visual-theme="liquid-glass"]) .score-container,
+:where(html[data-visual-theme="liquid-glass"]) .best-container,
+:where(html[data-visual-theme="liquid-glass"]) #timer,
+:where(html[data-visual-theme="liquid-glass"]) .timer-container,
+:where(html[data-visual-theme="liquid-glass"]) .timer-leaderboard-summary {
+  box-sizing: border-box;
+  color: var(--app-text);
+  background: var(--lg-surface-raised);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--app-radius-panel);
+  box-shadow: var(--lg-shadow-soft), var(--lg-inner-shadow);
+  -webkit-backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .score-container::after,
+:where(html[data-visual-theme="liquid-glass"]) .best-container::after,
+:where(html[data-visual-theme="liquid-glass"]) #timer::after {
+  color: var(--app-text-subtle);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container {
+  box-sizing: border-box;
+  background: var(--app-surface-board);
+  border: 1px solid var(--lg-border-strong);
+  border-radius: var(--app-radius-board);
+  box-shadow: var(--lg-shadow-raised);
+  -webkit-backdrop-filter: blur(calc(var(--lg-material-blur) * 0.72)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(calc(var(--lg-material-blur) * 0.72)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .grid-cell {
+  background: var(--app-surface-empty-tile);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .tile .tile-inner {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 18px rgba(31, 37, 45, 0.12);
+}
+
+:where(html[data-visual-theme="liquid-glass"][data-resolved-color-scheme="dark"]) .tile .tile-inner {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 22px rgba(0, 0, 0, 0.24);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .timerbox,
+:where(html[data-visual-theme="liquid-glass"]) .timer-leaderboard-list,
+:where(html[data-visual-theme="liquid-glass"]) .timer-leaderboard-row,
+:where(html[data-visual-theme="liquid-glass"]) .timertile {
+  color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .timertile:not([class*="timer-legend-"]),
+:where(html[data-visual-theme="liquid-glass"]) .timer-leaderboard-row .timer-leaderboard-name-tile {
+  background: var(--lg-surface-base);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container .game-message {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--lg-surface-modal) 82%, transparent);
+  -webkit-backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+}

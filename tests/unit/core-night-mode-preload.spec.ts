@@ -72,6 +72,7 @@ function runNightModePreload(
     storageValues?: Record<string, string | null>;
     pathname?: string;
     search?: string;
+    prefersDark?: boolean;
   } = {}
 ) {
   const scriptPath = path.resolve(process.cwd(), "public/js/core_night_mode_preload.js");
@@ -96,6 +97,12 @@ function runNightModePreload(
     location: {
       pathname: options.pathname || "/2048.html",
       search: options.search || ""
+    },
+    matchMedia(query: string) {
+      return {
+        media: query,
+        matches: !!options.prefersDark
+      };
     }
   } as Record<string, unknown>;
   context.window = context;
@@ -112,6 +119,35 @@ function runNightModePreload(
 }
 
 describe("core night mode preload", () => {
+  it("forces classic visual-theme root attributes before page runtime", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        visual_theme_v1: "liquid-glass",
+        color_scheme_v1: "dark"
+      }
+    });
+
+    expect(result.documentElement.getAttribute("data-visual-theme")).toBe("classic");
+    expect(result.documentElement.getAttribute("data-color-scheme")).toBe("system");
+    expect(result.documentElement.getAttribute("data-resolved-color-scheme")).toBe("light");
+  });
+
+  it("keeps classic/system defaults while mapping legacy night background to resolved dark", () => {
+    const result = runNightModePreload("1", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "1",
+        visual_theme_v1: "glass",
+        color_scheme_v1: null
+      },
+      prefersDark: false
+    });
+
+    expect(result.documentElement.getAttribute("data-visual-theme")).toBe("classic");
+    expect(result.documentElement.getAttribute("data-color-scheme")).toBe("system");
+    expect(result.documentElement.getAttribute("data-resolved-color-scheme")).toBe("dark");
+  });
+
   it("injects the night-mode style sheet before runtime when the saved flag is enabled", () => {
     const result = runNightModePreload("1");
     const styleNode = result.getStyleNode();

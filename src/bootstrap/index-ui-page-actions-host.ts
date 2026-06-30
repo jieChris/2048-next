@@ -123,6 +123,9 @@ export function createIndexUiPageActionResolvers(input: {
   );
 
   const initThemeSettingsUI = asFunction<() => unknown>(settingsModalInitResolvers.initThemeSettingsUI);
+  const initVisualThemeSettingsUI = asFunction<() => unknown>(
+    settingsModalInitResolvers.initVisualThemeSettingsUI
+  );
   const removeLegacyUndoSettingsUI = asFunction<() => unknown>(
     settingsModalInitResolvers.removeLegacyUndoSettingsUI
   );
@@ -303,6 +306,7 @@ export function createIndexUiPageActionResolvers(input: {
       windowLike: source.windowLike || null,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
+      initVisualThemeSettingsUI,
       initTimerModuleSettingsUI,
       initWinPromptSettingsUI,
       initHomeGuideSettingsUI

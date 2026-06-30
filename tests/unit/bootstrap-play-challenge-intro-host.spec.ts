@@ -7,10 +7,15 @@ interface FakeElement {
     display: string;
     setProperty: ReturnType<typeof vi.fn>;
   };
+  className: string;
   textContent: string;
   __modeIntroBound?: boolean;
   listeners: Record<string, ((event: any) => void)[]>;
   addEventListener: ReturnType<typeof vi.fn>;
+}
+
+function hasClass(element: FakeElement, className: string): boolean {
+  return (" " + element.className + " ").indexOf(" " + className + " ") >= 0;
 }
 
 describe("bootstrap play challenge intro host", () => {
@@ -34,10 +39,9 @@ describe("bootstrap play challenge intro host", () => {
     const introBtn: FakeElement = {
       style: {
         display: "",
-        setProperty: vi.fn(function (name: string, value: string) {
-          if (name === "display") introBtn.style.display = value;
-        })
+        setProperty: vi.fn()
       },
+      className: "is-hidden",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn((type: string, listener: (event: any) => void) => {
@@ -48,10 +52,9 @@ describe("bootstrap play challenge intro host", () => {
     const modal: FakeElement = {
       style: {
         display: "",
-        setProperty: vi.fn(function (name: string, value: string) {
-          if (name === "display") modal.style.display = value;
-        })
+        setProperty: vi.fn()
       },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn((type: string, listener: (event: any) => void) => {
@@ -64,6 +67,7 @@ describe("bootstrap play challenge intro host", () => {
         display: "",
         setProperty: vi.fn()
       },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn((type: string, listener: (event: any) => void) => {
@@ -73,18 +77,21 @@ describe("bootstrap play challenge intro host", () => {
     };
     const title: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const desc: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const leaderboard: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
@@ -133,8 +140,9 @@ describe("bootstrap play challenge intro host", () => {
     });
 
     expect(result.applied).toBe(true);
-    expect(introBtn.style.setProperty).toHaveBeenCalledWith("display", "inline-flex", "important");
-    expect(modal.style.display).toBe("none");
+    expect(introBtn.style.setProperty).not.toHaveBeenCalled();
+    expect(hasClass(introBtn, "is-hidden")).toBe(false);
+    expect(hasClass(modal, "is-hidden")).toBe(true);
     expect(title.textContent).toBe("标题");
     expect(desc.textContent).toBe("描述");
     expect(leaderboard.textContent).toBe("榜单");
@@ -146,13 +154,13 @@ describe("bootstrap play challenge intro host", () => {
     const preventDefault = vi.fn();
     introBtn.listeners.click[0]({ preventDefault });
     expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(modal.style.display).toBe("flex");
+    expect(hasClass(modal, "is-hidden")).toBe(false);
 
     closeBtn.listeners.click[0]({ preventDefault });
-    expect(modal.style.display).toBe("none");
+    expect(hasClass(modal, "is-hidden")).toBe(true);
 
     modal.listeners.click[0]({ target: modal });
-    expect(modal.style.display).toBe("none");
+    expect(hasClass(modal, "is-hidden")).toBe(true);
 
     expect(resolveIntroActionState).toHaveBeenCalledWith({ action: "open" });
     expect(resolveIntroActionState).toHaveBeenCalledWith({ action: "close" });
@@ -161,30 +169,35 @@ describe("bootstrap play challenge intro host", () => {
   it("skips event binding when ui says no", () => {
     const introBtn: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const modal: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const closeBtn: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const title: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()
     };
     const desc: FakeElement = {
       style: { display: "", setProperty: vi.fn() },
+      className: "",
       textContent: "",
       listeners: {},
       addEventListener: vi.fn()

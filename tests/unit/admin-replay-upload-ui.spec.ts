@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { readCssEntry } from "./css-test-utils";
+
 describe("admin replay rescue upload UI", () => {
   it("exposes replay upload controls and calls the parsed rescue API", () => {
     const root = process.cwd();
@@ -28,7 +30,7 @@ describe("admin replay rescue upload UI", () => {
     const root = process.cwd();
     const html = readFileSync(resolve(root, "admin.html"), "utf8");
     const page = readFileSync(resolve(root, "src/pages/admin-page.ts"), "utf8");
-    const css = readFileSync(resolve(root, "style/admin_page.css"), "utf8");
+    const css = readCssEntry("style/admin_page.css");
 
     expect(html).toContain('data-admin-access="checking"');
     expect(css).toContain('[data-admin-access="checking"] .admin-page-shell');

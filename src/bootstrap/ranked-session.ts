@@ -82,6 +82,7 @@ interface RankedSessionWindowLike extends Window {
   GAME_API_BASE_URL?: unknown;
   GAME_API_FALLBACK_BASE_URL?: unknown;
   RankedSessionRuntime?: RankedSessionRuntime;
+  game_manager?: unknown;
 }
 
 interface NormalizeRankedSessionOptions {
@@ -402,6 +403,31 @@ function syncWindowChallengeContext(
   if (!pageModeKey || !isRankedModeKey(pageModeKey)) return;
   const context = buildChallengeContext(record);
   windowLike.GAME_CHALLENGE_CONTEXT = context;
+}
+
+function resolveBlockedRankedGameManagerMode(manager: Record<string, unknown>): string {
+  const modeKey = typeof manager.modeKey === "string" ? manager.modeKey.trim() : "";
+  if (modeKey) return modeKey;
+  return typeof manager.mode === "string" ? manager.mode.trim() : "";
+}
+
+function resumeBlockedRankedGameAfterSeedReady(
+  windowLike: RankedSessionWindowLike,
+  modeKey: string | null,
+  activeContext: RankedChallengeContext | null
+): void {
+  if (!modeKey || !activeContext) return;
+  const manager = windowLike.game_manager;
+  if (!manager || typeof manager !== "object" || Array.isArray(manager)) return;
+  const managerRecord = manager as Record<string, unknown>;
+  if (managerRecord.rankedSetupBlockedUntilSessionReady !== true) return;
+  if (resolveBlockedRankedGameManagerMode(managerRecord) !== modeKey) return;
+  if (typeof managerRecord.setup !== "function") return;
+  try {
+    managerRecord.setup();
+  } catch (_error) {
+    // Startup must not fail the page if the legacy game manager rejects a late resume.
+  }
 }
 
 function isSameRankedSessionRecord(
@@ -760,6 +786,9 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
       }
     }
   }
-  if (activeContext) windowLike.GAME_CHALLENGE_CONTEXT = activeContext;
+  if (activeContext) {
+    windowLike.GAME_CHALLENGE_CONTEXT = activeContext;
+    resumeBlockedRankedGameAfterSeedReady(windowLike, modeKey, activeContext);
+  }
   void runtime.ensurePrefetch(modeKey);
 }

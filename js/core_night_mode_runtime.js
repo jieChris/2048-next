@@ -22,6 +22,7 @@
   var state = {
     enabled: false,
     hasToggleBinding: false,
+    boundToggle: null,
     hasLanguageBinding: false,
     hasStorageBinding: false,
     hasThemeChangeBinding: false
@@ -375,6 +376,8 @@
   }
 
   function syncNightModeSettingsUI() {
+    bindToggle();
+
     var row = getElementById("night-bg-settings-row");
     var toggle = getElementById("night-bg-toggle");
     var title = querySelector(row, ".settings-toggle-title");
@@ -468,10 +471,11 @@
 
   function bindToggle() {
     var toggle = getElementById("night-bg-toggle");
-    if (!toggle || state.hasToggleBinding) return false;
+    if (!toggle || state.boundToggle === toggle) return false;
     bindListener(toggle, "change", function () {
       setNightBackgroundEnabled(!!toRecord(toggle).checked);
     });
+    state.boundToggle = toggle;
     state.hasToggleBinding = true;
     return true;
   }

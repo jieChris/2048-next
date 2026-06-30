@@ -10,6 +10,26 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
+function syncExternalSettingsControls(windowLike: unknown): number {
+  const windowRecord = toRecord(windowLike);
+  const bgmRuntime = toRecord(windowRecord.CoreBgmRuntime);
+  const nightModeRuntime = toRecord(windowRecord.CoreNightModeRuntime);
+  let syncCount = 0;
+  const syncBgmSettingsUI = asFunction<() => unknown>(bgmRuntime.syncBgmSettingsUI);
+  if (syncBgmSettingsUI) {
+    syncBgmSettingsUI();
+    syncCount += 1;
+  }
+  const syncNightModeSettingsUI = asFunction<() => unknown>(
+    nightModeRuntime.syncNightModeSettingsUI
+  );
+  if (syncNightModeSettingsUI) {
+    syncNightModeSettingsUI();
+    syncCount += 1;
+  }
+  return syncCount;
+}
+
 const WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
 const LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
 const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
@@ -119,6 +139,7 @@ function resolveWinPromptNoteText(enabled: boolean): string {
 
 export interface SettingsModalInitResolvers {
   initThemeSettingsUI: () => unknown;
+  initVisualThemeSettingsUI: () => unknown;
   removeLegacyUndoSettingsUI: () => unknown;
   initTimerModuleSettingsUI: () => unknown;
   initWinPromptSettingsUI: () => unknown;
@@ -198,6 +219,46 @@ function buildSettingsToggleRowHtml(options: {
   );
 }
 
+function applyClassicVisualThemeRootState(input: {
+  documentLike?: unknown;
+} = {}): {
+  hasRoot: boolean;
+  didApply: boolean;
+  state: {
+    visualTheme: "classic";
+    colorScheme: "system";
+    resolvedColorScheme: "light";
+  };
+} {
+  const state = {
+    visualTheme: "classic",
+    colorScheme: "system",
+    resolvedColorScheme: "light"
+  } as const;
+  const root = toRecord(input.documentLike).documentElement;
+  const setAttribute = asFunction<(name: string, value: string) => unknown>(
+    toRecord(root).setAttribute
+  );
+
+  if (!root || !setAttribute) {
+    return {
+      hasRoot: false,
+      didApply: false,
+      state
+    };
+  }
+
+  setAttribute.call(root, "data-visual-theme", state.visualTheme);
+  setAttribute.call(root, "data-color-scheme", state.colorScheme);
+  setAttribute.call(root, "data-resolved-color-scheme", state.resolvedColorScheme);
+
+  return {
+    hasRoot: true,
+    didApply: true,
+    state
+  };
+}
+
 function buildToolkitEntryRowHtml(lang: "zh" | "en"): string {
   return (
     `<div id="toolkit-entry-row" class="settings-row toolkit-entry-row">` +
@@ -256,7 +317,7 @@ function buildCanonicalSettingsModalInnerHtml(options: {
         title: isEn ? "Stats Panel" : "统计面板",
         descId: "pku2048-inline-stats-desc",
         desc: isEn ? "Show inline on page." : "直接显示在页面中",
-        sliderInnerHtml: `<span class="settings-inline-desc-sr" style="display:none;">${
+        sliderInnerHtml: `<span class="settings-inline-desc-sr is-hidden">${
           isEn ? "Show inline on page." : "直接显示在页面中"
         }</span>`
       })
@@ -424,6 +485,18 @@ export function createSettingsModalInitResolvers(input: {
     });
   }
 
+  function initVisualThemeSettingsUI(): unknown {
+    applyClassicVisualThemeRootState({
+      documentLike: source.documentLike
+    });
+    return {
+      hasControls: false,
+      didBindVisualTheme: false,
+      didBindColorScheme: false,
+      didSync: true
+    };
+  }
+
   function removeLegacyUndoSettingsUI(): unknown {
     if (!applyLegacyUndoSettingsCleanup) return null;
     return applyLegacyUndoSettingsCleanup({
@@ -487,6 +560,7 @@ export function createSettingsModalInitResolvers(input: {
 
   return {
     initThemeSettingsUI,
+    initVisualThemeSettingsUI,
     removeLegacyUndoSettingsUI,
     initTimerModuleSettingsUI,
     initWinPromptSettingsUI
@@ -501,6 +575,7 @@ export function createSettingsModalActionResolvers(input: {
   windowLike?: unknown;
   removeLegacyUndoSettingsUI?: unknown;
   initThemeSettingsUI?: unknown;
+  initVisualThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
   initWinPromptSettingsUI?: unknown;
   initHomeGuideSettingsUI?: unknown;
@@ -520,6 +595,7 @@ export function createSettingsModalActionResolvers(input: {
         windowLike: source.windowLike,
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
+        initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
         initWinPromptSettingsUI: source.initWinPromptSettingsUI,
         initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
@@ -532,6 +608,7 @@ export function createSettingsModalActionResolvers(input: {
       windowLike: source.windowLike,
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
+      initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
       initWinPromptSettingsUI: source.initWinPromptSettingsUI,
       initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
@@ -574,6 +651,7 @@ export function applySettingsModalPageOpen(input: {
   windowLike?: unknown;
   removeLegacyUndoSettingsUI?: unknown;
   initThemeSettingsUI?: unknown;
+  initVisualThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
   initWinPromptSettingsUI?: unknown;
   initHomeGuideSettingsUI?: unknown;
@@ -594,12 +672,14 @@ export function applySettingsModalPageOpen(input: {
     documentLike: source.documentLike,
     windowLike: source.windowLike
   });
+  syncExternalSettingsControls(source.windowLike);
 
   applyOpen({
     replayModalRuntime: source.replayModalRuntime,
     documentLike: source.documentLike,
     removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
     initThemeSettingsUI: source.initThemeSettingsUI,
+    initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
     initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
     initWinPromptSettingsUI: source.initWinPromptSettingsUI,
     initHomeGuideSettingsUI: source.initHomeGuideSettingsUI

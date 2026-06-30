@@ -323,6 +323,11 @@
     return parsed > 0 ? parsed : 0;
   }
 
+  function parseNonNegativeInt(value) {
+    var parsed = Math.floor(Number(value));
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : -1;
+  }
+
   function normalizeReplayFileVersion(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
@@ -341,7 +346,7 @@
   }
 
   function getStoredUserId() {
-    return parsePositiveInt(safeGetStorage(STORAGE_USER_ID_KEY));
+    return parseNonNegativeInt(safeGetStorage(STORAGE_USER_ID_KEY));
   }
 
   function readLanguage() {
@@ -653,8 +658,8 @@
   }
 
   function getUserInfo(userId) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    var safeUserId = parseNonNegativeInt(userId);
+    if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -696,8 +701,8 @@
   }
 
   function getUserRecords(userId, options) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    var safeUserId = parseNonNegativeInt(userId);
+    if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
     var opts = options || {};
     var safeLimit = Math.floor(Number(opts.limit) || DEFAULT_RECORD_LIMIT);
     if (safeLimit <= 0) safeLimit = DEFAULT_RECORD_LIMIT;
@@ -1902,7 +1907,7 @@
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
       var localUserId = getStoredUserId();
-      var ownershipFromStorage = !!localUserId && localUserId === targetUserId && !!getAuthToken();
+      var ownershipFromStorage = localUserId >= 0 && localUserId === targetUserId && !!getAuthToken();
       isOwnProfile = ownershipFromStorage;
       updateVisibilityControl();
       syncRecordDateLabel();
@@ -1912,8 +1917,8 @@
     }
 
     var me = result.data || {};
-    var myUserId = parsePositiveInt(me.id || me.user_id);
-    isOwnProfile = !!myUserId && myUserId === targetUserId;
+    var myUserId = parseNonNegativeInt(me.id != null ? me.id : me.user_id);
+    isOwnProfile = myUserId >= 0 && myUserId === targetUserId;
 
     if (isOwnProfile && !resolvedProfileNickname) {
       resolvedProfileNickname = toText(me.nickname).trim();
@@ -1926,7 +1931,7 @@
   }
 
   async function refreshRecords(resetPage) {
-    if (!targetUserId) {
+    if (targetUserId < 0) {
       recordsLoading = false;
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
@@ -2124,7 +2129,7 @@
 
   function parseQuery() {
     var params = new global.URLSearchParams(toText(global.location && global.location.search));
-    targetUserId = parsePositiveInt(params.get("id"));
+    targetUserId = parseNonNegativeInt(params.get("id"));
     targetNicknameHint = toText(params.get("nickname")).trim();
     resolvedProfileNickname = targetNicknameHint;
   }
@@ -2145,7 +2150,7 @@
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
     if (visibilitySelect && !visibilitySelect.value) visibilitySelect.value = "active";
 
-    if (!targetUserId) {
+    if (targetUserId < 0) {
       applyDocumentTitle();
       recordsLoading = false;
       renderRecords([]);
@@ -2156,7 +2161,7 @@
     var nameNode = byId("user-value-name");
     if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
     var initialUserId = getStoredUserId();
-    isOwnProfile = !!initialUserId && initialUserId === targetUserId && !!getAuthToken();
+    isOwnProfile = initialUserId >= 0 && initialUserId === targetUserId && !!getAuthToken();
     updateVisibilityControl();
     applyDocumentTitle();
 

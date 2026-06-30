@@ -1,0 +1,178 @@
+    html,
+    body[data-page="relay-5x5"] {
+      min-height: 100%;
+    }
+    body[data-page="relay-5x5"] {
+      min-height: 100vh;
+    }
+    .relay-page { margin-top: 24px; margin-bottom: 24px; position: relative; }
+    .relay-head { margin-bottom: 14px; }
+    .relay-head h1 { margin: 0; color: #776e65; font-size: 34px; line-height: 1.1; }
+    .relay-head p { margin: 10px 0 0; color: #8a8178; font-size: 15px; }
+    .relay-nav { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .relay-nav-btn {
+      display: inline-block;
+      background: #8f7a66;
+      color: #f9f6f2;
+      text-decoration: none;
+      border: 1px solid #8f7a66;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: bold;
+      font-family: inherit;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .relay-nav-btn:hover { background: #7f6a56; }
+    .relay-panel {
+      background: #faf8ef;
+      border: 1px solid #ddd4c5;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .relay-panel h2 { margin: 0 0 10px; font-size: 22px; color: #6f665d; }
+    .relay-status-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .relay-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid #d7cbb9;
+      background: #fffdf7;
+      color: #7b6c5a;
+      padding: 4px 10px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+    #relay-my-case-pill {
+      border-color: #8f7a66;
+      background: #fff3d6;
+      color: #5f4f3f;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset, 0 0 0 1px rgba(143, 122, 102, 0.14);
+    }
+    .relay-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      border: 1px solid #8f7a66;
+      background: #8f7a66;
+      color: #f9f6f2;
+      border-radius: 6px;
+      padding: 0 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .relay-btn:disabled { opacity: 0.62; cursor: not-allowed; }
+    .relay-btn--ghost { background: #fffdf7; color: #8f7a66; }
+    .relay-btn--icon {
+      width: 34px;
+      min-width: 34px;
+      padding: 0;
+    }
+    .relay-row-claim-btn {
+      min-width: 84px;
+      height: 30px;
+      line-height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .relay-btn-icon {
+      width: 18px;
+      height: 18px;
+      display: block;
+      pointer-events: none;
+    }
+    .relay-table-wrap { width: 100%; overflow: hidden; }
+    .relay-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 0;
+      table-layout: fixed;
+      background: #fffdf7;
+      border: 1px solid #e2d8ca;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .relay-table th,
+    .relay-table td {
+      border-bottom: 1px solid #ece3d7;
+      text-align: left;
+      padding: 8px 10px;
+      color: #6f665d;
+      font-size: 13px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .relay-table th { background: #f4eee4; font-weight: bold; }
+    .relay-table tr:last-child td { border-bottom: 0; }
+    .relay-table-pager {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .relay-claim-modules {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .relay-claim-card {
+      border: 1px solid #e2d8ca;
+      background: #fffdf7;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 92px;
+    }
+    .relay-claim-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .relay-claim-empty {
+      margin: 0;
+      color: #7f6a56;
+      font-size: 13px;
+    }
+    .relay-claim-item {
+      border: 1px solid #e7ddcf;
+      border-radius: 8px;
+      background: #fffaf0;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .relay-claim-item-main {
+      margin: 0;
+      color: #6f665d;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .relay-claim-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .relay-page-info {
+      min-width: 72px;
+      text-align: center;
+      color: #7f6a56;
+      font-size: 13px;
+      font-weight: bold;
+    }

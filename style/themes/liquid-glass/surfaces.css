@@ -1,0 +1,36 @@
+:where(html[data-visual-theme="liquid-glass"]) body {
+  background: var(--app-page-bg);
+  color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .container {
+  color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) h1.title,
+:where(html[data-visual-theme="liquid-glass"]) h1.title a {
+  color: var(--app-text);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+:where(html[data-visual-theme="liquid-glass"][data-resolved-color-scheme="dark"]) h1.title,
+:where(html[data-visual-theme="liquid-glass"][data-resolved-color-scheme="dark"]) h1.title a {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-intro,
+:where(html[data-visual-theme="liquid-glass"]) .game-explanation,
+:where(html[data-visual-theme="liquid-glass"]) .stats-left,
+:where(html[data-visual-theme="liquid-glass"]) .stats-right,
+:where(html[data-visual-theme="liquid-glass"]) .site-record-footer,
+:where(html[data-visual-theme="liquid-glass"]) .site-record-footer p {
+  color: var(--app-text-subtle);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn) {
+  color: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) hr {
+  border-bottom-color: var(--lg-border);
+}

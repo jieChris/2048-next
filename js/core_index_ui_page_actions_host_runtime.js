@@ -63,6 +63,7 @@
     );
 
     var initThemeSettingsUI = asFunction(settingsModalInitResolvers.initThemeSettingsUI);
+    var initVisualThemeSettingsUI = asFunction(settingsModalInitResolvers.initVisualThemeSettingsUI);
     var removeLegacyUndoSettingsUI = asFunction(settingsModalInitResolvers.removeLegacyUndoSettingsUI);
     var initTimerModuleSettingsUI = asFunction(settingsModalInitResolvers.initTimerModuleSettingsUI);
     var initWinPromptSettingsUI = asFunction(settingsModalInitResolvers.initWinPromptSettingsUI);
@@ -231,6 +232,7 @@
         windowLike: source.windowLike || null,
         removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
         initThemeSettingsUI: initThemeSettingsUI,
+        initVisualThemeSettingsUI: initVisualThemeSettingsUI,
         initTimerModuleSettingsUI: initTimerModuleSettingsUI,
         initWinPromptSettingsUI: initWinPromptSettingsUI,
         initHomeGuideSettingsUI: initHomeGuideSettingsUI

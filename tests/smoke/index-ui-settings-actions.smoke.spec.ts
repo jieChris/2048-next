@@ -84,14 +84,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
           });
         });
 
-        const modal = document.getElementById("settings-modal");
-        const openDisplay = modal ? String((modal as HTMLElement).style.display || "") : "";
+        const modal = document.getElementById("settings-modal") as HTMLElement | null;
+        const openDisplay = modal ? window.getComputedStyle(modal).display : "";
 
         closeSettingsModal();
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => resolve(null));
         });
-        const closeDisplay = modal ? String((modal as HTMLElement).style.display || "") : "";
+        const closeDisplay = modal ? window.getComputedStyle(modal).display : "";
 
         return {
           hasRuntime: true,
@@ -216,14 +216,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
           });
         });
 
-        const replayModal = document.getElementById("replay-modal");
-        const openDisplay = replayModal ? String((replayModal as HTMLElement).style.display || "") : "";
+        const replayModal = document.getElementById("replay-modal") as HTMLElement | null;
+        const openDisplay = replayModal ? window.getComputedStyle(replayModal).display : "";
 
         closeReplayModal();
         await new Promise((resolve) => {
           window.requestAnimationFrame(() => resolve(null));
         });
-        const closeDisplay = replayModal ? String((replayModal as HTMLElement).style.display || "") : "";
+        const closeDisplay = replayModal ? window.getComputedStyle(replayModal).display : "";
 
         return {
           hasPageHostRuntime: true,
@@ -321,7 +321,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
         const toast = document.getElementById("replay-export-toast") as HTMLElement | null;
         const visibleToastStyle = toast ? window.getComputedStyle(toast) : null;
-        const modalOpenDisplay = String(modal.style.display || "");
+        const modalOpenDisplay = window.getComputedStyle(modal).display;
         const toastPosition = visibleToastStyle ? visibleToastStyle.position : "";
         const toastTop = visibleToastStyle ? visibleToastStyle.top : "";
         const toastBackground = visibleToastStyle ? visibleToastStyle.backgroundColor : "";
@@ -347,7 +347,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           clipboardWrites,
           actionText,
           modalOpenDisplay,
-          modalClosedDisplay: String(modal.style.display || ""),
+          modalClosedDisplay: window.getComputedStyle(modal).display,
           toastText: toast ? String(toast.textContent || "") : "",
           toastPosition,
           toastTop,

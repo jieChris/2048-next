@@ -38,6 +38,7 @@
     var initCallCount = 0;
     if (invoke(source.removeLegacyUndoSettingsUI)) initCallCount += 1;
     if (invoke(source.initThemeSettingsUI)) initCallCount += 1;
+    if (invoke(source.initVisualThemeSettingsUI)) initCallCount += 1;
     if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
     if (invoke(source.initWinPromptSettingsUI)) initCallCount += 1;
     if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;

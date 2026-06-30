@@ -1,0 +1,119 @@
+      /* Test Board Specific Styles */
+      .dashboard-container {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          margin-top: 10px;
+      }
+      .dashboard-box {
+          background: #bbada0; /* Box bg */
+          padding: 10px;
+          border-radius: 6px;
+          color: white;
+          box-sizing: border-box;
+          min-height: 120px; /* Ensure height alignment */
+      }
+      .dashboard-stats {
+          width: 25%;
+      }
+      .dashboard-controls {
+          width: 68%;
+          text-align: center;
+          display: flex;
+          width: 71%;
+          text-align: center;
+          /* Center content */
+          display: flex;
+          justify-content: center;
+          align-items: center;
+      }
+      .dashboard-controls label {
+          font-weight: bold;
+          display: block;
+          margin-bottom: 5px;
+      }
+      .dashboard-controls select {
+          padding: 5px;
+          border-radius: 3px;
+          border: none;
+          background: #faf8ef;
+          color: #776e65;
+          font-weight: bold;
+      }
+      .selection-grid {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 4px;
+          margin-top: 5px;
+          width: 100%;
+      }
+      .selection-tile {
+          /* Simulate game tile but static */
+          position: relative !important;
+          width: 55px !important;
+          height: 55px !important;
+          border-radius: 3px;
+          cursor: pointer;
+          transition: transform 0.1s;
+      }
+      .selection-tile .tile-inner {
+          width: 100% !important;
+          height: 100% !important;
+          line-height: 53px !important;
+          font-size: 20px !important;
+          border-radius: 3px;
+      }
+      /* Adjust fonts for larger numbers */
+      .selection-tile.tile-128 .tile-inner,
+      .selection-tile.tile-256 .tile-inner,
+      .selection-tile.tile-512 .tile-inner { font-size: 18px !important; }
+      
+      .selection-tile.tile-1024 .tile-inner,
+      .selection-tile.tile-2048 .tile-inner,
+      .selection-tile.tile-4096 .tile-inner,
+      .selection-tile.tile-8192 .tile-inner { font-size: 14px !important; }
+      
+      .selection-tile.tile-16384 .tile-inner,
+      .selection-tile.tile-32768 .tile-inner { font-size: 12px !important; }
+
+      .selection-tile:hover {
+          transform: scale(1.1);
+          z-index: 5;
+      }
+      .selection-tile.selected {
+          transform: scale(1.15);
+          box-shadow: 0 0 5px 2px rgba(255, 255, 0, 0.8); /* Highlight glow */
+          z-index: 10;
+          border: 2px solid #8f7a66; /* Border */
+      }
+      
+      /* Special style for 0 */
+      /* Special style for 0 */
+      .selection-tile.tile-0 .tile-inner {
+          background: rgba(238, 228, 218, 0.35);
+          color: #776e65;
+          text-align: center;
+          line-height: 55px !important;
+          font-weight: bold;
+      }
+
+      .scores-container.practice-gesture-entry {
+          cursor: pointer;
+      }
+      .scores-container.practice-gesture-entry.practice-gesture-active {
+          box-shadow: 0 0 0 2px #8f7a66 inset;
+          border-radius: 6px;
+      }
+      
+      .grid-cell {
+          cursor: pointer; /* Indicate clickable */
+      }
+      /* Hover effect for cleaner UI */
+      .grid-cell:hover {
+          background: rgba(238, 228, 218, 0.35);
+      }
+      .tile-container {
+          pointer-events: none;
+      }
+      

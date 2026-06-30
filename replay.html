@@ -20,7 +20,7 @@
 </head>
 <body data-page="replay">
   <div class="container replay-v1-page">
-    <div id="replay-imported-file-name" class="replay-imported-file-name" style="display: none;"></div>
+    <div id="replay-imported-file-name" class="replay-imported-file-name is-hidden"></div>
     <div class="replay-top-stats">
       <div class="replay-metric-card">
         <span id="replay-score-label" class="replay-metric-label">&#20998;&#25968;&#65306;</span>
@@ -86,7 +86,7 @@
       <a id="import-replay-text-btn" class="import-replay-button replay-action-btn">&#31896;&#36148;&#22238;&#25918;</a>
     </div>
 
-    <div id="replay-diagnostics-panel" class="replay-diagnostics-panel" style="display: none;">
+    <div id="replay-diagnostics-panel" class="replay-diagnostics-panel is-hidden">
       <div id="replay-diagnostics-summary" class="replay-diagnostics-summary"></div>
       <div id="replay-diagnostics-samples" class="replay-diagnostics-samples"></div>
     </div>
@@ -97,14 +97,14 @@
     </div>
   </div>
 
-  <div id="replay-modal" class="replay-modal-overlay" style="display: none;">
+  <div id="replay-modal" class="replay-modal-overlay is-hidden">
     <div class="replay-modal-content">
       <h3 id="replay-modal-title">&#22238;&#25918;</h3>
-      <div id="replay-singleline-wrap" class="replay-singleline-wrap" style="display: none;">
+      <div id="replay-singleline-wrap" class="replay-singleline-wrap is-hidden">
         <input id="replay-singleline-input" class="replay-singleline-input" type="text" inputmode="numeric">
         <span id="replay-singleline-unit" class="replay-singleline-unit">ms</span>
       </div>
-      <div id="replay-speed-mode-wrap" class="replay-speed-mode-wrap" style="display: none;">
+      <div id="replay-speed-mode-wrap" class="replay-speed-mode-wrap is-hidden">
         <label class="replay-speed-mode-label">
           <input id="replay-speed-mode-original" type="checkbox">
           <span id="replay-speed-mode-text">&#25353;&#21407;&#36895;&#22238;&#25918;</span>
@@ -118,7 +118,7 @@
     </div>
   </div>
 
-  <div id="replay-file-drop-overlay" class="replay-file-drop-overlay" style="display: none;">
+  <div id="replay-file-drop-overlay" class="replay-file-drop-overlay is-hidden">
     <div class="replay-file-drop-panel">
       <div id="replay-file-drop-title" class="replay-file-drop-title">&#25302;&#25341;&#22238;&#25918;&#25991;&#20214;&#21040;&#27492;&#22788;</div>
       <div id="replay-file-drop-hint" class="replay-file-drop-hint">&#25903;&#25345; .txt / .vrs / .rpl</div>

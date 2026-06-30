@@ -1,0 +1,182 @@
+:where(html[data-visual-theme="liquid-glass"]) .replay-modal-overlay,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-overlay {
+  background: var(--lg-surface-overlay);
+  -webkit-backdrop-filter: blur(calc(var(--lg-material-blur) * 0.82)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(calc(var(--lg-material-blur) * 0.82)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .replay-modal-content,
+:where(html[data-visual-theme="liquid-glass"]) .settings-modal-content,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-modal-content,
+:where(html[data-visual-theme="liquid-glass"]) .mobile-hint-modal-content,
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-panel,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-panel {
+  box-sizing: border-box;
+  color: var(--app-text);
+  background: var(--lg-surface-modal);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--app-radius-dialog);
+  box-shadow: var(--lg-shadow-raised);
+  -webkit-backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .replay-modal-content h3,
+:where(html[data-visual-theme="liquid-glass"]) .settings-modal-content h3,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-modal-content h3,
+:where(html[data-visual-theme="liquid-glass"]) .mobile-hint-modal-content h3,
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-title,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-title {
+  color: var(--app-text);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-message,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-desc,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-step,
+:where(html[data-visual-theme="liquid-glass"]) .settings-toggle-desc,
+:where(html[data-visual-theme="liquid-glass"]) .settings-action-copy .settings-toggle-desc,
+:where(html[data-visual-theme="liquid-glass"]) .settings-note {
+  color: var(--app-text-subtle);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-toggle-row,
+:where(html[data-visual-theme="liquid-glass"]) .settings-modal-content > .settings-row.language-settings-row,
+:where(html[data-visual-theme="liquid-glass"]) .settings-modal-content > .settings-row.settings-action-row,
+:where(html[data-visual-theme="liquid-glass"]) .tile-palette-settings-row,
+:where(html[data-visual-theme="liquid-glass"]) .tile-palette-editor-block,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-wrap,
+:where(html[data-visual-theme="liquid-glass"]) .mobile-hint-body {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-theme-select,
+:where(html[data-visual-theme="liquid-glass"]) .custom-select-trigger,
+:where(html[data-visual-theme="liquid-glass"]) .custom-select-options,
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-input,
+:where(html[data-visual-theme="liquid-glass"]) .replay-textarea,
+:where(html[data-visual-theme="liquid-glass"]) .tile-palette-name-input {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .custom-option:hover {
+  background: var(--lg-accent-muted);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .custom-option.selected {
+  color: var(--lg-text-on-strong);
+  background: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .custom-arrow {
+  border-top-color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-switch-slider {
+  background: color-mix(in srgb, var(--lg-surface-base) 82%, var(--app-text) 18%);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-switch-slider::after,
+:where(html[data-visual-theme="liquid-glass"]) .language-switch-thumb {
+  background: color-mix(in srgb, var(--lg-surface-floating) 88%, white 12%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-switch input[type=checkbox]:checked + .settings-switch-slider {
+  background: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-switch input[type=checkbox]:focus-visible + .settings-switch-slider,
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-input:focus {
+  box-shadow: 0 0 0 3px var(--app-focus-ring-control), var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .announcement-item {
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .announcement-pin-badge,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-link {
+  color: var(--lg-accent);
+  background: var(--lg-accent-muted);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .announcement-version,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-link:hover,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-link:focus-visible,
+:where(html[data-visual-theme="liquid-glass"]) .settings-inline-action-btn {
+  color: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .announcement-date,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-empty,
+:where(html[data-visual-theme="liquid-glass"]) .announcement-content,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-empty,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-more {
+  color: var(--app-text-subtle);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-desc,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-title,
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-row {
+  color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-row {
+  border-bottom-color: var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .mode-intro-leaderboard-nick-link {
+  color: var(--lg-accent);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container .game-message {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--lg-surface-modal) 86%, transparent);
+  text-shadow: none;
+  -webkit-backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(var(--lg-material-blur)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container .game-message.game-won {
+  background: color-mix(in srgb, var(--lg-accent-muted) 46%, var(--lg-surface-modal) 54%);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container .game-message.game-over {
+  background: color-mix(in srgb, var(--lg-surface-overlay) 26%, var(--lg-surface-modal) 74%);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-container .game-message p {
+  color: var(--app-text);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-overlay {
+  background: var(--lg-surface-overlay);
+  -webkit-backdrop-filter: blur(calc(var(--lg-material-blur) * 0.82)) saturate(var(--lg-material-saturation));
+  backdrop-filter: blur(calc(var(--lg-material-blur) * 0.82)) saturate(var(--lg-material-saturation));
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-button-secondary {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border: 1px solid var(--lg-border);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-overlay.is-danger .game-dialog-title,
+:where(html[data-visual-theme="liquid-glass"]) .game-dialog-button-danger {
+  color: var(--lg-text-on-strong);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-highlight {
+  box-shadow: 0 0 0 4px var(--lg-accent), 0 0 0 8px var(--lg-accent-muted);
+}

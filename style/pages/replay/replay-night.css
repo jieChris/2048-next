@@ -1,0 +1,94 @@
+html[data-night-background="1"] body[data-page="replay"] {
+  background:
+    radial-gradient(1180px 520px at 16% -16%, rgba(95, 121, 166, 0.18), transparent 66%),
+    radial-gradient(860px 420px at 86% 0%, rgba(114, 86, 153, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(19, 27, 45, 0.98) 0%, rgba(10, 18, 32, 0.98) 46%, rgba(6, 9, 19, 0.99) 100%) !important;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-metric-card {
+  background: linear-gradient(180deg, rgba(43, 60, 83, 0.96) 0%, rgba(23, 33, 49, 0.96) 100%);
+  box-shadow:
+    0 16px 34px rgba(2, 6, 16, 0.28),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-metric-label {
+  color: #c8d6e8;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-metric-value {
+  color: #fff4e1;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-compatibility-banner {
+  border-color: rgba(219, 183, 112, 0.42);
+  background: rgba(60, 44, 18, 0.72);
+  color: #f4ddb0;
+  box-shadow:
+    0 12px 28px rgba(2, 6, 16, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-imported-file-name {
+  background: linear-gradient(180deg, rgba(43, 60, 83, 0.96) 0%, rgba(23, 33, 49, 0.96) 100%);
+  color: #fff4e1;
+  box-shadow:
+    0 16px 34px rgba(2, 6, 16, 0.28),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-progress-wrap {
+  background: rgba(18, 29, 46, 0.72);
+  border: 1px solid rgba(181, 198, 221, 0.16);
+  border-radius: 999px;
+  padding: 8px 12px 6px;
+  box-sizing: border-box;
+  box-shadow:
+    0 12px 28px rgba(2, 6, 16, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-night-background="1"] body[data-page="replay"] #replay-progress {
+  accent-color: #d5a86a;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-speed-mode-label,
+html[data-night-background="1"] body[data-page="replay"] .replay-singleline-unit {
+  color: #d9d0c2;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-overlay {
+  background: rgba(6, 12, 22, 0.7);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-panel {
+  border-color: rgba(213, 168, 106, 0.9);
+  background: rgba(16, 24, 38, 0.95);
+  box-shadow:
+    0 28px 60px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-title {
+  color: #f2e4cf;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-file-drop-hint {
+  color: #b7c5d7;
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-singleline-input {
+  border-color: rgba(181, 198, 221, 0.16);
+  background: rgba(16, 24, 38, 0.92);
+  color: #ece2d3;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(2, 6, 16, 0.16);
+}
+
+html[data-night-background="1"] body[data-page="replay"] .replay-singleline-input:disabled {
+  background: rgba(31, 43, 62, 0.88);
+  color: #9eafc5;
+  border-color: rgba(181, 198, 221, 0.12);
+}
+

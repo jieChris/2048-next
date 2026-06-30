@@ -1,0 +1,167 @@
+.account-board-table-wrap {
+  border: 1px solid #dfd3c5;
+  border-radius: 12px;
+  background: #fffaf3;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(123, 100, 79, 0.08);
+  overflow: hidden;
+}
+
+.account-board-head-row {
+  display: grid;
+  grid-template-columns: 56px minmax(96px, 1fr) 90px 170px;
+  gap: 8px;
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(154, 133, 113, 0.26);
+  background: linear-gradient(180deg, #f7efe5, #f4eadf);
+  color: #847463;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.account-board-list {
+  min-height: 260px;
+  max-height: 560px;
+  overflow: auto;
+  background: #fffaf3;
+  position: relative;
+}
+
+.account-board-list[data-board-state="loading"] {
+  opacity: 0.8;
+}
+
+.account-board-list[data-board-state="error"] {
+  background: #fff8f6;
+}
+
+.account-board-list[data-board-state="empty"] {
+  background: #fffaf3;
+}
+
+.account-board-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(154, 133, 113, 0.24);
+}
+
+.account-board-pagination .replay-button {
+  min-width: 74px;
+}
+
+.account-board-empty,
+.account-board-row {
+  display: grid;
+  grid-template-columns: 56px minmax(96px, 1fr) 90px 170px;
+  gap: 8px;
+  align-items: center;
+  padding: 11px 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.account-board-row + .account-board-row {
+  border-top: 1px solid rgba(154, 133, 113, 0.2);
+}
+
+.account-board-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.account-board-row:nth-child(even) {
+  background: rgba(248, 239, 229, 0.46);
+}
+
+.account-board-row:hover {
+  background: #fff2e2;
+}
+
+.account-board-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8f7f70;
+}
+
+.account-board-empty.err {
+  color: var(--ap-bad);
+  font-weight: 700;
+}
+
+.account-rank,
+.account-score {
+  font-weight: 700;
+}
+
+.account-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 24px;
+  border-radius: 999px;
+  background: #efe4d6;
+  color: #6f5b49;
+  font-size: 12px;
+}
+
+.account-board-row.is-rank-top1 {
+  background: #fff2dc;
+}
+
+.account-board-row.is-rank-top2 {
+  background: #f5f0e6;
+}
+
+.account-board-row.is-rank-top3 {
+  background: #f7ede2;
+}
+
+.account-board-row.is-rank-top1 .account-rank {
+  background: #d8a744;
+  color: #fffaf0;
+}
+
+.account-board-row.is-rank-top2 .account-rank {
+  background: #a3a3a3;
+  color: #fff;
+}
+
+.account-board-row.is-rank-top3 .account-rank {
+  background: #b98053;
+  color: #fff;
+}
+
+.account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.account-name-link {
+  color: #594637;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.account-name-link:hover,
+.account-name-link:focus-visible {
+  color: #2f241b;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.account-date {
+  color: #8d7a67;
+  font-size: 12px;
+}
+

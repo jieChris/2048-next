@@ -1,0 +1,84 @@
+    html[data-night-background="1"] {
+      background:
+        radial-gradient(circle at 16% 12%, rgba(82, 110, 151, 0.16), transparent 28%),
+        radial-gradient(circle at 82% 8%, rgba(109, 87, 146, 0.12), transparent 24%),
+        linear-gradient(180deg, #101726 0%, #0b1220 52%, #070d16 100%);
+      color-scheme: dark;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 16% 12%, rgba(82, 110, 151, 0.16), transparent 28%),
+        radial-gradient(circle at 82% 8%, rgba(109, 87, 146, 0.12), transparent 24%),
+        linear-gradient(180deg, #101726 0%, #0b1220 52%, #070d16 100%);
+      color: #ece2d3;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-head h1,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-panel h2,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-field label,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-held-snapshot-title,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-replay-case-name {
+      color: #ece2d3;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-head p,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-page-info,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-held-snapshot-hint,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-replay-segment-hint,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-claim-empty,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-claim-item-main {
+      color: #a6b3c6;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-panel,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-claim-card,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-claim-item,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-table,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-replay-case-name,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-segment-select,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-input,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-textarea,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-advanced-panel {
+      background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+      border-color: rgba(181, 198, 221, 0.16);
+      color: #ece2d3;
+      box-shadow: 0 18px 36px rgba(1, 5, 14, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-nav-btn,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-btn {
+      background: linear-gradient(180deg, rgba(69, 98, 130, 0.98) 0%, rgba(47, 68, 92, 0.98) 100%);
+      border-color: rgba(181, 198, 221, 0.16);
+      color: #f6efe3;
+      box-shadow: 0 10px 22px rgba(2, 6, 16, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-nav-btn:hover,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-btn:hover {
+      background: linear-gradient(180deg, rgba(84, 117, 152, 1) 0%, rgba(56, 81, 109, 1) 100%);
+      color: #fff4e1;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-btn--ghost {
+      background: rgba(18, 29, 46, 0.84);
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-table th,
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-table td {
+      border-bottom-color: rgba(181, 198, 221, 0.1);
+      color: #d9d0c2;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-table th {
+      background: linear-gradient(180deg, rgba(29, 43, 66, 0.98), rgba(19, 29, 45, 0.98));
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-pill {
+      border-color: rgba(181, 198, 221, 0.16);
+      background: rgba(69, 98, 130, 0.82);
+      color: #f6efe3;
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-snapshot-board {
+      background: linear-gradient(180deg, rgba(27, 39, 61, 0.98) 0%, rgba(15, 24, 39, 0.98) 100%);
+      box-shadow: 0 16px 34px rgba(2, 6, 16, 0.28), inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-snapshot-cell {
+      background: rgba(176, 192, 214, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(235, 244, 255, 0.03);
+    }
+    html[data-night-background="1"] body[data-page="relay-5x5"] .relay-snapshot-tile {
+      color: #ece2d3;
+      box-shadow: 0 0 0 1px rgba(235, 244, 255, 0.12) inset;
+    }

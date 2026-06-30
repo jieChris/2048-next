@@ -167,29 +167,6 @@
   color: var(--app-text-subtle);
 }
 
-.settings-select-row .settings-select-main {
-  align-items: center;
-}
-
-.settings-theme-select {
-  flex: 0 0 132px;
-  min-width: 0;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--app-border-control);
-  border-radius: 6px;
-  background: #fffdfa;
-  color: var(--app-text);
-  font: inherit;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.settings-theme-select:focus-visible {
-  outline: 2px solid var(--app-focus-ring-control);
-  outline-offset: 2px;
-}
-
 .settings-switch {
   position: relative;
   display: block;

@@ -3,13 +3,57 @@
 
   if (!global) return;
 
-  function applyDisplay(target, displayValue, useImportant) {
+  var HIDDEN_CLASS_NAME = "is-hidden";
+
+  function hasClassName(target, className) {
+    if (target && target.classList && typeof target.classList.contains === "function") {
+      return target.classList.contains(className);
+    }
+    var current = target && typeof target.className === "string" ? target.className : "";
+    return (" " + current + " ").indexOf(" " + className + " ") >= 0;
+  }
+
+  function addClassName(target, className) {
+    if (target && target.classList && typeof target.classList.add === "function") {
+      target.classList.add(className);
+      return true;
+    }
+    if (!target || typeof target.className !== "string") return false;
+    if (hasClassName(target, className)) return true;
+    var current = target.className.trim();
+    target.className = current ? current + " " + className : className;
+    return true;
+  }
+
+  function removeClassName(target, className) {
+    if (target && target.classList && typeof target.classList.remove === "function") {
+      target.classList.remove(className);
+      return true;
+    }
+    if (!target || typeof target.className !== "string") return false;
+    if (!hasClassName(target, className)) return true;
+    target.className = target.className
+      .split(/\s+/)
+      .filter(function (name) {
+        return name && name !== className;
+      })
+      .join(" ");
+    return true;
+  }
+
+  function applyDisplay(target, displayValue) {
+    var hidden = displayValue === "none";
+    var didUpdateClass = hidden
+      ? addClassName(target, HIDDEN_CLASS_NAME)
+      : removeClassName(target, HIDDEN_CLASS_NAME);
     var style = target && target.style ? target.style : null;
-    if (!style) return;
-    if (useImportant && typeof style.setProperty === "function") {
-      style.setProperty("display", displayValue, "important");
+    if (didUpdateClass) {
+      if (style && !hidden && style.display === "none") {
+        style.display = "";
+      }
       return;
     }
+    if (!style) return;
     style.display = displayValue;
   }
 
@@ -54,8 +98,8 @@
       modalBound: !!modal.__modeIntroBound
     });
 
-    applyDisplay(introBtn, introUiState.entryDisplay, true);
-    applyDisplay(modal, introUiState.modalDisplay, false);
+    applyDisplay(introBtn, introUiState.entryDisplay);
+    applyDisplay(modal, introUiState.modalDisplay);
     title.textContent = introUiState.titleText;
     desc.textContent = introUiState.descriptionText;
     if (leaderboard) leaderboard.textContent = introUiState.leaderboardText;
@@ -78,7 +122,7 @@
           event.preventDefault();
         }
         if (openActionState.shouldApplyDisplay) {
-          applyDisplay(modal, openActionState.nextModalDisplay, false);
+          applyDisplay(modal, openActionState.nextModalDisplay);
         }
       });
     }
@@ -94,7 +138,7 @@
           event.preventDefault();
         }
         if (closeActionState.shouldApplyDisplay) {
-          applyDisplay(modal, closeActionState.nextModalDisplay, false);
+          applyDisplay(modal, closeActionState.nextModalDisplay);
         }
       });
     }
@@ -107,7 +151,7 @@
           eventTargetIsModal: !!(event && event.target === modal)
         });
         if (overlayActionState.shouldApplyDisplay) {
-          applyDisplay(modal, overlayActionState.nextModalDisplay, false);
+          applyDisplay(modal, overlayActionState.nextModalDisplay);
         }
       });
     }

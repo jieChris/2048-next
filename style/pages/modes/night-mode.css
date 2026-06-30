@@ -1,0 +1,110 @@
+    html[data-night-background="1"] {
+      --mode-page-bg: rgba(12, 18, 30, 0.88);
+      --mode-surface: rgba(18, 29, 46, 0.92);
+      --mode-surface-soft: rgba(28, 40, 62, 0.88);
+      --mode-line: rgba(171, 189, 214, 0.14);
+      --mode-line-strong: rgba(213, 191, 150, 0.3);
+      --mode-ink: #ece2d3;
+      --mode-ink-soft: #b8c2d3;
+      --mode-primary: #c9955b;
+      --mode-primary-press: #a9713a;
+      --mode-primary-tint: rgba(201, 149, 91, 0.18);
+      --mode-secondary: #86aeb0;
+      --mode-secondary-tint: rgba(96, 140, 148, 0.18);
+      --mode-shadow: rgba(2, 6, 16, 0.34);
+    }
+
+    html[data-night-background="1"] {
+      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
+      color-scheme: dark;
+    }
+
+    html[data-night-background="1"] body {
+      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
+      color: var(--mode-ink);
+    }
+
+    html[data-night-background="1"] body::before {
+      display: none;
+    }
+
+    html[data-night-background="1"] body::after {
+      display: none;
+    }
+
+    html[data-night-background="1"] .mode-select-page {
+      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
+      border-color: rgba(171, 189, 214, 0.08);
+      box-shadow: none;
+    }
+
+    html[data-night-background="1"] .mode-brand-title {
+      color: var(--mode-ink);
+      text-shadow: 0 1px 0 rgba(4, 7, 14, 0.8);
+    }
+
+    html[data-night-background="1"] .mode-frequent-title {
+      background: linear-gradient(180deg, rgba(32, 46, 69, 0.96) 0%, rgba(18, 27, 42, 0.96) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 18px rgba(2, 6, 16, 0.28);
+    }
+
+    html[data-night-background="1"] .mode-priority-card,
+    html[data-night-background="1"] .mode-select-body,
+    html[data-night-background="1"] .mode-tab-panels,
+    html[data-night-background="1"] .mode-hub-btn {
+      background: linear-gradient(180deg, rgba(28, 40, 62, 0.95) 0%, rgba(16, 26, 42, 0.95) 100%);
+      border-color: var(--mode-line);
+      box-shadow: 0 8px 18px rgba(2, 6, 16, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    html[data-night-background="1"] .mode-priority-card strong,
+    html[data-night-background="1"] .mode-group-title {
+      color: var(--mode-ink);
+    }
+
+    html[data-night-background="1"] .mode-priority-card small {
+      color: var(--mode-ink-soft);
+    }
+
+    html[data-night-background="1"] .mode-tab-bar {
+      background: linear-gradient(180deg, rgba(31, 45, 68, 0.95) 0%, rgba(20, 30, 46, 0.95) 100%);
+      border-bottom-color: var(--mode-line);
+    }
+
+    html[data-night-background="1"] .mode-tab-button {
+      border-right-color: var(--mode-line);
+      color: var(--mode-ink-soft);
+    }
+
+    html[data-night-background="1"] .mode-tab-button:hover {
+      background: rgba(201, 149, 91, 0.12);
+      color: var(--mode-ink);
+    }
+
+    html[data-night-background="1"] .mode-tab-button.is-active {
+      color: #fff7ec;
+      text-shadow: 0 1px 0 rgba(57, 35, 12, 0.32);
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    html[data-night-background="1"] .mode-tab-button.is-active::after {
+      box-shadow: 0 8px 14px rgba(2, 6, 16, 0.24);
+    }
+
+    html[data-night-background="1"] .mode-hub-btn:hover,
+    html[data-night-background="1"] .mode-priority-card:hover {
+      background: linear-gradient(180deg, rgba(42, 58, 84, 0.98) 0%, rgba(22, 34, 52, 0.98) 100%);
+      border-color: var(--mode-line-strong);
+      box-shadow: 0 12px 24px rgba(2, 6, 16, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    html[data-night-background="1"] .mode-tab-button:focus-visible,
+    html[data-night-background="1"] .mode-priority-card:focus-visible,
+    html[data-night-background="1"] .mode-hub-btn:focus-visible {
+      outline-color: rgba(237, 195, 123, 0.9);
+    }
+
+    html[data-night-background="1"] .mode-tab-button:nth-child(n),
+    html[data-night-background="1"] .mode-tab-button:last-child {
+      border-color: var(--mode-line);
+    }

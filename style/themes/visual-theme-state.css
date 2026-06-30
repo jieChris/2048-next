@@ -1,0 +1,14 @@
+:where(html[data-visual-theme="liquid-glass"]) {
+  --lg-material-blur: 22px;
+  --lg-material-saturation: 1.35;
+  --lg-transition-fast: 160ms ease;
+  --lg-transition-normal: 220ms ease;
+}
+
+:where(html[data-visual-theme="liquid-glass"][data-resolved-color-scheme="light"]) {
+  color-scheme: light;
+}
+
+:where(html[data-visual-theme="liquid-glass"][data-resolved-color-scheme="dark"]) {
+  color-scheme: dark;
+}

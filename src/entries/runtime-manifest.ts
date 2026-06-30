@@ -81,7 +81,7 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
   {
     pageId: "play",
     htmlFile: "play.html",
-    capabilities: ["play", "i18n"]
+    capabilities: ["play"]
   },
   {
     pageId: "replay",

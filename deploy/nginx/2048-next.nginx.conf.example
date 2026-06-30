@@ -1,7 +1,7 @@
 # 2048-next Nginx reverse proxy config for the self-hosted static container.
 
 upstream game_data_api {
-    server 127.0.0.1:3010;
+    server 2048-game-api:3001;
     keepalive 32;
 }
 
@@ -70,8 +70,8 @@ server {
 
     location ~* \.(?:js|mjs|css|wasm)$ {
         try_files $uri =404;
-        add_header Cache-Control "no-cache" always;
-        add_header Cloudflare-CDN-Cache-Control "public, max-age=300, stale-while-revalidate=300" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header Cloudflare-CDN-Cache-Control "public, max-age=31536000, immutable" always;
     }
 
     location ~* \.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf)$ {

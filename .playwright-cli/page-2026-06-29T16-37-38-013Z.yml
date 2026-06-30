@@ -1,0 +1,22 @@
+- main [ref=e2]:
+  - region "内测访问登录" [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: "2048"
+      - generic [ref=e6]: Closed Beta
+    - heading "内测访问登录" [level=1] [ref=e7]
+    - paragraph [ref=e8]: 本项目当前为局部内测。请使用受邀邮箱对应账号登录，或先完成受邀邮箱注册。
+    - paragraph [ref=e9]: 内测交流群：1103144436
+    - tablist "内测访问方式" [ref=e10]:
+      - tab "登录" [selected] [ref=e11] [cursor=pointer]
+      - tab "注册" [ref=e12] [cursor=pointer]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - text: 邮箱
+        - textbox "邮箱" [ref=e15]:
+          - /placeholder: invitee@example.com
+      - generic [ref=e16]:
+        - text: 密码
+        - textbox "密码" [ref=e17]:
+          - /placeholder: 请输入密码
+      - button "登录并继续" [ref=e18] [cursor=pointer]
+    - paragraph [ref=e19]

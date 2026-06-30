@@ -1,0 +1,42 @@
+:where(html[data-visual-theme="liquid-glass"]) .restart-button,
+:where(html[data-visual-theme="liquid-glass"]) .top-action-btn,
+:where(html[data-visual-theme="liquid-glass"]) .replay-button,
+:where(html[data-visual-theme="liquid-glass"]) .keep-playing-button,
+:where(html[data-visual-theme="liquid-glass"]) .retry-button,
+:where(html[data-visual-theme="liquid-glass"]) .undo-button,
+:where(html[data-visual-theme="liquid-glass"]) .mode-hub-btn,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-btn {
+  box-sizing: border-box;
+  color: var(--lg-text-on-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lg-accent) 88%, white 12%), var(--app-action-bg));
+  border: 1px solid color-mix(in srgb, var(--lg-accent) 70%, white 30%);
+  border-radius: var(--app-radius-control);
+  box-shadow: var(--lg-shadow-soft), var(--lg-inner-shadow);
+  transition: background var(--lg-transition-fast), box-shadow var(--lg-transition-fast), transform var(--lg-transition-fast);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .restart-button:hover,
+:where(html[data-visual-theme="liquid-glass"]) .top-action-btn:hover,
+:where(html[data-visual-theme="liquid-glass"]) .replay-button:hover,
+:where(html[data-visual-theme="liquid-glass"]) .keep-playing-button:hover,
+:where(html[data-visual-theme="liquid-glass"]) .retry-button:hover,
+:where(html[data-visual-theme="liquid-glass"]) .undo-button:hover,
+:where(html[data-visual-theme="liquid-glass"]) .mode-hub-btn:hover,
+:where(html[data-visual-theme="liquid-glass"]) .home-guide-btn:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--lg-accent-hover) 88%, white 12%), var(--lg-accent-hover));
+  box-shadow: var(--lg-shadow-raised);
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .top-action-btn svg,
+:where(html[data-visual-theme="liquid-glass"]) .restart-button svg {
+  stroke: currentColor;
+}
+
+:where(html[data-visual-theme="liquid-glass"]) .settings-theme-select,
+:where(html[data-visual-theme="liquid-glass"]) .custom-select-trigger,
+:where(html[data-visual-theme="liquid-glass"]) .replay-textarea {
+  color: var(--app-text);
+  background: var(--lg-surface-floating);
+  border-color: var(--lg-border);
+  box-shadow: var(--lg-inner-shadow);
+}

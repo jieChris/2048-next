@@ -3,8 +3,16 @@ export interface PlayChallengeIntroHostElementStyleLike {
   setProperty?: ((name: string, value: string, priority?: string) => void) | null | undefined;
 }
 
+export interface PlayChallengeIntroHostClassListLike {
+  add?: ((name: string) => void) | null | undefined;
+  remove?: ((name: string) => void) | null | undefined;
+  contains?: ((name: string) => boolean) | null | undefined;
+}
+
 export interface PlayChallengeIntroHostElementLike {
   style?: PlayChallengeIntroHostElementStyleLike | null | undefined;
+  className?: string | null | undefined;
+  classList?: PlayChallengeIntroHostClassListLike | null | undefined;
   textContent?: string | null | undefined;
   __modeIntroBound?: boolean | null | undefined;
   addEventListener?: ((type: string, listener: (event: unknown) => void) => void) | null | undefined;
@@ -63,17 +71,55 @@ export interface PlayChallengeIntroHostApplyResult {
   bindOverlayClick: boolean;
 }
 
-function applyDisplay(
-  target: PlayChallengeIntroHostElementLike,
-  displayValue: string,
-  useImportant: boolean
-): void {
+const HIDDEN_CLASS_NAME = "is-hidden";
+
+function hasClassName(target: PlayChallengeIntroHostElementLike, className: string): boolean {
+  if (target.classList && typeof target.classList.contains === "function") {
+    return target.classList.contains(className);
+  }
+  const current = typeof target.className === "string" ? target.className : "";
+  return (" " + current + " ").indexOf(" " + className + " ") >= 0;
+}
+
+function addClassName(target: PlayChallengeIntroHostElementLike, className: string): boolean {
+  if (target.classList && typeof target.classList.add === "function") {
+    target.classList.add(className);
+    return true;
+  }
+  if (typeof target.className !== "string") return false;
+  if (hasClassName(target, className)) return true;
+  const current = target.className.trim();
+  target.className = current ? current + " " + className : className;
+  return true;
+}
+
+function removeClassName(target: PlayChallengeIntroHostElementLike, className: string): boolean {
+  if (target.classList && typeof target.classList.remove === "function") {
+    target.classList.remove(className);
+    return true;
+  }
+  if (typeof target.className !== "string") return false;
+  if (!hasClassName(target, className)) return true;
+  target.className = target.className
+    .split(/\s+/)
+    .filter((name) => name && name !== className)
+    .join(" ");
+  return true;
+}
+
+function applyDisplay(target: PlayChallengeIntroHostElementLike, displayValue: string): void {
+  const hidden = displayValue === "none";
+  const didUpdateClass = hidden
+    ? addClassName(target, HIDDEN_CLASS_NAME)
+    : removeClassName(target, HIDDEN_CLASS_NAME);
   const style = target && target.style ? target.style : null;
-  if (!style) return;
-  if (useImportant && typeof style.setProperty === "function") {
-    style.setProperty("display", displayValue, "important");
+  if (didUpdateClass) {
+    if (style && !hidden && style.display === "none") {
+      style.display = "";
+    }
     return;
   }
+  if (!style) return;
   style.display = displayValue;
 }
 
@@ -120,8 +166,8 @@ export function resolvePlayChallengeIntroFromContext(
     modalBound: !!modal.__modeIntroBound
   });
 
-  applyDisplay(introBtn, introUiState.entryDisplay, true);
-  applyDisplay(modal, introUiState.modalDisplay, false);
+  applyDisplay(introBtn, introUiState.entryDisplay);
+  applyDisplay(modal, introUiState.modalDisplay);
   title.textContent = introUiState.titleText;
   desc.textContent = introUiState.descriptionText;
   if (leaderboard) leaderboard.textContent = introUiState.leaderboardText;
@@ -144,7 +190,7 @@ export function resolvePlayChallengeIntroFromContext(
         (event as { preventDefault: () => void }).preventDefault();
       }
       if (openActionState.shouldApplyDisplay) {
-        applyDisplay(modal, openActionState.nextModalDisplay, false);
+        applyDisplay(modal, openActionState.nextModalDisplay);
       }
     });
   }
@@ -160,7 +206,7 @@ export function resolvePlayChallengeIntroFromContext(
         (event as { preventDefault: () => void }).preventDefault();
       }
       if (closeActionState.shouldApplyDisplay) {
-        applyDisplay(modal, closeActionState.nextModalDisplay, false);
+        applyDisplay(modal, closeActionState.nextModalDisplay);
       }
     });
   }
@@ -173,7 +219,7 @@ export function resolvePlayChallengeIntroFromContext(
         eventTargetIsModal: !!(event && (event as { target?: unknown }).target === modal)
       });
       if (overlayActionState.shouldApplyDisplay) {
-        applyDisplay(modal, overlayActionState.nextModalDisplay, false);
+        applyDisplay(modal, overlayActionState.nextModalDisplay);
       }
     });
   }

@@ -1,0 +1,98 @@
+.admin-result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.admin-result-table th,
+.admin-result-table td {
+  border-bottom: 1px solid rgba(190, 174, 155, 0.5);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.admin-result-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eee3d6;
+  color: #5a4b3f;
+}
+
+.admin-result-table td {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-rescue-history-table {
+  min-width: 1280px;
+}
+
+.admin-mono-cell {
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.admin-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border: 1px solid rgba(140, 122, 103, 0.22);
+  border-radius: 999px;
+  color: #6f5f4f;
+  background: rgba(140, 122, 103, 0.08);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.admin-status-consumed,
+.admin-status-finished {
+  border-color: rgba(78, 139, 88, 0.25);
+  color: #3f7a49;
+  background: rgba(78, 139, 88, 0.1);
+}
+
+.admin-status-started,
+.admin-status-in_progress,
+.admin-status-accepted,
+.admin-status-accepted_not_applied {
+  border-color: rgba(55, 111, 176, 0.25);
+  color: #315f94;
+  background: rgba(55, 111, 176, 0.1);
+}
+
+.admin-status-pending,
+.admin-status-not_started {
+  border-color: rgba(178, 125, 46, 0.25);
+  color: #8c621f;
+  background: rgba(178, 125, 46, 0.1);
+}
+
+.admin-status-rejected,
+.admin-status-expired,
+.admin-status-abandoned {
+  border-color: rgba(194, 71, 59, 0.28);
+  color: #a83b32;
+  background: rgba(194, 71, 59, 0.09);
+}
+
+.admin-status-root {
+  border-color: rgba(178, 125, 46, 0.32);
+  color: #8c621f;
+  background: rgba(178, 125, 46, 0.12);
+}
+
+.admin-empty-state {
+  padding: 12px;
+  color: #8c7a67;
+  font-size: 13px;
+}
+
+.admin-panel-actions {
+  margin: 0;
+}
+

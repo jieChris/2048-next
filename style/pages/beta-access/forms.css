@@ -1,0 +1,153 @@
+.beta-entry-panel h1 {
+  margin: 0 0 10px;
+  font-size: clamp(30px, 6vw, 46px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.beta-entry-panel h2 {
+  margin: 22px 0 10px;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.beta-entry-panel h3 {
+  margin: 18px 0 8px;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.beta-copy,
+.beta-entry-panel p {
+  color: var(--beta-muted);
+  line-height: 1.72;
+}
+
+.beta-contact-copy {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 4px 0 0;
+  padding: 0 11px;
+  border: 1px solid rgba(209, 141, 36, 0.24);
+  border-radius: 7px;
+  color: #8a5d16;
+  background: rgba(209, 141, 36, 0.1);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.beta-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 24px 0 18px;
+  padding: 5px;
+  border-radius: 8px;
+  background: rgba(187, 173, 160, 0.18);
+}
+
+.beta-tab {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--beta-muted);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.beta-tab.is-active {
+  color: #fff;
+  background: var(--beta-accent-strong);
+}
+
+.beta-form-section {
+  display: grid;
+  gap: 14px;
+}
+
+.beta-form-section[hidden],
+.beta-state-section[hidden] {
+  display: none;
+}
+
+.beta-form-section label,
+.beta-code-row label {
+  display: grid;
+  gap: 7px;
+  color: var(--beta-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.beta-input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(75, 68, 55, 0.22);
+  border-radius: 7px;
+  padding: 0 13px;
+  color: var(--beta-ink);
+  background: #fffdf8;
+  font: inherit;
+  outline: none;
+}
+
+.beta-input:focus {
+  border-color: var(--beta-accent);
+  box-shadow: 0 0 0 3px rgba(61, 127, 114, 0.16);
+}
+
+.beta-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  align-items: end;
+  gap: 10px;
+}
+
+.beta-primary-button,
+.beta-secondary-button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.beta-primary-button {
+  color: #fff;
+  background: var(--beta-accent-strong);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.beta-secondary-button {
+  color: var(--beta-ink);
+  background: rgba(187, 173, 160, 0.22);
+}
+
+.beta-primary-button:disabled,
+.beta-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.beta-tip {
+  min-height: 26px;
+  margin: 15px 0 0;
+  font-weight: 800;
+}
+
+.beta-tip[data-state="ok"] {
+  color: var(--beta-accent-strong);
+}
+
+.beta-tip[data-state="err"] {
+  color: var(--beta-danger);
+}
+
+.beta-tip[data-state="busy"] {
+  color: var(--beta-warn);
+}

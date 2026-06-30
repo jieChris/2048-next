@@ -1,0 +1,72 @@
+    .relay-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .relay-grid--advanced {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 10px;
+    }
+    .relay-field { display: flex; flex-direction: column; gap: 6px; }
+    .relay-field label { font-size: 13px; color: #7a6d5e; font-weight: bold; }
+    .relay-input,
+    .relay-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #d6cab9;
+      border-radius: 6px;
+      background: #fffdf7;
+      color: #5e554b;
+      padding: 8px 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .relay-input:focus,
+    .relay-textarea:focus {
+      border-color: #8f7a66;
+      box-shadow: 0 0 0 2px rgba(143, 122, 102, 0.18);
+    }
+    .relay-textarea { resize: vertical; min-height: 110px; }
+    .relay-textarea--readonly {
+      min-height: 140px;
+      resize: vertical;
+      font-family: Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      background: #fffaf0;
+    }
+    .relay-action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .relay-note {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 20;
+      margin: 0;
+      min-height: 0;
+      max-width: min(360px, calc(100% - 24px));
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d7cbb9;
+      background: #fff7ea;
+      color: #7f6a56;
+      font-size: 13px;
+      line-height: 1.4;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      display: none;
+    }
+    .relay-note:not(:empty) { display: block; }
+    .relay-note.is-error {
+      color: #fff8f7;
+      background: #bf3b2f;
+      border-color: #a8342a;
+    }
+    .relay-advanced-toggle-row { margin: 2px 0 10px; }
+    .relay-advanced-panel {
+      border: 1px dashed #d8ccb9;
+      border-radius: 8px;
+      background: #fffdf7;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .relay-advanced-panel[hidden] { display: none !important; }

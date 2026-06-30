@@ -68,6 +68,12 @@
     }
   }
 
+  function syncVisualThemeAttributes() {
+    documentElement.setAttribute("data-visual-theme", "classic");
+    documentElement.setAttribute("data-color-scheme", "system");
+    documentElement.setAttribute("data-resolved-color-scheme", readStorageItem(STORAGE_KEY) === "1" ? "dark" : "light");
+  }
+
   function resolveInitialModeKey() {
     var search = "";
     var pathname = "";
@@ -104,6 +110,8 @@
     } catch (_errTimerModule) {}
     documentElement.removeAttribute("data-initial-timer-leaderboard");
   }
+
+  syncVisualThemeAttributes();
 
   try {
     if (readStorageItem(STORAGE_KEY) === "1") {

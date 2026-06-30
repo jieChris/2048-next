@@ -11,6 +11,7 @@ interface ElementLike {
   href?: string;
   innerHTML?: string;
   textContent?: string | null;
+  hidden?: boolean;
   parentNode?: unknown;
   nextSibling?: unknown;
   style?: { display?: string } | null;
@@ -254,11 +255,18 @@ function isPrimaryTopButton(node: ElementLike | null, doc: DocumentLike | null):
   return false;
 }
 
+function isElementHidden(node: ElementLike | null): boolean {
+  if (!node) return false;
+  if (node.hidden === true) return true;
+  if (hasClass(node, "is-hidden")) return true;
+  return node.style?.display === "none";
+}
+
 function syncMobileActionButtonClasses(host: ElementLike | null, doc: DocumentLike | null): void {
   const buttons = collectHostButtons(host);
   for (let i = 0; i < buttons.length; i += 1) {
     const button = buttons[i];
-    if (button.id === "top-mode-intro-btn" && button.style?.display === "none") {
+    if (button.id === "top-mode-intro-btn" && isElementHidden(button)) {
       removeClass(button, "mobile-actions-primary");
       removeClass(button, "mobile-actions-collapse-target");
       continue;
@@ -409,4 +417,3 @@ export function ensureMobileHintToggleButtonDom(
   syncMobileActionButtonClasses(host, doc);
   return btn;
 }
-

@@ -1,0 +1,125 @@
+html[data-night-background="1"] body[data-page="palette-hub"] {
+  --pp-bg: #0d1522;
+  --pp-panel: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+  --pp-line: rgba(181, 198, 221, 0.16);
+  --pp-ink: #ece2d3;
+  --pp-muted: #a6b3c6;
+  --pp-btn: #436282;
+  --pp-btn-hover: #537598;
+  --pp-soft: rgba(69, 98, 130, 0.82);
+  color: var(--pp-ink);
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-kicker,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-subtitle,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-item-meta,
+html[data-night-background="1"] body[data-page="palette-hub"] .color-target-label,
+html[data-night-background="1"] body[data-page="palette-hub"] .editor-palette-head,
+html[data-night-background="1"] body[data-page="palette-hub"] .theme-preview-grid-title,
+html[data-night-background="1"] body[data-page="palette-hub"] .picker-rgb-row span,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-note {
+  color: #a6b3c6;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-title,
+html[data-night-background="1"] body[data-page="palette-hub"] .panel-head h2,
+html[data-night-background="1"] body[data-page="palette-hub"] .theme-selection-col > label,
+html[data-night-background="1"] body[data-page="palette-hub"] .theme-preview-col > label,
+html[data-night-background="1"] body[data-page="palette-hub"] .board-selection-col > label,
+html[data-night-background="1"] body[data-page="palette-hub"] .color-panel-head,
+html[data-night-background="1"] body[data-page="palette-hub"] .swatch-tile-value {
+  color: #ece2d3;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .card-surface,
+html[data-night-background="1"] body[data-page="palette-hub"] .theme-selection-col,
+html[data-night-background="1"] body[data-page="palette-hub"] .theme-preview-col,
+html[data-night-background="1"] body[data-page="palette-hub"] .board-selection-col,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-item,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-toolbar,
+html[data-night-background="1"] body[data-page="palette-hub"] .color-panel,
+html[data-night-background="1"] body[data-page="palette-hub"] .preview-panel,
+html[data-night-background="1"] body[data-page="palette-hub"] .editor-targets,
+html[data-night-background="1"] body[data-page="palette-hub"] .editor-palette,
+html[data-night-background="1"] body[data-page="palette-hub"] .editor-palette-tile,
+html[data-night-background="1"] body[data-page="palette-hub"] .picker-sv,
+html[data-night-background="1"] body[data-page="palette-hub"] .picker-rgb-row label,
+html[data-night-background="1"] body[data-page="palette-hub"] .preview-board-wrap {
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+  border-color: rgba(181, 198, 221, 0.16);
+  box-shadow:
+    0 18px 36px rgba(1, 5, 14, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .panel-pill,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-chip {
+  background: rgba(69, 98, 130, 0.82);
+  color: #f6efe3;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-item.is-active,
+html[data-night-background="1"] body[data-page="palette-hub"] .color-target.is-active-target,
+html[data-night-background="1"] body[data-page="palette-hub"] .swatch-chip.is-active-swatch {
+  border-color: rgba(213, 168, 106, 0.68);
+  box-shadow:
+    0 0 0 1px rgba(237, 195, 123, 0.22),
+    0 12px 24px rgba(2, 6, 16, 0.28);
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .custom-select-trigger,
+html[data-night-background="1"] body[data-page="palette-hub"] .custom-select-options,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-name-input,
+html[data-night-background="1"] body[data-page="palette-hub"] .picker-rgb-row input,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-dimension-tabs {
+  background: rgba(16, 24, 38, 0.92);
+  border-color: rgba(181, 198, 221, 0.16);
+  color: #ece2d3;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .custom-arrow {
+  border-right-color: #c8d6e8;
+  border-bottom-color: #c8d6e8;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .custom-option + .custom-option,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-dimension-tab + .palette-dimension-tab {
+  border-color: rgba(181, 198, 221, 0.16);
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-name-input::placeholder,
+html[data-night-background="1"] body[data-page="palette-hub"] .picker-rgb-row input::placeholder {
+  color: #8390a2;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-board-btn,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-dimension-tab,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-nav-btn {
+  background: linear-gradient(180deg, rgba(69, 98, 130, 0.98) 0%, rgba(47, 68, 92, 0.98) 100%);
+  color: #f6efe3;
+  border-color: rgba(181, 198, 221, 0.16);
+  box-shadow:
+    0 10px 22px rgba(2, 6, 16, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-board-btn.is-active,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-dimension-tab.is-active {
+  background: linear-gradient(180deg, rgba(201, 149, 91, 0.96) 0%, rgba(163, 108, 51, 0.96) 100%);
+  color: #fff4e1;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-board-btn:hover,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-dimension-tab:hover,
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-nav-btn:hover {
+  background: linear-gradient(180deg, rgba(84, 117, 152, 1) 0%, rgba(56, 81, 109, 1) 100%);
+  color: #fff4e1;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-board-preview {
+  background: linear-gradient(180deg, rgba(27, 39, 61, 0.98) 0%, rgba(15, 24, 39, 0.98) 100%);
+  box-shadow:
+    0 16px 34px rgba(2, 6, 16, 0.28),
+    inset 0 0 0 1px rgba(235, 244, 255, 0.05);
+}
+

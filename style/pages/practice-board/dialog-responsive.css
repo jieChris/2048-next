@@ -1,0 +1,17 @@
+      @media (max-width: 640px) {
+          .practice-mode-panel,
+          .practice-board-code-panel {
+              padding-top: 70px;
+          }
+          .practice-mode-badge {
+              top: -30px;
+              max-width: calc(100% - 4px);
+              padding: 5px 10px;
+              font-size: 12px;
+          }
+          .practice-mode-header,
+          .practice-board-code-row {
+              flex-direction: column;
+              align-items: stretch;
+          }
+      }

@@ -27,10 +27,62 @@ function resolveGetElementById(input: {
   };
 }
 
-function setDisplayStyle(target: unknown, display: string): void {
+const HIDDEN_CLASS_NAME = "is-hidden";
+
+function hasClassName(target: unknown, className: string): boolean {
   const record = toRecord(target);
+  const classList = toRecord(record.classList);
+  const contains = asFunction<(value: string) => boolean>(classList.contains);
+  if (contains) return !!contains.call(classList, className);
+  const current = typeof record.className === "string" ? record.className : "";
+  return (" " + current + " ").indexOf(" " + className + " ") >= 0;
+}
+
+function addClassName(target: unknown, className: string): boolean {
+  const record = toRecord(target);
+  const classList = toRecord(record.classList);
+  const add = asFunction<(value: string) => unknown>(classList.add);
+  if (add) {
+    add.call(classList, className);
+    return true;
+  }
+  if (typeof record.className !== "string") return false;
+  if (hasClassName(record, className)) return true;
+  const current = record.className.trim();
+  record.className = current ? current + " " + className : className;
+  return true;
+}
+
+function removeClassName(target: unknown, className: string): boolean {
+  const record = toRecord(target);
+  const classList = toRecord(record.classList);
+  const remove = asFunction<(value: string) => unknown>(classList.remove);
+  if (remove) {
+    remove.call(classList, className);
+    return true;
+  }
+  if (typeof record.className !== "string") return false;
+  if (!hasClassName(record, className)) return true;
+  record.className = record.className
+    .split(/\s+/)
+    .filter((name) => name && name !== className)
+    .join(" ");
+  return true;
+}
+
+function setHiddenState(target: unknown, hidden: boolean, fallbackVisibleDisplay: string): void {
+  const record = toRecord(target);
+  const didUpdateClass = hidden
+    ? addClassName(record, HIDDEN_CLASS_NAME)
+    : removeClassName(record, HIDDEN_CLASS_NAME);
   const style = toRecord(record.style);
-  style.display = display;
+  if (didUpdateClass) {
+    if (!hidden && style.display === "none") {
+      style.display = "";
+    }
+    return;
+  }
+  style.display = hidden ? "none" : fallbackVisibleDisplay;
 }
 
 function bindModalOverlayClose(modalNode: unknown, closeCallback: (() => unknown) | null): void {
@@ -72,7 +124,7 @@ export function applyReplayModalOpen(input: {
   const openPageBtn = getElementById("replay-open-page-btn");
   const closeBtn = getElementById("replay-close-btn");
 
-  setDisplayStyle(modal, "flex");
+  setHiddenState(modal, false, "flex");
   if (titleEl) {
     toRecord(titleEl).textContent = source.title == null ? "" : String(source.title);
   }
@@ -85,7 +137,7 @@ export function applyReplayModalOpen(input: {
   if (actionBtn) {
     const actionBtnRecord = toRecord(actionBtn);
     if (actionName) {
-      setDisplayStyle(actionBtnRecord, "inline-block");
+      setHiddenState(actionBtnRecord, false, "inline-block");
       actionBtnRecord.textContent = actionName;
       actionBtnRecord.onclick = function () {
         if (!actionCallback) return undefined;
@@ -93,20 +145,20 @@ export function applyReplayModalOpen(input: {
         return actionCallback(value);
       };
     } else {
-      setDisplayStyle(actionBtnRecord, "none");
+      setHiddenState(actionBtnRecord, true, "inline-block");
       actionBtnRecord.onclick = null;
     }
   }
 
   if (downloadBtn) {
     const downloadBtnRecord = toRecord(downloadBtn);
-    setDisplayStyle(downloadBtnRecord, "none");
+    setHiddenState(downloadBtnRecord, true, "inline-block");
     downloadBtnRecord.onclick = null;
   }
 
   if (openPageBtn) {
     const openPageBtnRecord = toRecord(openPageBtn);
-    setDisplayStyle(openPageBtnRecord, "none");
+    setHiddenState(openPageBtnRecord, true, "inline-block");
     openPageBtnRecord.onclick = null;
   }
 
@@ -136,7 +188,7 @@ export function applyReplayModalClose(input: {
   }
   const modal = toRecord(modalNode);
 
-  setDisplayStyle(modal, "none");
+  setHiddenState(modal, true, "flex");
   return {
     closed: true
   };
@@ -156,7 +208,7 @@ export function applySettingsModalOpen(input: {
   }
   const modal = toRecord(modalNode);
 
-  setDisplayStyle(modal, "flex");
+  setHiddenState(modal, false, "flex");
   return {
     opened: true
   };
@@ -176,7 +228,7 @@ export function applySettingsModalClose(input: {
   }
   const modal = toRecord(modalNode);
 
-  setDisplayStyle(modal, "none");
+  setHiddenState(modal, true, "flex");
   return {
     closed: true
   };

@@ -57,6 +57,13 @@ describe("runtime-manifest: getPageManifest", () => {
     expect(getPageManifest("user-profile")?.htmlFile).toBe("user.html");
   });
 
+  it("keeps the play page behind one bundled legacy runtime capability", () => {
+    expect(getPageManifest("play")?.capabilities).toEqual(["play"]);
+    const scripts = resolveHomeFamilyScriptsByCapabilities(["play"]);
+    expect(scripts).toHaveLength(1);
+    expect(scripts[0]).toMatch(/^\.\/js\/play_standard_bundle\.[a-f0-9]{12}\.js$/);
+  });
+
   it("returns undefined for unknown page", () => {
     expect(getPageManifest("nonexistent")).toBeUndefined();
   });

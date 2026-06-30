@@ -215,6 +215,59 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page).toHaveTitle("用户主页-Alice");
   });
 
+  test("root admin profile id 0 loads as a valid user without the global account badge", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-root");
+      window.localStorage.setItem("2048_auth_userId_v1", "0");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Helloman");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/0/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: [] })
+        });
+        return;
+      }
+      if (url.includes("/user/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 0, nickname: "Helloman", created_at: "2026-06-30 20:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/0")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 0, nickname: "Helloman", created_at: "2026-06-30 20:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    const response = await page.goto("/user.html?id=0&nickname=Helloman", { waitUntil: "domcontentloaded" });
+    expect(response, "User response should exist").not.toBeNull();
+    expect(response?.ok(), "User response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("#user-value-name")).toHaveText("Helloman");
+    await expect(page.locator("#user-record-tip")).not.toHaveText("无效的用户 ID");
+    await expect(page.locator("#home-user-display")).toHaveCount(0);
+    await page.waitForFunction(() => document.title === "用户主页");
+    await expect(page).toHaveTitle("用户主页");
+  });
+
   test("other user profile uses 上传时间 label and yyyy-mm-dd hh:mm:ss format", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-other-date");

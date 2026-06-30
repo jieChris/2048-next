@@ -1,0 +1,80 @@
+    @media (max-width: 900px) {
+      .mode-select-page {
+        width: calc(100% - 20px);
+        padding: 16px 12px 18px;
+      }
+
+      .mode-select-top {
+        grid-template-columns: 1fr;
+      }
+
+      .mode-brand-logo {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .mode-frequent-title {
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+        min-height: 58px;
+        letter-spacing: 0.6px;
+        justify-content: center;
+        padding: 0 14px;
+      }
+
+      .mode-tab-bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .mode-tab-button {
+        min-height: 52px;
+        border-bottom: 1px solid #d1c6b7;
+      }
+
+      .mode-tab-button:nth-child(3n) {
+        border-right: 0;
+      }
+
+      .mode-tab-panels {
+        min-height: 360px;
+        padding: 16px;
+      }
+
+      .mode-hub-actions--entertainment {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .mode-hub-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .mode-priority-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mode-hub-actions--entertainment {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .mode-brand-title {
+        font-size: 38px;
+      }
+
+      .mode-tab-button {
+        font-size: 16px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .mode-hub-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    html[data-night-background="1"] .mode-tab-button {
+      border-bottom-color: var(--mode-line);
+    }

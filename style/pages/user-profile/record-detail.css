@@ -1,0 +1,106 @@
+.user-record-detail {
+  display: none;
+  padding: 0 10px 11px;
+}
+
+.user-record-item[data-open="1"] .user-record-detail {
+  display: block;
+}
+
+.user-record-detail-card {
+  border: 1px solid #dbcab7;
+  border-radius: 9px;
+  background: #fff;
+  padding: 10px;
+}
+
+.user-record-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #7b6b5b;
+}
+
+.user-record-detail-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-replay-btn,
+.user-replay-export-btn,
+.user-record-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 32px;
+  height: auto;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.user-replay-btn,
+.user-replay-export-btn {
+  min-width: 78px;
+}
+
+.user-danger-btn {
+  background: #b4665c;
+}
+
+.user-danger-btn:hover,
+.user-danger-btn:focus-visible {
+  background: #a5564d;
+}
+
+.user-mini-board-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-x: auto;
+}
+
+.user-mini-game.game-container {
+  float: none;
+  margin: 0;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.user-mini-game .tile,
+.user-mini-game .tile .tile-inner {
+  transition: none !important;
+  animation: none !important;
+}
+
+.user-record-detail-error {
+  color: #a44f45;
+  font-size: 12px;
+}
+
+.user-tip {
+  margin: 10px 0 0;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.user-tip.ok {
+  color: var(--up-good);
+}
+
+.user-tip.err {
+  color: var(--up-bad);
+}
