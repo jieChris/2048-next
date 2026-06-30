@@ -355,7 +355,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const node = document.getElementById("top-mode-intro-btn");
         if (!node) return null;
         const htmlNode = node as HTMLElement;
-        return htmlNode.style.display || "";
+        return window.getComputedStyle(htmlNode).display || "";
       })()
     }));
 

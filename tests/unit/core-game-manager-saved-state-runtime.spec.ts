@@ -1836,6 +1836,51 @@ describe("core game manager saved state runtime", () => {
     expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
   });
 
+  it("auto-resumes timer on restore after a 2048 win when the user is continuing", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const startTimer = vi.fn();
+    const manager = {
+      accumulatedTime: 4321,
+      over: false,
+      won: true,
+      keepPlaying: true,
+      timerStatus: 0,
+      timerFrozen: false,
+      timerModuleView: "timer",
+      elements: {
+        timer: {
+          textContent: ""
+        }
+      },
+      resolveProvidedCappedModeState() {
+        return {
+          isCappedMode: false,
+          cappedTargetValue: null,
+          isProgressiveCapped64Mode: false
+        };
+      },
+      pretty(value: number) {
+        return String(value);
+      },
+      callWindowMethod() {},
+      startTimer
+    };
+
+    runtime.applySavedTimerPostRestoreState(
+      manager,
+      {
+        timer_module_view: "timer",
+        timer_status: 1,
+        timer_frozen: false
+      },
+      { isCappedMode: false }
+    );
+
+    expect(manager.timerFrozen).toBe(false);
+    expect(startTimer).toHaveBeenCalledTimes(1);
+    expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
+  });
+
   it("restores session replay v1 and preserves its idle timer after refresh", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const savedLastEventAt = 1234;

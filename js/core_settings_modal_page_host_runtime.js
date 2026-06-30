@@ -15,6 +15,24 @@
     return typeof value === "function" ? value : null;
   }
 
+  function syncExternalSettingsControls(windowLike) {
+    var windowRecord = toRecord(windowLike);
+    var bgmRuntime = toRecord(windowRecord.CoreBgmRuntime);
+    var nightModeRuntime = toRecord(windowRecord.CoreNightModeRuntime);
+    var syncCount = 0;
+    var syncBgmSettingsUI = asFunction(bgmRuntime.syncBgmSettingsUI);
+    if (syncBgmSettingsUI) {
+      syncBgmSettingsUI();
+      syncCount += 1;
+    }
+    var syncNightModeSettingsUI = asFunction(nightModeRuntime.syncNightModeSettingsUI);
+    if (syncNightModeSettingsUI) {
+      syncNightModeSettingsUI();
+      syncCount += 1;
+    }
+    return syncCount;
+  }
+
   var WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
   var LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
   var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
@@ -128,6 +146,33 @@
     return enabled
       ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
       : "合成 2048 时不弹出胜利提示，将自动继续游戏。";
+  }
+
+  function applyClassicVisualThemeRootState(input) {
+    var source = toRecord(input);
+    var state = {
+      visualTheme: "classic",
+      colorScheme: "system",
+      resolvedColorScheme: "light"
+    };
+    var documentLike = source.documentLike || null;
+    var root = toRecord(documentLike).documentElement;
+    var setAttribute = asFunction(toRecord(root).setAttribute);
+    if (!root || !setAttribute) {
+      return {
+        hasRoot: false,
+        didApply: false,
+        state: state
+      };
+    }
+    setAttribute.call(root, "data-visual-theme", state.visualTheme);
+    setAttribute.call(root, "data-color-scheme", state.colorScheme);
+    setAttribute.call(root, "data-resolved-color-scheme", state.resolvedColorScheme);
+    return {
+      hasRoot: true,
+      didApply: true,
+      state: state
+    };
   }
 
   function resolveWinPromptNoteText(enabled) {
@@ -249,7 +294,7 @@
           descId: "pku2048-inline-stats-desc",
           desc: isEn ? "Show inline on page." : "直接显示在页面中",
           sliderInnerHtml:
-            '<span class="settings-inline-desc-sr" style="display:none;">' +
+            '<span class="settings-inline-desc-sr is-hidden">' +
             (isEn ? "Show inline on page." : "直接显示在页面中") +
             "</span>"
         })
@@ -421,6 +466,18 @@
       });
     }
 
+    function initVisualThemeSettingsUI() {
+      applyClassicVisualThemeRootState({
+        documentLike: source.documentLike
+      });
+      return {
+        hasControls: false,
+        didBindVisualTheme: false,
+        didBindColorScheme: false,
+        didSync: true
+      };
+    }
+
     function removeLegacyUndoSettingsUI() {
       if (!applyLegacyUndoSettingsCleanup) return null;
       return applyLegacyUndoSettingsCleanup({
@@ -497,6 +554,7 @@
 
     return {
       initThemeSettingsUI: initThemeSettingsUI,
+      initVisualThemeSettingsUI: initVisualThemeSettingsUI,
       removeLegacyUndoSettingsUI: removeLegacyUndoSettingsUI,
       initTimerModuleSettingsUI: initTimerModuleSettingsUI,
       initWinPromptSettingsUI: initWinPromptSettingsUI
@@ -517,6 +575,7 @@
           windowLike: source.windowLike,
           removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
           initThemeSettingsUI: source.initThemeSettingsUI,
+          initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
           initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
           initWinPromptSettingsUI: source.initWinPromptSettingsUI,
           initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
@@ -529,6 +588,7 @@
         windowLike: source.windowLike,
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
+        initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
         initWinPromptSettingsUI: source.initWinPromptSettingsUI,
         initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
@@ -572,12 +632,14 @@
       documentLike: source.documentLike,
       windowLike: source.windowLike
     });
+    syncExternalSettingsControls(source.windowLike);
 
     applyOpen({
       replayModalRuntime: source.replayModalRuntime,
       documentLike: source.documentLike,
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
+      initVisualThemeSettingsUI: source.initVisualThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
       initWinPromptSettingsUI: source.initWinPromptSettingsUI,
       initHomeGuideSettingsUI: source.initHomeGuideSettingsUI

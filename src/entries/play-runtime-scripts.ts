@@ -90,6 +90,9 @@ import adminRescueClientRuntimeUrl from "../../js/admin_rescue_client_runtime.js
 import onlineLeaderboardRuntimeUrl from "../../js/online_leaderboard_runtime.js?url";
 import coreI18nRuntimeUrl from "../../js/core_i18n_runtime.js?url";
 
+export const PLAY_STANDARD_BUNDLE_URL = __PLAY_STANDARD_BUNDLE_URL__;
+export const playBundledScripts = [PLAY_STANDARD_BUNDLE_URL] as const;
+
 export const playLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,

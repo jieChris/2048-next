@@ -1,0 +1,138 @@
+.stone-control-card {
+  margin-top: 16px;
+  border-radius: 24px;
+  padding: 18px;
+}
+
+.stone-control-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.24fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.stone-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stone-control-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(118, 97, 74, 0.12);
+}
+
+.stone-toggle-row {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.stone-action-row {
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.stone-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.stone-field.small,
+.stone-field.medium,
+.stone-field.grow {
+  width: 100%;
+}
+
+.stone-field label,
+.stone-check {
+  color: var(--stone-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stone-field textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.stone-field-help {
+  margin: 0;
+  color: var(--stone-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.stone-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.stone-check input {
+  accent-color: var(--stone-accent);
+}
+
+.stone-status {
+  min-height: 22px;
+  margin: 14px 4px;
+  color: var(--stone-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.stone-status[data-state="ok"] {
+  color: var(--stone-success);
+}
+
+.stone-status[data-state="err"] {
+  color: var(--stone-danger);
+}
+
+.stone-status[data-state="busy"] {
+  color: var(--stone-accent-deep);
+}
+
+.stone-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stone-stat-card {
+  border-radius: 22px;
+  padding: 16px 18px;
+}
+
+.stone-stat-card span {
+  display: block;
+  color: var(--stone-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stone-stat-value {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  word-break: break-word;
+}
+
+.stone-stat-value.is-latest {
+  font-size: clamp(18px, 2.4vw, 24px);
+  line-height: 1.25;
+}
+

@@ -17,7 +17,7 @@
 <body data-page="history">
   <div class="container portal-container">
     <div class="portal-header">
-      <h1 class="title"><a href="2048.html" style="text-decoration:none;color:inherit;"><img class="site-logo" style="width:234px;max-width:none;display:block" width="234" height="101" decoding="async" src="meta/logo-tall-small.png?v=20260607-logo-small" alt="2048 标志"></a> 本地历史</h1>
+      <h1 class="title"><a href="2048.html"><img class="site-logo" width="234" height="104" decoding="async" src="meta/logo-tall-small.png?v=20260630-logo-height" alt="2048 标志"></a> 本地历史</h1>
       <div class="portal-nav">
         <a href="2048.html">首页</a>
         <a href="modes.html">模式</a>
@@ -50,19 +50,19 @@
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
-      <div class="portal-actions-inline" style="margin-top:8px;">
+      <div class="portal-actions-inline history-bulk-actions">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
         <button class="replay-button" id="history-import-btn">导入合并</button>
         <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
-        <input id="history-import-file" type="file" accept="application/json,.json" style="display:none;">
+        <input id="history-import-file" class="history-import-file-input" type="file" accept="application/json,.json">
       </div>
 
       <div id="history-status" class="portal-status"></div>
       <div id="history-summary" class="portal-muted"></div>
     </div>
 
-    <div class="portal-actions-inline" style="justify-content:flex-end; margin-bottom:10px;">
+    <div class="portal-actions-inline history-pagination-actions">
       <button class="replay-button" id="history-prev-page">上一页</button>
       <button class="replay-button" id="history-next-page">下一页</button>
     </div>
@@ -73,6 +73,3 @@
   <script type="module" src="./src/entries/history.ts"></script>
 </body>
 </html>
-
-
-

@@ -1,0 +1,220 @@
+.palette-theme-card {
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.palette-theme-card .panel-head h2 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.palette-theme-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+
+.theme-selection-col,
+.theme-preview-col,
+.board-selection-col {
+  border: 1px solid #cebfae;
+  border-radius: 14px;
+  background: #f9f7f1;
+  padding: 10px;
+}
+
+.theme-selection-col {
+  box-sizing: border-box;
+}
+
+.palette-native-theme-select {
+  display: none;
+}
+
+.theme-preview-col {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.theme-selection-col > label,
+.theme-preview-col > label,
+.board-selection-col > label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #695d51;
+}
+
+.custom-select-wrapper,
+.custom-select,
+.custom-select-trigger {
+  width: 100%;
+}
+
+.custom-select {
+  position: relative;
+}
+
+.custom-select-trigger {
+  min-height: 44px;
+  border: 1px solid #cfbead;
+  border-radius: 10px;
+  background: #fffdf8;
+  color: #5d4f42;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-select-trigger span {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.custom-select-trigger:hover {
+  border-color: #b48f74;
+}
+
+.custom-select.open .custom-select-trigger {
+  border-color: #a9785d;
+  box-shadow: 0 0 0 2px rgba(169, 120, 93, 0.18);
+}
+
+.custom-select-options {
+  margin-top: 6px;
+  border: 1px solid #cebfae;
+  border-radius: 10px;
+  background: #fffdf8;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 9;
+  max-height: 240px;
+  overflow: auto;
+  display: none;
+}
+
+.custom-select.open .custom-select-options {
+  display: block;
+}
+
+.custom-option {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.custom-option + .custom-option {
+  border-top: 1px solid #eee4d8;
+}
+
+.custom-option:hover,
+.custom-option.selected {
+  background: #efe4d8;
+}
+
+.custom-arrow {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-right: 2px solid #8d7f72;
+  border-bottom: 2px solid #8d7f72;
+  transform: rotate(45deg);
+  margin-left: 10px;
+  pointer-events: none;
+}
+
+.theme-selection-col .board-selection-col {
+  margin-top: 8px;
+  border-color: #d6c8b7;
+  background: #fcfaf6;
+  padding: 8px;
+}
+
+.theme-selection-col .board-selection-col > label {
+  margin-bottom: 6px;
+}
+
+#theme-preview-grid.theme-preview-dual-wrap {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  align-self: center;
+}
+
+#theme-preview-grid.theme-preview-dual-wrap .theme-preview-grid-block {
+  display: none;
+}
+
+#theme-preview-grid.theme-preview-dual-wrap[data-board="pow2"] .theme-preview-grid-block:first-child {
+  display: flex;
+}
+
+#theme-preview-grid.theme-preview-dual-wrap[data-board="fibonacci"] .theme-preview-grid-block[data-ruleset="fibonacci"] {
+  display: flex;
+}
+
+.theme-preview-grid-block {
+  width: 168px;
+  height: 163px;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+}
+
+.theme-preview-grid-title {
+  display: none;
+}
+
+.theme-preview-grid {
+  flex: 1;
+  border: 1px solid #cebfae;
+  border-radius: 10px;
+  background: var(--app-surface-board);
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.theme-preview-grid .theme-preview-tile {
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--app-radius-tile) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.palette-board-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.palette-board-btn {
+  border: 1px solid #b89e88;
+  border-radius: 10px;
+  min-height: 44px;
+  background: #f4ebe1;
+  color: #5f4e3f;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.palette-board-btn.is-active {
+  background: #ad7e62;
+  color: #fff;
+  border-color: #8f6650;
+}

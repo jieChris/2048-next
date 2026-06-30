@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BETA_ACCESS_EXEMPT_PAGE_IDS,
   BETA_ACCESS_SMOKE_BYPASS_KEY,
+  normalizeAccessStatus,
   runBetaAccessGate,
   shouldRunBetaAccessGate
 } from "../../src/bootstrap/access-gate";
@@ -44,6 +45,24 @@ describe("bootstrap: access-gate", () => {
     expect(shouldRunBetaAccessGate("beta-access")).toBe(false);
     expect(shouldRunBetaAccessGate("admin")).toBe(false);
     expect(shouldRunBetaAccessGate("play")).toBe(true);
+  });
+
+  it("normalizes owner user id 0 without treating it as missing", () => {
+    expect(
+      normalizeAccessStatus({
+        success: true,
+        data: {
+          authenticated: true,
+          userId: 0,
+          email: "owner@example.com",
+          role: "owner",
+          superAdmin: true,
+          allowlisted: true,
+          noticeAccepted: true,
+          canAccessProduct: true
+        }
+      }).userId
+    ).toBe(0);
   });
 
   it("redirects to the standalone beta login page when no auth token exists", async () => {
@@ -135,6 +154,115 @@ describe("bootstrap: access-gate", () => {
     expect(result.allowed).toBe(true);
     expect(windowLike.location.replace).not.toHaveBeenCalled();
     expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+  });
+
+  it("refreshes stale local identity from access status for owner user id 0", async () => {
+    const dom = createDom();
+    const windowLike = createWindowLike(dom);
+    dom.window.localStorage.setItem("2048_auth_token_v1", "token");
+    dom.window.localStorage.setItem("2048_auth_userId_v1", "19");
+    dom.window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    const fetchLike = vi.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          authenticated: true,
+          userId: 0,
+          nickname: "Owner",
+          email: "owner@example.com",
+          role: "owner",
+          superAdmin: true,
+          allowlisted: true,
+          noticeAccepted: true,
+          noticeVersion: "beta_notice_2026_06_26_v1",
+          canAccessProduct: true
+        }
+      })
+    }));
+
+    const result = await runBetaAccessGate("play", {
+      documentLike: dom.window.document,
+      windowLike,
+      storageLike: dom.window.localStorage,
+      fetchLike: fetchLike as never
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(dom.window.localStorage.getItem("2048_auth_userId_v1")).toBe("0");
+    expect(dom.window.localStorage.getItem("2048_auth_nickname_v1")).toBe("Owner");
+  });
+
+  it("does not replace a stored nickname with email when access status omits nickname", async () => {
+    const dom = createDom();
+    const windowLike = createWindowLike(dom);
+    dom.window.localStorage.setItem("2048_auth_token_v1", "token");
+    dom.window.localStorage.setItem("2048_auth_userId_v1", "0");
+    dom.window.localStorage.setItem("2048_auth_nickname_v1", "Helloman");
+    const fetchLike = vi.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          authenticated: true,
+          userId: 0,
+          email: "owner@example.com",
+          role: "owner",
+          superAdmin: true,
+          allowlisted: true,
+          noticeAccepted: true,
+          noticeVersion: "beta_notice_2026_06_26_v1",
+          canAccessProduct: true
+        }
+      })
+    }));
+
+    const result = await runBetaAccessGate("play", {
+      documentLike: dom.window.document,
+      windowLike,
+      storageLike: dom.window.localStorage,
+      fetchLike: fetchLike as never
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(dom.window.localStorage.getItem("2048_auth_userId_v1")).toBe("0");
+    expect(dom.window.localStorage.getItem("2048_auth_nickname_v1")).toBe("Helloman");
+  });
+
+  it("clears a stale nickname when access status switches user id without a nickname", async () => {
+    const dom = createDom();
+    const windowLike = createWindowLike(dom);
+    dom.window.localStorage.setItem("2048_auth_token_v1", "token");
+    dom.window.localStorage.setItem("2048_auth_userId_v1", "19");
+    dom.window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    const fetchLike = vi.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          authenticated: true,
+          userId: 0,
+          email: "owner@example.com",
+          role: "owner",
+          superAdmin: true,
+          allowlisted: true,
+          noticeAccepted: true,
+          noticeVersion: "beta_notice_2026_06_26_v1",
+          canAccessProduct: true
+        }
+      })
+    }));
+
+    const result = await runBetaAccessGate("play", {
+      documentLike: dom.window.document,
+      windowLike,
+      storageLike: dom.window.localStorage,
+      fetchLike: fetchLike as never
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(dom.window.localStorage.getItem("2048_auth_userId_v1")).toBe("0");
+    expect(dom.window.localStorage.getItem("2048_auth_nickname_v1")).toBeNull();
   });
 
   it("allows the smoke bypass only on local development hosts", async () => {

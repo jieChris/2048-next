@@ -40,12 +40,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.locator("#replay-action-btn").click();
 
     const snapshot = await page.evaluate(() => {
-      const modal = document.getElementById("replay-modal");
+      const modal = document.getElementById("replay-modal") as HTMLElement | null;
       return {
         calls: Array.isArray((window as any).__replayImportTextCalls)
           ? (window as any).__replayImportTextCalls.slice()
           : [],
-        modalDisplay: modal ? modal.style.display : null
+        modalDisplay: modal ? window.getComputedStyle(modal).display : null
       };
     });
 

@@ -1,0 +1,91 @@
+@media (max-width: 980px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-board-head-row,
+  .account-board-empty,
+  .account-board-row {
+    grid-template-columns: 48px minmax(82px, 1fr) 82px 132px;
+  }
+
+  .account-board-tools {
+    justify-content: flex-start;
+  }
+
+  .account-action-row .replay-button {
+    min-width: 110px;
+    flex: 1 1 calc(33.33% - 6px);
+  }
+}
+
+@media (max-width: 560px) {
+  .account-page-shell {
+    width: calc(100vw - 12px);
+    margin: 10px auto 18px;
+  }
+
+  .account-board-tools {
+    justify-content: flex-start;
+  }
+
+  .account-board-filter-row {
+    padding: 10px;
+  }
+
+  .account-board-title-row h2 {
+    font-size: clamp(31px, 8vw, 36px);
+    line-height: 1;
+  }
+
+  .account-auth-title-row h2 {
+    font-size: clamp(31px, 8vw, 36px);
+    line-height: 1;
+  }
+
+  .account-auth-subtitle {
+    font-size: 12px;
+  }
+
+  .account-auth-form-surface,
+  .account-action-row {
+    padding: 9px;
+  }
+
+  .account-action-row .replay-button {
+    min-width: 88px;
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .account-board-subtitle {
+    font-size: 12px;
+  }
+
+  body[data-page="account-hub"] .account-board-tools .settings-select {
+    min-width: 140px;
+  }
+
+  .account-board-head-row,
+  .account-board-empty,
+  .account-board-row {
+    grid-template-columns: 42px minmax(74px, 1fr) 70px 96px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .account-date {
+    font-size: 11px;
+  }
+
+  .account-board-pagination {
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .account-board-row .account-rank {
+    width: 26px;
+    min-height: 20px;
+    font-size: 11px;
+  }
+}
+

@@ -1,0 +1,29 @@
+@media (max-width: 980px) {
+  .admin-grid,
+  .admin-form-grid,
+  .admin-rescue-grid,
+  .admin-beta-access-form,
+  .admin-beta-access-row,
+  .admin-super-admin-form,
+  .admin-super-admin-row,
+  .admin-achievement-layout,
+  .admin-achievement-ops {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-beta-access-table-head {
+    display: none;
+  }
+
+  .admin-beta-access-submit,
+  .admin-beta-access-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-beta-access-email,
+  .admin-beta-access-note,
+  .admin-beta-access-lifecycle {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

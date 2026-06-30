@@ -218,6 +218,12 @@
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
   var rankedCheckpointSaveTimer = 0;
+  var immediateSubmitHookBindRetryTimer = 0;
+  var immediateSubmitHookBindRetryCount = 0;
+  var gameManagerAssignmentHookInstalled = false;
+  var gameManagerAssignmentHookValue;
+  var IMMEDIATE_SUBMIT_HOOK_BIND_RETRY_LIMIT = 20;
+  var IMMEDIATE_SUBMIT_HOOK_BIND_RETRY_DELAY_MS = 50;
   var rankedSessionExpiredNoticeModeKey = "";
   var rankedSessionExpiredNoticeAt = 0;
   var accountBestScoreSyncPending = Object.create(null);
@@ -247,9 +253,16 @@
     return parsed > 0 ? parsed : 0;
   }
 
+  function parseUserId(value) {
+    var text = toText(value).trim();
+    if (!/^\d+$/.test(text)) return null;
+    var parsed = Math.floor(Number(text));
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
   function buildUserProfileUrl(userId, nickname) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return "";
+    var safeUserId = parseUserId(userId);
+    if (safeUserId === null) return "";
     var params = new global.URLSearchParams();
     params.set("id", String(safeUserId));
     var safeNickname = toText(nickname).trim();
@@ -1727,15 +1740,16 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function resolveSelfRank(rows) {
     var list = Array.isArray(rows) ? rows : [];
-    var userId = String(Math.floor(Number(getUserId()) || 0));
-    if (!userId || userId === "0") return null;
+    var parsedUserId = parseUserId(getUserId());
+    if (parsedUserId === null) return null;
+    var userId = String(parsedUserId);
 
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i] || {};
-      if (String(item.user_id || "") === userId) {
+      if (String(parseUserId(item.user_id)) === userId) {
         return {
           rank: i + 1,
-          user_id: Math.floor(Number(item.user_id) || 0),
+          user_id: parsedUserId,
           score: Math.floor(Number(item.score) || 0),
           nickname: toText(item.nickname || getNickname() || "")
         };
@@ -2467,7 +2481,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (timerEl && typeof manager.pretty === "function") {
         timerEl.textContent = manager.pretty(manager.accumulatedTime);
       }
-      if (!(manager.over || manager.won || manager.timerFrozen) && savedLike.timer_status === 1) {
+      if (!(manager.over || (manager.won && !manager.keepPlaying) || manager.timerFrozen) && savedLike.timer_status === 1) {
         manager.startTimer();
       }
     }
@@ -3023,8 +3037,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function getUserInfo(userId) {
-    var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0) return Promise.resolve({ error: "无效的用户ID" });
+    var safeUserId = parseUserId(userId);
+    if (safeUserId === null) return Promise.resolve({ error: "无效的用户ID" });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -3045,8 +3059,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function getAccountBestScoreRecords(userId, modeKey, modeBucket) {
-    var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0 || !modeKey || !modeBucket) {
+    var safeUserId = parseUserId(userId);
+    if (safeUserId === null || !modeKey || !modeBucket) {
       return Promise.resolve({ success: true, data: [] });
     }
     var safeLimit = ACCOUNT_BEST_SCORE_SYNC_FETCH_LIMIT;
@@ -4007,11 +4021,11 @@ async function refreshLeaderboard(modeLike) {
 
   function bindImmediateOnlineSubmitHooks() {
     var manager = global.game_manager;
-    if (!manager || manager.replayMode) return;
+    if (!manager || manager.replayMode) return false;
     if (manager.needsRankedCheckpointRestore) {
       scheduleRankedCheckpointRestore(manager, { reason: "bind" });
     }
-    if (manager.__onlineImmediateSubmitHooksBound === true) return;
+    if (manager.__onlineImmediateSubmitHooksBound === true) return true;
 
     wrapOnlineSubmitHook(manager, "move", "after");
     wrapOnlineSubmitHook(manager, "restart", "before");
@@ -4019,6 +4033,47 @@ async function refreshLeaderboard(modeLike) {
     wrapOnlineSubmitHook(manager, "restartWithBoard", "before");
     wrapOnlineSubmitHook(manager, "tryAutoSubmitOnGameOver", "after");
     manager.__onlineImmediateSubmitHooksBound = true;
+    return true;
+  }
+
+  function scheduleImmediateOnlineSubmitHookBindRetry() {
+    if (immediateSubmitHookBindRetryTimer) return;
+    if (immediateSubmitHookBindRetryCount >= IMMEDIATE_SUBMIT_HOOK_BIND_RETRY_LIMIT) return;
+    immediateSubmitHookBindRetryCount += 1;
+    immediateSubmitHookBindRetryTimer = global.setTimeout(function () {
+      immediateSubmitHookBindRetryTimer = 0;
+      if (bindImmediateOnlineSubmitHooks()) return;
+      scheduleImmediateOnlineSubmitHookBindRetry();
+    }, IMMEDIATE_SUBMIT_HOOK_BIND_RETRY_DELAY_MS);
+  }
+
+  function installGameManagerAssignmentHook() {
+    if (gameManagerAssignmentHookInstalled) return;
+    gameManagerAssignmentHookInstalled = true;
+    var existingManager = global.game_manager;
+    if (existingManager) {
+      gameManagerAssignmentHookValue = existingManager;
+      return;
+    }
+    try {
+      Object.defineProperty(global, "game_manager", {
+        configurable: true,
+        enumerable: true,
+        get: function () {
+          return gameManagerAssignmentHookValue;
+        },
+        set: function (manager) {
+          gameManagerAssignmentHookValue = manager;
+          bindImmediateOnlineSubmitHooks();
+        }
+      });
+    } catch (_err) {}
+  }
+
+  function ensureImmediateOnlineSubmitHooksBound() {
+    if (bindImmediateOnlineSubmitHooks()) return;
+    installGameManagerAssignmentHook();
+    scheduleImmediateOnlineSubmitHookBindRetry();
   }
 
   function flushTerminalSubmitOnPageHide() {
@@ -4212,7 +4267,7 @@ async function refreshLeaderboard(modeLike) {
 
 function init() {
   var allowOnlineAutoload = shouldAutoLoadOnlineLeaderboard();
-  bindImmediateOnlineSubmitHooks();
+  ensureImmediateOnlineSubmitHooksBound();
     scheduleRankedCheckpointRestore(global.game_manager, { reason: "init" });
     ensureToolkitEntryRow();
     bindLanguageSync();

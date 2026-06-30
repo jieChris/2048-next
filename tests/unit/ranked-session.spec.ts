@@ -574,4 +574,58 @@ describe("ranked session runtime", () => {
       seed: 2468
     });
   });
+
+  it("resumes a ranked home game that was blocked before the seed bootstrap finished", async () => {
+    const storage = new MemoryStorage();
+    const fetchImpl = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: createSession({
+            challenge_id: "ranked-delayed-home",
+            seed: 13579,
+            ranked_session_token: "delayed-home-token"
+          })
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    const windowLike = createWindowLike(storage, fetchImpl) as Window & {
+      game_manager: {
+        mode: string;
+        modeKey: string;
+        rankedSetupBlockedUntilSessionReady: boolean;
+        setup: ReturnType<typeof vi.fn>;
+      };
+      addEventListener: (type: string, listener: (eventLike?: { key?: string }) => void) => void;
+      setTimeout: (handler: () => void, timeout?: number) => number;
+    };
+    windowLike.addEventListener = vi.fn();
+    windowLike.setTimeout = vi.fn(() => 1);
+    windowLike.game_manager = {
+      mode: MODE_KEY,
+      modeKey: MODE_KEY,
+      rankedSetupBlockedUntilSessionReady: true,
+      setup: vi.fn(function (this: { rankedSetupBlockedUntilSessionReady: boolean }) {
+        this.rankedSetupBlockedUntilSessionReady = false;
+      })
+    };
+    const previousWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = windowLike;
+
+    try {
+      await bootstrapRankedSessionForHomeFamilyPage("index");
+    } finally {
+      (globalThis as { window?: unknown }).window = previousWindow;
+    }
+
+    expect(windowLike.game_manager.setup).toHaveBeenCalledTimes(1);
+    expect(windowLike.game_manager.rankedSetupBlockedUntilSessionReady).toBe(false);
+    expect(windowLike.GAME_CHALLENGE_CONTEXT).toMatchObject({
+      id: "ranked-delayed-home",
+      mode_key: MODE_KEY,
+      ranked_session_token: "delayed-home-token",
+      seed: 13579
+    });
+  });
 });

@@ -82,12 +82,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
             window.requestAnimationFrame(() => resolve(null));
           });
         });
-        const settingsModal = document.getElementById("settings-modal");
+        const settingsModal = document.getElementById("settings-modal") as HTMLElement | null;
         return {
           hasRuntime: true,
           hasSyncMobileTimerboxUI: typeof syncMobileTimerboxUI === "function",
           hasOpenSettingsModal: typeof openSettingsModal === "function",
-          settingsVisible: Boolean(settingsModal && settingsModal.style.display === "flex"),
+          settingsVisible: Boolean(settingsModal && window.getComputedStyle(settingsModal).display === "flex"),
           resolveStorageByNameCallCount
         };
       } finally {

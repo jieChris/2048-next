@@ -1,0 +1,12 @@
+      @media (max-width: 900px) {
+          .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-content {
+              top: 84px;
+              left: 8px;
+              width: 186px;
+              max-width: 186px;
+              padding: calc(10px * var(--pku-stats-scale));
+          }
+          .pku2048-page.pku2048-stats-inline-mode #stats-panel-overlay .stats-panel-row {
+              font-size: calc(13px * var(--pku-stats-scale));
+          }
+      }

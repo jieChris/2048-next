@@ -1,0 +1,39 @@
+@media (max-width: 980px) {
+  .user-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-record-head-row,
+  .user-record-empty,
+  .user-record-row {
+    grid-template-columns: minmax(84px, 1fr) 84px 130px;
+  }
+}
+
+@media (max-width: 560px) {
+  .user-page-shell {
+    width: calc(100vw - 12px);
+    margin: 10px auto 18px;
+  }
+
+  .user-record-tools {
+    justify-content: flex-end;
+  }
+
+  .user-record-head-row,
+  .user-record-empty,
+  .user-record-row {
+    grid-template-columns: minmax(78px, 1fr) 70px 98px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .user-record-date {
+    font-size: 11px;
+  }
+
+  .user-record-detail-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

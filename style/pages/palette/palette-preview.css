@@ -1,0 +1,66 @@
+.color-item.is-locked,
+.color-item.is-locked input[type="color"] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.preview-panel {
+  margin-top: 10px;
+}
+
+.preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, var(--pp-preview-board-content-size));
+  gap: 12px;
+  align-items: start;
+  justify-content: center;
+}
+
+.preview-board-wrap {
+  width: var(--pp-preview-board-content-size);
+  min-width: 0;
+}
+
+.palette-board-preview {
+  width: var(--pp-preview-board-content-size);
+  max-width: var(--pp-preview-board-content-size);
+  aspect-ratio: 1 / 1;
+  background: var(--app-surface-board);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.palette-board-preview .preview-tile {
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  font-weight: 700;
+  font-size: clamp(18px, 2.6vw, 36px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-sizing: border-box;
+}
+
+.palette-board-preview.is-fibonacci .preview-tile {
+  font-size: clamp(16px, 2.25vw, 32px);
+}
+
+.palette-note {
+  margin: 10px 0 0;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.palette-note.ok {
+  color: #2f7f48;
+}
+
+.palette-note.err {
+  color: #c2473b;
+}

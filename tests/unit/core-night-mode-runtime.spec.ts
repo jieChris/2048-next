@@ -12,7 +12,35 @@ type MockNode = {
   checked?: boolean;
   style: Record<string, string>;
   parentNode: MockNode | null;
+  addEventListener?(eventName: string, handler: () => void): void;
+  dispatchEventName?(eventName: string): void;
+  listenerCount?(eventName: string): number;
 };
+
+function createMockNode(id?: string): MockNode {
+  const listeners = new Map<string, Array<() => void>>();
+  return {
+    id,
+    checked: false,
+    style: {},
+    parentNode: null,
+    addEventListener(eventName: string, handler: () => void) {
+      const key = String(eventName);
+      const bucket = listeners.get(key) || [];
+      bucket.push(handler);
+      listeners.set(key, bucket);
+    },
+    dispatchEventName(eventName: string) {
+      const bucket = listeners.get(String(eventName)) || [];
+      for (const handler of bucket) {
+        handler();
+      }
+    },
+    listenerCount(eventName: string) {
+      return (listeners.get(String(eventName)) || []).length;
+    }
+  };
+}
 
 function createStorage(storageMap?: StorageMap) {
   const map = storageMap || new Map<string, string>();
@@ -32,12 +60,7 @@ function createStorage(storageMap?: StorageMap) {
 function createMockDocument() {
   const attrs = new Map<string, string>();
   const elementsById = new Map<string, MockNode>();
-  const nightToggle = {
-    id: "night-bg-toggle",
-    checked: false,
-    style: {},
-    parentNode: null
-  } as MockNode;
+  const nightToggle = createMockNode("night-bg-toggle");
   elementsById.set("night-bg-toggle", nightToggle);
 
   const documentElement = {
@@ -69,6 +92,10 @@ function createMockDocument() {
     documentElement,
     getElementById(id: string) {
       return elementsById.get(String(id)) || null;
+    },
+    replaceElementById(id: string, node: MockNode) {
+      elementsById.set(String(id), node);
+      return node;
     },
     createElement(_tagName: string) {
       return {
@@ -110,6 +137,7 @@ function loadNightModeRuntime(options?: {
     context: context as {
       CoreNightModeRuntime: {
         setNightBackgroundEnabled: (enabled: boolean) => boolean;
+        syncNightModeSettingsUI: () => void;
         getNightModeRuntimeSnapshot: () => Record<string, unknown>;
       };
     },
@@ -292,5 +320,27 @@ describe("core night mode runtime", () => {
     expect(disabledSnapshot.enabled).toBe(false);
     expect(disabledSnapshot.dataAttribute).toBe("");
     expect(toggleAfterDisable?.checked).toBe(false);
+  });
+
+  it("rebinds the night mode toggle after settings modal content is rebuilt", () => {
+    const runtime = loadNightModeRuntime({
+      storageMap: new Map<string, string>([
+        ["settings_night_background_enabled_v1", "0"],
+        ["theme_profile_v1", "classic"]
+      ])
+    });
+    const firstToggle = runtime.documentLike.getElementById("night-bg-toggle") as MockNode | null;
+    expect(firstToggle?.listenerCount?.("change")).toBe(1);
+
+    const rebuiltToggle = createMockNode("night-bg-toggle");
+    runtime.documentLike.replaceElementById("night-bg-toggle", rebuiltToggle);
+
+    runtime.context.CoreNightModeRuntime.syncNightModeSettingsUI();
+    rebuiltToggle.checked = true;
+    rebuiltToggle.dispatchEventName?.("change");
+
+    expect(rebuiltToggle.listenerCount?.("change")).toBe(1);
+    expect(runtime.storageMap.get("settings_night_background_enabled_v1")).toBe("1");
+    expect(runtime.context.CoreNightModeRuntime.getNightModeRuntimeSnapshot().enabled).toBe(true);
   });
 });

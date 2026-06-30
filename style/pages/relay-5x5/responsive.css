@@ -1,0 +1,38 @@
+    @media (max-width: 900px) {
+      .relay-grid { grid-template-columns: 1fr; }
+      .relay-grid--advanced { grid-template-columns: 1fr; }
+      .relay-snapshot-replay-row { grid-template-columns: 1fr; }
+      .relay-claim-modules { grid-template-columns: 1fr; }
+      .relay-head h1 { font-size: 28px; }
+      .relay-table th,
+      .relay-table td {
+        padding: 6px 6px;
+        font-size: 12px;
+      }
+      .relay-table th:nth-child(4),
+      .relay-table td:nth-child(4) {
+        width: 82px;
+        min-width: 82px;
+        text-align: center;
+      }
+      .relay-row-claim-btn {
+        width: 100%;
+        min-width: 0;
+        height: 28px;
+        line-height: 26px;
+        padding: 0 4px;
+        font-size: 11px;
+      }
+      .relay-replay-inline-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+      .relay-replay-segment-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      #relay-replay-copy-segment-btn {
+        width: 100%;
+      }
+      .relay-note {
+        max-width: calc(100% - 20px);
+      }
+    }

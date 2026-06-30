@@ -88,7 +88,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasModal: !!modal,
         initialUnread,
         afterUnread: !!(btn && btn.classList.contains("has-unread")),
-        modalDisplay: modal ? String(modal.style.display || "") : "",
+        modalDisplay: modal ? window.getComputedStyle(modal).display : "",
         hasAnnouncementLink: !!document.querySelector(".announcement-link"),
         homeFeedbackText: String(
           (document.querySelector(".mobile-hide-project-copy")?.textContent || "").trim()

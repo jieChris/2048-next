@@ -853,7 +853,7 @@ function applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore) 
   manager.timerFrozen = !!saved.timer_frozen;
   var timerEl = resolveManagerElementById(manager, "timer");
   if (timerEl) timerEl.textContent = manager.pretty(manager.accumulatedTime);
-  if (!(manager.over || manager.won || manager.timerFrozen) && saved.timer_status === 1) {
+  if (!(manager.over || (manager.won && !manager.keepPlaying) || manager.timerFrozen) && saved.timer_status === 1) {
     manager.startTimer();
   }
 }

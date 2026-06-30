@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { mockAcceptedBetaAccess } from "./support/beta-access";
+import { installRankedSessionForMode } from "./support/ranked-session";
 
 interface SmokePage {
   name: string;
@@ -32,12 +33,46 @@ test.describe("Runtime contract smoke", () => {
       const consoleErrors: string[] = [];
 
       await mockAcceptedBetaAccess(page);
+      if (entry.name === "index" || entry.name === "play") {
+        await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+          authToken: "smoke-beta-token",
+          seed: 707,
+          token: `runtime-contract-${entry.name}-token`
+        });
+      }
 
       await page.route("**/api/leaderboard**", async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({ success: true, data: [] })
+        });
+      });
+      let rankedSessionIssueCount = 0;
+      await page.route("**/api/ranked-session/start", async (route) => {
+        rankedSessionIssueCount += 1;
+        let modeKey = "standard_4x4_pow2_no_undo";
+        try {
+          const payload = route.request().postDataJSON() as { mode_key?: unknown };
+          if (typeof payload.mode_key === "string" && payload.mode_key) {
+            modeKey = payload.mode_key;
+          }
+        } catch (_error) {}
+        const nowSec = Math.floor(Date.now() / 1000);
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              mode_key: modeKey,
+              challenge_id: `${entry.name}-runtime-${rankedSessionIssueCount}`,
+              seed: 100000 + rankedSessionIssueCount,
+              ranked_session_token: `${entry.name}-runtime-token-${rankedSessionIssueCount}`,
+              issued_at: nowSec,
+              exp: nowSec + 3600
+            }
+          })
         });
       });
 
@@ -111,6 +146,25 @@ test.describe("Runtime contract smoke", () => {
       expect(hasLegacyEngine, `${entry.name} should not expose __legacyEngine`).toBe(false);
       expect(hasLegacyAdapterRuntime, `${entry.name} should not expose LegacyAdapterRuntime`).toBe(false);
       expect(hasReplayLegacyRuntime, `${entry.name} should not expose CoreReplayLegacyRuntime`).toBe(false);
+
+      if (entry.name === "index") {
+        await page.waitForFunction(
+          () => document.querySelectorAll(".tile-container .tile").length > 0,
+          null,
+          { timeout: 5_000 }
+        );
+        const tileSnapshot = await page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          return {
+            renderedTiles: document.querySelectorAll(".tile-container .tile").length,
+            occupiedCells: manager && manager.grid && Array.isArray(manager.grid.cells)
+              ? manager.grid.cells.flat().filter(Boolean).length
+              : 0
+          };
+        });
+        expect(tileSnapshot.renderedTiles, "index should render initial tiles").toBeGreaterThan(0);
+        expect(tileSnapshot.occupiedCells, "index game manager grid should contain initial tiles").toBeGreaterThan(0);
+      }
 
       expect(pageErrors, `${entry.name} should not emit pageerror`).toEqual([]);
       expect(consoleErrors, `${entry.name} should not emit console error`).toEqual([]);

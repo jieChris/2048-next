@@ -1,0 +1,111 @@
+.account-board-title-row {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.account-board-title-wrap {
+  display: grid;
+  gap: 4px;
+}
+
+.account-board-title-row h2 {
+  margin: 0;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+
+.account-board-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #8a7765;
+}
+
+.account-board-filter-row {
+  margin-bottom: 12px;
+  border: 1px solid #e2d7ca;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(252, 245, 236, 0.82));
+  padding: 10px 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.66),
+    0 1px 3px rgba(127, 104, 84, 0.08);
+}
+
+.account-board-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.account-board-tools label {
+  margin: 0;
+  font-size: 13px;
+  color: #7b6c5f;
+  font-weight: 700;
+}
+
+.account-board-tools .replay-button {
+  min-height: 38px;
+}
+
+.account-board-tools .replay-button.is-loading {
+  opacity: 0.86;
+  cursor: wait;
+}
+
+.account-page-indicator {
+  min-width: 78px;
+  text-align: center;
+  font-size: 12px;
+  color: #7b6c5f;
+  font-weight: 700;
+}
+
+body[data-page="account-hub"] .account-board-tools .settings-select {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 38px;
+  border: 1px solid #d9cabc;
+  border-radius: 12px;
+  padding: 0 36px 0 12px;
+  background-color: #fff8f0;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 241, 232, 0.95)),
+    linear-gradient(45deg, transparent 50%, #806f5f 50%),
+    linear-gradient(135deg, #806f5f 50%, transparent 50%);
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-position:
+    center center,
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px);
+  background-size: auto, 6px 6px, 6px 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 2px rgba(117, 99, 82, 0.08);
+  color: #66584b;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+body[data-page="account-hub"] .account-board-tools .settings-select:hover {
+  border-color: #ccb8a6;
+  background-color: #fff4ea;
+}
+
+body[data-page="account-hub"] .account-board-tools .settings-select:focus,
+body[data-page="account-hub"] .account-board-tools .settings-select:focus-visible {
+  border-color: #ad8f74;
+  box-shadow:
+    0 0 0 3px rgba(173, 143, 116, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+

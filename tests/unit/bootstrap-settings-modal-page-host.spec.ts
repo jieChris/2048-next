@@ -47,7 +47,8 @@ describe("bootstrap settings modal page host", () => {
       Array.from(dom.window.document.querySelectorAll(".settings-modal-content > .settings-row"))
         .map((row) => {
           const input = row.querySelector("input");
-          return row.id || input?.id || "";
+          const select = row.querySelector("select");
+          return row.id || input?.id || select?.id || "";
         })
     ).toEqual([
       "win-prompt-toggle",
@@ -58,6 +59,8 @@ describe("bootstrap settings modal page host", () => {
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
+    expect(dom.window.document.querySelectorAll("#visual-theme-select")).toHaveLength(0);
+    expect(dom.window.document.querySelectorAll("#color-scheme-select")).toHaveLength(0);
     expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelector("#toolkit-account-link")).not.toBeNull();
   });
@@ -127,6 +130,7 @@ describe("bootstrap settings modal page host", () => {
     const documentLike = { id: "document" };
     const removeLegacyUndoSettingsUI = vi.fn();
     const initThemeSettingsUI = vi.fn();
+    const initVisualThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
     const initWinPromptSettingsUI = vi.fn();
     const initHomeGuideSettingsUI = vi.fn();
@@ -141,6 +145,7 @@ describe("bootstrap settings modal page host", () => {
       documentLike,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
+      initVisualThemeSettingsUI,
       initTimerModuleSettingsUI,
       initWinPromptSettingsUI,
       initHomeGuideSettingsUI
@@ -155,6 +160,7 @@ describe("bootstrap settings modal page host", () => {
       documentLike,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
+      initVisualThemeSettingsUI,
       initTimerModuleSettingsUI,
       initWinPromptSettingsUI,
       initHomeGuideSettingsUI
@@ -180,9 +186,16 @@ describe("bootstrap settings modal page host", () => {
   it("delegates modal open orchestration to host runtime", () => {
     const applySettingsModalOpenOrchestration = vi.fn();
     const documentLike = { id: "document" };
+    const syncBgmSettingsUI = vi.fn();
+    const syncNightModeSettingsUI = vi.fn();
+    const windowLike = {
+      CoreBgmRuntime: { syncBgmSettingsUI },
+      CoreNightModeRuntime: { syncNightModeSettingsUI }
+    };
     const replayModalRuntime = { id: "replay" };
     const removeLegacyUndoSettingsUI = vi.fn();
     const initThemeSettingsUI = vi.fn();
+    const initVisualThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
     const initWinPromptSettingsUI = vi.fn();
     const initHomeGuideSettingsUI = vi.fn();
@@ -193,8 +206,10 @@ describe("bootstrap settings modal page host", () => {
       },
       replayModalRuntime,
       documentLike,
+      windowLike,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
+      initVisualThemeSettingsUI,
       initTimerModuleSettingsUI,
       initWinPromptSettingsUI,
       initHomeGuideSettingsUI
@@ -205,10 +220,13 @@ describe("bootstrap settings modal page host", () => {
       documentLike,
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
+      initVisualThemeSettingsUI,
       initTimerModuleSettingsUI,
       initWinPromptSettingsUI,
       initHomeGuideSettingsUI
     });
+    expect(syncBgmSettingsUI).toHaveBeenCalledTimes(1);
+    expect(syncNightModeSettingsUI).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       hasApplyOpenApi: true,
       didApply: true
@@ -275,6 +293,12 @@ describe("bootstrap settings modal page host", () => {
     });
 
     expect(resolvers.initThemeSettingsUI()).toEqual({ didApply: true });
+    expect(resolvers.initVisualThemeSettingsUI()).toEqual({
+      hasControls: false,
+      didBindVisualTheme: false,
+      didBindColorScheme: false,
+      didSync: true
+    });
     expect(resolvers.removeLegacyUndoSettingsUI()).toEqual({ didRemoveRow: true });
     expect(resolvers.initTimerModuleSettingsUI()).toEqual({ didApply: true });
     expect(resolvers.initWinPromptSettingsUI()).toEqual({
@@ -304,6 +328,58 @@ describe("bootstrap settings modal page host", () => {
       reinvokeInit: expect.any(Function),
       syncMobileTimerboxUi: undefined
     });
+  });
+
+  it("keeps unfinished visual theme controls disabled and forces classic root state", () => {
+    const attrs = new Map<string, string>();
+    const root = {
+      setAttribute(name: string, value: string) {
+        attrs.set(String(name), String(value));
+      },
+      getAttribute(name: string) {
+        return attrs.get(String(name)) || null;
+      }
+    };
+    const localStorage = {
+      getItem: vi.fn(() => {
+        throw new Error("visual theme settings must not read storage");
+      }),
+      setItem: vi.fn(() => {
+        throw new Error("visual theme settings must not write storage");
+      })
+    };
+
+    const resolvers = createSettingsModalInitResolvers({
+      documentLike: {
+        documentElement: root,
+        getElementById: vi.fn(() => null)
+      },
+      windowLike: {
+        localStorage,
+        matchMedia: vi.fn(() => ({ matches: false }))
+      }
+    });
+
+    expect(resolvers.initVisualThemeSettingsUI()).toEqual({
+      hasControls: false,
+      didBindVisualTheme: false,
+      didBindColorScheme: false,
+      didSync: true
+    });
+    expect(root.getAttribute("data-visual-theme")).toBe("classic");
+    expect(root.getAttribute("data-color-scheme")).toBe("system");
+    expect(root.getAttribute("data-resolved-color-scheme")).toBe("light");
+    expect(localStorage.getItem).not.toHaveBeenCalled();
+    expect(localStorage.setItem).not.toHaveBeenCalled();
+
+    expect(resolvers.initVisualThemeSettingsUI()).toEqual({
+      hasControls: false,
+      didBindVisualTheme: false,
+      didBindColorScheme: false,
+      didSync: true
+    });
+    expect(localStorage.getItem).not.toHaveBeenCalled();
+    expect(localStorage.setItem).not.toHaveBeenCalled();
   });
 
   it("returns null for timer settings init when page host api is missing", () => {
@@ -409,6 +485,12 @@ describe("bootstrap settings modal page host", () => {
     });
 
     expect(resolvers.initThemeSettingsUI()).toBeNull();
+    expect(resolvers.initVisualThemeSettingsUI()).toEqual({
+      hasControls: false,
+      didBindVisualTheme: false,
+      didBindColorScheme: false,
+      didSync: true
+    });
     expect(resolvers.removeLegacyUndoSettingsUI()).toBeNull();
     expect(resolvers.initTimerModuleSettingsUI()).toBeNull();
     expect(resolvers.initWinPromptSettingsUI()).toEqual({

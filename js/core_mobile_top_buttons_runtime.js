@@ -216,11 +216,18 @@
     return false;
   }
 
+  function isElementHidden(node) {
+    if (!node) return false;
+    if (node.hidden === true) return true;
+    if (hasClass(node, "is-hidden")) return true;
+    return !!(node.style && node.style.display === "none");
+  }
+
   function syncMobileActionButtonClasses(host, doc) {
     var buttons = collectHostButtons(host);
     for (var i = 0; i < buttons.length; i += 1) {
       var button = buttons[i];
-      if (button.id === "top-mode-intro-btn" && button.style && button.style.display === "none") {
+      if (button.id === "top-mode-intro-btn" && isElementHidden(button)) {
         removeClass(button, "mobile-actions-primary");
         removeClass(button, "mobile-actions-collapse-target");
         continue;
@@ -364,4 +371,3 @@
   global.CoreMobileTopButtonsRuntime.ensureMobileExpandToggleButtonDom =
     ensureMobileExpandToggleButtonDom;
 })(typeof window !== "undefined" ? window : undefined);
-

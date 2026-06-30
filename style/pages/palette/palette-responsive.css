@@ -1,0 +1,62 @@
+@media (max-width: 1100px) {
+  .palette-theme-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-list {
+    max-height: 280px;
+  }
+
+  .preview-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview-board-wrap {
+    width: min(var(--pp-preview-board-content-size), 100%);
+  }
+
+  .palette-board-preview {
+    width: min(var(--pp-preview-board-content-size), 100%);
+    max-width: var(--pp-preview-board-content-size);
+  }
+}
+
+@media (max-width: 760px) {
+  .palette-page-shell {
+    width: calc(100vw - 14px);
+    margin: 10px auto 18px;
+  }
+
+  .palette-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .palette-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-dimension-tab {
+    font-size: 20px;
+    min-height: 44px;
+  }
+
+  .editor-workspace {
+    position: relative;
+  }
+
+  .color-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .color-grid-targets {
+    grid-template-columns: repeat(auto-fill, minmax(50px, 50px));
+    grid-auto-rows: 50px;
+    justify-content: start;
+  }
+
+}

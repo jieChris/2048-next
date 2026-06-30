@@ -181,14 +181,16 @@ function createScoreManagerStub(storage: MemoryStorage, score: number): Record<s
 }
 
 function loadOnlineLeaderboardRuntime(options: {
-  manager: Record<string, unknown>;
+  manager?: Record<string, unknown>;
   fetchImpl: (url: string, init: FetchCall["init"]) => Promise<Record<string, unknown>>;
   disableOnlineLeaderboard?: boolean;
   storage?: MemoryStorage;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
-  storage.setItem(AUTH_USER_ID_STORAGE_KEY, "7");
+  if (storage.getItem(AUTH_USER_ID_STORAGE_KEY) === null) {
+    storage.setItem(AUTH_USER_ID_STORAGE_KEY, "7");
+  }
   const fetchCalls: FetchCall[] = [];
   const fetchImpl = vi.fn(async (url: string, init: FetchCall["init"]) => {
     fetchCalls.push({ url, init });
@@ -204,7 +206,6 @@ function loadOnlineLeaderboardRuntime(options: {
       pathname: "/2048.html"
     },
     URLSearchParams,
-    game_manager: options.manager,
     ApiSharedUtils: {
       toText(value: unknown) {
         return value == null ? "" : String(value);
@@ -231,6 +232,9 @@ function loadOnlineLeaderboardRuntime(options: {
     clearTimeout,
     alert: vi.fn()
   };
+  if (options.manager) {
+    windowLike.game_manager = options.manager;
+  }
 
   const scriptPath = path.resolve(process.cwd(), "js/online_leaderboard_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
@@ -780,6 +784,18 @@ describe("online leaderboard terminal submission", () => {
 
     const list = createElementStub("div");
     list.id = "timer-leaderboard-list";
+    list.querySelector = vi.fn((selector: string) => {
+      if (!selector.includes(".timer-leaderboard-row:not(.is-empty):not(.is-self)")) return null;
+      const rows = Array.isArray(list.children) ? list.children as Array<Record<string, unknown>> : [];
+      const row = rows.find((candidate) => {
+        const className = String(candidate.className || "");
+        return className.includes("timer-leaderboard-row") &&
+          !className.includes("is-empty") &&
+          !className.includes("is-self");
+      });
+      const nameTile = row ? (row as { _nameTile?: unknown })._nameTile : null;
+      return nameTile ? { textContent: collectTextContent(nameTile) } : null;
+    });
     const summary = createElementStub("div");
     summary.id = "timer-leaderboard-summary";
     const panel = createElementStub("div");
@@ -823,6 +839,114 @@ describe("online leaderboard terminal submission", () => {
     refreshDeferred.resolve(createJsonResponse({ success: true, data: [] }));
     await refreshPromise;
     await flushRuntimePromises();
+  });
+
+  it("renders user id 0 as the timer leaderboard self row", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(AUTH_USER_ID_STORAGE_KEY, "0");
+    storage.setItem("2048_auth_nickname_v1", "Owner");
+    storage.setItem(
+      TIMER_LEADERBOARD_CACHE_KEY,
+      JSON.stringify({
+        key: `${MODE_KEY}|all`,
+        rows: [
+          { user_id: 19, nickname: "PreviousUser", score: 4096 },
+          { user_id: 0, nickname: "Owner", score: 2048 }
+        ],
+        time: Date.now() - 60_000
+      })
+    );
+
+    const list = createElementStub("div");
+    list.id = "timer-leaderboard-list";
+    list.querySelector = vi.fn((selector: string) => {
+      if (!selector.includes(".timer-leaderboard-row:not(.is-empty):not(.is-self)")) return null;
+      const rows = Array.isArray(list.children) ? list.children as Array<Record<string, unknown>> : [];
+      const row = rows.find((candidate) => {
+        const className = String(candidate.className || "");
+        return className.includes("timer-leaderboard-row") &&
+          !className.includes("is-empty") &&
+          !className.includes("is-self");
+      });
+      const nameTile = row ? (row as { _nameTile?: unknown })._nameTile : null;
+      return nameTile ? { textContent: collectTextContent(nameTile) } : null;
+    });
+    const summary = createElementStub("div");
+    summary.id = "timer-leaderboard-summary";
+    const panel = createElementStub("div");
+    panel.id = "timer-leaderboard-panel";
+    const timerBox = createElementStub("div");
+    timerBox.id = "timerbox";
+    const elements: Record<string, Record<string, unknown>> = {
+      "timerbox": timerBox,
+      "timer-leaderboard-panel": panel,
+      "timer-leaderboard-summary": summary,
+      "timer-leaderboard-list": list
+    };
+
+    const refreshDeferred = createDeferred<Record<string, unknown>>();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        getTimerModuleViewMode: vi.fn(() => "hidden")
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.includes("/leaderboard?")) return refreshDeferred.promise;
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const documentLike = runtime.windowLike.document as Record<string, unknown>;
+    documentLike.getElementById = vi.fn((id: string) => elements[id] || null);
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      refreshTimerLeaderboardPanel: (force?: boolean, preferCached?: boolean) => Promise<boolean>;
+    };
+    const refreshPromise = onlineRuntime.refreshTimerLeaderboardPanel(false, true);
+
+    const selfRow = (list.children as Array<Record<string, unknown>>)[10];
+    const rankTile = (selfRow.children as Array<Record<string, unknown>>)[0];
+    const nameTile = (selfRow.children as Array<Record<string, unknown>>)[1];
+    expect(rankTile.textContent).toBe("2");
+    expect(collectTextContent(nameTile)).toContain("Owner");
+    expect(collectTextContent(nameTile)).toContain("2048");
+    expect(nameTile.getAttribute("data-profile-href")).toBe("user.html?id=0&nickname=Owner");
+
+    refreshDeferred.resolve(createJsonResponse({ success: true, data: [] }));
+    await refreshPromise;
+  });
+
+  it("syncs account best score for user id 0 on startup", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(AUTH_USER_ID_STORAGE_KEY, "0");
+    const scoreManager = createScoreManagerStub(storage, 16);
+    const bestContainer = { textContent: "" };
+
+    loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        scoreManager,
+        actuator: { bestContainer }
+      }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.includes("/user/0/records")) {
+          return createJsonResponse({
+            success: true,
+            data: [{ mode_key: MODE_KEY, score: 2048 }]
+          });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    await flushRuntimePromises();
+
+    expect(storage.getItem(BEST_SCORE_KEY)).toBe("2048");
+    expect(bestContainer.textContent).toBe("2048");
   });
 
   it("leaves flying click effects to the hidden easter egg binding", async () => {
@@ -1345,6 +1469,76 @@ describe("online leaderboard terminal submission", () => {
 
     expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
     expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
+  });
+
+  it("binds submit hooks when the game manager is created after runtime startup", async () => {
+    vi.useFakeTimers();
+    const storage = new MemoryStorage();
+    try {
+      const runtime = loadOnlineLeaderboardRuntime({
+        storage,
+        disableOnlineLeaderboard: true,
+        fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+      });
+      const manager = createTerminatedManager({
+        rankPolicy: "ranked",
+        over: false,
+        won: false,
+        hasGameStarted: true,
+        moveHistory: [0],
+        successfulMoveCount: 1,
+        score: 4,
+        rankedSessionToken: "ranked-token"
+      });
+
+      runtime.windowLike.game_manager = manager;
+      vi.advanceTimersByTime(250);
+
+      (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+      await vi.runOnlyPendingTimersAsync();
+      await Promise.resolve();
+
+      expect(manager.__onlineImmediateSubmitHooksBound).toBe(true);
+      expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("binds submit hooks even when the game manager appears after the startup retry window", async () => {
+    vi.useFakeTimers();
+    const storage = new MemoryStorage();
+    try {
+      const runtime = loadOnlineLeaderboardRuntime({
+        storage,
+        disableOnlineLeaderboard: true,
+        fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+      });
+
+      vi.advanceTimersByTime(1500);
+
+      const manager = createTerminatedManager({
+        rankPolicy: "ranked",
+        over: false,
+        won: false,
+        hasGameStarted: true,
+        moveHistory: [0],
+        successfulMoveCount: 1,
+        score: 4,
+        rankedSessionToken: "ranked-token"
+      });
+
+      runtime.windowLike.game_manager = manager;
+
+      (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+      await vi.runOnlyPendingTimersAsync();
+      await Promise.resolve();
+
+      expect(manager.__onlineImmediateSubmitHooksBound).toBe(true);
+      expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {

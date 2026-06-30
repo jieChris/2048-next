@@ -1,0 +1,134 @@
+.palette-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.palette-sidebar {
+  padding: 14px;
+}
+
+.palette-sidebar .panel-head h2 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 250px);
+  overflow: auto;
+}
+
+.palette-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #ccbaa8;
+  border-radius: 12px;
+  background: #f7f1e7;
+  color: #4f4336;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.palette-item.is-active {
+  border-color: #9a765a;
+  box-shadow: 0 0 0 1px #9a765a inset;
+}
+
+.palette-item-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.palette-item-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.palette-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: #fff;
+  background: #8b6d55;
+}
+
+.palette-chip.custom {
+  background: #4e8854;
+}
+
+.palette-chip.current {
+  background: #8b5a44;
+}
+
+.palette-editor {
+  padding: 14px;
+}
+
+.palette-editor .panel-head h2 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.palette-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(5, auto);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.palette-name-input {
+  min-height: 38px;
+  border: 1px solid #cfbead;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 16px;
+  color: #55473a;
+  background: #fffdf8;
+}
+
+.palette-dimension-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid #cfbead;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: #f8f4ec;
+}
+
+.palette-dimension-tab {
+  min-height: 48px;
+  border: none;
+  border-right: 1px solid #d8cabb;
+  background: linear-gradient(180deg, #fdf9f4 0%, #f6efe4 100%);
+  color: #6d5b4a;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.palette-dimension-tab:last-child {
+  border-right: none;
+}
+
+.palette-dimension-tab.is-active {
+  background: #a9785d;
+  color: #fff;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.palette-dimension-tab:not(.is-active):hover {
+  background: linear-gradient(180deg, #fffdf9 0%, #f1e8dc 100%);
+}
+

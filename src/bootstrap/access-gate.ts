@@ -1,4 +1,4 @@
-import { removeStorageValue } from "../storage/browser-storage";
+import { removeStorageValue, writeStorageValue } from "../storage/browser-storage";
 import {
   AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
@@ -12,6 +12,8 @@ export const ACTIVE_BETA_NOTICE_VERSION = "beta_notice_2026_06_26_v1";
 export const BETA_ACCESS_SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
 const BETA_GATE_PAGE_VERSION = "20260627-02";
 export const BETA_ACCESS_EXEMPT_PAGE_IDS = new Set(["beta-login", "beta-access", "admin", "cache-reset"]);
+const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
+const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
 
 export interface BetaAccessGateResult {
   allowed: boolean;
@@ -28,6 +30,7 @@ export interface BetaAccessStatus {
   authenticated: boolean;
   userId: number;
   email: string;
+  nickname: string;
   role: string;
   superAdmin: boolean;
   allowlisted: boolean;
@@ -46,6 +49,13 @@ function toBool(value: unknown): boolean {
 
 function toRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function firstPresentText(...values: unknown[]): string {
+  for (const value of values) {
+    if (value !== null && value !== undefined) return toText(value).trim();
+  }
+  return "";
 }
 
 function resolveDocument(options: BetaAccessGateOptions): Document | null {
@@ -114,8 +124,9 @@ export function normalizeAccessStatus(payload: JsonRecord): BetaAccessStatus {
   const data = toRecord(payload.data);
   return {
     authenticated: toBool(data.authenticated),
-    userId: Number(data.userId || data.user_id || 0),
+    userId: Number(data.userId ?? data.user_id ?? 0),
     email: toText(data.email),
+    nickname: toText(data.nickname),
     role: toText(data.role),
     superAdmin: toBool(data.superAdmin || data.super_admin),
     allowlisted: toBool(data.allowlisted),
@@ -123,6 +134,35 @@ export function normalizeAccessStatus(payload: JsonRecord): BetaAccessStatus {
     noticeVersion: toText(data.noticeVersion || data.notice_version || ACTIVE_BETA_NOTICE_VERSION),
     canAccessProduct: toBool(data.canAccessProduct || data.can_access_product)
   };
+}
+
+function syncLocalIdentityFromAccessPayload(payload: JsonRecord, storageLike: Storage | null): void {
+  const data = toRecord(payload.data);
+  const user = toRecord(payload.user);
+  const userId = firstPresentText(data.userId, data.user_id, user.id, payload.userId, payload.user_id);
+  const nickname = firstPresentText(
+    data.nickname,
+    data.displayName,
+    data.display_name,
+    user.nickname,
+    user.displayName,
+    user.display_name,
+    payload.nickname,
+    payload.displayName,
+    payload.display_name
+  );
+  let previousUserId = "";
+  try {
+    previousUserId = toText(storageLike?.getItem(AUTH_USER_ID_KEY)).trim();
+  } catch (_err) {
+    previousUserId = "";
+  }
+  if (userId) writeStorageValue(storageLike, AUTH_USER_ID_KEY, userId);
+  if (nickname) {
+    writeStorageValue(storageLike, AUTH_NICKNAME_KEY, nickname);
+  } else if (userId && previousUserId && previousUserId !== userId) {
+    removeStorageValue(storageLike, AUTH_NICKNAME_KEY);
+  }
 }
 
 export function shouldRunBetaAccessGate(pageId: string): boolean {
@@ -214,6 +254,7 @@ export async function runBetaAccessGate(
   }
 
   const status = access.status;
+  if (status) syncLocalIdentityFromAccessPayload(access.payload, storageLike);
   if (!status || (!status.superAdmin && !status.allowlisted)) {
     safeNavigate(windowLike, buildGateHref("beta-access.html", windowLike, "blocked"));
     return { allowed: false };

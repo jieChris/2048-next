@@ -1,0 +1,99 @@
+.color-panel,
+.preview-panel {
+  border: 1px solid #d2c4b4;
+  border-radius: 12px;
+  background: #f8f5ef;
+  padding: 10px;
+}
+
+.color-panel-head {
+  font-size: 24px;
+  color: #6f6255;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.editor-workspace {
+  position: relative;
+}
+
+.editor-targets {
+  border: 1px solid #dccfbe;
+  border-radius: 10px;
+  background: #fbf8f2;
+  padding: 8px;
+}
+
+.color-grid-targets {
+  grid-template-columns: repeat(auto-fill, minmax(50px, 50px));
+  grid-auto-rows: 50px;
+  gap: 7px;
+  justify-content: start;
+}
+
+.color-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.color-target {
+  border: 1px solid #cebfae;
+  border-radius: 8px;
+  background: #fffdf8;
+  width: 50px;
+  height: 50px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.color-target:hover {
+  border-color: #a58469;
+}
+
+.color-grid-targets.is-readonly .color-target {
+  cursor: not-allowed;
+}
+
+.color-grid-targets.is-readonly .color-target:hover {
+  border-color: #cebfae;
+}
+
+.color-target.is-active-target {
+  border-color: #9a765a;
+  box-shadow: 0 0 0 1px #9a765a inset;
+}
+
+.color-target-chip {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: 7px;
+  border: none;
+}
+
+.color-target-label {
+  font-size: 21px;
+  color: #4f4336;
+  font-weight: 700;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28), 0 0 2px rgba(0, 0, 0, 0.2);
+}
+

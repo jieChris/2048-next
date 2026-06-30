@@ -1,0 +1,86 @@
+.user-record-head-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 110px 190px;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #847463;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.user-record-list {
+  border: 1px solid #dfd4c8;
+  border-radius: 10px;
+  background: #fffaf3;
+  min-height: 260px;
+  max-height: 560px;
+  overflow: auto;
+}
+
+.user-record-empty,
+.user-record-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 110px 190px;
+  gap: 8px;
+  align-items: center;
+  padding: 9px 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.user-record-row + .user-record-row {
+  border-top: 1px solid rgba(154, 133, 113, 0.2);
+}
+
+.user-record-item + .user-record-item {
+  border-top: 1px solid rgba(154, 133, 113, 0.2);
+}
+
+.user-record-empty {
+  min-height: 120px;
+  color: #8f7f70;
+}
+
+.user-record-item[data-open="1"] {
+  background: rgba(244, 235, 225, 0.48);
+}
+
+.user-record-item.is-deleted {
+  background: rgba(201, 176, 152, 0.16);
+}
+
+.user-record-item.is-deleted .user-record-row {
+  color: #8d7e72;
+}
+
+.user-record-item.is-deleted .user-record-score {
+  color: #7f6f62;
+}
+
+.user-record-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-record-row:hover {
+  background: rgba(214, 188, 161, 0.2);
+}
+
+.user-record-mode {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-record-score {
+  font-weight: 700;
+}
+
+.user-record-date {
+  color: #907f6d;
+  font-size: 12px;
+}

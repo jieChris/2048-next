@@ -41,7 +41,8 @@ const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "pku2048",
   "practice",
   "replay",
-  "stone-2k-monitor"
+  "stone-2k-monitor",
+  "user-profile"
 ]);
 
 function toRecord(value: unknown): Record<string, unknown> {

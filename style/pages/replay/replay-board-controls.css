@@ -1,0 +1,105 @@
+body[data-page="replay"] .replay-board-shell {
+  width: 500px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body[data-page="replay"] .game-container.game-container-replay {
+  width: 500px;
+  height: 500px;
+  margin: 0;
+  float: none;
+  background: var(--app-surface-board);
+  border-radius: var(--app-radius-board);
+  box-shadow: none;
+}
+
+body[data-page="replay"] .game-container .game-message {
+  border-radius: var(--app-radius-board);
+}
+
+body[data-page="replay"] .replay-progress-wrap {
+  width: 548px;
+  padding-top: 1px;
+}
+
+body[data-page="replay"] #replay-progress {
+  width: 100%;
+  margin: 0;
+}
+
+body[data-page="replay"] .replay-step-buttons {
+  width: 294px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body[data-page="replay"] .replay-control-btn,
+body[data-page="replay"] .import-replay-button {
+  min-height: 40px;
+  border: none;
+  border-radius: 9px;
+  background: var(--app-action-muted-bg);
+  color: var(--app-text-on-strong);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+body[data-page="replay"] .replay-control-btn:hover,
+body[data-page="replay"] .import-replay-button:hover {
+  background: #a69586;
+}
+
+body[data-page="replay"] .replay-action-buttons {
+  width: 620px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+body[data-page="replay"] .replay-action-btn {
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 0 8px;
+  font-size: 16px;
+}
+
+body[data-page="replay"] .replay-diagnostics-panel {
+  width: 620px;
+  margin-top: 2px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  border: 1px solid #d8d0c7;
+  border-radius: 10px;
+  background: #f8f7f4;
+  text-align: left;
+}
+
+body[data-page="replay"] .replay-diagnostics-summary,
+body[data-page="replay"] .replay-diagnostics-samples {
+  font-size: 14px;
+  color: #75695f;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+body[data-page="replay"] .replay-diagnostics-samples {
+  margin-top: 4px;
+}
+
+body[data-page="replay"] .replay-hidden-scoreboard {
+  display: none;
+}

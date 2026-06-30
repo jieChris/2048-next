@@ -1,0 +1,67 @@
+    .validator-board {
+      display: grid;
+      grid-template-columns: repeat(var(--board-columns, 4), minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-radius: 16px;
+      background: rgba(3, 9, 20, 0.66);
+    }
+
+    .validator-cell {
+      min-height: 56px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      background: var(--cell-empty);
+      color: #e8f0ff;
+    }
+
+    .validator-cell.is-empty::before {
+      content: ".";
+      color: rgba(255, 255, 255, 0.24);
+      font-size: 24px;
+    }
+
+    .validator-cell[data-tile="2"] {
+      background: linear-gradient(135deg, #9fdbff, #60b4ff);
+      color: #05223b;
+    }
+
+    .validator-cell[data-tile="4"] {
+      background: linear-gradient(135deg, #ffdca8, #ff9b61);
+      color: #341300;
+    }
+
+    .validator-cell[data-tile="8"],
+    .validator-cell[data-tile="16"],
+    .validator-cell[data-tile="32"],
+    .validator-cell[data-tile="64"] {
+      background: linear-gradient(135deg, rgba(141, 107, 255, 0.82), rgba(98, 168, 255, 0.72));
+    }
+
+    .validator-cell[data-tile="128"],
+    .validator-cell[data-tile="256"],
+    .validator-cell[data-tile="512"],
+    .validator-cell[data-tile="1024"],
+    .validator-cell[data-tile="2048"],
+    .validator-cell[data-tile="4096"] {
+      background: linear-gradient(135deg, rgba(122, 240, 217, 0.84), rgba(98, 168, 255, 0.82));
+      color: #031019;
+    }
+
+    .validator-result-json {
+      margin: 18px 0 0;
+      border-radius: 18px;
+      padding: 16px;
+      overflow: auto;
+      max-height: 320px;
+      background: rgba(3, 9, 20, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cfe0ff;
+      font-family: "Cascadia Code", "JetBrains Mono", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }

@@ -7,26 +7,34 @@ import {
   applySettingsModalOpen
 } from "../../src/bootstrap/replay-modal";
 
+function hasClass(node: { className?: string }, className: string): boolean {
+  return (" " + String(node.className || "") + " ").indexOf(" " + className + " ") >= 0;
+}
+
 describe("bootstrap replay modal", () => {
   it("opens replay modal and binds action/close handlers", () => {
     const closeBtn = { onclick: null as null | (() => unknown) };
     const modal = {
       style: { display: "none" },
+      className: "replay-modal-overlay is-hidden",
       onclick: null as null | ((eventLike?: unknown) => unknown)
     };
     const titleEl = { textContent: "" };
     const textEl = { value: "" };
     const actionBtn = {
       style: { display: "none" },
+      className: "replay-button is-hidden",
       textContent: "",
       onclick: null as null | (() => unknown)
     };
     const downloadBtn = {
       style: { display: "inline-block" },
+      className: "replay-button",
       onclick: vi.fn()
     };
     const openPageBtn = {
       style: { display: "inline-block" },
+      className: "replay-button",
       onclick: vi.fn()
     };
     const getElementById = vi.fn((id: string) => {
@@ -52,14 +60,14 @@ describe("bootstrap replay modal", () => {
     });
 
     expect(result).toEqual({ opened: true, hasActionButton: true });
-    expect(modal.style.display).toBe("flex");
+    expect(hasClass(modal, "is-hidden")).toBe(false);
     expect(titleEl.textContent).toBe("导出回放");
     expect(textEl.value).toBe("data");
-    expect(actionBtn.style.display).toBe("inline-block");
+    expect(hasClass(actionBtn, "is-hidden")).toBe(false);
     expect(actionBtn.textContent).toBe("复制回放");
-    expect(downloadBtn.style.display).toBe("none");
+    expect(hasClass(downloadBtn, "is-hidden")).toBe(true);
     expect(downloadBtn.onclick).toBeNull();
-    expect(openPageBtn.style.display).toBe("none");
+    expect(hasClass(openPageBtn, "is-hidden")).toBe(true);
     expect(openPageBtn.onclick).toBeNull();
 
     actionBtn.onclick?.();
@@ -77,10 +85,12 @@ describe("bootstrap replay modal", () => {
 
   it("hides replay action button when action is not provided", () => {
     const modal = {
-      style: { display: "none" }
+      style: { display: "none" },
+      className: "replay-modal-overlay is-hidden"
     };
     const actionBtn = {
       style: { display: "inline-block" },
+      className: "replay-button",
       textContent: "x",
       onclick: vi.fn()
     };
@@ -93,13 +103,14 @@ describe("bootstrap replay modal", () => {
     });
 
     expect(result).toEqual({ opened: true, hasActionButton: false });
-    expect(actionBtn.style.display).toBe("none");
+    expect(hasClass(actionBtn, "is-hidden")).toBe(true);
     expect(actionBtn.onclick).toBeNull();
   });
 
   it("closes replay modal", () => {
     const modal = {
-      style: { display: "flex" }
+      style: { display: "" },
+      className: "replay-modal-overlay"
     };
     const result = applyReplayModalClose({
       getElementById(id: string) {
@@ -108,12 +119,13 @@ describe("bootstrap replay modal", () => {
     });
 
     expect(result).toEqual({ closed: true });
-    expect(modal.style.display).toBe("none");
+    expect(hasClass(modal, "is-hidden")).toBe(true);
   });
 
   it("opens and closes settings modal", () => {
     const modal = {
-      style: { display: "none" }
+      style: { display: "none" },
+      className: "replay-modal-overlay is-hidden"
     };
 
     const openResult = applySettingsModalOpen({
@@ -129,6 +141,6 @@ describe("bootstrap replay modal", () => {
 
     expect(openResult).toEqual({ opened: true });
     expect(closeResult).toEqual({ closed: true });
-    expect(modal.style.display).toBe("none");
+    expect(hasClass(modal, "is-hidden")).toBe(true);
   });
 });

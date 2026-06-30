@@ -164,11 +164,38 @@
     }
   }
 
+  function setHiddenState(element, hidden, fallbackVisibleDisplay) {
+    if (!element) return;
+    if (element.classList && typeof element.classList.add === "function" && typeof element.classList.remove === "function") {
+      if (hidden) {
+        element.classList.add("is-hidden");
+      } else {
+        element.classList.remove("is-hidden");
+        if (element.style && element.style.display === "none") {
+          element.style.display = "";
+        }
+      }
+      return;
+    }
+    if (element.style) {
+      element.style.display = hidden ? "none" : fallbackVisibleDisplay;
+    }
+  }
+
+  function isHiddenState(element) {
+    if (!element) return true;
+    if (element.hidden === true) return true;
+    if (element.classList && typeof element.classList.contains === "function" && element.classList.contains("is-hidden")) {
+      return true;
+    }
+    return !!(element.style && element.style.display === "none");
+  }
+
   function openAnnouncementModal() {
     var modal = document.getElementById("announcement-modal");
     if (!modal) return;
     renderAnnouncementList();
-    modal.style.display = "flex";
+    setHiddenState(modal, false, "flex");
     markLatestAsRead();
     updateUnreadDot();
   }
@@ -176,7 +203,7 @@
   function closeAnnouncementModal() {
     var modal = document.getElementById("announcement-modal");
     if (!modal) return;
-    modal.style.display = "none";
+    setHiddenState(modal, true, "flex");
   }
 
   function bindEvents() {
@@ -247,7 +274,7 @@
     window.__announcementLangBound = true;
     window.addEventListener("uilanguagechange", function () {
       var modal = document.getElementById("announcement-modal");
-      if (modal && modal.style && modal.style.display === "flex") {
+      if (modal && !isHiddenState(modal)) {
         renderAnnouncementList();
       }
     });

@@ -1,4 +1,4 @@
-import { writeStorageValue } from "../storage/browser-storage";
+import { removeStorageValue, writeStorageValue } from "../storage/browser-storage";
 import {
   AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
@@ -22,6 +22,13 @@ function toText(value: unknown): string {
 
 function toRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function firstPresentText(...values: unknown[]): string {
+  for (const value of values) {
+    if (value !== null && value !== undefined) return toText(value).trim();
+  }
+  return "";
 }
 
 function currentNext(): string {
@@ -58,12 +65,24 @@ function api() {
 function persistAuth(payload: JsonRecord): void {
   const user = toRecord(payload.user);
   const data = toRecord(payload.data);
-  const token = toText(payload.token || data.token).trim();
-  const userId = toText(payload.userId || payload.user_id || user.id || data.userId || data.user_id).trim();
-  const nickname = toText(payload.nickname || user.nickname || data.nickname || user.email || data.email).trim();
+  const token = firstPresentText(payload.token, data.token);
+  const userId = firstPresentText(payload.userId, payload.user_id, user.id, data.userId, data.user_id);
+  const nickname = firstPresentText(
+    payload.nickname,
+    payload.displayName,
+    payload.display_name,
+    user.nickname,
+    user.displayName,
+    user.display_name,
+    data.nickname,
+    data.displayName,
+    data.display_name
+  );
   writeStorageValue(window.localStorage, AUTH_TOKEN_KEY, token);
   if (userId) writeStorageValue(window.localStorage, AUTH_USER_ID_KEY, userId);
+  else removeStorageValue(window.localStorage, AUTH_USER_ID_KEY);
   if (nickname) writeStorageValue(window.localStorage, AUTH_NICKNAME_KEY, nickname);
+  else removeStorageValue(window.localStorage, AUTH_NICKNAME_KEY);
 }
 
 function authError(payload: JsonRecord, fallback: string): string {

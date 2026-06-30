@@ -5,12 +5,13 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.resetModules();
   });
 
-  it("waits for the ranked session before loading the ranked home game startup scripts", async () => {
+  it("starts the ranked session without blocking the ranked home game startup scripts", async () => {
     const loadCalls: string[][] = [];
     let releaseRankedSession: (() => void) | null = null;
     const rankedSessionReady = new Promise<void>((resolve) => {
       releaseRankedSession = resolve;
     });
+    const bootstrapRankedSessionForHomeFamilyPage = vi.fn(() => rankedSessionReady);
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
@@ -20,7 +21,7 @@ describe("home family bootstrap ranked session ordering", () => {
       registerEngineFacade: vi.fn()
     }));
     vi.doMock("../../src/bootstrap/ranked-session", () => ({
-      bootstrapRankedSessionForHomeFamilyPage: vi.fn(() => rankedSessionReady)
+      bootstrapRankedSessionForHomeFamilyPage
     }));
     vi.doMock("../../src/bootstrap/storage", () => ({
       resolveStorageByName: () => null,
@@ -54,16 +55,20 @@ describe("home family bootstrap ranked session ordering", () => {
     const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
     const pendingBootstrap = bootstrapHomeFamilyPage("index");
 
-    await Promise.resolve();
-    expect(loadCalls).toEqual([]);
-
-    releaseRankedSession?.();
-    await pendingBootstrap;
-
-    expect(loadCalls).toEqual([
-      ["./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat"],
-      ["./js/home_standard_startup_bundle.js?v=20260625-ranked-cache"]
-    ]);
+    try {
+      await vi.dynamicImportSettled();
+      expect(bootstrapRankedSessionForHomeFamilyPage).toHaveBeenCalledWith("index");
+      expect(loadCalls[0]).toEqual([
+        "./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat"
+      ]);
+      expect(loadCalls[1]).toHaveLength(1);
+      expect(loadCalls[1][0]).toMatch(
+        /^\.\/js\/home_standard_startup_bundle\.[a-f0-9]{12}\.js$/
+      );
+    } finally {
+      releaseRankedSession?.();
+      await pendingBootstrap;
+    }
   });
 
   it("installs the pre-accessor manager-forward bindings runtime before loading game scripts", async () => {

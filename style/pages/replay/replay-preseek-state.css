@@ -1,0 +1,3 @@
+body[data-page="replay"] .game-container.game-container-replay.replay-step-preseek-hidden {
+  opacity: 0;
+}

@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light;
+  --page-bg: #f7f3ea;
+  --ink: #3f3831;
+  --muted: #817569;
+  --panel: rgba(255, 252, 245, 0.76);
+  --line: rgba(86, 74, 62, 0.14);
+  --timer-brown: #bbada0;
+  --tile: #eee4da;
+  --tile-text: #776e65;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 42%),
+    var(--page-bg);
+  color: var(--ink);
+  font-family: "Avenir Next", "Trebuchet MS", "Helvetica Neue", Arial, sans-serif;
+}
+
+.preview-shell {
+  width: min(1160px, calc(100vw - 36px));
+  margin: 0 auto;
+  padding: 34px 0 46px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.preview-kicker {
+  margin: 0 0 8px;
+  color: #9a7a4d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.preview-logo {
+  width: 156px;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 28px;
+  align-items: start;
+}

@@ -1,0 +1,13 @@
+    @media (max-width: 920px) {
+      .validator-grid {
+        grid-template-columns: 1fr;
+      }
+      .validator-shell {
+        width: min(100vw - 20px, 1200px);
+        padding-top: 16px;
+      }
+      .validator-hero,
+      .validator-panel {
+        padding: 18px;
+      }
+    }

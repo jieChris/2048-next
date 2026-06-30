@@ -1076,12 +1076,30 @@
     return document.getElementById("replay-imported-file-name");
   }
 
+  function setHiddenState(element, hidden, fallbackVisibleDisplay) {
+    if (!element) return;
+    if (element.classList && typeof element.classList.add === "function" && typeof element.classList.remove === "function") {
+      if (hidden) {
+        element.classList.add("is-hidden");
+      } else {
+        element.classList.remove("is-hidden");
+        if (element.style && element.style.display === "none") {
+          element.style.display = "";
+        }
+      }
+      return;
+    }
+    if (element.style) {
+      element.style.display = hidden ? "none" : fallbackVisibleDisplay;
+    }
+  }
+
   function syncReplayImportedFileNameElement() {
     var banner = resolveReplayImportedFileNameElement();
     if (!banner) return;
     var name = toText(replayImportedFileBaseName).trim();
     banner.textContent = name;
-    banner.style.display = name ? "block" : "none";
+    setHiddenState(banner, !name, "block");
   }
 
   function setReplayImportedFileBaseName(name) {
@@ -1113,7 +1131,7 @@
   function syncReplayFileDropOverlay() {
     var overlay = document.getElementById("replay-file-drop-overlay");
     if (!overlay) return;
-    overlay.style.display = replayFileDropOverlayVisible ? "flex" : "none";
+    setHiddenState(overlay, !replayFileDropOverlayVisible, "flex");
   }
 
   function setReplayFileDropOverlayVisible(visible) {
@@ -1200,12 +1218,12 @@
     var readOnly = modalOptions.readOnly === true;
     var inputText = toText(content);
 
-    modal.style.display = "flex";
+    setHiddenState(modal, false, "flex");
     titleEl.textContent = title;
     textEl.value = inputText;
 
     if (singleWrap && singleInput) {
-      singleWrap.style.display = useSingleLine ? "flex" : "none";
+      setHiddenState(singleWrap, !useSingleLine, "flex");
       if (singleUnit) {
         singleUnit.textContent = toText(modalOptions.unitText || "ms");
       }
@@ -1223,11 +1241,11 @@
       }
     }
 
-    textEl.style.display = useSingleLine ? "none" : "block";
+    setHiddenState(textEl, useSingleLine, "block");
     textEl.readOnly = readOnly;
 
     if (speedModeWrap && speedModeCheckbox) {
-      speedModeWrap.style.display = showSpeedModeToggle ? "block" : "none";
+      setHiddenState(speedModeWrap, !showSpeedModeToggle, "block");
       var useOriginalSpeed = modalOptions.useOriginalSpeed === true;
       speedModeCheckbox.checked = useOriginalSpeed;
       if (singleInput) singleInput.disabled = useOriginalSpeed;
@@ -1237,7 +1255,7 @@
     }
 
     if (actionName) {
-      actionBtn.style.display = "inline-block";
+      setHiddenState(actionBtn, false, "inline-block");
       actionBtn.textContent = actionName;
       actionBtn.onclick = function () {
         var value = useSingleLine && singleInput ? singleInput.value : textEl.value;
@@ -1245,12 +1263,12 @@
         actionCallback(value, { useOriginalSpeed: useOriginalSpeed });
       };
     } else {
-      actionBtn.style.display = "none";
+      setHiddenState(actionBtn, true, "inline-block");
       actionBtn.onclick = null;
     }
 
     if (downloadBtn) {
-      downloadBtn.style.display = "none";
+      setHiddenState(downloadBtn, true, "inline-block");
       downloadBtn.onclick = null;
     }
   }
@@ -1346,7 +1364,7 @@
 
   window.closeReplayModal = function () {
     var modal = document.getElementById("replay-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) setHiddenState(modal, true, "flex");
   };
 
   function importReplayFromTextModal() {
@@ -1550,7 +1568,7 @@
     replayDiagnosticsVisible = visible === true;
     var panel = resolveReplayDiagnosticsElement("replay-diagnostics-panel");
     if (!panel) return;
-    panel.style.display = replayDiagnosticsVisible ? "block" : "none";
+    setHiddenState(panel, !replayDiagnosticsVisible, "block");
 
     var toggleBtn = document.getElementById("replay-toggle-diagnostics-btn");
     if (toggleBtn && toggleBtn.classList) {

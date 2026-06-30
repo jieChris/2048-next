@@ -1,0 +1,54 @@
+.palette-flat-warm,
+.palette-flat-muted,
+.palette-flat-crisp {
+  --rank-bg: #d8d0bd;
+  --rank-text: #fffaf2;
+  --top-shadow: none;
+  --rank-font-weight: 620;
+}
+
+.palette-flat-warm .rank,
+.palette-flat-muted .rank,
+.palette-flat-crisp .rank {
+  box-shadow: none;
+}
+
+.palette-flat-warm .top-1,
+.palette-flat-muted .top-1,
+.palette-flat-crisp .top-1,
+.palette-flat-warm .top-2,
+.palette-flat-muted .top-2,
+.palette-flat-crisp .top-2,
+.palette-flat-warm .top-3,
+.palette-flat-muted .top-3,
+.palette-flat-crisp .top-3 {
+  color: #fffaf2;
+  font-size: 22px;
+}
+
+.palette-flat-warm {
+  --top-1-bg: #d7b51e;
+  --top-2-bg: #82aeb1;
+  --top-3-bg: #b66f3c;
+  --top-1-text: #fffaf2;
+  --top-2-text: #fffaf2;
+  --top-3-text: #fffaf2;
+}
+
+.palette-flat-muted {
+  --top-1-bg: #c8a63a;
+  --top-2-bg: #8fa2a0;
+  --top-3-bg: #a66f49;
+  --top-1-text: #fffaf2;
+  --top-2-text: #fffaf2;
+  --top-3-text: #fffaf2;
+}
+
+.palette-flat-crisp {
+  --top-1-bg: #dfbd24;
+  --top-2-bg: #6fb5bd;
+  --top-3-bg: #c57943;
+  --top-1-text: #fffaf2;
+  --top-2-text: #fffaf2;
+  --top-3-text: #fffaf2;
+}

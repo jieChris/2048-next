@@ -29,10 +29,64 @@
     };
   }
 
-  function setDisplayStyle(target, display) {
+  var HIDDEN_CLASS_NAME = "is-hidden";
+
+  function hasClassName(target, className) {
     var record = toRecord(target);
+    var classList = toRecord(record.classList);
+    var contains = asFunction(classList.contains);
+    if (contains) return !!contains.call(classList, className);
+    var current = typeof record.className === "string" ? record.className : "";
+    return (" " + current + " ").indexOf(" " + className + " ") >= 0;
+  }
+
+  function addClassName(target, className) {
+    var record = toRecord(target);
+    var classList = toRecord(record.classList);
+    var add = asFunction(classList.add);
+    if (add) {
+      add.call(classList, className);
+      return true;
+    }
+    if (typeof record.className !== "string") return false;
+    if (hasClassName(record, className)) return true;
+    var current = record.className.trim();
+    record.className = current ? current + " " + className : className;
+    return true;
+  }
+
+  function removeClassName(target, className) {
+    var record = toRecord(target);
+    var classList = toRecord(record.classList);
+    var remove = asFunction(classList.remove);
+    if (remove) {
+      remove.call(classList, className);
+      return true;
+    }
+    if (typeof record.className !== "string") return false;
+    if (!hasClassName(record, className)) return true;
+    record.className = record.className
+      .split(/\s+/)
+      .filter(function (name) {
+        return name && name !== className;
+      })
+      .join(" ");
+    return true;
+  }
+
+  function setHiddenState(target, hidden, fallbackVisibleDisplay) {
+    var record = toRecord(target);
+    var didUpdateClass = hidden
+      ? addClassName(record, HIDDEN_CLASS_NAME)
+      : removeClassName(record, HIDDEN_CLASS_NAME);
     var style = toRecord(record.style);
-    style.display = display;
+    if (didUpdateClass) {
+      if (!hidden && style.display === "none") {
+        style.display = "";
+      }
+      return;
+    }
+    style.display = hidden ? "none" : fallbackVisibleDisplay;
   }
 
   function bindModalOverlayClose(modalNode, closeCallback) {
@@ -66,7 +120,7 @@
     var openPageBtn = getElementById("replay-open-page-btn");
     var closeBtn = getElementById("replay-close-btn");
 
-    setDisplayStyle(modal, "flex");
+    setHiddenState(modal, false, "flex");
     if (titleEl) {
       toRecord(titleEl).textContent = source.title == null ? "" : String(source.title);
     }
@@ -79,7 +133,7 @@
     if (actionBtn) {
       var actionBtnRecord = toRecord(actionBtn);
       if (actionName) {
-        setDisplayStyle(actionBtnRecord, "inline-block");
+        setHiddenState(actionBtnRecord, false, "inline-block");
         actionBtnRecord.textContent = actionName;
         actionBtnRecord.onclick = function () {
           if (!actionCallback) return undefined;
@@ -87,20 +141,20 @@
           return actionCallback(value);
         };
       } else {
-        setDisplayStyle(actionBtnRecord, "none");
+        setHiddenState(actionBtnRecord, true, "inline-block");
         actionBtnRecord.onclick = null;
       }
     }
 
     if (downloadBtn) {
       var downloadBtnRecord = toRecord(downloadBtn);
-      setDisplayStyle(downloadBtnRecord, "none");
+      setHiddenState(downloadBtnRecord, true, "inline-block");
       downloadBtnRecord.onclick = null;
     }
 
     if (openPageBtn) {
       var openPageBtnRecord = toRecord(openPageBtn);
-      setDisplayStyle(openPageBtnRecord, "none");
+      setHiddenState(openPageBtnRecord, true, "inline-block");
       openPageBtnRecord.onclick = null;
     }
 
@@ -127,7 +181,7 @@
     }
     var modal = toRecord(modalNode);
 
-    setDisplayStyle(modal, "none");
+    setHiddenState(modal, true, "flex");
     return {
       closed: true
     };
@@ -144,7 +198,7 @@
     }
     var modal = toRecord(modalNode);
 
-    setDisplayStyle(modal, "flex");
+    setHiddenState(modal, false, "flex");
     return {
       opened: true
     };
@@ -161,7 +215,7 @@
     }
     var modal = toRecord(modalNode);
 
-    setDisplayStyle(modal, "none");
+    setHiddenState(modal, true, "flex");
     return {
       closed: true
     };
