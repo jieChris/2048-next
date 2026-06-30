@@ -1,0 +1,111 @@
+body[data-page="game"] .top-action-btn.export-btn .export-arrow-static,
+body[data-page="practice"] .top-action-btn.export-btn .export-arrow-static {
+  opacity: 1;
+}
+
+body[data-page="game"] .top-action-btn.export-btn .export-arrow-trace,
+body[data-page="practice"] .top-action-btn.export-btn .export-arrow-trace {
+  opacity: 0;
+  stroke-linecap: round;
+  stroke-dasharray: 0;
+  stroke-dashoffset: 0;
+}
+
+body[data-page="game"] .top-action-btn.export-btn .export-arrow-mover,
+body[data-page="practice"] .top-action-btn.export-btn .export-arrow-mover {
+  opacity: 0;
+  pointer-events: none;
+  offset-distance: 0%;
+  offset-rotate: auto;
+  offset-path: path("M12 3 L12 15");
+}
+
+body[data-page="game"] .top-action-btn.export-btn .export-arrow-mover line,
+body[data-page="practice"] .top-action-btn.export-btn .export-arrow-mover line,
+body[data-page="game"] .top-action-btn.export-btn .export-arrow-mover polyline,
+body[data-page="practice"] .top-action-btn.export-btn .export-arrow-mover polyline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body[data-page="game"] .top-action-btn.export-btn .export-base-group,
+body[data-page="practice"] .top-action-btn.export-btn .export-base-group {
+  opacity: 1;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transform: scaleY(1);
+}
+
+body[data-page="game"] .top-action-btn.export-btn:hover .export-base-group,
+body[data-page="practice"] .top-action-btn.export-btn:hover .export-base-group,
+body[data-page="game"] .top-action-btn.export-btn:focus-visible .export-base-group,
+body[data-page="practice"] .top-action-btn.export-btn:focus-visible .export-base-group {
+  opacity: 0;
+  animation: export-base-rise-in 0.33s cubic-bezier(0.2, 0.8, 0.2, 1) 0.105s forwards;
+}
+
+@keyframes export-base-rise-in {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-static,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-static {
+  opacity: 1;
+}
+
+body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-trace,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-trace {
+  opacity: 0;
+  stroke-linecap: round;
+  stroke-dasharray: 0;
+  stroke-dashoffset: 0;
+}
+
+body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-mover,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-mover {
+  opacity: 0;
+  pointer-events: none;
+  offset-distance: 0%;
+  offset-rotate: auto;
+  offset-path: path("M11 13 L21 3");
+}
+
+body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-mover line,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-mover line,
+body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-mover polyline,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-mover polyline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body[data-page="game"] .top-action-btn.practice-btn .practice-frame-group,
+body[data-page="practice"] .top-action-btn.practice-btn .practice-frame-group {
+  opacity: 1;
+  clip-path: inset(0 0 0 0);
+}
+
+body[data-page="game"] .top-action-btn.practice-btn:hover .practice-frame-group,
+body[data-page="practice"] .top-action-btn.practice-btn:hover .practice-frame-group,
+body[data-page="game"] .top-action-btn.practice-btn:focus-visible .practice-frame-group,
+body[data-page="practice"] .top-action-btn.practice-btn:focus-visible .practice-frame-group {
+  opacity: 0;
+  animation: practice-frame-btt-in 0.307s cubic-bezier(0.2, 0.8, 0.2, 1) 0.102s forwards;
+}
+
+@keyframes practice-frame-btt-in {
+  0% {
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}

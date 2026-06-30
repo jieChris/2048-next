@@ -1,0 +1,97 @@
+.game-container .game-message {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(238, 228, 218, 0.5);
+  z-index: 100;
+  text-align: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px 0;
+  -webkit-animation: fade-in 800ms ease 1200ms;
+  -moz-animation: fade-in 800ms ease 1200ms;
+  animation: fade-in 800ms ease 1200ms;
+  -webkit-animation-fill-mode: both;
+  -moz-animation-fill-mode: both;
+  animation-fill-mode: both;
+}
+
+.game-container .game-message p {
+  font-size: 60px;
+  font-weight: bold;
+  height: auto;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.game-container .game-message .lower {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  margin-top: 28px;
+  width: min(320px, 82%);
+}
+
+.game-container .game-message.game-over .lower.has-undo-controls {
+  justify-content: space-between;
+  gap: 9px;
+  width: min(214px, 54%);
+}
+
+.game-container .game-message.game-over .lower.has-undo-controls > a.undo-button,
+.game-container .game-message.game-over .lower.has-undo-controls > a.retry-button {
+  flex: 0 1 calc(50% - 4.5px);
+  min-width: 63px;
+  max-width: 91px;
+}
+
+.game-container .game-message a {
+  display: inline-block;
+  background: var(--app-action-bg);
+  border-radius: var(--app-radius-tile);
+  padding: 0 20px;
+  text-decoration: none;
+  color: var(--app-text-on-strong);
+  height: 40px;
+  line-height: 42px;
+  margin-left: 0;
+  text-align: center;
+}
+
+.game-container .game-message a.keep-playing-button {
+  display: none;
+}
+
+html[data-theme="classic"] .game-container .game-message a.retry-button {
+  color: #ffffff !important;
+}
+
+.game-container .game-message.game-won {
+  background: rgba(237, 194, 46, 0.5);
+  color: var(--app-text-on-strong);
+}
+
+.game-container .game-message.game-won a.keep-playing-button {
+  display: inline-block;
+}
+
+.game-container .game-message.game-won,
+.game-container .game-message.game-over {
+  display: flex;
+}
+
+.game-container .game-message.game-won.game-message-temporarily-hidden,
+.game-container .game-message.game-over.game-message-temporarily-hidden {
+  display: none !important;
+  pointer-events: none;
+}
+
+.game-container .game-message.game-over p {
+  transform: translateX(20px);
+}
+

@@ -1,0 +1,55 @@
+.settings-row {
+  margin: 0;
+}
+
+.settings-row label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: var(--app-text);
+}
+
+.toolkit-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1 1 100%;
+  min-width: 100%;
+  max-width: 100%;
+  width: 100%;
+  justify-items: center;
+}
+
+.toolkit-entry-actions .replay-button {
+  min-width: 0;
+  width: min(205px, 100%);
+  min-height: 48px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #a98a72 0%, #8f6f58 100%);
+  box-shadow: 0 10px 24px rgba(108, 81, 57, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.toolkit-entry-actions .replay-button:hover,
+.toolkit-entry-actions .replay-button:focus-visible {
+  background: linear-gradient(180deg, #b48f71 0%, #996f52 100%);
+  box-shadow: 0 14px 28px rgba(108, 81, 57, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.toolkit-entry-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  order: 40;
+}
+
+.settings-modal-content > .replay-modal-actions {
+  order: 60;
+}

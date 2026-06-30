@@ -1,0 +1,28 @@
+.timer-legend-32,
+.timer-legend-64 {
+  font-size: 22px;
+}
+
+.timer-legend-128,
+.timer-legend-256,
+.timer-legend-512 {
+  font-size: 18px;
+}
+
+.timer-legend-1024,
+.timer-legend-2048,
+.timer-legend-4096,
+.timer-legend-8192 {
+  font-size: 14px;
+}
+
+.timer-legend-16384,
+.timer-legend-32768,
+.timer-legend-65536 {
+  font-size: 11px;
+}
+
+.timer-progress-cell {
+  width: var(--timerbox-main-tile-width);
+  margin-left: var(--timerbox-tile-gap);
+}

@@ -1,0 +1,31 @@
+@media screen and (max-width: 320px) {
+  body[data-page="game"],
+  body[data-page="replay"],
+  body[data-page="practice"],
+  body[data-page="modes"],
+  body[data-page="history"] {
+    padding: 0 6px;
+  }
+
+  body[data-page="game"] {
+    padding: 0 5px;
+  }
+
+  body[data-page="practice"] {
+    padding: 0 5px;
+  }
+
+  body[data-page="game"] .top-action-btn,
+  body[data-page="game"] .timerbox-toggle-btn,
+  body[data-page="game"] .mobile-hint-toggle-btn,
+  body[data-page="practice"] .top-action-btn,
+  body[data-page="practice"] .timerbox-toggle-btn,
+  body[data-page="replay"] .replay-control-btn,
+  body[data-page="history"] .replay-button {
+    font-size: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+

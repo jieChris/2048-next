@@ -1,0 +1,88 @@
+.above-game {
+  width: 500px;
+  float: left;
+}
+
+.above-game:after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.game-intro {
+  float: left;
+  line-height: 42px;
+  margin-bottom: 0;
+}
+
+#play-mode-intro {
+  max-width: 380px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  font-size: 18px;
+}
+
+.restart-button {
+  display: inline-block;
+  background: var(--app-action-bg);
+  border-radius: var(--app-radius-control);
+  padding: 0 20px;
+  text-decoration: none;
+  color: var(--app-text-on-strong);
+  height: 40px;
+  line-height: 42px;
+  display: block;
+  text-align: center;
+  float: right;
+}
+
+.timer-container:after {
+  position: absolute;
+  width: 100%;
+  top: 10px;
+  left: 0;
+  text-transform: uppercase;
+  font-size: 13px;
+  line-height: 13px;
+  text-align: center;
+  color: var(--app-text-on-board-muted);
+  content: "\65f6\95f4";
+}
+
+html[data-ui-lang="en"] .score-container:after {
+  content: "SCORE";
+}
+
+html[data-ui-lang="en"] .best-container:after {
+  content: "BEST";
+}
+
+html[data-ui-lang="en"] #timer:after,
+html[data-ui-lang="en"] .timer-container:after {
+  content: "TIME";
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 10px;
+  line-height: 1.65;
+}
+
+a {
+  color: var(--app-text);
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+strong.important {
+  text-transform: uppercase;
+}
+
+hr {
+  border: none;
+  border-bottom: 1px solid var(--app-border-control);
+  margin-top: 20px;
+  margin-bottom: 30px;
+}

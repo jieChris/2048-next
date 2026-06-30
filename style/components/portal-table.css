@@ -1,0 +1,35 @@
+.portal-status {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.portal-muted {
+  color: var(--app-text-subtle);
+  margin-top: 6px;
+}
+
+.portal-table-wrap {
+  overflow-x: auto;
+}
+
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.portal-table th,
+.portal-table td {
+  border-bottom: 1px solid #e7e1d7;
+  padding: 8px;
+  text-align: left;
+}
+
+.portal-table th {
+  color: var(--app-text-subtle);
+}
+
+.portal-section-title {
+  margin: 12px 0;
+  font-size: 24px;
+}

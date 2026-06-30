@@ -1,0 +1,28 @@
+.history-mini-board-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow-x: auto;
+}
+
+.history-mini-game.game-container {
+  float: none;
+  margin: 0;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.history-mini-game .grid-cell {
+  border-radius: var(--app-radius-panel);
+}
+
+.history-mini-game .tile,
+.history-mini-game .tile .tile-inner {
+  transition: none !important;
+  animation: none !important;
+}

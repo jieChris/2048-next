@@ -1,0 +1,94 @@
+body[data-page="game"] .top-action-btn.mode-btn .mode-quad,
+body[data-page="practice"] .top-action-btn.mode-btn .mode-quad {
+  transform: none;
+  opacity: 1;
+  clip-path: inset(0 0 0 0);
+}
+
+body[data-page="game"] .top-action-btn.mode-btn:hover .mode-quad-tl,
+body[data-page="practice"] .top-action-btn.mode-btn:hover .mode-quad-tl,
+body[data-page="game"] .top-action-btn.mode-btn:focus-visible .mode-quad-tl,
+body[data-page="practice"] .top-action-btn.mode-btn:focus-visible .mode-quad-tl {
+  animation: mode-quad-out-tl 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+body[data-page="game"] .top-action-btn.mode-btn:hover .mode-quad-tr,
+body[data-page="practice"] .top-action-btn.mode-btn:hover .mode-quad-tr,
+body[data-page="game"] .top-action-btn.mode-btn:focus-visible .mode-quad-tr,
+body[data-page="practice"] .top-action-btn.mode-btn:focus-visible .mode-quad-tr {
+  animation: mode-quad-out-tr 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+body[data-page="game"] .top-action-btn.mode-btn:hover .mode-quad-br,
+body[data-page="practice"] .top-action-btn.mode-btn:hover .mode-quad-br,
+body[data-page="game"] .top-action-btn.mode-btn:focus-visible .mode-quad-br,
+body[data-page="practice"] .top-action-btn.mode-btn:focus-visible .mode-quad-br {
+  animation: mode-quad-out-br 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+body[data-page="game"] .top-action-btn.mode-btn:hover .mode-quad-bl,
+body[data-page="practice"] .top-action-btn.mode-btn:hover .mode-quad-bl,
+body[data-page="game"] .top-action-btn.mode-btn:focus-visible .mode-quad-bl,
+body[data-page="practice"] .top-action-btn.mode-btn:focus-visible .mode-quad-bl {
+  animation: mode-quad-out-bl 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes mode-quad-out-tl {
+  0% {
+    opacity: 0;
+    clip-path: inset(100% 0 0 100%);
+  }
+  20% {
+    opacity: 0;
+    clip-path: inset(100% 0 0 100%);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes mode-quad-out-tr {
+  0% {
+    opacity: 0;
+    clip-path: inset(100% 100% 0 0);
+  }
+  20% {
+    opacity: 0;
+    clip-path: inset(100% 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes mode-quad-out-br {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 100% 0);
+  }
+  20% {
+    opacity: 0;
+    clip-path: inset(0 100% 100% 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes mode-quad-out-bl {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 100%);
+  }
+  20% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 100%);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}

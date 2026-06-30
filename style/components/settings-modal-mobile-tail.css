@@ -1,0 +1,44 @@
+@media screen and (max-width: 520px) {
+  .top-action-buttons {
+    position: static;
+    right: auto;
+    top: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .top-action-btn {
+    height: 30px;
+    line-height: 30px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .floating-settings-btn {
+    right: 6px;
+    top: 6px;
+  }
+
+  .stats-panel-toggle.is-floating {
+    right: 76px;
+    top: 6px;
+  }
+
+  .theme-preview-dual-wrap {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tile-palette-toolbar .settings-select,
+  .tile-palette-name-input,
+  .tile-palette-toolbar .replay-button {
+    width: 100%;
+  }
+
+  .tile-palette-editor-block {
+    min-width: 0;
+    width: 100%;
+  }
+}
+

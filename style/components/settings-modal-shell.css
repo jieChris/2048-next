@@ -1,0 +1,35 @@
+/* Settings modal */
+.settings-modal-content {
+  max-width: 540px;
+  text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.announcement-modal-content {
+  max-width: 640px;
+  text-align: left;
+}
+
+.settings-modal-content > h3 {
+  order: 0;
+}
+
+.settings-modal-content > .settings-row:not(.toolkit-entry-row) {
+  order: 10;
+}
+
+.settings-modal-content > h3,
+.settings-modal-content > .theme-settings-row,
+.settings-modal-content > .toolkit-entry-row,
+.settings-modal-content > .replay-modal-actions,
+.settings-modal-content > .settings-row:not(.settings-toggle-row) {
+  width: 100%;
+}
+
+.settings-modal-content > .settings-row:empty {
+  display: none;
+}
+

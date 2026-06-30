@@ -1,0 +1,51 @@
+/* Responsive V2 (mobile-first compatibility layer) */
+.timerbox-toggle-btn {
+  display: none;
+  border: none;
+  background: var(--app-action-bg);
+  color: var(--app-text-on-strong);
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 14px;
+  min-height: 36px;
+  line-height: 36px;
+  padding: 0 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.timerbox-toggle-btn svg {
+  display: block;
+}
+
+.mobile-hint-toggle-btn {
+  display: none;
+}
+
+.mobile-undo-top-btn {
+  display: none;
+}
+
+.practice-mobile-undo-btn {
+  display: none;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f59f6a 0%, #f07a4a 100%);
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(156, 73, 39, 0.95);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.practice-mobile-undo-btn svg {
+  display: block;
+}
+
+.practice-mobile-undo-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(156, 73, 39, 0.95);
+}
+
+.practice-mobile-undo-btn[aria-disabled="true"] {
+  filter: grayscale(0.2);
+  box-shadow: none;
+}

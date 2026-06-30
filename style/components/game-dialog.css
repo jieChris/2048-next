@@ -1,0 +1,140 @@
+.game-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(250, 248, 239, 0.78), rgba(187, 173, 160, 0.62)), rgba(80, 72, 65, 0.48);
+  backdrop-filter: blur(5px);
+}
+
+.game-dialog-panel {
+  width: min(360px, calc(100vw - 48px));
+  border-radius: var(--app-radius-dialog);
+  padding: 22px 22px 18px;
+  background: linear-gradient(180deg, rgba(250, 248, 239, 0.98) 0%, rgba(238, 228, 218, 0.98) 100%);
+  border: 1px solid rgba(187, 173, 160, 0.72);
+  box-shadow: var(--app-shadow-dialog);
+  color: var(--app-text);
+  transform: translateY(4px) scale(0.98);
+  animation: game-dialog-pop 150ms ease-out forwards;
+}
+
+.game-dialog-title {
+  margin: 0 0 10px;
+  color: var(--app-text);
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: bold;
+  letter-spacing: 0;
+}
+
+.game-dialog-message {
+  color: var(--app-action-bg);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.game-dialog-input-wrap {
+  margin-top: 14px;
+}
+
+.game-dialog-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(187, 173, 160, 0.78);
+  border-radius: var(--app-radius-control);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--app-text);
+  font: inherit;
+  outline: none;
+}
+
+textarea.game-dialog-input {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.game-dialog-input:focus {
+  border-color: #f2b179;
+  box-shadow: 0 0 0 3px rgba(242, 177, 121, 0.22);
+}
+
+.game-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.game-dialog-button {
+  min-width: 78px;
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--app-radius-control);
+  padding: 0 14px;
+  font: inherit;
+  font-weight: bold;
+  color: var(--app-text-on-strong);
+  cursor: pointer;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.game-dialog-button-primary {
+  background: var(--app-action-bg);
+}
+
+.game-dialog-button-secondary {
+  background: var(--app-surface-board);
+}
+
+.game-dialog-button-danger {
+  background: #d65f43;
+}
+
+.game-dialog-button:hover {
+  filter: brightness(1.05);
+}
+
+.game-dialog-button:focus-visible {
+  outline: 3px solid var(--app-focus-ring-warm);
+  outline-offset: 2px;
+}
+
+.game-dialog-overlay.is-danger .game-dialog-title {
+  color: #b94d35;
+}
+
+@keyframes game-dialog-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+html[data-night-background="1"] .game-dialog-overlay {
+  background: linear-gradient(135deg, rgba(12, 18, 29, 0.82), rgba(45, 57, 75, 0.72)), rgba(2, 6, 16, 0.54);
+}
+
+html[data-night-background="1"] .game-dialog-panel {
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.98) 0%, rgba(13, 21, 34, 0.98) 100%);
+  border-color: rgba(213, 168, 106, 0.28);
+  color: #efe7dc;
+  box-shadow: 0 24px 54px rgba(1, 5, 14, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-night-background="1"] .game-dialog-title,
+html[data-night-background="1"] .game-dialog-message {
+  color: #efe7dc;
+}
+
+html[data-night-background="1"] .game-dialog-input {
+  background: rgba(16, 24, 38, 0.92);
+  border-color: rgba(213, 168, 106, 0.28);
+  color: #efe7dc;
+}

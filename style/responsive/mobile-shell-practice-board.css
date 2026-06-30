@@ -1,0 +1,15 @@
+@media screen and (max-width: 980px) {
+  body[data-page="practice"] .heading {
+    float: none;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  body[data-page="practice"] .game-container {
+    float: none;
+    margin: 12px auto 0;
+    width: calc(100% - 10px);
+    max-width: none;
+  }
+
+}

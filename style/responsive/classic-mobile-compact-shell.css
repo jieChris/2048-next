@@ -1,0 +1,49 @@
+@media screen and (max-width: 520px) {
+
+  html,
+  body {
+    font-size: 15px;
+  }
+
+  body {
+    margin: 20px 0;
+    padding: 0 20px;
+  }
+
+  h1.title {
+    font-size: 27px;
+    margin-top: 15px;
+  }
+
+  .container {
+    width: 280px;
+    margin: 0 auto;
+  }
+
+  .score-container,
+  .best-container,
+  .timer-container {
+    margin-top: 0;
+    padding: 15px 10px;
+    min-width: 40px;
+  }
+
+  .stats-left {
+    float: left;
+    font-weight: bold;
+    color: var(--app-text);
+    margin-top: 10px;
+  }
+
+  .stats-right {
+    float: right;
+    font-weight: bold;
+    color: var(--app-text);
+    margin-top: 10px;
+  }
+
+  .heading {
+    margin-bottom: 10px;
+  }
+
+}

@@ -1,0 +1,43 @@
+@media (max-width: 520px) {
+  .game-dialog-overlay {
+    padding: 18px;
+  }
+
+  .game-dialog-panel {
+    width: calc(100vw - 36px);
+    padding: 20px 18px 16px;
+  }
+
+  .game-dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .game-dialog-button {
+    width: 100%;
+  }
+
+  .beta-access-gate {
+    padding: 14px;
+  }
+
+  .beta-access-panel {
+    width: calc(100vw - 28px);
+    max-height: calc(100vh - 28px);
+    padding: 18px;
+  }
+
+  .beta-access-title {
+    font-size: 22px;
+  }
+
+  .beta-access-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .beta-access-button {
+    width: 100%;
+  }
+}
+

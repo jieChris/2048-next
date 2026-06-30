@@ -1,0 +1,15 @@
+.replay-modal-content {
+  background: var(--app-page-bg);
+  padding: 20px;
+  border-radius: var(--app-radius-panel);
+  width: 90%;
+  max-width: 500px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.replay-modal-content h3 {
+  color: var(--app-text);
+  margin-top: 0;
+}

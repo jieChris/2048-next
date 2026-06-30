@@ -1,0 +1,104 @@
+.final-board-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 52px);
+  grid-template-rows: repeat(4, 52px);
+  gap: 6px;
+  background: var(--app-surface-board);
+  border-radius: var(--app-radius-board);
+  padding: 8px;
+  width: fit-content;
+}
+
+.final-board-cell {
+  background: var(--app-surface-empty-tile);
+  border-radius: var(--app-radius-tile);
+  color: var(--app-text);
+  font-weight: bold;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.final-board-cell-empty {
+  background: var(--app-surface-empty-tile);
+  color: transparent;
+}
+
+.final-board-cell-v-2 {
+  background: var(--app-surface-tile);
+  color: var(--app-text);
+}
+
+.final-board-cell-v-4 {
+  background: #ede0c8;
+  color: var(--app-text);
+}
+
+.final-board-cell-v-8 {
+  background: #f2b179;
+  color: var(--app-text-on-strong);
+}
+
+.final-board-cell-v-16 {
+  background: #f59563;
+  color: var(--app-text-on-strong);
+}
+
+.final-board-cell-v-32 {
+  background: #f67c5f;
+  color: var(--app-text-on-strong);
+}
+
+.final-board-cell-v-64 {
+  background: #f65e3b;
+  color: var(--app-text-on-strong);
+}
+
+.final-board-cell-v-128 {
+  background: #edcf72;
+  color: var(--app-text-on-strong);
+  font-size: 14px;
+}
+
+.final-board-cell-v-256 {
+  background: #edcc61;
+  color: var(--app-text-on-strong);
+  font-size: 14px;
+}
+
+.final-board-cell-v-512 {
+  background: #edc850;
+  color: var(--app-text-on-strong);
+  font-size: 14px;
+}
+
+.final-board-cell-v-1024 {
+  background: #edc53f;
+  color: var(--app-text-on-strong);
+  font-size: 12px;
+}
+
+.final-board-cell-v-2048 {
+  background: #edc22e;
+  color: var(--app-text-on-strong);
+  font-size: 12px;
+}
+
+.final-board-cell-v-4096,
+.final-board-cell-v-8192,
+.final-board-cell-v-16384,
+.final-board-cell-v-32768,
+.final-board-cell-v-65536 {
+  background: #3c3a32;
+  color: var(--app-text-on-strong);
+  font-size: 11px;
+}
+
+.final-board-cell-super {
+  background: #3c3a32;
+  color: var(--app-text-on-strong);
+  font-size: 10px;
+}
+

@@ -1,0 +1,48 @@
+body[data-page="game"] .top-action-btn.history-btn .history-hand,
+body[data-page="practice"] .top-action-btn.history-btn .history-hand {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  opacity: 1;
+}
+
+body[data-page="game"] .top-action-btn.history-btn .history-hand-long,
+body[data-page="practice"] .top-action-btn.history-btn .history-hand-long {
+  transform: rotate(0deg);
+}
+
+body[data-page="game"] .top-action-btn.history-btn .history-hand-short,
+body[data-page="practice"] .top-action-btn.history-btn .history-hand-short {
+  transform: rotate(118deg);
+}
+
+body[data-page="game"] .top-action-btn.history-btn:hover .history-hand-long,
+body[data-page="practice"] .top-action-btn.history-btn:hover .history-hand-long,
+body[data-page="game"] .top-action-btn.history-btn:focus-visible .history-hand-long,
+body[data-page="practice"] .top-action-btn.history-btn:focus-visible .history-hand-long {
+  animation: history-long-spin 0.3s linear forwards;
+}
+
+body[data-page="game"] .top-action-btn.history-btn:hover .history-hand-short,
+body[data-page="practice"] .top-action-btn.history-btn:hover .history-hand-short,
+body[data-page="game"] .top-action-btn.history-btn:focus-visible .history-hand-short,
+body[data-page="practice"] .top-action-btn.history-btn:focus-visible .history-hand-short {
+  animation: history-short-sweep 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes history-long-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes history-short-sweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(118deg);
+  }
+}

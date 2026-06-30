@@ -1,0 +1,22 @@
+body[data-page="game"] .top-action-btn.settings-btn svg,
+body[data-page="practice"] .top-action-btn.settings-btn svg {
+  transform: rotate(0deg);
+  transform-origin: center;
+  transform-box: view-box;
+}
+
+body[data-page="game"] .top-action-btn.settings-btn:hover svg,
+body[data-page="practice"] .top-action-btn.settings-btn:hover svg,
+body[data-page="game"] .top-action-btn.settings-btn:focus-visible svg,
+body[data-page="practice"] .top-action-btn.settings-btn:focus-visible svg {
+  animation: settings-spin-once 0.56s linear forwards;
+}
+
+@keyframes settings-spin-once {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}

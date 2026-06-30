@@ -1,0 +1,18 @@
+@media screen and (max-width: 980px) {
+  .portal-container {
+    width: 94%;
+  }
+
+  .portal-header {
+    display: block;
+  }
+
+  .portal-nav {
+    margin-top: 8px;
+  }
+
+  .portal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+

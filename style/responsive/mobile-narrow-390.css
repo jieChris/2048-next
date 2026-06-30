@@ -1,0 +1,25 @@
+@media screen and (max-width: 390px) {
+  body[data-page="game"] #corner-stats-4-rate,
+  body[data-page="game"] #corner-stats-ips {
+    font-size: 12px !important;
+    top: 4px !important;
+  }
+
+  body[data-page="game"] .top-action-buttons,
+  body[data-page="practice"] #practice-stats-actions {
+    gap: 6px;
+  }
+
+  body[data-page="game"] .top-action-btn,
+  body[data-page="game"] .timerbox-toggle-btn,
+  body[data-page="game"] .mobile-hint-toggle-btn,
+  body[data-page="practice"] .top-action-btn,
+  body[data-page="practice"] .timerbox-toggle-btn {
+    font-size: 13px;
+  }
+
+  body[data-page="modes"] .mode-major-title {
+    font-size: 20px !important;
+  }
+}
+

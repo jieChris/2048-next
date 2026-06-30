@@ -1,0 +1,10 @@
+@media screen and (min-width: 981px) {
+  body[data-page="game"] .mobile-undo-top-btn,
+  body[data-page="game"] .mobile-hint-toggle-btn,
+  body[data-page="game"] .timerbox-toggle-btn,
+  body[data-page="practice"] .timerbox-toggle-btn,
+  body[data-page="practice"] .practice-mobile-undo-btn {
+    display: none !important;
+  }
+}
+

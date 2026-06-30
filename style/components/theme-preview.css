@@ -1,0 +1,31 @@
+/* Adjusted Preview Grid for Side-by-Side */
+.theme-preview-dual-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-preview-grid-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-preview-grid-title {
+  font-size: 12px;
+  color: var(--app-text-subtle);
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.theme-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 30px);
+  grid-template-rows: repeat(4, 30px);
+  gap: 4px;
+  background: var(--app-surface-board);
+  border-radius: var(--app-radius-board);
+  padding: 5px;
+  width: fit-content;
+}

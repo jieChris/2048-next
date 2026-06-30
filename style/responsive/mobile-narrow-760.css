@@ -1,0 +1,132 @@
+@media screen and (max-width: 760px) {
+  body[data-page="game"] #corner-stats-4-rate,
+  body[data-page="game"] #corner-stats-ips {
+    font-size: 16px !important;
+    top: 6px !important;
+  }
+
+  body[data-page="game"] #corner-stats-4-rate {
+    left: 6px !important;
+  }
+
+  body[data-page="game"] #corner-stats-ips {
+    right: 6px !important;
+  }
+
+  .home-guide-panel {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .home-guide-step {
+    font-size: 12px;
+  }
+
+  .home-guide-title {
+    font-size: 18px;
+    margin-top: 4px;
+  }
+
+  .home-guide-desc {
+    font-size: 14px;
+    line-height: 1.45;
+    margin-top: 6px;
+  }
+
+  .home-guide-actions {
+    margin-top: 10px;
+    gap: 6px;
+  }
+
+  .home-guide-btn {
+    height: 34px;
+    line-height: 34px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+
+  .mobile-hint-modal-content {
+    width: min(92vw, 520px);
+    padding: 14px;
+  }
+
+  .mobile-hint-body {
+    font-size: 14px;
+    max-height: 62vh;
+  }
+
+  body[data-page="game"] {
+    padding: 0 5px;
+  }
+
+  .replay-modal-content,
+  .settings-modal-content,
+  .announcement-modal-content {
+    max-height: 82vh;
+    overflow-y: auto;
+  }
+
+  body[data-page="game"] h1.title,
+  body[data-page="replay"] h1.title,
+  body[data-page="practice"] h1.title,
+  body[data-page="modes"] h1.title {
+    font-size: 38px;
+    margin-top: 8px;
+  }
+
+  body[data-page="game"] .game-container,
+  body[data-page="replay"] .game-container,
+  body[data-page="practice"] .game-container {
+    width: min(100%, 500px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    padding: 10px;
+  }
+
+  body[data-page="game"] .game-container {
+    width: 100%;
+    max-width: none;
+    height: calc(100vw - 10px);
+  }
+
+  body[data-page="game"] .grid-container,
+  body[data-page="game"] .tile-container {
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+  }
+
+  body[data-page="game"] .grid-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body[data-page="game"] .grid-row {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    margin-bottom: 10px;
+  }
+
+  body[data-page="game"] .grid-cell {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    margin-right: 10px;
+    float: none;
+  }
+
+  body[data-page="practice"] .game-container {
+    width: calc(100% - 10px);
+    max-width: none;
+  }
+
+  body[data-page="history"] .portal-actions-inline {
+    flex-wrap: wrap;
+  }
+}
+

@@ -1,0 +1,53 @@
+@media screen and (max-width: 980px) {
+  body[data-page="modes"] {
+    margin: 16px 0;
+    padding: 0 10px;
+  }
+
+  body[data-page="modes"] .container {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  body[data-page="modes"] .heading {
+    float: none !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  body[data-page="modes"] .heading .title {
+    float: none !important;
+  }
+
+  body[data-page="modes"] .mode-hub {
+    margin-top: 12px !important;
+    padding: 14px !important;
+  }
+
+  body[data-page="modes"] .mode-major-title {
+    font-size: 22px !important;
+  }
+
+  body[data-page="modes"] .mode-hub-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  body[data-page="modes"] .mode-hub-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  body[data-page="history"] {
+    margin: 16px 0;
+    padding: 0 8px;
+  }
+
+  body[data-page="history"] .container.portal-container {
+    width: 100% !important;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+}

@@ -1,0 +1,102 @@
+/* Mobile-only home button replaces clickable logo on game pages */
+.mobile-home-btn {
+  display: none !important;
+}
+
+@media screen and (max-width: 980px) {
+  body[data-page="game"] .home-user-display {
+    display: none !important;
+  }
+
+  .home-user-display--global {
+    display: block !important;
+    top: 14px;
+    left: 14px;
+    max-width: calc(100vw - 28px);
+    height: 28px;
+    line-height: 28px;
+    font-size: 20px;
+  }
+}
+
+/* Mobile game top-actions: primary five + expandable overflow row */
+@media screen and (max-width: 980px) {
+  body[data-page="game"] .top-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  body[data-page="game"] .top-action-buttons .top-action-btn,
+  body[data-page="game"] .top-action-buttons .restart-button,
+  body[data-page="game"] .top-action-buttons #timerbox-toggle-btn {
+    flex: 0 0 calc((100% - 40px) / 6);
+    width: calc((100% - 40px) / 6);
+    min-width: 0;
+    max-width: 64px;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-primary {
+    order: 10;
+    display: inline-flex !important;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle {
+    order: 11;
+    display: inline-flex !important;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle svg {
+    width: 30px !important;
+    height: 30px !important;
+    stroke-width: 2.6px;
+    display: block;
+  }
+
+  body[data-page="game"][data-top-button-style="icon"] .top-action-buttons .mobile-actions-expand-toggle {
+    font-size: 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-collapse-target {
+    order: 100;
+    display: none !important;
+  }
+
+  body[data-page="game"][data-mobile-actions-expanded="1"] .top-action-buttons .mobile-actions-collapse-target {
+    display: inline-flex !important;
+  }
+
+  /* Announcement appears only in no-undo modes */
+  body[data-page="game"][data-mode-id*="_undo"]:not([data-mode-id*="no_undo"]):not([data-mode-id*="no-undo"]) #top-announcement-btn {
+    display: none !important;
+  }
+}
+
+@media screen and (min-width: 981px) {
+  body[data-page="game"] .top-action-buttons .mobile-home-btn {
+    display: none !important;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle,
+  body[data-page="game"] .top-action-buttons #top-actions-expand-toggle {
+    display: none !important;
+  }
+}
+
+body[data-page="game"][data-top-button-style="text"] .top-action-buttons .top-action-btn,
+body[data-page="game"][data-top-button-style="text"] .top-action-buttons .restart-button,
+body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn,
+body[data-page="practice"][data-top-button-style="text"] #practice-stats-actions .top-action-btn,
+body[data-page="practice"][data-top-button-style="text"] #practice-stats-actions .restart-button,
+body[data-page="practice"][data-top-button-style="text"] #timerbox-toggle-btn {
+  font-size: 13px;
+  letter-spacing: 0;
+  padding: 0 10px;
+}

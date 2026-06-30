@@ -1,0 +1,56 @@
+body[data-page="game"] .top-action-btn.announcement-btn .announce-speaker,
+body[data-page="practice"] .top-action-btn.announcement-btn .announce-speaker {
+  transform-origin: 9px 12px;
+  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: scale(1);
+}
+
+body[data-page="game"] .top-action-btn.announcement-btn .announce-wave,
+body[data-page="practice"] .top-action-btn.announcement-btn .announce-wave {
+  transform-origin: 16px 12px;
+  opacity: 1;
+  transform: scale(1);
+}
+
+body[data-page="game"] .top-action-btn.announcement-btn:hover .announce-speaker,
+body[data-page="practice"] .top-action-btn.announcement-btn:hover .announce-speaker,
+body[data-page="game"] .top-action-btn.announcement-btn:focus-visible .announce-speaker,
+body[data-page="practice"] .top-action-btn.announcement-btn:focus-visible .announce-speaker {
+  transform: scale(1.26);
+}
+
+body[data-page="game"] .top-action-btn.announcement-btn:hover .announce-wave,
+body[data-page="practice"] .top-action-btn.announcement-btn:hover .announce-wave,
+body[data-page="game"] .top-action-btn.announcement-btn:focus-visible .announce-wave,
+body[data-page="practice"] .top-action-btn.announcement-btn:focus-visible .announce-wave {
+  opacity: 0;
+  animation-name: announcement-wave-in;
+  animation-duration: 0.34s;
+  animation-timing-function: ease;
+  animation-fill-mode: forwards;
+}
+
+body[data-page="game"] .top-action-btn.announcement-btn:hover .announce-wave-1,
+body[data-page="practice"] .top-action-btn.announcement-btn:hover .announce-wave-1,
+body[data-page="game"] .top-action-btn.announcement-btn:focus-visible .announce-wave-1,
+body[data-page="practice"] .top-action-btn.announcement-btn:focus-visible .announce-wave-1 {
+  animation-delay: 0.08s;
+}
+
+body[data-page="game"] .top-action-btn.announcement-btn:hover .announce-wave-2,
+body[data-page="practice"] .top-action-btn.announcement-btn:hover .announce-wave-2,
+body[data-page="game"] .top-action-btn.announcement-btn:focus-visible .announce-wave-2,
+body[data-page="practice"] .top-action-btn.announcement-btn:focus-visible .announce-wave-2 {
+  animation-delay: 0.16s;
+}
+
+@keyframes announcement-wave-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-1px) scale(0.72);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

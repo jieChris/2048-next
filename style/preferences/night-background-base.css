@@ -1,0 +1,27 @@
+/* Night background surfaces */
+html[data-night-background="1"] body {
+  color: var(--night-ink);
+}
+
+html[data-night-background="1"] h1.title,
+html[data-night-background="1"] h1.title a {
+  color: var(--night-ink);
+}
+
+html[data-night-background="1"] a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button) {
+  color: #f0dcc0;
+}
+
+html[data-night-background="1"] .site-record-footer {
+  border-top-color: var(--night-line);
+}
+
+html[data-night-background="1"] .site-record-footer p,
+html[data-night-background="1"] .site-record-footer a,
+html[data-night-background="1"] .game-explanation,
+html[data-night-background="1"] .mobile-hide-project-copy,
+html[data-night-background="1"] .stats-left,
+html[data-night-background="1"] .stats-right,
+html[data-night-background="1"] .game-intro {
+  color: var(--night-ink-soft);
+}

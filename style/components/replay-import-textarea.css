@@ -1,0 +1,19 @@
+.replay-textarea {
+  width: 100%;
+  max-width: 100%;
+  height: 100px;
+  margin: 15px 0;
+  padding: 10px;
+  border: 1px solid var(--app-border-control);
+  border-radius: var(--app-radius-control);
+  font-family: monospace;
+  resize: vertical;
+  box-sizing: border-box;
+  display: block;
+}
+
+.replay-modal-content > .replay-textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}

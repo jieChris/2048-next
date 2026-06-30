@@ -1,0 +1,60 @@
+/* Mobile scoreboard stabilization: keep SCORE/BEST in one row */
+@media screen and (max-width: 980px) {
+  body[data-page="game"] .scores-container,
+  body[data-page="replay"] .scores-container {
+    float: none;
+    display: flex;
+    width: 100%;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: 3px;
+    text-align: initial;
+  }
+
+  body[data-page="game"] .score-container,
+  body[data-page="game"] .best-container,
+  body[data-page="replay"] .score-container,
+  body[data-page="replay"] .best-container {
+    flex: 1 1 calc((100% - 3px) / 2);
+    width: calc((100% - 3px) / 2);
+    max-width: none;
+    min-width: 0;
+    margin-top: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 18px 8px 8px;
+    height: auto;
+    line-height: 1.05;
+    font-size: clamp(22px, 6vw, 30px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body[data-page="game"] .score-container:after,
+  body[data-page="game"] .best-container:after,
+  body[data-page="replay"] .score-container:after,
+  body[data-page="replay"] .best-container:after {
+    top: 6px;
+    font-size: 12px;
+    line-height: 12px;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  body[data-page="game"] .scores-container,
+  body[data-page="replay"] .scores-container {
+    gap: 3px;
+  }
+
+  body[data-page="game"] .score-container,
+  body[data-page="game"] .best-container,
+  body[data-page="replay"] .score-container,
+  body[data-page="replay"] .best-container {
+    font-size: clamp(20px, 8vw, 28px);
+    padding: 18px 6px 8px;
+  }
+}
+

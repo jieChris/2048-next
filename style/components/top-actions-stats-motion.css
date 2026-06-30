@@ -1,0 +1,50 @@
+body[data-page="game"] .top-action-btn.stats-btn .stats-line,
+body[data-page="practice"] .top-action-btn.stats-btn .stats-line {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+body[data-page="game"] .top-action-btn.stats-btn:hover .stats-line,
+body[data-page="practice"] .top-action-btn.stats-btn:hover .stats-line,
+body[data-page="game"] .top-action-btn.stats-btn:focus-visible .stats-line,
+body[data-page="practice"] .top-action-btn.stats-btn:focus-visible .stats-line {
+  opacity: 0;
+  animation-name: stats-line-rise-in;
+  animation-duration: 0.36s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+
+body[data-page="game"] .top-action-btn.stats-btn:hover .stats-line-left,
+body[data-page="practice"] .top-action-btn.stats-btn:hover .stats-line-left,
+body[data-page="game"] .top-action-btn.stats-btn:focus-visible .stats-line-left,
+body[data-page="practice"] .top-action-btn.stats-btn:focus-visible .stats-line-left {
+  animation-delay: 0.05s;
+}
+
+body[data-page="game"] .top-action-btn.stats-btn:hover .stats-line-right,
+body[data-page="practice"] .top-action-btn.stats-btn:hover .stats-line-right,
+body[data-page="game"] .top-action-btn.stats-btn:focus-visible .stats-line-right,
+body[data-page="practice"] .top-action-btn.stats-btn:focus-visible .stats-line-right {
+  animation-delay: 0.14s;
+}
+
+body[data-page="game"] .top-action-btn.stats-btn:hover .stats-line-mid,
+body[data-page="practice"] .top-action-btn.stats-btn:hover .stats-line-mid,
+body[data-page="game"] .top-action-btn.stats-btn:focus-visible .stats-line-mid,
+body[data-page="practice"] .top-action-btn.stats-btn:focus-visible .stats-line-mid {
+  animation-delay: 0.23s;
+}
+
+@keyframes stats-line-rise-in {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}

@@ -1,0 +1,61 @@
+@media screen and (max-width: 980px) {
+  body[data-page="practice"] {
+    margin: 16px 0;
+    padding: 0 5px;
+    overflow-x: hidden;
+  }
+
+  body[data-page="practice"] .container {
+    width: 100% !important;
+    max-width: 760px;
+    margin: 0 auto;
+    overflow-x: hidden;
+  }
+
+  body[data-page="practice"] .dashboard-container {
+    flex-direction: column !important;
+    gap: 10px;
+    margin-bottom: 12px !important;
+  }
+
+  body[data-page="practice"] .dashboard-stats,
+  body[data-page="practice"] .dashboard-controls {
+    width: 100% !important;
+  }
+
+  body[data-page="practice"] .dashboard-box {
+    min-height: 0 !important;
+  }
+
+  body[data-page="practice"] .dashboard-controls {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+body[data-page="practice"] .selection-grid {
+  justify-content: flex-start !important;
+}
+
+body[data-page="practice"].practice-setup-locked .selection-grid,
+body[data-page="practice"].practice-setup-locked #test-grid-container {
+  opacity: 0.72;
+}
+
+body[data-page="practice"] .selection-grid.selection-grid-locked .selection-tile,
+body[data-page="practice"] #test-grid-container.practice-grid-locked .grid-cell {
+  cursor: not-allowed !important;
+}
+
+  body[data-page="practice"] #timerbox {
+    float: none;
+    width: 100% !important;
+    max-width: 500px;
+    margin: 12px auto 0;
+  }
+
+}

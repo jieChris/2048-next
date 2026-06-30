@@ -1,0 +1,60 @@
+/* Home top action buttons */
+.top-action-buttons {
+  position: absolute;
+  top: -56px;
+  right: -250px;
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+}
+
+.top-action-btn {
+  display: inline-block;
+  position: relative;
+  background: var(--app-action-bg);
+  border-radius: var(--app-radius-tile);
+  padding: 0 14px;
+  text-decoration: none;
+  color: var(--app-text-on-strong);
+  height: 34px;
+  line-height: 34px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.top-action-btn.has-unread::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+}
+
+.top-action-btn:hover {
+  background: #7f6a56;
+}
+
+.top-action-btn svg,
+.restart-button svg {
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+.top-action-btn:hover svg,
+.top-action-btn:focus-visible svg,
+.restart-button:hover svg,
+.restart-button:focus-visible svg {
+  transform: scale(1.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-action-btn svg,
+  .restart-button svg {
+    transition: none;
+  }
+}

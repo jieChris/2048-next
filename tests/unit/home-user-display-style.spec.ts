@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { readCssEntry } from "./css-test-utils";
 
 function extractRule(source: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -9,7 +10,7 @@ function extractRule(source: string, selector: string): string {
 
 describe("home user display style", () => {
   it("shows long nicknames without ellipsis clipping", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const scss = readFileSync("style/main.scss", "utf8");
 
     for (const source of [css, scss]) {
@@ -41,7 +42,7 @@ describe("home user display style", () => {
   });
 
   it("defines a fixed global variant without changing the home label base rule", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const scss = readFileSync("style/main.scss", "utf8");
 
     for (const source of [css, scss]) {

@@ -1,0 +1,93 @@
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="game"] .top-action-btn.announcement-btn .announce-speaker,
+  body[data-page="practice"] .top-action-btn.announcement-btn .announce-speaker {
+    transition: none;
+  }
+
+  body[data-page="game"] .top-action-btn.announcement-btn:hover .announce-wave,
+  body[data-page="practice"] .top-action-btn.announcement-btn:hover .announce-wave,
+  body[data-page="game"] .top-action-btn.announcement-btn:focus-visible .announce-wave,
+  body[data-page="practice"] .top-action-btn.announcement-btn:focus-visible .announce-wave {
+    animation: none;
+    opacity: 1;
+  }
+
+  body[data-page="game"] .top-action-btn.history-btn:hover .history-hand-long,
+  body[data-page="practice"] .top-action-btn.history-btn:hover .history-hand-long,
+  body[data-page="game"] .top-action-btn.history-btn:focus-visible .history-hand-long,
+  body[data-page="practice"] .top-action-btn.history-btn:focus-visible .history-hand-long {
+    animation: none;
+    transform: rotate(0deg);
+  }
+
+  body[data-page="game"] .top-action-btn.history-btn:hover .history-hand-short,
+  body[data-page="practice"] .top-action-btn.history-btn:hover .history-hand-short,
+  body[data-page="game"] .top-action-btn.history-btn:focus-visible .history-hand-short,
+  body[data-page="practice"] .top-action-btn.history-btn:focus-visible .history-hand-short {
+    animation: none;
+    transform: rotate(118deg);
+  }
+
+  body[data-page="game"] .top-action-btn.mode-btn:hover .mode-quad,
+  body[data-page="practice"] .top-action-btn.mode-btn:hover .mode-quad,
+  body[data-page="game"] .top-action-btn.mode-btn:focus-visible .mode-quad,
+  body[data-page="practice"] .top-action-btn.mode-btn:focus-visible .mode-quad {
+    animation: none;
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+
+  body[data-page="game"] .top-action-btn.settings-btn:hover svg,
+  body[data-page="practice"] .top-action-btn.settings-btn:hover svg,
+  body[data-page="game"] .top-action-btn.settings-btn:focus-visible svg,
+  body[data-page="practice"] .top-action-btn.settings-btn:focus-visible svg {
+    animation: none;
+    transform: rotate(0deg);
+  }
+
+  body[data-page="game"] .top-action-btn.stats-btn:hover .stats-line,
+  body[data-page="practice"] .top-action-btn.stats-btn:hover .stats-line,
+  body[data-page="game"] .top-action-btn.stats-btn:focus-visible .stats-line,
+  body[data-page="practice"] .top-action-btn.stats-btn:focus-visible .stats-line {
+    animation: none;
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  body[data-page="game"] .top-action-btn.export-btn:hover .export-base-group,
+  body[data-page="practice"] .top-action-btn.export-btn:hover .export-base-group,
+  body[data-page="game"] .top-action-btn.export-btn:focus-visible .export-base-group,
+  body[data-page="practice"] .top-action-btn.export-btn:focus-visible .export-base-group {
+    animation: none;
+    opacity: 1;
+    transform: scaleY(1);
+  }
+
+  body[data-page="game"] .top-action-btn.export-btn .export-arrow-static,
+  body[data-page="practice"] .top-action-btn.export-btn .export-arrow-static,
+  body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-static,
+  body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-static {
+    opacity: 1;
+  }
+
+  body[data-page="game"] .top-action-btn.export-btn .export-arrow-trace,
+  body[data-page="practice"] .top-action-btn.export-btn .export-arrow-trace,
+  body[data-page="game"] .top-action-btn.export-btn .export-arrow-mover,
+  body[data-page="practice"] .top-action-btn.export-btn .export-arrow-mover,
+  body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-trace,
+  body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-trace,
+  body[data-page="game"] .top-action-btn.practice-btn .practice-arrow-mover,
+  body[data-page="practice"] .top-action-btn.practice-btn .practice-arrow-mover {
+    opacity: 0;
+  }
+
+  body[data-page="game"] .top-action-btn.practice-btn:hover .practice-frame-group,
+  body[data-page="practice"] .top-action-btn.practice-btn:hover .practice-frame-group,
+  body[data-page="game"] .top-action-btn.practice-btn:focus-visible .practice-frame-group,
+  body[data-page="practice"] .top-action-btn.practice-btn:focus-visible .practice-frame-group {
+    animation: none;
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+

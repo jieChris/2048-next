@@ -1,0 +1,39 @@
+/* Account / Leaderboard / History pages */
+.portal-container {
+  width: 960px;
+}
+
+.portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.portal-header .title {
+  float: none;
+  margin: 0;
+}
+
+.portal-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.portal-nav a {
+  text-decoration: none;
+}
+
+.portal-card {
+  background: #fffdf7;
+  border: 1px solid var(--app-border-control);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.portal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}

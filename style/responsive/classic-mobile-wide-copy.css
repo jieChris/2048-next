@@ -1,0 +1,5 @@
+@media screen and (max-width: 1200px) {
+  body[data-page="game"] .mobile-hide-project-copy {
+    display: none !important;
+  }
+}

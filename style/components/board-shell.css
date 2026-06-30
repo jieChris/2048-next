@@ -1,0 +1,146 @@
+.container {
+  width: 750px;
+  margin: 0 auto;
+}
+
+@-webkit-keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@-moz-keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.game-container {
+  float: left;
+  /* Added float */
+  margin-top: 10px;
+  position: relative;
+  padding: 15px;
+  cursor: default;
+  -webkit-touch-callout: none;
+  -ms-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -ms-touch-action: none;
+  touch-action: none;
+  background: var(--app-surface-board);
+  border-radius: var(--app-radius-board);
+  width: 500px;
+  height: 500px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+@media screen and (min-width: 981px) {
+  body[data-page="game"] {
+    margin: 99px 0 56px;
+  }
+
+  body[data-page="game"] .stats-left,
+  body[data-page="game"] .stats-right {
+    display: none;
+  }
+
+  body[data-page="game"] .heading {
+    margin-bottom: 8px;
+  }
+
+  body[data-page="game"] .top-action-buttons {
+    position: absolute;
+    top: -56px;
+    right: -250px;
+    width: auto;
+    margin: 0;
+    justify-content: flex-start;
+  }
+
+  body[data-page="game"] .above-game {
+    padding-top: 8px !important;
+  }
+
+  body[data-page="game"] .game-container {
+    margin-top: 3px;
+  }
+}
+
+.game-container.game-container-replay {
+  margin-left: 114px;
+}
+
+body[data-page="replay"] .replay-heading {
+  float: none;
+  margin: 0 auto;
+  width: min(100%, 740px);
+}
+
+body[data-page="replay"] .replay-hidden-scoreboard {
+  display: none;
+}
+
+body[data-page="replay"] .replay-stats-strip {
+  width: min(100%, 740px);
+  margin: 16px auto 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+body[data-page="replay"] .replay-stat-card {
+  background: #b7aba0;
+  color: #f8f4ed;
+  border-radius: 2px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+body[data-page="replay"] .replay-stat-label,
+body[data-page="replay"] .replay-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+body[data-page="replay"] .replay-stat-card-step .replay-stat-value {
+  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
+body[data-page="replay"] .game-container.game-container-replay {
+  float: none;
+  margin: 12px auto 0;
+  box-shadow: 0 0 0 6px rgba(245, 214, 193, 0.28);
+}
+
+html[data-ui-lang="en"] body[data-page="replay"] .replay-stat-label,
+html[data-ui-lang="en"] body[data-page="replay"] .replay-stat-value {
+  font-size: 16px;
+}

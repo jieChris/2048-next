@@ -1,0 +1,17 @@
+.settings-note {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--app-text-subtle);
+}
+
+.settings-note:empty {
+  display: none;
+}
+
+.settings-toggle-row .settings-note {
+  display: none;
+}
+
+.language-settings-row .settings-note {
+  display: none;
+}

@@ -1,0 +1,49 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--app-page-bg);
+  color: var(--app-text);
+  font-family: var(--app-font-sans);
+  font-size: 18px;
+}
+
+body {
+  margin: 80px 0;
+}
+
+.site-record-footer {
+  width: 500px;
+  margin: 24px auto 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-border-muted);
+  text-align: center;
+}
+
+.site-record-footer p {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--app-text-muted);
+}
+
+.site-record-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-record-footer a:hover {
+  color: var(--app-text-hover);
+  text-decoration: underline;
+}
+
+@media screen and (max-width: 520px) {
+  .site-record-footer {
+    width: calc(100% - 24px);
+  }
+
+  .site-record-footer p {
+    font-size: 12px;
+  }
+}
+

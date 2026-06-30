@@ -1,0 +1,99 @@
+@keyframes flying-click-effect-logo-rise-burst {
+  0% {
+    opacity: 1;
+    transform: translate3d(var(--flying-click-x, 0), 0, 0) rotate(-14deg) scale(0.92);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.08), -56px, 0) rotate(-9deg) scale(1.02);
+  }
+
+  36% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.22), -103px, 0) rotate(-4deg) scale(1.07);
+  }
+
+  52% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.4), -137px, 0) rotate(2deg) scale(1.05);
+  }
+
+  64% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.52), -154px, 0) rotate(7deg) scale(1);
+  }
+
+  68% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.55), -158px, 0) rotate(9deg) scale(0.98);
+  }
+
+  69% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.55), -158px, 0) rotate(9deg) scale(0.98);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.55), -158px, 0) rotate(9deg) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(calc(var(--flying-click-x, 0) * 1.55), -158px, 0) rotate(9deg) scale(0.98);
+  }
+}
+
+@keyframes flying-click-effect-logo-image-burst {
+  0%,
+  66% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  69% {
+    opacity: 0.92;
+    transform: scale(1.1);
+  }
+
+  72% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes flying-click-effect-logo-powder {
+  0%,
+  68% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.4);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  88% {
+    opacity: 0.88;
+    transform: translate3d(
+      calc(var(--flying-click-powder-x, 0) * 0.72),
+      calc(var(--flying-click-powder-y, 0) * 0.72),
+      0
+    )
+      scale(0.78);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--flying-click-powder-x, 0), var(--flying-click-powder-y, 0), 0)
+      scale(0.35);
+  }
+}
+

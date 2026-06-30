@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { readCssEntry } from "./css-test-utils";
 
 describe("home mobile board CSS fallback", () => {
   it("keeps an explicit mobile board height instead of relying on aspect-ratio", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
 
     expect(css).toContain('body[data-page="game"] .game-container');
     expect(css).toContain("height: calc(100vw - 10px);");

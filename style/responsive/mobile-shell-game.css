@@ -1,0 +1,128 @@
+@media screen and (max-width: 980px) {
+  body[data-page="game"] {
+    margin: 18px 0;
+    padding: 0 10px;
+  }
+
+  body[data-page="game"] .container {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  body[data-page="game"] .heading {
+    float: none;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  body[data-page="game"] .top-action-buttons {
+    position: static;
+    top: auto;
+    right: auto;
+    margin: 0 0 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  body[data-page="game"] .top-action-btn {
+    min-height: 36px;
+    height: 36px;
+    line-height: 36px;
+    padding: 0 12px;
+  }
+
+  body[data-page="game"] .scores-container {
+    float: none;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  body[data-page="game"] .score-container,
+  body[data-page="game"] .best-container {
+    margin-top: 0;
+  }
+
+  body[data-page="game"] .above-game {
+    float: none;
+    width: 100%;
+    padding-top: 10px !important;
+  }
+
+  body[data-page="game"] .game-intro {
+    float: none;
+    width: 100%;
+    margin-bottom: 8px;
+    line-height: 1.45;
+  }
+
+  body[data-page="game"] #play-mode-intro {
+    max-width: none;
+  }
+
+  body[data-page="game"] .restart-button {
+    float: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    height: 36px;
+    line-height: 36px;
+    width: auto;
+    padding: 0 12px;
+    margin-top: 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .restart-button {
+    float: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    height: 36px;
+    line-height: 36px;
+    width: auto;
+    padding: 0 12px;
+    margin: 0;
+    order: 90;
+  }
+
+  body[data-page="game"] .stats-left {
+    float: none;
+    margin: 0 0 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+
+  body[data-page="game"] .stats-left > div {
+    margin: 0;
+  }
+
+  body[data-page="game"] .stats-right {
+    float: none;
+    text-align: right;
+    margin: 0 0 8px;
+  }
+
+  body[data-page="game"] #timerbox {
+    float: none;
+    width: 100%;
+    max-width: 500px;
+    margin: 12px auto 0;
+    text-align: center;
+  }
+
+  body[data-page="game"] .game-container {
+    float: none;
+    margin: 12px auto 0;
+  }
+
+  body[data-page="game"] .game-explanation,
+  body[data-page="game"] hr {
+    max-width: 100%;
+  }
+
+}

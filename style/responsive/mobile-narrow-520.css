@@ -1,0 +1,89 @@
+@media screen and (max-width: 520px) {
+  body[data-page="game"],
+  body[data-page="replay"],
+  body[data-page="practice"],
+  body[data-page="modes"],
+  body[data-page="history"] {
+    padding: 0 8px;
+  }
+
+  body[data-page="game"] {
+    padding: 0 5px;
+  }
+
+  body[data-page="practice"] {
+    padding: 0 5px;
+  }
+
+  body[data-page="game"] h1.title,
+  body[data-page="replay"] h1.title,
+  body[data-page="practice"] h1.title,
+  body[data-page="modes"] h1.title {
+    font-size: 30px;
+  }
+
+  body[data-page="game"] .top-action-btn,
+  body[data-page="practice"] .top-action-btn {
+    min-height: 36px;
+    height: 36px;
+    line-height: 36px;
+    padding: 0 10px;
+  }
+
+  body[data-page="replay"] .game-container,
+  body[data-page="practice"] .game-container {
+    width: min(100%, 320px);
+  }
+
+  body[data-page="game"] .game-container {
+    width: 100%;
+    max-width: none;
+  }
+
+  body[data-page="practice"] .game-container {
+    width: calc(100% - 10px);
+    max-width: none;
+  }
+
+  body[data-page="game"] #corner-stats-4-rate,
+  body[data-page="game"] #corner-stats-ips {
+    font-size: 14px !important;
+    top: 5px !important;
+  }
+
+  body[data-page="replay"] .replay-control-btn,
+  body[data-page="replay"] #replay-playback-mode,
+  body[data-page="replay"] #replay-speed,
+  body[data-page="replay"] .import-replay-button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  body[data-page="practice"] .selection-tile {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  body[data-page="practice"] .selection-tile .tile-inner {
+    line-height: 42px !important;
+    font-size: 16px !important;
+  }
+
+  body[data-page="history"] .portal-inline-input,
+  body[data-page="history"] .portal-inline-select,
+  body[data-page="history"] .portal-actions-inline .replay-button {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  body[data-page="history"] #history-prev-page,
+  body[data-page="history"] #history-next-page {
+    width: 100%;
+  }
+
+  body[data-page="history"] .history-item {
+    overflow-x: auto;
+  }
+}
+

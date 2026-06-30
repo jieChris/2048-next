@@ -1,0 +1,56 @@
+@media screen and (max-width: 520px) {
+  .game-intro {
+    width: 55%;
+    display: block;
+    box-sizing: border-box;
+    line-height: 1.65;
+  }
+
+  #play-mode-intro {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    line-height: 1.65;
+    font-size: 13px;
+  }
+
+  .restart-button {
+    width: 42%;
+    padding: 0;
+    display: block;
+    box-sizing: border-box;
+    margin-top: 2px;
+  }
+
+  .game-container {
+    margin-top: 17px;
+  }
+
+  .tile .tile-inner {
+    font-size: 35px;
+  }
+
+  .game-message p {
+    font-size: 30px !important;
+    height: auto !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+  }
+
+  .game-message .lower {
+    margin-top: 20px !important;
+    width: min(240px, 88%) !important;
+  }
+
+  .game-message.game-over .lower.has-undo-controls {
+    width: min(179px, 60%) !important;
+    gap: 6px !important;
+  }
+
+  .game-message.game-over .lower.has-undo-controls > a.undo-button,
+  .game-message.game-over .lower.has-undo-controls > a.retry-button {
+    max-width: 80px !important;
+    min-width: 57px !important;
+  }
+
+}

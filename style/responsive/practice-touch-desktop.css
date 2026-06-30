@@ -1,0 +1,54 @@
+@media screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+  body[data-page="practice"] {
+    margin: 16px 0;
+    padding: 0 14px;
+  }
+
+  body[data-page="practice"] .container {
+    width: 100% !important;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  body[data-page="practice"] .dashboard-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+
+  body[data-page="practice"] .dashboard-stats,
+  body[data-page="practice"] .dashboard-controls {
+    width: 100% !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .practice-mobile-undo-btn {
+    display: none !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .timerbox-toggle-btn,
+  body[data-page="practice"] #timerbox-toggle-btn {
+    display: none !important;
+  }
+
+  body[data-page="practice"] #timerbox {
+    float: none;
+    width: min(100%, 560px) !important;
+    margin: 10px auto 0;
+    display: block !important;
+  }
+
+  body[data-page="practice"] #timerbox.timerbox-hidden-mode > * {
+    visibility: visible !important;
+  }
+
+  body[data-page="practice"] .game-container {
+    width: min(100%, 560px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

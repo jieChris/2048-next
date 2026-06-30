@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { readCssEntry } from "./css-test-utils";
 
 function extractRule(source: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -9,7 +10,7 @@ function extractRule(source: string, selector: string): string {
 
 describe("timer leaderboard rank style", () => {
   it("shows the static leaderboard shell when preload marks the initial leaderboard view", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const hiddenRule = extractRule(css, 'html[data-initial-timer-leaderboard="1"] #timerbox > *');
     const panelRule = extractRule(
       css,
@@ -23,7 +24,7 @@ describe("timer leaderboard rank style", () => {
   });
 
   it("uses logo-derived rank colors instead of saturated warning colors", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const timerboxRule = extractRule(css, "#timerbox");
     const baseRule = extractRule(css, ".timertile.timer-leaderboard-rank-tile");
     const topOneRule = extractRule(css, ".timer-leaderboard-rank-tile.is-top-1");
@@ -65,7 +66,7 @@ describe("timer leaderboard rank style", () => {
   });
 
   it("defines an isolated fixed overlay for the hidden breakout easter egg", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const openHtmlRule = extractRule(css, "html.breakout-easter-egg-open");
     const openBodyRule = extractRule(css, "body.breakout-easter-egg-open");
     const overlayRule = extractRule(css, ".breakout-easter-egg-overlay");
@@ -91,7 +92,7 @@ describe("timer leaderboard rank style", () => {
   });
 
   it("keeps the flying click effect on a continuous no-pause motion path", () => {
-    const css = readFileSync("style/main.css", "utf8");
+    const css = readCssEntry("style/main.css");
     const rootRule = extractRule(css, ".flying-click-effect-root");
     const layerRule = extractRule(css, ".flying-click-effect-layer");
     const particleRule = extractRule(css, ".flying-click-effect-particle");

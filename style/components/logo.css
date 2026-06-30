@@ -1,0 +1,18 @@
+.site-logo-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-logo {
+  display: block;
+  width: var(--app-logo-width);
+  height: auto;
+  margin-left: var(--app-logo-offset-inline);
+  max-width: none;
+}
+
+@media screen and (max-width: 980px) {
+  body[data-page="game"] .site-logo {
+    display: none !important;
+  }
+}

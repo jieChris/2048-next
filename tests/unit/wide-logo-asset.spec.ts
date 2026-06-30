@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { readCssEntry } from "./css-test-utils";
 
 const WIDE_LOGO_HTML_FILES = [
   "2048.html",
@@ -37,7 +38,7 @@ describe("wide logo asset", () => {
       expect(html, file).not.toMatch(/height\s*:\s*10(?:1|6\.2621)px/);
     }
 
-    const mainCss = readFileSync("style/main.css", "utf8");
+    const mainCss = readCssEntry("style/main.css");
     expect(mainCss).toContain("height: auto;");
     expect(mainCss).not.toContain("height: 106.2621px;");
   });

@@ -1,0 +1,29 @@
+.mode-intro-desc {
+  color: var(--app-text);
+  line-height: 1.6;
+  font-size: 15px;
+  white-space: pre-line;
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.mode-intro-leaderboard-wrap {
+  border: 1px solid var(--app-border-control);
+  border-radius: var(--app-radius-panel);
+  background: var(--app-surface-popover);
+  padding: 10px;
+  margin-bottom: 14px;
+}
+
+.mode-intro-leaderboard-title {
+  color: var(--app-text);
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.mode-intro-leaderboard {
+  min-height: 90px;
+  color: var(--app-text-subtle);
+  line-height: 1.5;
+  font-size: 14px;
+}

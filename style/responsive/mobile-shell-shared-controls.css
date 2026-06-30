@@ -1,0 +1,157 @@
+@media screen and (max-width: 980px) {
+  body[data-page="game"] .timerbox-toggle-btn,
+  body[data-page="practice"] .timerbox-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .timerbox-toggle-btn,
+  body[data-page="practice"] #practice-stats-actions .timerbox-toggle-btn {
+    margin: 0;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .practice-mobile-undo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    order: 999;
+  }
+
+  body[data-page="practice"] .above-game .game-intro {
+    display: none !important;
+  }
+
+  body[data-page="practice"] .container > .game-container ~ hr,
+  body[data-page="practice"] .container > .game-container ~ p {
+    display: none !important;
+  }
+
+  /* Mobile fallback: always collapse intro/help copy into hint modal */
+  body[data-page="game"] .above-game .game-intro,
+  body[data-page="game"] .game-explanation,
+  body[data-page="game"] .container > hr,
+  body[data-page="game"] .container > p {
+    display: none !important;
+  }
+
+  /* Mobile fallback: never show undo entry in no-undo/capped modes */
+  body[data-page="game"][data-mode-id*="no_undo"] .mobile-undo-top-btn,
+  body[data-page="game"][data-mode-id*="no-undo"] .mobile-undo-top-btn,
+  body[data-page="game"][data-mode-id*="capped"] .mobile-undo-top-btn,
+  body[data-page="game"][data-mode-id*="no_undo"] #undo-link,
+  body[data-page="game"][data-mode-id*="no-undo"] #undo-link,
+  body[data-page="game"][data-mode-id*="capped"] #undo-link {
+    display: none !important;
+  }
+
+  body[data-page="practice"] #practice-stats-actions .restart-button {
+    float: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    height: 36px;
+    line-height: 36px;
+    width: auto;
+    padding: 0 12px;
+    margin: 0;
+    order: 93;
+  }
+
+  body[data-page="game"] .top-action-buttons .timerbox-toggle-btn {
+    order: 91;
+  }
+
+  body[data-page="game"] .mobile-hint-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0 0;
+  }
+
+  body[data-page="game"] .mobile-undo-top-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0 0;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-hint-toggle-btn {
+    margin: 0;
+    order: 92;
+  }
+
+  body[data-page="game"] .top-action-buttons .mobile-undo-top-btn {
+    margin: 0;
+    order: 999;
+  }
+
+  body[data-page="game"] #timerbox,
+  body[data-page="practice"] #timerbox {
+    display: none;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded,
+  body[data-page="practice"] #timerbox.is-mobile-expanded {
+    display: block;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded,
+  body[data-page="practice"] #timerbox.is-mobile-expanded {
+    position: relative;
+    z-index: 2;
+    margin-top: 10px;
+    margin-bottom: 14px;
+    line-height: 0;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded::after,
+  body[data-page="practice"] #timerbox.is-mobile-expanded::after {
+    content: "";
+    display: block;
+    clear: both;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded #timer,
+  body[data-page="practice"] #timerbox.is-mobile-expanded #timer,
+  body[data-page="game"] #timerbox.is-mobile-expanded .timer-leaderboard-summary,
+  body[data-page="practice"] #timerbox.is-mobile-expanded .timer-leaderboard-summary {
+    float: none;
+    display: block;
+    margin: 8px auto 10px;
+    width: calc(100% - 30px);
+    max-width: 250px;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded .timertile,
+  body[data-page="practice"] #timerbox.is-mobile-expanded .timertile {
+    float: none;
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 4px;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded br,
+  body[data-page="practice"] #timerbox.is-mobile-expanded br {
+    line-height: 0;
+    font-size: 0;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded + .game-container,
+  body[data-page="practice"] #timerbox.is-mobile-expanded + .game-container {
+    margin-top: 16px;
+  }
+
+  body[data-page="game"].mobile-hint-collapsed-content .container > hr,
+  body[data-page="game"].mobile-hint-collapsed-content .container > p {
+    display: none !important;
+  }
+
+  body[data-page="game"] .game-intro.mobile-hint-hidden {
+    display: none;
+  }
+
+}

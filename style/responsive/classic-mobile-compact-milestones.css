@@ -1,0 +1,17 @@
+@media screen and (max-width: 520px) {
+  /* Mobile Optimization for Milestones */
+  #milestones-container {
+    display: none;
+    margin-top: 10px;
+    background: var(--app-page-bg);
+    padding: 10px;
+    border-radius: var(--app-radius-panel);
+  }
+
+  #milestones-container.expanded {
+    display: block;
+    -webkit-animation: fade-in 400ms ease;
+    -moz-animation: fade-in 400ms ease;
+    animation: fade-in 400ms ease;
+  }
+}

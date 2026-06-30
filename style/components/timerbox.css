@@ -1,0 +1,192 @@
+/* New Timer Styles */
+#timer {
+  float: left;
+  width: 185px;
+  text-align: center;
+  margin-left: 15px;
+  margin-bottom: 5px;
+  position: relative;
+  display: inline-block;
+  background: var(--app-surface-board);
+  padding: 15px 25px;
+  font-size: 25px;
+  height: 25px;
+  line-height: 47px;
+  font-weight: bold;
+  border-radius: var(--app-radius-tile);
+  color: white;
+  margin-top: 8px;
+}
+
+#timer:after {
+  content: "\65f6\95f4";
+  position: absolute;
+  width: 100%;
+  top: 10px;
+  left: 0;
+  text-transform: uppercase;
+  font-size: 13px;
+  line-height: 13px;
+  text-align: center;
+  color: var(--app-text-on-board-muted);
+}
+
+#timerbox {
+  float: right;
+  width: 250px;
+  text-align: center;
+  margin-bottom: 45px;
+  --timerbox-left-offset: 15px;
+  --timerbox-rank-tile-width: 42px;
+  --timerbox-tile-gap: 6px;
+  --timerbox-main-tile-width: 187px;
+  --timerbox-summary-padding-x: 25px;
+  --leaderboard-rank-bg: #b9aea2;
+  --leaderboard-rank-text: #fffaf2;
+  --leaderboard-rank-top-1-bg: #f3cd6f;
+  --leaderboard-rank-top-1-text: #fffaf2;
+  --leaderboard-rank-top-2-bg: #7099b6;
+  --leaderboard-rank-top-2-text: #fffaf2;
+  --leaderboard-rank-top-3-bg: #729b8b;
+  --leaderboard-rank-top-3-text: #fffaf2;
+  --leaderboard-rank-self-bg: #b27f58;
+  --leaderboard-rank-self-text: #fffaf2;
+  --leaderboard-rank-shadow: 0 5px 12px rgba(119, 110, 101, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --leaderboard-rank-top-shadow: none;
+  --leaderboard-rank-self-shadow: none;
+  --leaderboard-rank-font-weight: 620;
+}
+
+.timer-scroll-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--app-surface-tile);
+  border-radius: var(--app-radius-tile);
+  padding: 0;
+  text-decoration: none;
+  color: var(--app-text);
+  height: 32px;
+  line-height: 1;
+  font-size: 0;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.timer-scroll-btn:hover {
+  background: var(--app-surface-tile);
+  color: var(--app-text);
+}
+
+.timer-scroll-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+.timer-scroll-btn[data-scroll-dir="-1"]:hover svg {
+  transform: translateY(-1px);
+}
+
+.timer-scroll-btn[data-scroll-dir="1"]:hover svg {
+  transform: translateY(1px);
+}
+
+#timer-scroll-controls {
+    display: none;
+    width: 235px;
+    margin: 14px 0 0 15px;
+    text-align: center;
+    clear: both;
+    padding-top: 0;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+@media screen and (max-width: 980px) {
+  body[data-page="game"] #timerbox #timer-scroll-controls,
+  body[data-page="practice"] #timerbox #timer-scroll-controls {
+    width: calc(100% - 30px);
+    max-width: 250px;
+    margin: 14px auto 0 !important;
+    box-sizing: border-box;
+    padding-left: 15px;
+    padding-right: 0;
+  }
+
+  body[data-page="game"] #timerbox #timer-leaderboard-panel,
+  body[data-page="practice"] #timerbox #timer-leaderboard-panel {
+    width: min(100%, 250px);
+    margin: 0 auto;
+  }
+
+  body[data-page="game"] #timerbox .timer-leaderboard-list,
+  body[data-page="practice"] #timerbox .timer-leaderboard-list {
+    max-width: 250px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  body[data-page="game"] #timerbox .timer-leaderboard-row,
+  body[data-page="practice"] #timerbox .timer-leaderboard-row {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  body[data-page="game"] #timerbox.is-mobile-expanded #timer-scroll-controls,
+  body[data-page="practice"] #timerbox.is-mobile-expanded #timer-scroll-controls {
+    margin: 14px auto 0 !important;
+  }
+}
+
+body.home-guide-active #timer-scroll-controls {
+  position: relative;
+  z-index: 3240;
+}
+
+body.home-guide-active .top-action-buttons {
+  z-index: 3240;
+}
+
+#timerbox.timerbox-hidden-mode {
+  position: relative;
+}
+
+#timerbox.timerbox-hidden-mode > * {
+  visibility: hidden !important;
+}
+
+html[data-initial-timer-leaderboard="1"] #timerbox > * {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+#timerbox.timerbox-hidden-mode.timerbox-leaderboard-mode > #timer-leaderboard-panel {
+  visibility: visible !important;
+}
+
+html[data-initial-timer-leaderboard="1"] #timerbox > #timer-leaderboard-panel {
+  display: block !important;
+  visibility: visible !important;
+}
+
+#timerbox.timerbox-leaderboard-mode > * {
+  display: none !important;
+}
+
+#timerbox.timerbox-leaderboard-mode > #timer-leaderboard-panel {
+  display: block !important;
+}
+

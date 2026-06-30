@@ -1,0 +1,29 @@
+.mobile-hint-modal-content {
+  max-width: 560px;
+  text-align: left;
+}
+
+.mobile-hint-modal-content h3 {
+  text-align: center;
+}
+
+.mobile-hint-body {
+  border: 1px solid var(--app-border-control);
+  border-radius: var(--app-radius-panel);
+  background: #fffdfa;
+  color: var(--app-text);
+  line-height: 1.6;
+  font-size: 15px;
+  padding: 10px 12px;
+  max-height: 58vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.mobile-hint-body p {
+  margin: 0 0 10px;
+}
+
+.mobile-hint-body p:last-child {
+  margin-bottom: 0;
+}

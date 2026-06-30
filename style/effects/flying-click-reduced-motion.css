@@ -1,0 +1,7 @@
+@media (prefers-reduced-motion: reduce) {
+  .flying-click-effect-particle {
+    animation: none;
+    opacity: 0;
+  }
+}
+

@@ -1,0 +1,126 @@
+html[data-night-background="1"] .replay-modal-overlay,
+html[data-night-background="1"] .home-guide-overlay {
+  background: rgba(3, 7, 15, 0.78) !important;
+}
+
+html[data-night-background="1"] .replay-modal-content,
+html[data-night-background="1"] .settings-modal-content,
+html[data-night-background="1"] .announcement-modal-content,
+html[data-night-background="1"] .mobile-hint-modal-content,
+html[data-night-background="1"] .mobile-hint-body,
+html[data-night-background="1"] .replay-diagnostics-panel,
+html[data-night-background="1"] .home-guide-panel {
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+  border-color: var(--night-line);
+  color: var(--night-ink);
+  box-shadow: 0 20px 42px rgba(1, 4, 12, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html[data-night-background="1"] .replay-modal-content h3,
+html[data-night-background="1"] .settings-modal-content h3,
+html[data-night-background="1"] .announcement-modal-content h3,
+html[data-night-background="1"] .mobile-hint-modal-content h3,
+html[data-night-background="1"] .home-guide-title {
+  color: var(--night-ink);
+}
+
+html[data-night-background="1"] .home-guide-step,
+html[data-night-background="1"] .home-guide-desc,
+html[data-night-background="1"] .replay-diagnostics-summary,
+html[data-night-background="1"] .mobile-hint-body,
+html[data-night-background="1"] .announcement-version,
+html[data-night-background="1"] .announcement-date {
+  color: var(--night-ink-soft);
+}
+
+html[data-night-background="1"] .announcement-item,
+html[data-night-background="1"] .settings-toggle-row,
+html[data-night-background="1"] .settings-modal-content > .settings-row.language-settings-row,
+html[data-night-background="1"] .settings-modal-content > .settings-row.settings-action-row,
+html[data-night-background="1"] .tile-palette-settings-row,
+html[data-night-background="1"] .custom-select-trigger,
+html[data-night-background="1"] .custom-options,
+html[data-night-background="1"] .mode-intro-leaderboard-row,
+html[data-night-background="1"] .mode-intro-leaderboard-empty,
+html[data-night-background="1"] .mode-intro-leaderboard-more,
+html[data-night-background="1"] .online-board-empty {
+  background: rgba(18, 29, 46, 0.84);
+  border-color: var(--night-line);
+  color: var(--night-ink);
+}
+
+html[data-night-background="1"] .mode-intro-leaderboard-row {
+  border-bottom-color: var(--night-line);
+}
+
+html[data-night-background="1"] .mode-intro-leaderboard-nick-link:hover,
+html[data-night-background="1"] .mode-intro-leaderboard-nick-link:focus-visible {
+  color: #fff0d8;
+}
+
+html[data-night-background="1"] .announcement-pin-badge {
+  background: rgba(213, 168, 106, 0.2);
+  color: #f2d8ae;
+}
+
+html[data-night-background="1"] .settings-row label,
+html[data-night-background="1"] .settings-toggle-title,
+html[data-night-background="1"] .theme-preview-grid-title {
+  color: var(--night-ink) !important;
+}
+
+html[data-night-background="1"] .settings-toggle-desc,
+html[data-night-background="1"] .settings-note,
+html[data-night-background="1"] .settings-action-copy .settings-toggle-desc,
+html[data-night-background="1"] .language-switch-thumb,
+html[data-night-background="1"] .custom-select-trigger,
+html[data-night-background="1"] .custom-option {
+  color: var(--night-ink-soft);
+}
+
+html[data-night-background="1"] .settings-inline-action-btn {
+  color: #f0d3ad;
+}
+
+html[data-night-background="1"] .settings-inline-action-btn:hover {
+  color: #ffe6c4;
+}
+
+html[data-night-background="1"] .settings-inline-action-btn:focus-visible,
+html[data-night-background="1"] .custom-select-trigger:focus-visible,
+html[data-night-background="1"] .custom-option:focus-visible {
+  outline-color: rgba(237, 195, 123, 0.38);
+}
+
+html[data-night-background="1"] .custom-option:hover {
+  background: rgba(213, 168, 106, 0.16);
+}
+
+html[data-night-background="1"] .custom-option.selected {
+  background: rgba(213, 168, 106, 0.22);
+  color: #fff1d8;
+}
+
+html[data-night-background="1"] .settings-switch .settings-switch-slider {
+  background: rgba(148, 163, 184, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(233, 241, 255, 0.06);
+}
+
+html[data-night-background="1"] .settings-switch .settings-switch-slider::after,
+html[data-night-background="1"] .language-switch-thumb {
+  background: #f3eee6;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.28);
+}
+
+html[data-night-background="1"] .settings-switch input[type=checkbox]:checked + .settings-switch-slider {
+  background: linear-gradient(180deg, rgba(213, 168, 106, 0.96) 0%, rgba(174, 123, 63, 0.96) 100%);
+}
+
+html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled + .settings-switch-slider {
+  background: rgba(117, 128, 145, 0.28);
+}
+
+html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled + .settings-switch-slider::after {
+  background: rgba(225, 220, 212, 0.72);
+}
+

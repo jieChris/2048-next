@@ -1,0 +1,33 @@
+:root {
+  --app-font-sans: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+  --app-page-bg: #faf8ef;
+  --app-text: #776e65;
+  --app-text-muted: #8e857a;
+  --app-text-subtle: #8a8178;
+  --app-text-hover: #6f665d;
+  --app-surface-light: #f9f6f2;
+  --app-surface-modal: #fffdf9;
+  --app-surface-popover: #fffdfa;
+  --app-surface-overlay: rgba(0, 0, 0, 0.5);
+  --app-text-on-strong: var(--app-surface-light);
+  --app-text-on-board-muted: #eee4da;
+  --app-border-control: #d8d4d0;
+  --app-border-muted: #e2dbce;
+  --app-action-bg: #8f7a66;
+  --app-action-muted-bg: #b8aca1;
+  --app-action-muted-hover-bg: #a69689;
+  --app-surface-board: #bbada0;
+  --app-surface-tile: var(--app-text-on-board-muted);
+  --app-surface-empty-tile: rgba(238, 228, 218, 0.35);
+  --app-radius-tile: 3px;
+  --app-radius-control: var(--app-radius-tile);
+  --app-radius-board: 6px;
+  --app-radius-panel: var(--app-radius-board);
+  --app-radius-dialog: 8px;
+  --app-radius-pill: 999px;
+  --app-focus-ring-control: rgba(143, 122, 102, 0.35);
+  --app-focus-ring-warm: rgba(242, 177, 121, 0.38);
+  --app-shadow-dialog: 0 24px 54px rgba(82, 72, 63, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --app-logo-width: 234px;
+  --app-logo-offset-inline: -25px;
+}

@@ -1,0 +1,72 @@
+body[data-page="game"] .restart-button.reset-btn .reset-top-static,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-static,
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-static,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-static,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-static,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-static,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-static,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-static {
+  opacity: 1;
+}
+
+body[data-page="game"] .restart-button.reset-btn .reset-top-trace,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-trace,
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-trace,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-trace,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-trace,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-trace,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-trace,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-trace {
+  opacity: 0;
+  stroke-linecap: round;
+  stroke-dasharray: 0;
+  stroke-dashoffset: 0;
+}
+
+body[data-page="game"] .restart-button.reset-btn .reset-top-mover,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-mover,
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-mover,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-mover,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-mover,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-mover,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-mover,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
+  opacity: 0;
+  pointer-events: none;
+  offset-distance: 0%;
+  offset-rotate: auto;
+}
+
+body[data-page="game"] .restart-button.reset-btn .reset-top-mover line,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-mover line,
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-mover line,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-mover line,
+body[data-page="game"] .restart-button.reset-btn .reset-top-mover polyline,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-mover polyline,
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-mover polyline,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-mover polyline,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-mover line,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-mover line,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-mover line,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover line,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-mover polyline,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-mover polyline,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-mover polyline,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover polyline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body[data-page="game"] .restart-button.reset-btn .reset-top-mover,
+body[data-page="practice"] .restart-button.reset-btn .reset-top-mover,
+body[data-page="game"] .top-action-btn.reset-btn .reset-top-mover,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-top-mover {
+  offset-path: path("M3.51 9 A9 9 0 0 1 18.36 5.64 L23 10");
+}
+
+body[data-page="game"] .restart-button.reset-btn .reset-bottom-mover,
+body[data-page="practice"] .restart-button.reset-btn .reset-bottom-mover,
+body[data-page="game"] .top-action-btn.reset-btn .reset-bottom-mover,
+body[data-page="practice"] .top-action-btn.reset-btn .reset-bottom-mover {
+  offset-path: path("M20.49 15 A9 9 0 0 1 5.64 18.36 L1 14");
+}

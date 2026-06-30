@@ -1,0 +1,9 @@
+.is-hidden,
+[hidden] {
+  display: none !important;
+}
+
+[class].is-hidden,
+[class][hidden] {
+  display: none !important;
+}
