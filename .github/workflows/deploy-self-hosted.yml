@@ -40,6 +40,9 @@ jobs:
       - name: Build dist
         run: npm run build
 
+      - name: Audit production dist
+        run: npm run audit:production-dist
+
       - name: Prepare release metadata
         id: meta
         run: |

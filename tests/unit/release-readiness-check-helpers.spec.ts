@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEPLOY_WORKFLOW_REQUIRED_SNIPPETS,
   ensureContainsSnippets,
+  ensureSnippetOrder,
   ensureJobNeedsDependency,
   extractWorkflowJobBlock,
   findMissingSnippets,
+  verifyDeployWorkflowProductionDistAuditContent,
   verifyRefactorGateSupportsSmokeScriptParamContent,
   verifySmokeWorkflowShardingContent
 } from "../../scripts/release-readiness-check.mjs";
@@ -20,6 +23,13 @@ describe("release-readiness-check helpers", () => {
     expect(() => ensureContainsSnippets("alpha beta", ["alpha"], "demo")).not.toThrow();
     expect(() => ensureContainsSnippets("alpha beta", ["missing"], "demo")).toThrow(
       /demo missing required snippet/
+    );
+  });
+
+  it("ensures required snippets appear in order", () => {
+    expect(() => ensureSnippetOrder("alpha\nbeta\ngamma", ["alpha", "gamma"], "demo")).not.toThrow();
+    expect(() => ensureSnippetOrder("alpha\nbeta\ngamma", ["gamma", "alpha"], "demo")).toThrow(
+      /demo snippet order mismatch/
     );
   });
 
@@ -145,5 +155,49 @@ describe("release-readiness-check helpers", () => {
         gate.replace("REFACTOR_GATE_TIMEOUT_SMOKE_MS", "TIMEOUT_SMOKE")
       )
     ).toThrow(/refactor gate missing required snippet/);
+  });
+
+  it("validates deploy workflow audits production dist before release archival", () => {
+    const workflow = [
+      "jobs:",
+      "  build:",
+      "    steps:",
+      "      - name: Verify release readiness",
+      "        run: npm run verify:release-ready",
+      "      - name: Build dist",
+      "        run: npm run build",
+      "      - name: Audit production dist",
+      "        run: npm run audit:production-dist",
+      "      - name: Prepare release metadata",
+      "        id: meta",
+      "      - name: Archive dist bundle",
+      "        run: tar -czf bundle.tgz -C dist .",
+      "      - name: Upload release package",
+      "        uses: actions/upload-artifact@v4"
+    ].join("\n");
+
+    expect(DEPLOY_WORKFLOW_REQUIRED_SNIPPETS).toContain("npm run audit:production-dist");
+    expect(() => verifyDeployWorkflowProductionDistAuditContent(workflow)).not.toThrow();
+    expect(() =>
+      verifyDeployWorkflowProductionDistAuditContent(
+        workflow.replace("npm run audit:production-dist", "npm run build")
+      )
+    ).toThrow(/deploy workflow missing required snippet/);
+    expect(() =>
+      verifyDeployWorkflowProductionDistAuditContent(
+        workflow.replace(
+          "      - name: Audit production dist\n        run: npm run audit:production-dist\n",
+          ""
+        )
+      )
+    ).toThrow(/deploy workflow missing required snippet/);
+    expect(() =>
+      verifyDeployWorkflowProductionDistAuditContent(
+        workflow.replace(
+          "      - name: Build dist\n        run: npm run build\n      - name: Audit production dist\n        run: npm run audit:production-dist",
+          "      - name: Audit production dist\n        run: npm run audit:production-dist\n      - name: Build dist\n        run: npm run build"
+        )
+      )
+    ).toThrow(/deploy workflow snippet order mismatch/);
   });
 });

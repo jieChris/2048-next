@@ -12,14 +12,18 @@ const REQUIRED_FILES = [
   ".github/workflows/smoke.yml",
   "scripts/refactor-gate.mjs",
   "scripts/contracts-matrix-audit.mjs",
-  "scripts/refactor-timeout-env-keys.mjs"
+  "scripts/refactor-timeout-env-keys.mjs",
+  "scripts/production-dist-audit.mjs",
+  ".github/workflows/deploy-self-hosted.yml"
 ];
 
 const REQUIRED_NPM_SCRIPTS = [
+  "audit:production-dist",
   "verify:refactor:ci",
   "verify:prepush",
   "verify:release-ready",
   "verify:release",
+  "verify:release-dist",
   "verify:submit-ready",
   "test:smoke:ci",
   "report:refactor-progress",
@@ -86,6 +90,27 @@ const REFACTOR_GATE_REQUIRED_SNIPPETS = [
   "resolveStepTimeoutMs"
 ];
 
+const DEPLOY_WORKFLOW_REQUIRED_SNIPPETS = [
+  "Verify release readiness",
+  "npm run verify:release-ready",
+  "Build dist",
+  "npm run build",
+  "Audit production dist",
+  "npm run audit:production-dist",
+  "Prepare release metadata",
+  "Archive dist bundle",
+  "Upload release package"
+];
+
+const DEPLOY_WORKFLOW_REQUIRED_ORDER = [
+  "npm run verify:release-ready",
+  "npm run build",
+  "npm run audit:production-dist",
+  "Prepare release metadata",
+  "Archive dist bundle",
+  "Upload release package"
+];
+
 function fail(message) {
   throw new Error(message);
 }
@@ -103,6 +128,21 @@ function ensureContainsSnippets(content, snippets, scope) {
   const missing = findMissingSnippets(content, snippets);
   if (missing.length > 0) {
     fail(`[verify:release-ready] ${scope} missing required snippet: ${missing[0]}`);
+  }
+}
+
+function ensureSnippetOrder(content, snippets, scope) {
+  const source = String(content || "");
+  let cursor = -1;
+  for (const snippet of snippets) {
+    const nextIndex = source.indexOf(snippet, cursor + 1);
+    if (nextIndex < 0) {
+      if (source.includes(snippet)) {
+        fail(`[verify:release-ready] ${scope} snippet order mismatch: ${snippet}`);
+      }
+      fail(`[verify:release-ready] ${scope} missing required snippet: ${snippet}`);
+    }
+    cursor = nextIndex;
   }
 }
 
@@ -190,14 +230,33 @@ async function verifyRefactorGateSupportsSmokeScriptParam() {
   verifyRefactorGateSupportsSmokeScriptParamContent(gate);
 }
 
+function verifyDeployWorkflowProductionDistAuditContent(workflowContent) {
+  ensureContainsSnippets(
+    workflowContent,
+    DEPLOY_WORKFLOW_REQUIRED_SNIPPETS,
+    "deploy workflow"
+  );
+  ensureSnippetOrder(
+    workflowContent,
+    DEPLOY_WORKFLOW_REQUIRED_ORDER,
+    "deploy workflow"
+  );
+}
+
+async function verifyDeployWorkflowProductionDistAudit() {
+  const workflow = await readText(".github/workflows/deploy-self-hosted.yml");
+  verifyDeployWorkflowProductionDistAuditContent(workflow);
+}
+
 async function runReleaseReadinessCheck() {
   console.log("[verify:release-ready] start");
   await verifyFilesExist();
   await verifyPackageScripts();
   await verifySmokeWorkflowSharding();
   await verifyRefactorGateSupportsSmokeScriptParam();
+  await verifyDeployWorkflowProductionDistAudit();
   console.log(
-    "[verify:release-ready] PASS: stable docs + scripts + smoke sharding + gate parameterization verified"
+    "[verify:release-ready] PASS: stable docs + scripts + smoke sharding + gate parameterization + deploy dist audit verified"
   );
 }
 
@@ -213,14 +272,17 @@ if (isDirectCliExecution()) {
 }
 
 export {
+  DEPLOY_WORKFLOW_REQUIRED_SNIPPETS,
   REFACTOR_GATE_REQUIRED_SNIPPETS,
   SMOKE_WORKFLOW_REQUIRED_SNIPPETS,
   ensureContainsSnippets,
+  ensureSnippetOrder,
   ensureJobNeedsDependency,
   extractWorkflowJobBlock,
   findMissingSnippets,
   isDirectCliExecution,
   runReleaseReadinessCheck,
+  verifyDeployWorkflowProductionDistAuditContent,
   verifyRefactorGateSupportsSmokeScriptParamContent,
   verifySmokeWorkflowShardingContent
 };
