@@ -97,6 +97,9 @@ const PACKAGE_SCRIPT_COMMAND_REQUIRED_SNIPPETS = {
     "npm run build",
     "npm run audit:production-dist",
     "npm run audit:resource-budget"
+  ],
+  "test:smoke:critical": [
+    "tests/smoke/pages-theme-entry-guard.smoke.spec.ts"
   ]
 };
 

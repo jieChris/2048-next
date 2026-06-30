@@ -34,9 +34,10 @@ describe("release-readiness-check helpers", () => {
     );
   });
 
-  it("validates release-dist script runs build, production dist audit, and resource budget", () => {
+  it("validates release-dist and critical smoke package script contracts", () => {
     const scripts = {
-      "verify:release-dist": "npm run build && npm run audit:production-dist && npm run audit:resource-budget"
+      "verify:release-dist": "npm run build && npm run audit:production-dist && npm run audit:resource-budget",
+      "test:smoke:critical": "playwright test tests/smoke/pages-theme-entry-guard.smoke.spec.ts"
     };
 
     expect(() => verifyPackageScriptCommandsContent(scripts)).not.toThrow();
@@ -45,6 +46,12 @@ describe("release-readiness-check helpers", () => {
         "verify:release-dist": "npm run build && npm run audit:production-dist"
       })
     ).toThrow(/package script "verify:release-dist" missing required snippet/);
+    expect(() =>
+      verifyPackageScriptCommandsContent({
+        "verify:release-dist": scripts["verify:release-dist"],
+        "test:smoke:critical": "playwright test tests/smoke/pages-runtime-contract.smoke.spec.ts"
+      })
+    ).toThrow(/package script "test:smoke:critical" missing required snippet/);
   });
 
   it("extracts workflow job blocks and validates needs dependencies", () => {

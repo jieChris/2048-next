@@ -53,7 +53,7 @@
     "audit:entry-manifest": "node scripts/entry-manifest-audit.mjs",
     "audit:engine": "node scripts/engine-audit.mjs",
     "audit:service-boundary": "node scripts/service-boundary-audit.mjs",
-    "test:smoke:critical": "playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts tests/smoke/pages-play-anti-cheat.smoke.spec.ts tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts tests/smoke/pages-online-submit-timeout-retry.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts",
+    "test:smoke:critical": "playwright test --config=playwright.config.ts --workers=1 tests/smoke/pages-runtime-contract.smoke.spec.ts tests/smoke/pages-theme-entry-guard.smoke.spec.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-contracts-saved-session.smoke.spec.ts tests/smoke/pages-play-anti-cheat.smoke.spec.ts tests/smoke/pages-online-submit-persist-retry.smoke.spec.ts tests/smoke/pages-online-submit-timeout-retry.smoke.spec.ts tests/smoke/history-records-import-core.smoke.spec.ts",
     "test:smoke:nightly": "npm run test:smoke"
   },
   "devDependencies": {
