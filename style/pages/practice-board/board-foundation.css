@@ -68,12 +68,12 @@
       .selection-tile.tile-128 .tile-inner,
       .selection-tile.tile-256 .tile-inner,
       .selection-tile.tile-512 .tile-inner { font-size: 18px !important; }
-      
+
       .selection-tile.tile-1024 .tile-inner,
       .selection-tile.tile-2048 .tile-inner,
       .selection-tile.tile-4096 .tile-inner,
       .selection-tile.tile-8192 .tile-inner { font-size: 14px !important; }
-      
+
       .selection-tile.tile-16384 .tile-inner,
       .selection-tile.tile-32768 .tile-inner { font-size: 12px !important; }
 
@@ -87,7 +87,7 @@
           z-index: 10;
           border: 2px solid #8f7a66; /* Border */
       }
-      
+
       /* Special style for 0 */
       /* Special style for 0 */
       .selection-tile.tile-0 .tile-inner {
@@ -105,7 +105,7 @@
           box-shadow: 0 0 0 2px #8f7a66 inset;
           border-radius: 6px;
       }
-      
+
       .grid-cell {
           cursor: pointer; /* Indicate clickable */
       }
@@ -116,4 +116,3 @@
       .tile-container {
           pointer-events: none;
       }
-      

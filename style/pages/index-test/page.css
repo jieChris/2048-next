@@ -9,7 +9,7 @@
       pointer-events: none; /* Let clicks pass through */
       display: flex;
       align-items: center; /* Vertically center in the 180px height area */
-      padding-top: 0; 
+      padding-top: 0;
       transform: translateY(-45px); /* Lift up so the bottom is 5px above grid */
     }
 
@@ -21,7 +21,7 @@
       justify-content: flex-start;
       overflow: hidden;
     }
-    
+
     .username-bg-text {
       font-family: "Georgia", "Times New Roman", serif;
       font-size: 190px; /* Increased back to fit the box height */
@@ -33,7 +33,7 @@
       white-space: nowrap;
       user-select: none;
     }
-    
+
     /* Ensure action buttons and main content are above */
     .container {
       position: relative;
