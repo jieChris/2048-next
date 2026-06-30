@@ -7,6 +7,7 @@ import {
   ensureJobNeedsDependency,
   extractWorkflowJobBlock,
   findMissingSnippets,
+  verifyPackageScriptCommandsContent,
   verifyDeployWorkflowProductionDistAuditContent,
   verifyRefactorGateSupportsSmokeScriptParamContent,
   verifySmokeWorkflowShardingContent
@@ -31,6 +32,19 @@ describe("release-readiness-check helpers", () => {
     expect(() => ensureSnippetOrder("alpha\nbeta\ngamma", ["gamma", "alpha"], "demo")).toThrow(
       /demo snippet order mismatch/
     );
+  });
+
+  it("validates release-dist script runs build, production dist audit, and resource budget", () => {
+    const scripts = {
+      "verify:release-dist": "npm run build && npm run audit:production-dist && npm run audit:resource-budget"
+    };
+
+    expect(() => verifyPackageScriptCommandsContent(scripts)).not.toThrow();
+    expect(() =>
+      verifyPackageScriptCommandsContent({
+        "verify:release-dist": "npm run build && npm run audit:production-dist"
+      })
+    ).toThrow(/package script "verify:release-dist" missing required snippet/);
   });
 
   it("extracts workflow job blocks and validates needs dependencies", () => {
@@ -168,6 +182,8 @@ describe("release-readiness-check helpers", () => {
       "        run: npm run build",
       "      - name: Audit production dist",
       "        run: npm run audit:production-dist",
+      "      - name: Audit resource budget",
+      "        run: npm run audit:resource-budget",
       "      - name: Prepare release metadata",
       "        id: meta",
       "      - name: Archive dist bundle",
@@ -177,6 +193,7 @@ describe("release-readiness-check helpers", () => {
     ].join("\n");
 
     expect(DEPLOY_WORKFLOW_REQUIRED_SNIPPETS).toContain("npm run audit:production-dist");
+    expect(DEPLOY_WORKFLOW_REQUIRED_SNIPPETS).toContain("npm run audit:resource-budget");
     expect(() => verifyDeployWorkflowProductionDistAuditContent(workflow)).not.toThrow();
     expect(() =>
       verifyDeployWorkflowProductionDistAuditContent(
@@ -186,7 +203,7 @@ describe("release-readiness-check helpers", () => {
     expect(() =>
       verifyDeployWorkflowProductionDistAuditContent(
         workflow.replace(
-          "      - name: Audit production dist\n        run: npm run audit:production-dist\n",
+          "      - name: Audit resource budget\n        run: npm run audit:resource-budget\n",
           ""
         )
       )
@@ -194,8 +211,8 @@ describe("release-readiness-check helpers", () => {
     expect(() =>
       verifyDeployWorkflowProductionDistAuditContent(
         workflow.replace(
-          "      - name: Build dist\n        run: npm run build\n      - name: Audit production dist\n        run: npm run audit:production-dist",
-          "      - name: Audit production dist\n        run: npm run audit:production-dist\n      - name: Build dist\n        run: npm run build"
+          "      - name: Audit production dist\n        run: npm run audit:production-dist\n      - name: Audit resource budget\n        run: npm run audit:resource-budget",
+          "      - name: Audit resource budget\n        run: npm run audit:resource-budget\n      - name: Audit production dist\n        run: npm run audit:production-dist"
         )
       )
     ).toThrow(/deploy workflow snippet order mismatch/);

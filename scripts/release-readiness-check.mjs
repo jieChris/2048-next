@@ -14,11 +14,13 @@ const REQUIRED_FILES = [
   "scripts/contracts-matrix-audit.mjs",
   "scripts/refactor-timeout-env-keys.mjs",
   "scripts/production-dist-audit.mjs",
+  "scripts/resource-budget-check.mjs",
   ".github/workflows/deploy-self-hosted.yml"
 ];
 
 const REQUIRED_NPM_SCRIPTS = [
   "audit:production-dist",
+  "audit:resource-budget",
   "verify:refactor:ci",
   "verify:prepush",
   "verify:release-ready",
@@ -90,6 +92,14 @@ const REFACTOR_GATE_REQUIRED_SNIPPETS = [
   "resolveStepTimeoutMs"
 ];
 
+const PACKAGE_SCRIPT_COMMAND_REQUIRED_SNIPPETS = {
+  "verify:release-dist": [
+    "npm run build",
+    "npm run audit:production-dist",
+    "npm run audit:resource-budget"
+  ]
+};
+
 const DEPLOY_WORKFLOW_REQUIRED_SNIPPETS = [
   "Verify release readiness",
   "npm run verify:release-ready",
@@ -97,6 +107,8 @@ const DEPLOY_WORKFLOW_REQUIRED_SNIPPETS = [
   "npm run build",
   "Audit production dist",
   "npm run audit:production-dist",
+  "Audit resource budget",
+  "npm run audit:resource-budget",
   "Prepare release metadata",
   "Archive dist bundle",
   "Upload release package"
@@ -106,6 +118,7 @@ const DEPLOY_WORKFLOW_REQUIRED_ORDER = [
   "npm run verify:release-ready",
   "npm run build",
   "npm run audit:production-dist",
+  "npm run audit:resource-budget",
   "Prepare release metadata",
   "Archive dist bundle",
   "Upload release package"
@@ -200,6 +213,22 @@ async function verifyPackageScripts() {
       fail(`[verify:release-ready] missing npm script: ${scriptName}`);
     }
   }
+  verifyPackageScriptCommandsContent(scripts);
+}
+
+function verifyPackageScriptCommandsContent(scripts) {
+  const availableScripts = scripts && typeof scripts === "object" ? scripts : {};
+  for (const [scriptName, snippets] of Object.entries(PACKAGE_SCRIPT_COMMAND_REQUIRED_SNIPPETS)) {
+    const command = String(availableScripts[scriptName] || "");
+    for (const snippet of snippets) {
+      if (!command.includes(snippet)) {
+        fail(
+          `[verify:release-ready] package script "${scriptName}" missing required snippet: ${snippet}`
+        );
+      }
+    }
+    ensureSnippetOrder(command, snippets, `package script "${scriptName}"`);
+  }
 }
 
 function verifySmokeWorkflowShardingContent(workflowContent) {
@@ -256,7 +285,7 @@ async function runReleaseReadinessCheck() {
   await verifyRefactorGateSupportsSmokeScriptParam();
   await verifyDeployWorkflowProductionDistAudit();
   console.log(
-    "[verify:release-ready] PASS: stable docs + scripts + smoke sharding + gate parameterization + deploy dist audit verified"
+    "[verify:release-ready] PASS: stable docs + scripts + smoke sharding + gate parameterization + deploy dist audit + resource budget verified"
   );
 }
 
@@ -283,6 +312,7 @@ export {
   isDirectCliExecution,
   runReleaseReadinessCheck,
   verifyDeployWorkflowProductionDistAuditContent,
+  verifyPackageScriptCommandsContent,
   verifyRefactorGateSupportsSmokeScriptParamContent,
   verifySmokeWorkflowShardingContent
 };

@@ -43,6 +43,9 @@ jobs:
       - name: Audit production dist
         run: npm run audit:production-dist
 
+      - name: Audit resource budget
+        run: npm run audit:resource-budget
+
       - name: Prepare release metadata
         id: meta
         run: |
