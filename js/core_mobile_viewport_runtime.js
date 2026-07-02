@@ -74,6 +74,132 @@
     return page === "game" || page === "practice";
   }
 
+  function toFiniteNumber(value, fallback) {
+    return typeof value === "number" && isFinite(value) ? value : fallback;
+  }
+
+  function resolveBodyLike(options) {
+    if (options.bodyLike) return options.bodyLike;
+    var doc = options.documentLike || null;
+    return doc && doc.body ? doc.body : null;
+  }
+
+  function resolveViewportHeight(windowLike, root) {
+    var visualViewport = windowLike && windowLike.visualViewport ? windowLike.visualViewport : null;
+    var visualHeight = toFiniteNumber(visualViewport && visualViewport.height, 0);
+    if (visualHeight > 0) return visualHeight;
+    var innerHeight = toFiniteNumber(windowLike && windowLike.innerHeight, 0);
+    if (innerHeight > 0) return innerHeight;
+    return toFiniteNumber(root && root.clientHeight, 0);
+  }
+
+  function resolvePageScrollHeight(root, body) {
+    return Math.max(
+      toFiniteNumber(root && root.scrollHeight, 0),
+      toFiniteNumber(body && body.scrollHeight, 0),
+      toFiniteNumber(root && root.clientHeight, 0),
+      toFiniteNumber(body && body.clientHeight, 0)
+    );
+  }
+
+  function resolveMobilePageScrollLockState(options) {
+    var opts = options || {};
+    var doc = opts.documentLike || null;
+    var root = doc && doc.documentElement ? doc.documentElement : null;
+    var body = resolveBodyLike(opts);
+    var win = opts.windowLike || null;
+    var tolerancePx = Math.max(0, toFiniteNumber(opts.tolerancePx, 2));
+    var viewportHeight = resolveViewportHeight(win, root);
+    var scrollHeight = resolvePageScrollHeight(root, body);
+    var isMobileViewport = isMobileGameViewport({
+      windowLike: win,
+      navigatorLike: opts.navigatorLike,
+      maxWidth: opts.maxWidth
+    });
+    var isPageScope = isTimerboxMobileScope({ bodyLike: body });
+    var overflowPx = Math.max(0, scrollHeight - viewportHeight);
+
+    return {
+      shouldLock: isMobileViewport && isPageScope && viewportHeight > 0 && overflowPx <= tolerancePx,
+      isMobileViewport: isMobileViewport,
+      isPageScope: isPageScope,
+      viewportHeight: viewportHeight,
+      scrollHeight: scrollHeight,
+      overflowPx: overflowPx
+    };
+  }
+
+  function applyMobilePageScrollLock(options) {
+    var opts = options || {};
+    var doc = opts.documentLike || null;
+    var root = doc && doc.documentElement ? doc.documentElement : null;
+    var attributeName =
+      typeof opts.attributeName === "string" && opts.attributeName
+        ? opts.attributeName
+        : "data-mobile-page-scroll-lock";
+    var lockedValue =
+      typeof opts.lockedValue === "string" && opts.lockedValue ? opts.lockedValue : "1";
+    var state = resolveMobilePageScrollLockState(opts);
+
+    if (root) {
+      if (state.shouldLock && typeof root.setAttribute === "function") {
+        root.setAttribute(attributeName, lockedValue);
+      } else if (!state.shouldLock && typeof root.removeAttribute === "function") {
+        root.removeAttribute(attributeName);
+      }
+    }
+
+    return state;
+  }
+
+  function bindMobilePageScrollLock(options) {
+    var opts = options || {};
+    var win = opts.windowLike || null;
+    var sync = function () {
+      return applyMobilePageScrollLock(opts);
+    };
+    var scheduleSync = function () {
+      if (win && typeof win.requestAnimationFrame === "function") {
+        win.requestAnimationFrame(sync);
+        return;
+      }
+      if (win && typeof win.setTimeout === "function") {
+        win.setTimeout(sync, 0);
+        return;
+      }
+      sync();
+    };
+
+    var initialState = sync();
+    if (!win || win.__mobilePageScrollLockBound) return initialState;
+    win.__mobilePageScrollLockBound = true;
+
+    if (typeof win.addEventListener === "function") {
+      win.addEventListener("resize", scheduleSync);
+      win.addEventListener("orientationchange", scheduleSync);
+      win.addEventListener("load", scheduleSync);
+    }
+    var visualViewport = win.visualViewport || null;
+    if (visualViewport && typeof visualViewport.addEventListener === "function") {
+      visualViewport.addEventListener("resize", scheduleSync);
+    }
+    var doc = opts.documentLike || null;
+    var ResizeObserverCtor = win.ResizeObserver;
+    if (typeof ResizeObserverCtor === "function") {
+      var observer = new ResizeObserverCtor(scheduleSync);
+      var root = doc && doc.documentElement ? doc.documentElement : null;
+      var body = resolveBodyLike(opts);
+      if (root) observer.observe(root);
+      if (body) observer.observe(body);
+      var container =
+        doc && typeof doc.querySelector === "function" ? doc.querySelector(".container") : null;
+      if (container) observer.observe(container);
+    }
+
+    scheduleSync();
+    return initialState;
+  }
+
   global.CoreMobileViewportRuntime = global.CoreMobileViewportRuntime || {};
   global.CoreMobileViewportRuntime.isViewportAtMost = isViewportAtMost;
   global.CoreMobileViewportRuntime.isCompactGameViewport = isCompactGameViewport;
@@ -83,4 +209,8 @@
   global.CoreMobileViewportRuntime.isGamePageScope = isGamePageScope;
   global.CoreMobileViewportRuntime.isPracticePageScope = isPracticePageScope;
   global.CoreMobileViewportRuntime.isTimerboxMobileScope = isTimerboxMobileScope;
+  global.CoreMobileViewportRuntime.resolveMobilePageScrollLockState =
+    resolveMobilePageScrollLockState;
+  global.CoreMobileViewportRuntime.applyMobilePageScrollLock = applyMobilePageScrollLock;
+  global.CoreMobileViewportRuntime.bindMobilePageScrollLock = bindMobilePageScrollLock;
 })(typeof window !== "undefined" ? window : undefined);

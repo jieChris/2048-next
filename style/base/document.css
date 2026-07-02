@@ -12,6 +12,12 @@ body {
   margin: 80px 0;
 }
 
+html[data-mobile-page-scroll-lock="1"],
+html[data-mobile-page-scroll-lock="1"] body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .site-record-footer {
   width: 500px;
   margin: 24px auto 0;
@@ -46,4 +52,3 @@ body {
     font-size: 12px;
   }
 }
-

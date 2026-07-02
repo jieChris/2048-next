@@ -69,3 +69,16 @@ indexUiPageHostRuntime.applyIndexUiPageBootstrap({
   syncMobileUndoTopButtonAvailability: indexUiBootstrapResolvers.syncMobileUndoTopButtonAvailability,
   prettyTimeRuntime: coreContracts.prettyTimeRuntime
 });
+
+if (
+  coreContracts.mobileViewportRuntime &&
+  typeof coreContracts.mobileViewportRuntime.bindMobilePageScrollLock === "function"
+) {
+  coreContracts.mobileViewportRuntime.bindMobilePageScrollLock({
+    documentLike: document,
+    windowLike: window,
+    navigatorLike: navigator,
+    bodyLike: document.body,
+    maxWidth: 760
+  });
+}
