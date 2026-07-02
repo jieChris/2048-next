@@ -1,0 +1,70 @@
+category,scope,name,path_or_id,type,main_locations,production_status,notes
+independent_page,source_html,标准 2048 首页,/2048.html,game_page,2048.html,production_build,主游戏页
+independent_page,source_html,根入口跳转页,/index.html,redirect_page,index.html,production_build,自动跳转到 2048.html
+independent_page,source_html,通用模式游戏页,/play.html,game_page,play.html,production_build,多模式入口
+independent_page,source_html,撤回版 2048,/undo_2048.html,game_page,undo_2048.html,production_build,可撤回模式
+independent_page,source_html,封顶模式,/capped_2048.html,game_page,capped_2048.html,production_build,封顶玩法
+independent_page,source_html,练习板,/Practice_board.html,game_page,Practice_board.html,production_build,直通盘面和练习
+independent_page,source_html,PKU2048,/PKU2048.html,game_page,PKU2048.html,production_build,PKU 页面
+independent_page,source_html,回放页,/replay.html,replay_page,replay.html,production_build,回放查看和导入
+independent_page,source_html,模式选择,/modes.html,navigation_page,modes.html,production_build,模式大厅
+independent_page,source_html,本地历史,/history.html,data_page,history.html,production_build,本地记录
+independent_page,source_html,用户主页,/user.html,profile_page,user.html,production_build,用户云端记录
+independent_page,source_html,账号中心,/account.html,account_page,account.html,production_build,登录和账号排行榜
+independent_page,source_html,账号设置,/account_settings.html,account_page,account_settings.html,production_build,昵称和密码
+independent_page,source_html,注册账号,/register.html,account_page,register.html,production_build,账号注册
+independent_page,source_html,密码中心,/password.html,account_page,password.html,production_build,找回或重置密码
+independent_page,source_html,勋章墙/成就,/medal-wall.html,achievement_page,medal-wall.html,production_build,成就展示
+independent_page,source_html,管理后台,/admin.html,admin_page,admin.html,production_build,管理功能
+independent_page,source_html,内测访问登录,/beta-login.html,beta_gate_page,beta-login.html,production_build,内测登录和注册
+independent_page,source_html,内测准入/协议,/beta-access.html,beta_gate_page,beta-access.html,production_build,准入状态和协议
+independent_page,source_html,色板中心,/palette.html,theme_page,palette.html,production_build,主题色板
+independent_page,source_html,5x5 接力模式,/relay_5x5.html,relay_page,relay_5x5.html,production_build,接力测试页
+independent_page,source_html,2K 封顶成绩监测,/stone_2k_monitor.html,monitor_page,stone_2k_monitor.html,production_build,成绩监测页
+independent_page,source_html,API 文档,/api-docs.html,docs_page,api-docs.html,production_build,接口文档
+independent_page,source_html,缓存修复,/cache-reset.html,utility_page,cache-reset.html,production_build,清缓存跳转页
+independent_page,source_html,Favicon Preview,/favicon-preview.html,preview_page,favicon-preview.html,production_build,图标预览
+independent_page,source_html,UI 预览工作台,/ui-preview.html,preview_page,ui-preview.html,production_build,UI 预览
+independent_page,source_html,Index Test,/index_test.html,dev_test_page,index_test.html,production_build,测试/开发页但会构建
+independent_page,source_html,Breakout Easter Egg,/easter-eggs/breakout/index.html,easter_egg_page,public/easter-eggs/breakout/index.html,static_public_asset,彩蛋页
+independent_page,source_html,Ranked Seed Validator,/ranked_seed_validator.html,dev_tool_page,ranked_seed_validator.html,source_only_not_vite_build,源码存在但未纳入当前 Vite build
+overlay_or_dialog,runtime_ui,设置窗口,#settings-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,统一设置弹窗
+overlay_or_dialog,runtime_ui,统计信息窗口,#stats-panel-overlay,modal_or_inline_panel,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,游戏统计信息
+overlay_or_dialog,runtime_ui,回放导出窗口,#replay-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html",production_build,同一 replay-modal 容器的导出用途
+overlay_or_dialog,runtime_ui,回放导入文本窗口,#replay-modal,modal,replay.html,production_build,同一 replay-modal 容器的导入用途
+overlay_or_dialog,runtime_ui,回放统计窗口,#replay-modal,modal,replay.html,production_build,回放页统计内容
+overlay_or_dialog,runtime_ui,回放速度设置窗口,#replay-modal,modal,replay.html,production_build,回放间隔/原速设置
+overlay_or_dialog,runtime_ui,版本公告窗口,#announcement-modal,modal,"2048.html; index_test.html",production_build,版本公告列表
+overlay_or_dialog,runtime_ui,模式说明/排行榜窗口,#mode-intro-modal,modal,play.html,production_build,模式说明和排行榜预览
+overlay_or_dialog,runtime_ui,练习板模式选择窗口,#practice-mode-panel,dialog,Practice_board.html,production_build,选择练习模式
+overlay_or_dialog,runtime_ui,盘面代码输入窗口,#practice-board-code-panel,dialog,"Practice_board.html; PKU2048.html",production_build,输入盘面代码
+overlay_or_dialog,runtime_ui,游戏胜利提示,.game-message.game-won,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,合成 2048 后显示
+overlay_or_dialog,runtime_ui,游戏结束提示,.game-message.game-over,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,无可移动步数后显示
+overlay_or_dialog,runtime_ui,移动端玩法提示,#mobile-hint-overlay,modal,game_pages,production_build,移动端玩法帮助
+overlay_or_dialog,runtime_ui,新手引导浮层,#home-guide-overlay,overlay,home_family_pages,production_build,分步引导
+overlay_or_dialog,runtime_ui,新手引导完成提示,#home-guide-done-toast,toast,home_family_pages,production_build,引导完成瞬时提示
+overlay_or_dialog,runtime_ui,封顶/练习引导遮罩,#guide-overlay,overlay,"capped_2048.html; Practice_board.html",production_build,页面引导遮罩
+overlay_or_dialog,runtime_ui,回放文件拖拽导入遮罩,#replay-file-drop-overlay,overlay,replay.html,production_build,拖拽 .txt/.vrs/.rpl 时显示
+overlay_or_dialog,runtime_ui,回放导出瞬时提示,#replay-export-toast,toast,game_pages,production_build,复制/导出提示
+overlay_or_dialog,runtime_ui,Breakout 彩蛋承载层,[data-breakout-easter-egg-overlay],overlay_iframe,home_family_pages,production_build,嵌入 Breakout 彩蛋
+overlay_or_dialog,runtime_ui,通用提示弹窗,#game-dialog-overlay,GameDialog_alert,multiple_pages,production_build,替代 alert 的通用提示
+overlay_or_dialog,runtime_ui,通用确认弹窗,#game-dialog-overlay,GameDialog_confirm,multiple_pages,production_build,替代 confirm 的通用确认
+overlay_or_dialog,runtime_ui,危险确认弹窗,#game-dialog-overlay,GameDialog_danger,multiple_pages,production_build,删除/清空等危险操作
+overlay_or_dialog,runtime_ui,通用输入弹窗,#game-dialog-overlay,GameDialog_prompt,multiple_pages,production_build,替代 prompt 的输入弹窗
+overlay_or_dialog,runtime_ui,计时排行榜面板,#timer-leaderboard-panel,embedded_panel,game_pages,production_build,游戏页排行榜/计时榜面板
+overlay_or_dialog,runtime_ui,回放诊断面板,#replay-diagnostics-panel,embedded_panel,replay.html,production_build,回放诊断信息
+business_dialog_variant,semantic_ui,开始新游戏确认,GameDialog.confirm,confirm,game_pages,production_build,文案：是否确认开始新游戏？
+business_dialog_variant,semantic_ui,删除本地历史记录确认,GameDialog.danger,confirm,history.html,production_build,删除单条历史记录
+business_dialog_variant,semantic_ui,导入并替换历史确认,GameDialog.danger,confirm,history.html,production_build,导入历史前确认
+business_dialog_variant,semantic_ui,清空全部本地历史确认,GameDialog.danger,confirm,history.html,production_build,不可撤销操作
+business_dialog_variant,semantic_ui,删除用户云端记录确认,GameDialog.danger,confirm,user.html,production_build,用户主页记录删除
+business_dialog_variant,semantic_ui,删除色板确认,GameDialog.danger,confirm,palette.html,production_build,删除当前色板
+business_dialog_variant,semantic_ui,修改昵称输入,GameDialog.prompt,prompt,account.html,production_build,账号中心昵称输入
+business_dialog_variant,semantic_ui,5x5 删除接力确认,window.confirm,confirm,relay_5x5.html,production_build,目前仍可能是系统原生确认框
+business_dialog_variant,semantic_ui,管理后台成就回填确认,window.confirm,confirm,admin.html,production_build,目前仍可能是系统原生确认框
+business_dialog_variant,semantic_ui,排位会话过期提示,window.alert,alert,game_pages,production_build,目前仍可能是系统原生提示
+business_dialog_variant,semantic_ui,救援恢复确认/结果提示,window.confirm/window.alert,confirm_or_alert,game_pages,production_build,目前仍可能是系统原生弹窗
+business_dialog_variant,semantic_ui,单页重复打开提示,window.alert,alert,game_pages,production_build,重复模式页保护
+business_dialog_variant,semantic_ui,无效模式提示,window.alert,alert,play.html,production_build,无效 mode_key 跳转前提示
+business_dialog_variant,semantic_ui,回放导入错误提示,GameDialog.alert_or_window.alert,alert,"replay.html; game_pages",production_build,回放导入失败提示
+business_dialog_variant,semantic_ui,自定义出生率输入,window.prompt,custom_spawn_prompt,play.html,production_build,目前仍可能是系统原生输入框
