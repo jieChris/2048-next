@@ -74,9 +74,16 @@ function ensureThemeSettingsGlobals(): void {
 }
 
 function applyThemePageCopy(): void {
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
   const lang = typeof globalWindow.UII18N?.getLanguage === "function"
     ? globalWindow.UII18N.getLanguage()
-    : window.localStorage.getItem("ui_language_v1") || "zh";
+    : safeReadStorageItem({
+        storageLike,
+        key: "ui_language_v1"
+      }) || "zh";
   const isEnglish = String(lang || "").toLowerCase().startsWith("en");
   const title = isEnglish ? "Palette Center" : "\u8272\u677f\u4e2d\u5fc3";
   const subtitle = isEnglish

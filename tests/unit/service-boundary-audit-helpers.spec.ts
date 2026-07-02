@@ -64,6 +64,17 @@ describe("service-boundary-audit helpers", () => {
     ]);
   });
 
+  it("allows storage access through the browser storage boundary helpers", () => {
+    const filePath = path.resolve("G:/2048/2048undo/2048-next/src/sample.ts");
+    const source = [
+      "const storageLike = resolveStorageByName({ windowLike: window, storageName: 'localStorage' });",
+      "const value = safeReadStorageItem({ storageLike, key: 'ui_language_v1' });",
+      "const other = readStorageValue(createBrowserStorageAccess().local(), 'ui_language_v1');"
+    ].join("\n");
+
+    expect(collectBoundaryViolations(filePath, source)).toEqual([]);
+  });
+
   it("rejects any collected violations", () => {
     expect(() =>
       ensureNoBoundaryViolations([

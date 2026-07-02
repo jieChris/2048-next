@@ -1,4 +1,5 @@
 ﻿import { createAdminService } from "../services/admin-rescue";
+import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
 
 type JsonRecord = Record<string, unknown>;
 type TipState = "ok" | "err" | "busy" | "idle";
@@ -276,7 +277,10 @@ function toText(value: unknown): string {
 
 function isEnglishUi(): boolean {
   try {
-    return toText(window.localStorage.getItem(UI_LANGUAGE_KEY)).trim().toLowerCase().startsWith("en");
+    return toText(readStorageValue(createBrowserStorageAccess().local(), UI_LANGUAGE_KEY))
+      .trim()
+      .toLowerCase()
+      .startsWith("en");
   } catch (_err) {
     return false;
   }

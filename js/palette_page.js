@@ -435,16 +435,31 @@
       if (type === "err") noteEl.classList.add("err");
     }
 
+    function readLocalStorageItem(key) {
+      var runtime = toRecord(global.CoreStorageRuntime);
+      var resolveStorageByName = asFunction(runtime.resolveStorageByName);
+      var safeReadStorageItem = asFunction(runtime.safeReadStorageItem);
+      if (!resolveStorageByName || !safeReadStorageItem) return "";
+      try {
+        var storageLike = resolveStorageByName.call(runtime, {
+          windowLike: global,
+          storageName: "localStorage"
+        });
+        return resolveText(safeReadStorageItem.call(runtime, {
+          storageLike: storageLike,
+          key: key
+        }));
+      } catch (_err) {
+        return "";
+      }
+    }
+
     function isEnglishUi() {
       var i18n = toRecord(global.UII18N);
       var getLanguage = asFunction(i18n.getLanguage);
       var lang = getLanguage ? resolveText(getLanguage.call(i18n)) : "";
       if (!lang) {
-        try {
-          lang = resolveText(global.localStorage && global.localStorage.getItem("ui_language_v1"));
-        } catch (_err) {
-          lang = "";
-        }
+        lang = readLocalStorageItem("ui_language_v1");
       }
       return lang.toLowerCase().indexOf("en") === 0;
     }

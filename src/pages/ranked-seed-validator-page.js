@@ -9,6 +9,7 @@ import {
   resolveExpectedRankedSpawn,
   resolveRankedModeFromCatalog
 } from "../tools/ranked-seed-validator-core.js";
+import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 
 const EXAMPLE_SEED = "424242";
 const EXAMPLE_STEP_COUNT = "7";
@@ -26,7 +27,14 @@ const UI_LANGUAGE_KEY = "ui_language_v1";
 
 function isEnglishUi() {
   try {
-    return String(window.localStorage.getItem(UI_LANGUAGE_KEY) || "").trim().toLowerCase().indexOf("en") === 0;
+    const storageLike = resolveStorageByName({
+      windowLike: window,
+      storageName: "localStorage"
+    });
+    return String(safeReadStorageItem({
+      storageLike,
+      key: UI_LANGUAGE_KEY
+    }) || "").trim().toLowerCase().indexOf("en") === 0;
   } catch (_err) {
     return false;
   }

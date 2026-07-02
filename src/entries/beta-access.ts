@@ -1,4 +1,4 @@
-import { removeStorageValue } from "../storage/browser-storage";
+import { createBrowserStorageAccess, readStorageValue, removeStorageValue } from "../storage/browser-storage";
 import { AUTH_TOKEN_KEY, type JsonRecord } from "../services/api-client";
 import {
   ACTIVE_BETA_NOTICE_VERSION,
@@ -110,7 +110,7 @@ function toText(value: unknown): string {
 
 function currentLang(): PageLang {
   try {
-    const raw = toText(window.localStorage.getItem(UI_LANGUAGE_KEY)).trim().toLowerCase();
+    const raw = toText(readStorageValue(createBrowserStorageAccess().local(), UI_LANGUAGE_KEY)).trim().toLowerCase();
     if (raw.startsWith("en")) return "en";
   } catch (_err) {}
   return "zh";
