@@ -787,8 +787,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(replayPage.locator("#replay-modal")).toBeVisible();
     const statsText = await replayPage.locator("#replay-textarea").inputValue();
 
-    expect(statsText).toContain("总步数：");
-    expect(statsText).not.toContain("总步数：0");
+    expect(statsText).toContain("总操作数：");
+    expect(statsText).not.toContain("总操作数：0");
     expect(statsText).not.toContain("出2数量：0\n出4数量：0");
     await replayPage.close();
   });

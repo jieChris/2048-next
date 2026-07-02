@@ -158,7 +158,8 @@
     ["主题设置", "Theme Settings"], ["统计面板", "Stats Panel"], ["直接显示在页面中", "Show inline on page."],
     ["页面中英文切换", "Switch page language."], ["打开指引", "Open Guide"],
     ["设置", "Settings"], ["关闭", "Close"], ["回放", "Replay"], ["执行", "Run"], ["版本公告", "Announcements"],
-    ["统计", "Stats"], ["统计汇总", "Stats Summary"], ["总步数", "Total Steps"], ["移动步数", "Move Steps"], ["撤回步数", "Undo Steps"],
+    ["统计", "Stats"], ["统计汇总", "Stats Summary"], ["总操作数", "Total Actions"], ["有效移动数", "Effective Moves"], ["撤回次数", "Undo Count"],
+    ["总步数", "Total Actions"], ["移动步数", "Effective Moves"], ["撤回步数", "Undo Count"],
     ["导出回放", "Export Replay"], ["直通练习板", "Practice Board"], ["高级回放", "Advanced Replay"],
     ["模式选择", "Mode Selection"], ["历史记录", "History"], ["回首页", "Home"], ["首页", "Home"], ["模式", "Mode"],
     ["归属", "Owner"], ["全部归属", "All Owners"], ["游客", "Guest"], ["未知用户", "Unknown User"],
@@ -379,8 +380,11 @@
     var out = String(text || "");
     if (lang === "en") {
       out = out.replace(/^4率\s*[:：]?\s*/u, "4-Rate: ");
-      out = out.replace(/^总步数\s*[:：]?\s*/u, "Total Moves: ");
-      out = out.replace(/^移动步数\s*[:：]?\s*/u, "Move Count: ");
+      out = out.replace(/^总操作数\s*[:：]?\s*/u, "Total Actions: ");
+      out = out.replace(/^有效移动数\s*[:：]?\s*/u, "Effective Moves: ");
+      out = out.replace(/^撤回次数\s*[:：]?\s*/u, "Undo Count: ");
+      out = out.replace(/^总步数\s*[:：]?\s*/u, "Total Actions: ");
+      out = out.replace(/^移动步数\s*[:：]?\s*/u, "Effective Moves: ");
       out = out.replace(/^撤回步数\s*[:：]?\s*/u, "Undo Count: ");
       out = out.replace(/^总分\s*[:：]?\s*/u, "Total Score: ");
       out = out.replace(/实际出4率/gu, "Actual 4-Rate");
@@ -410,9 +414,12 @@
       out = out.replace(/封顶/gu, "Capped");
     } else {
       out = out.replace(/^4-Rate\s*[:：]?\s*/u, "4率: ");
-      out = out.replace(/^Total Moves\s*[:：]?\s*/u, "总步数: ");
-      out = out.replace(/^Move Count\s*[:：]?\s*/u, "移动步数: ");
-      out = out.replace(/^Undo Count\s*[:：]?\s*/u, "撤回步数: ");
+      out = out.replace(/^Total Actions\s*[:：]?\s*/u, "总操作数: ");
+      out = out.replace(/^Effective Moves\s*[:：]?\s*/u, "有效移动数: ");
+      out = out.replace(/^Undo Steps\s*[:：]?\s*/u, "撤回次数: ");
+      out = out.replace(/^Undo Count\s*[:：]?\s*/u, "撤回次数: ");
+      out = out.replace(/^Total Moves\s*[:：]?\s*/u, "总操作数: ");
+      out = out.replace(/^Move Count\s*[:：]?\s*/u, "有效移动数: ");
       out = out.replace(/^Total Score\s*[:：]?\s*/u, "总分: ");
       out = out.replace(/Actual 4-Rate/gu, "实际出4率");
       out = out.replace(/2 Spawns/gu, "出2数量");

@@ -22,13 +22,13 @@ function normalizeStatsPanelLanguage(value) {
   return "";
 }
 var STATS_PANEL_COPY_EN = {
-  button: "Stats", title: "Stats Summary", totalSteps: "Total Steps", moveSteps: "Move Steps",
-  undoSteps: "Undo Steps", primarySpawns: "2 Spawns", secondarySpawns: "4 Spawns",
+  button: "Stats", title: "Stats Summary", totalSteps: "Total Actions", moveSteps: "Effective Moves",
+  undoSteps: "Undo Count", primarySpawns: "2 Spawns", secondarySpawns: "4 Spawns",
   secondaryRate: "Actual 4-Rate", close: "Close"
 };
 var STATS_PANEL_COPY_ZH = {
-  button: "\u7edf\u8ba1", title: "\u7edf\u8ba1\u6c47\u603b", totalSteps: "\u603b\u6b65\u6570",
-  moveSteps: "\u79fb\u52a8\u6b65\u6570", undoSteps: "\u64a4\u56de\u6b65\u6570",
+  button: "\u7edf\u8ba1", title: "\u7edf\u8ba1\u6c47\u603b", totalSteps: "\u603b\u64cd\u4f5c\u6570",
+  moveSteps: "\u6709\u6548\u79fb\u52a8\u6570", undoSteps: "\u64a4\u56de\u6b21\u6570",
   primarySpawns: "\u51fa2\u6570\u91cf", secondarySpawns: "\u51fa4\u6570\u91cf",
   secondaryRate: "\u5b9e\u9645\u51fa4\u7387", close: "\u5173\u95ed"
 };

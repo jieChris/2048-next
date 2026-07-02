@@ -216,9 +216,9 @@
     if (key === "statsSpawn4") return isEn ? "Spawn 4 Count" : "\u51fa4\u6570\u91cf";
     if (key === "statsSpawn2Rate") return isEn ? "Spawn 2 Rate" : "2\u7387";
     if (key === "statsSpawn4Rate") return isEn ? "Spawn 4 Rate" : "4\u7387";
-    if (key === "statsTotalSteps") return isEn ? "Total Steps" : "\u603b\u6b65\u6570";
+    if (key === "statsTotalSteps") return isEn ? "Total Actions" : "\u603b\u64cd\u4f5c\u6570";
     if (key === "statsAvgSpeed") return isEn ? "Average Speed" : "\u5e73\u5747\u901f\u5ea6";
-    if (key === "statsAvgSpeedUnit") return isEn ? "s/step" : "\u79d2/\u6b65";
+    if (key === "statsAvgSpeedUnit") return isEn ? "s/action" : "\u79d2/\u64cd\u4f5c";
     if (key === "statsNoData") return isEn ? "No replay statistics available." : "\u6682\u65e0\u53ef\u7528\u7edf\u8ba1\u6570\u636e\u3002";
     if (key === "speedSettings") return isEn ? "Set Speed" : "\u8bbe\u7f6e\u901f\u5ea6";
     if (key === "importFile") return isEn ? "Import Replay" : "\u5bfc\u5165\u56de\u653e";
