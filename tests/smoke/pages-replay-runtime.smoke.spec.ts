@@ -1223,11 +1223,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
         if (nextLength > startLength) break;
       }
-      const replay = manager.sessionReplayV3 && typeof manager.sessionReplayV3 === "object"
-        ? JSON.parse(JSON.stringify(manager.sessionReplayV3))
-        : null;
-      if (!replay || !Array.isArray(replay.actions) || replay.actions.length === 0) {
-        throw new Error("structured diagonal replay missing actions");
+      const replay = typeof manager.serializeV3 === "function" ? manager.serializeV3() : null;
+      if (
+        !replay ||
+        replay.mode_key !== "diag_2x4_pow2_no_undo" ||
+        typeof replay.seed !== "number" ||
+        !Array.isArray(replay.actions) ||
+        replay.actions.length === 0
+      ) {
+        throw new Error("serialized diagonal replay missing structured mode key, seed, or actions");
       }
       return replay;
     });
@@ -1247,6 +1251,84 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.sessionStorage.setItem("cloud_replay_payload_v1", JSON.stringify(payload));
       },
       { payloadReplay: replayPayload, payloadModeKey: modeKey }
+    );
+
+    const replayResponse = await replayPage.goto("/replay.html?cloud_replay=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(replayResponse).not.toBeNull();
+    expect(replayResponse?.ok()).toBeTruthy();
+    await expect(replayPage.locator("body")).toBeVisible();
+    await expect(replayPage.locator("#game-dialog-overlay.is-open")).toBeHidden();
+
+    await expect
+      .poll(
+        async () =>
+          replayPage.evaluate(() => window.sessionStorage.getItem("cloud_replay_payload_v1")),
+        { timeout: 10_000 }
+      )
+      .toBeNull();
+
+    const snapshot = await replayPage.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        modeKey: String(manager?.modeKey || ""),
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : 0
+      };
+    });
+
+    expect(snapshot.modeKey).toBe(modeKey);
+    expect(snapshot.replayMovesLength).toBeGreaterThan(0);
+    await replayPage.close();
+  });
+
+  test("replay page loads diagonal cloud replay from v1 replay string payload", async ({
+    browser
+  }) => {
+    const modeKey = "diag_2x4_pow2_no_undo";
+    const gamePage = await browser.newPage();
+    await installLiveReplaySourceSession(gamePage, modeKey, 641);
+    const gameResponse = await gamePage.goto(`/play.html?mode_key=${modeKey}`, {
+      waitUntil: "domcontentloaded"
+    });
+    expect(gameResponse).not.toBeNull();
+    expect(gameResponse?.ok()).toBeTruthy();
+    await expect(gamePage.locator("body")).toBeVisible();
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.move === "function" && typeof manager.serialize === "function";
+    });
+
+    const replayString = await gamePage.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+      for (let i = 0; i < 32; i += 1) {
+        manager.move(i % 8);
+        const nextLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        if (nextLength > startLength) break;
+      }
+      const replay = String(manager.serialize() || "");
+      if (!replay.startsWith("REPLAY_v1RPL_B64_")) {
+        throw new Error("diagonal replay string missing v1 RPL prefix");
+      }
+      return replay;
+    });
+    await gamePage.close();
+
+    const replayPage = await browser.newPage();
+    await replayPage.addInitScript(
+      ({ payloadReplayString, payloadModeKey }) => {
+        const payload = {
+          source: "cloud_record",
+          cloud_payload_version: 2,
+          replay_file_version: 1,
+          id: "cloud-diag-v1-string",
+          mode_key: payloadModeKey,
+          replay_string: payloadReplayString
+        };
+        window.sessionStorage.setItem("cloud_replay_payload_v1", JSON.stringify(payload));
+      },
+      { payloadReplayString: replayString, payloadModeKey: modeKey }
     );
 
     const replayResponse = await replayPage.goto("/replay.html?cloud_replay=1", {

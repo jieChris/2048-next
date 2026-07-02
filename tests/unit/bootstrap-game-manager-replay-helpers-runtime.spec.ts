@@ -6,6 +6,7 @@ import {
   insertCustomTile,
   installGameManagerReplayHelperGlobals,
   serializeReplay,
+  serializeReplayV3,
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
 import { decodeReplayV1Rpl, encodeReplayV1Rpl } from "../../src/core/replay-codec";
@@ -105,6 +106,38 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(decoded.height).toBe(2);
     expect(decoded.initTiles).toHaveLength(2);
     expect(decoded.records.some((record) => record.kind === "move")).toBe(true);
+  });
+
+  it("serializes diagonal sessions with structured seed, mode key, and actions for cloud replay", () => {
+    const manager = {
+      width: 4,
+      height: 4,
+      modeKey: "diag_4x4_pow2_no_undo",
+      mode: "diagonal",
+      score: 128,
+      initialSeed: 0.625,
+      ruleset: "pow2",
+      modeConfig: { undo_enabled: false },
+      modeFamily: "diagonal",
+      rankPolicy: "casual",
+      specialRules: { allow_diagonal_moves: true },
+      sessionReplayV3: {
+        v: 3,
+        mode_key: "diag_4x4_pow2_no_undo",
+        seed: 0.625,
+        actions: [["m", 4], ["m", 7]]
+      },
+      clonePlain(value: unknown) {
+        return JSON.parse(JSON.stringify(value));
+      }
+    };
+
+    expect(serializeReplayV3(manager)).toMatchObject({
+      v: 3,
+      mode_key: "diag_4x4_pow2_no_undo",
+      seed: 0.625,
+      actions: [["m", 4], ["m", 7]]
+    });
   });
 
   it("imports structured replay JSON actions without replacing them with fallback moves", () => {

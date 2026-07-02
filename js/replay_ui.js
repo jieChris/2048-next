@@ -917,19 +917,30 @@
     return JSON.stringify(structured);
   }
 
+  function isReplayV1RplPayload(replayText) {
+    var text = normalizeLegacyReplayStringForImport(replayText);
+    if (!text) return false;
+    var prefix = resolveReplayV1PrefixForTimeline();
+    return !!prefix && text.indexOf(prefix) === 0;
+  }
+
   function buildDiagonalReplayPayloadV1(recordLike) {
     var source = normalizeReplayRecordLike(recordLike);
     var structured = normalizeStructuredReplayV1(source);
+    var replayCode = normalizeLegacyReplayStringForImport(source.replay_string);
     if (!structured) {
+      if (isReplayV1RplPayload(replayCode)) return replayCode;
       throw new Error(t("unsupportedDiagonalReplay"));
     }
 
     var seed = Number(structured.seed);
     if (!Number.isFinite(seed)) {
+      if (isReplayV1RplPayload(replayCode)) return replayCode;
       throw new Error(t("unsupportedDiagonalReplay"));
     }
 
     if (!Array.isArray(structured.actions)) {
+      if (isReplayV1RplPayload(replayCode)) return replayCode;
       throw new Error(t("unsupportedDiagonalReplay"));
     }
 

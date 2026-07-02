@@ -65,6 +65,14 @@ function normalizeReplayRecordObject(value, fallback) {
   return isReplayRecordObject(value) ? value : fallback;
 }
 
+function cloneReplayJsonSafe(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_error) {
+    return null;
+  }
+}
+
 function resolveReplayV1CodecRuntime(manager) {
   if (!(manager && typeof manager.getWindowLike === "function")) return null;
   var windowLike = manager.getWindowLike();
@@ -1431,6 +1439,7 @@ function resolveReplayModeTag(modeKey, fallbackMode) {
 }
 
 function createDefaultReplayV3Session(manager) {
+  var modeConfig = manager && manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : {};
   return {
     v: 3,
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
@@ -1438,10 +1447,10 @@ function createDefaultReplayV3Session(manager) {
     board_width: manager.width,
     board_height: manager.height,
     ruleset: manager.ruleset,
-    undo_enabled: !!manager.modeConfig.undo_enabled,
+    undo_enabled: !!modeConfig.undo_enabled,
     mode_family: manager.modeFamily,
     rank_policy: manager.rankPolicy,
-    special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
+    special_rules_snapshot: cloneReplayJsonSafe(manager.specialRules || {}) || {},
     seed: manager.initialSeed,
     actions: []
   };
@@ -1485,7 +1494,7 @@ function resolveSerializedReplayV3RankPolicy(manager, source) {
 }
 
 function resolveSerializedReplayV3SpecialRulesSnapshot(manager, source) {
-  return manager.clonePlain(source.special_rules_snapshot || manager.specialRules || {});
+  return cloneReplayJsonSafe(source.special_rules_snapshot || manager.specialRules || {}) || {};
 }
 
 function resolveSerializedReplayV3ChallengeId(manager, source) {
@@ -1493,7 +1502,8 @@ function resolveSerializedReplayV3ChallengeId(manager, source) {
 }
 
 function resolveSerializedReplayV3Actions(source) {
-  return Array.isArray(source.actions) ? source.actions.slice() : [];
+  if (!Array.isArray(source.actions)) return [];
+  return cloneReplayJsonSafe(source.actions) || source.actions.slice();
 }
 
 function createSerializedReplayV3(manager, source) {
@@ -1515,11 +1525,7 @@ function createSerializedReplayV3(manager, source) {
 }
 
 function serializeReplayV3(manager) {
-  return {
-    v: 1,
-    replay_logic_version: "v1",
-    replay_string: serializeReplay(manager)
-  };
+  return createSerializedReplayV3(manager, resolveReplayV3SessionSource(manager));
 }
 
 function writeAutoSubmitResultRecord(manager, payload) {

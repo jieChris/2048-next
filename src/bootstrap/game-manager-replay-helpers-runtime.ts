@@ -535,6 +535,24 @@ export function isSessionTerminated(manager: ManagerLike): boolean {
   return !!manager && (!!manager.over || (!!manager.won && !manager.keepPlaying));
 }
 
+function resolveReplayModeTag(modeKey: unknown, fallbackMode: unknown): string {
+  const key = typeof modeKey === "string" && modeKey ? modeKey : typeof fallbackMode === "string" ? fallbackMode : "";
+  if (key && key.indexOf("capped") !== -1) return "capped";
+  if (key && key.indexOf("practice") !== -1) return "practice";
+  return "classic";
+}
+
+function resolveReplayV3Seed(manager: ManagerLike, source: Record<string, unknown>): unknown {
+  if (source.seed != null) return source.seed;
+  if (manager.initialSeed != null) return manager.initialSeed;
+  return manager.seed;
+}
+
+function resolveReplayV3Actions(source: Record<string, unknown>): unknown[] {
+  if (!Array.isArray(source.actions)) return [];
+  return (cloneJsonSafe(source.actions) as unknown[] | null) || source.actions.slice();
+}
+
 export function serializeReplay(manager: ManagerLike): string {
   const rescueReplay = String(manager.rescueReplayString || "").trim();
   if (rescueReplay) return rescueReplay;
@@ -558,10 +576,23 @@ export function serializeReplay(manager: ManagerLike): string {
 }
 
 export function serializeReplayV3(manager: ManagerLike): Record<string, unknown> {
+  const source = toRecord(manager.sessionReplayV3);
+  const modeKey = source.mode_key || manager.modeKey || manager.mode;
+  const modeConfig = toRecord(manager.modeConfig);
   return {
-    v: 1,
-    replay_logic_version: "v1",
-    replay_string: serializeReplay(manager)
+    v: 3,
+    mode: source.mode || resolveReplayModeTag(modeKey, manager.mode),
+    mode_key: modeKey,
+    board_width: source.board_width || manager.width,
+    board_height: source.board_height || manager.height,
+    ruleset: source.ruleset || manager.ruleset,
+    undo_enabled: typeof source.undo_enabled === "boolean" ? source.undo_enabled : !!modeConfig.undo_enabled,
+    mode_family: source.mode_family || manager.modeFamily,
+    rank_policy: source.rank_policy || manager.rankPolicy,
+    special_rules_snapshot: cloneJsonSafe(source.special_rules_snapshot || manager.specialRules || {}) || {},
+    challenge_id: source.challenge_id || manager.challengeId || null,
+    seed: resolveReplayV3Seed(manager, source),
+    actions: resolveReplayV3Actions(source)
   };
 }
 
