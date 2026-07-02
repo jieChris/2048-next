@@ -152,9 +152,25 @@
     return state;
   }
 
+  function handleMobilePageScrollLockTouchMove(options, eventLike) {
+    var state = resolveMobilePageScrollLockState(options || {});
+    if (!state.shouldLock) return false;
+    var eventRecord = eventLike || null;
+    if (
+      eventRecord &&
+      eventRecord.cancelable !== false &&
+      typeof eventRecord.preventDefault === "function"
+    ) {
+      eventRecord.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
   function bindMobilePageScrollLock(options) {
     var opts = options || {};
     var win = opts.windowLike || null;
+    var doc = opts.documentLike || null;
     var sync = function () {
       return applyMobilePageScrollLock(opts);
     };
@@ -183,7 +199,15 @@
     if (visualViewport && typeof visualViewport.addEventListener === "function") {
       visualViewport.addEventListener("resize", scheduleSync);
     }
-    var doc = opts.documentLike || null;
+    if (doc && typeof doc.addEventListener === "function") {
+      doc.addEventListener(
+        "touchmove",
+        function (event) {
+          handleMobilePageScrollLockTouchMove(opts, event);
+        },
+        { passive: false }
+      );
+    }
     var ResizeObserverCtor = win.ResizeObserver;
     if (typeof ResizeObserverCtor === "function") {
       var observer = new ResizeObserverCtor(scheduleSync);
@@ -212,5 +236,7 @@
   global.CoreMobileViewportRuntime.resolveMobilePageScrollLockState =
     resolveMobilePageScrollLockState;
   global.CoreMobileViewportRuntime.applyMobilePageScrollLock = applyMobilePageScrollLock;
+  global.CoreMobileViewportRuntime.handleMobilePageScrollLockTouchMove =
+    handleMobilePageScrollLockTouchMove;
   global.CoreMobileViewportRuntime.bindMobilePageScrollLock = bindMobilePageScrollLock;
 })(typeof window !== "undefined" ? window : undefined);

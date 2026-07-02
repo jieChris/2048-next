@@ -40,6 +40,16 @@ interface DocumentLike {
   documentElement?: AttributeElementLike | null;
   body?: BodyLike | null;
   querySelector?(selector: string): unknown;
+  addEventListener?(
+    name: string,
+    listener: (event: unknown) => void,
+    options?: unknown
+  ): unknown;
+}
+
+interface TouchMoveEventLike {
+  cancelable?: boolean;
+  preventDefault?(): unknown;
 }
 
 export interface ViewportWidthOptions {
@@ -227,9 +237,28 @@ export function applyMobilePageScrollLock(
   return state;
 }
 
+export function handleMobilePageScrollLockTouchMove(
+  options: MobilePageScrollLockOptions,
+  eventLike: TouchMoveEventLike | null | undefined
+): boolean {
+  const state = resolveMobilePageScrollLockState(options || {});
+  if (!state.shouldLock) return false;
+  const eventRecord = eventLike || null;
+  if (
+    eventRecord &&
+    eventRecord.cancelable !== false &&
+    typeof eventRecord.preventDefault === "function"
+  ) {
+    eventRecord.preventDefault();
+    return true;
+  }
+  return false;
+}
+
 export function bindMobilePageScrollLock(options: MobilePageScrollLockOptions): MobilePageScrollLockState {
   const opts = options || {};
   const win = opts.windowLike || null;
+  const doc = opts.documentLike || null;
   const sync = function (): MobilePageScrollLockState {
     return applyMobilePageScrollLock(opts);
   };
@@ -258,7 +287,15 @@ export function bindMobilePageScrollLock(options: MobilePageScrollLockOptions): 
   if (visualViewport && typeof visualViewport.addEventListener === "function") {
     visualViewport.addEventListener("resize", scheduleSync);
   }
-  const doc = opts.documentLike || null;
+  if (doc && typeof doc.addEventListener === "function") {
+    doc.addEventListener(
+      "touchmove",
+      function (event: unknown): void {
+        handleMobilePageScrollLockTouchMove(opts, event as TouchMoveEventLike);
+      },
+      { passive: false }
+    );
+  }
   const ResizeObserverCtor = win.ResizeObserver;
   if (typeof ResizeObserverCtor === "function") {
     const observer = new ResizeObserverCtor(scheduleSync);

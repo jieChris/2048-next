@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyMobilePageScrollLock,
   bindMobilePageScrollLock,
+  handleMobilePageScrollLockTouchMove,
   isGamePageScope,
   isCompactGameViewport,
   isMobileGameViewport,
@@ -297,5 +298,140 @@ describe("bootstrap mobile viewport", () => {
     listeners.get("resize")?.[0]?.();
 
     expect(root.getAttribute("data-mobile-page-scroll-lock")).toBeNull();
+  });
+
+  it("prevents touchmove while the mobile page scroll lock is active", () => {
+    const body = {
+      scrollHeight: 640,
+      clientHeight: 640,
+      getAttribute(name: string) {
+        return name === "data-page" ? "game" : null;
+      }
+    };
+    const documentLike = {
+      documentElement: {
+        scrollHeight: 640,
+        clientHeight: 640
+      },
+      body
+    };
+    const windowLike = {
+      innerWidth: 390,
+      innerHeight: 640,
+      matchMedia(query: string) {
+        if (query === "(max-width: 760px)") return { matches: true };
+        if (query === "(pointer: coarse)") return { matches: true };
+        return { matches: false };
+      }
+    };
+    let prevented = false;
+
+    const didPrevent = handleMobilePageScrollLockTouchMove(
+      {
+        documentLike,
+        windowLike,
+        navigatorLike: { userAgent: "iPhone" },
+        bodyLike: body,
+        maxWidth: 760
+      },
+      {
+        cancelable: true,
+        preventDefault() {
+          prevented = true;
+        }
+      }
+    );
+
+    expect(didPrevent).toBe(true);
+    expect(prevented).toBe(true);
+  });
+
+  it("does not prevent touchmove when the mobile page still needs scrolling", () => {
+    const body = {
+      scrollHeight: 900,
+      clientHeight: 640,
+      getAttribute(name: string) {
+        return name === "data-page" ? "game" : null;
+      }
+    };
+    let prevented = false;
+
+    const didPrevent = handleMobilePageScrollLockTouchMove(
+      {
+        documentLike: {
+          documentElement: {
+            scrollHeight: 900,
+            clientHeight: 640
+          },
+          body
+        },
+        windowLike: {
+          innerWidth: 390,
+          innerHeight: 640,
+          matchMedia(query: string) {
+            if (query === "(max-width: 760px)") return { matches: true };
+            if (query === "(pointer: coarse)") return { matches: true };
+            return { matches: false };
+          }
+        },
+        navigatorLike: { userAgent: "iPhone" },
+        bodyLike: body,
+        maxWidth: 760
+      },
+      {
+        cancelable: true,
+        preventDefault() {
+          prevented = true;
+        }
+      }
+    );
+
+    expect(didPrevent).toBe(false);
+    expect(prevented).toBe(false);
+  });
+
+  it("binds a non-passive touchmove listener for the mobile page scroll lock", () => {
+    const body = {
+      scrollHeight: 640,
+      clientHeight: 640,
+      getAttribute(name: string) {
+        return name === "data-page" ? "practice" : null;
+      }
+    };
+    const listeners: Array<{ name: string; listener: (event: unknown) => void; options: unknown }> = [];
+    const documentLike = {
+      documentElement: {
+        scrollHeight: 640,
+        clientHeight: 640,
+        setAttribute() {},
+        removeAttribute() {}
+      },
+      body,
+      addEventListener(name: string, listener: (event: unknown) => void, options?: unknown) {
+        listeners.push({ name, listener, options });
+      }
+    };
+
+    bindMobilePageScrollLock({
+      documentLike,
+      windowLike: {
+        innerWidth: 390,
+        innerHeight: 640,
+        matchMedia(query: string) {
+          if (query === "(max-width: 760px)") return { matches: true };
+          if (query === "(pointer: coarse)") return { matches: true };
+          return { matches: false };
+        }
+      },
+      navigatorLike: { userAgent: "iPhone" },
+      bodyLike: body,
+      maxWidth: 760
+    });
+
+    expect(listeners).toContainEqual({
+      name: "touchmove",
+      listener: expect.any(Function),
+      options: { passive: false }
+    });
   });
 });

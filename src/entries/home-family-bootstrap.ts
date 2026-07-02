@@ -9,6 +9,7 @@ import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime
 import { installBreakoutEasterEggRuntime } from "../bootstrap/breakout-easter-egg";
 import { installFlyingClickEffectRuntime } from "../bootstrap/flying-click-effect";
 import { installGameOverUndoHostRuntime } from "../bootstrap/game-over-undo-host";
+import { bindMobilePageScrollLock } from "../bootstrap/mobile-viewport";
 import { installGameManagerBaseHelpersRuntime } from "../bootstrap/game-manager-base-helpers-runtime";
 import { installGameManagerClientRecordIdRuntime } from "../bootstrap/game-manager-client-record-id-runtime";
 import { installGameManagerEnvHelpersRuntime } from "../bootstrap/game-manager-env-helpers-runtime";
@@ -183,6 +184,19 @@ function bindNightBackgroundSync(): void {
   });
 }
 
+function bindHomeFamilyMobilePageScrollLock(): void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+  bindMobilePageScrollLock({
+    documentLike: document,
+    windowLike: window,
+    navigatorLike: navigator,
+    bodyLike: document.body,
+    maxWidth: 760
+  });
+}
+
 async function runBootstrapPipeline(pageId: string): Promise<void> {
   const descriptor = resolvePageDescriptor(pageId);
   const hooks = createBootstrapPipeline(descriptor);
@@ -257,6 +271,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     const access = await runBetaAccessGate(pageId);
     if (!access.allowed) return;
   }
+  bindHomeFamilyMobilePageScrollLock();
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     bindHomeUserDisplay({
       documentLike: document,
