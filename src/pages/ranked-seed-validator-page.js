@@ -22,6 +22,91 @@ const EXAMPLE_BOARD = JSON.stringify(
   null,
   2
 );
+const UI_LANGUAGE_KEY = "ui_language_v1";
+
+function isEnglishUi() {
+  try {
+    return String(window.localStorage.getItem(UI_LANGUAGE_KEY) || "").trim().toLowerCase().indexOf("en") === 0;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function translateModeLabelToEnglish(rawLabel) {
+  return String(rawLabel || "")
+    .replace(/斐波那契/gu, "Fibonacci")
+    .replace(/标准版/gu, "Standard")
+    .replace(/经典版/gu, "Classic")
+    .replace(/封顶版|封顶/gu, "Capped")
+    .replace(/斜向/gu, "Diagonal")
+    .replace(/练习板/gu, "Practice Board")
+    .replace(/无撤回/gu, "No Undo")
+    .replace(/可撤回/gu, "Undo")
+    .replace(/自定义4率/gu, "Custom 4-Rate")
+    .replace(/概率/gu, "Spawn")
+    .replace(/限次撤回/gu, "Limited Undo")
+    .replace(/连击加分/gu, "Combo Scoring")
+    .replace(/方向锁/gu, "Direction Lock")
+    .replace(/障碍块/gu, "Obstacle Blocks")
+    .replace(/道具模式/gu, "Item Mode")
+    .replace(/石头模式/gu, "Stone Mode")
+    .replace(/限时/gu, "Timed")
+    .replace(/（/gu, " (")
+    .replace(/）/gu, ")")
+    .replace(/，/gu, ", ")
+    .replace(/次/gu, " Uses")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function displayModeLabel(mode) {
+  const label = mode?.label || "";
+  return isEnglishUi() ? translateModeLabelToEnglish(label) : label;
+}
+
+function applyStaticCopy() {
+  if (!isEnglishUi()) return;
+  document.documentElement.lang = "en";
+  document.title = "Ranked Seed Validator";
+  const kicker = document.querySelector(".validator-kicker");
+  if (kicker) kicker.textContent = "OFFLINE VALIDATION SURFACE";
+  const title = document.querySelector(".validator-title");
+  if (title) title.textContent = "Ranked Seed Validator";
+  const intro = document.querySelector(".validator-intro");
+  if (intro) {
+    intro.textContent =
+      "For local safety validation only. Manually enter a ranked mode, seed, board, and stepCount to reproduce deterministic spawn results. This page does not connect to production pages and does not read seeds from browser runtime state.";
+  }
+  const badges = document.querySelectorAll(".validator-badge");
+  if (badges[0]) badges[0].textContent = "Manual seed input only";
+  if (badges[1]) badges[1].textContent = "Offline / local verification";
+  if (badges[2]) badges[2].textContent = "No live extraction";
+  const panels = document.querySelectorAll(".validator-panel h2");
+  if (panels[0]) panels[0].textContent = "Input";
+  if (panels[1]) panels[1].textContent = "Result";
+  const labels = document.querySelectorAll(".validator-field label");
+  if (labels[0]) labels[0].textContent = "Ranked Mode";
+  if (labels[1]) labels[1].textContent = "Seed";
+  if (labels[2]) labels[2].textContent = "Validation Type";
+  if (labels[3]) labels[3].textContent = "stepCount";
+  if (labels[4]) labels[4].textContent = "Current Board JSON";
+  const help = document.querySelectorAll(".validator-field small");
+  if (help[0]) help[0].textContent = "Use a decimal non-negative integer. The backend currently issues unsigned 32-bit integer seeds.";
+  if (help[1]) help[1].textContent = "Enter the deterministic step count for this spawn. For the two opening tiles, use 0 and 1.";
+  if (help[2]) help[2].textContent = "Enter the board matrix before the next tile is spawned.";
+  const viewGroup = document.querySelector(".validator-view-switch");
+  if (viewGroup) viewGroup.setAttribute("aria-label", "Validation type");
+  const viewButtons = document.querySelectorAll("[data-validator-view]");
+  if (viewButtons[0]) viewButtons[0].textContent = "Opening Board";
+  if (viewButtons[1]) viewButtons[1].textContent = "Next Tile";
+  if (viewButtons[2]) viewButtons[2].textContent = "Four Directions";
+  const seedInput = document.getElementById("validator-seed");
+  if (seedInput) seedInput.setAttribute("placeholder", "Example: 424242");
+  const exampleButton = document.getElementById("validator-example");
+  if (exampleButton) exampleButton.textContent = "Fill Example";
+  const runButton = document.getElementById("validator-run");
+  if (runButton) runButton.textContent = "Run Validation";
+}
 
 function getCatalog() {
   if (typeof window === "undefined") {
@@ -160,7 +245,8 @@ function createMetaRow(label, value) {
 
 function createMetaContent(result, view) {
   const fragment = document.createDocumentFragment();
-  fragment.appendChild(createMetaRow("Mode", `${result.mode.label} (${result.mode.key})`));
+  const modeLabel = displayModeLabel(result.mode);
+  fragment.appendChild(createMetaRow("Mode", `${modeLabel} (${result.mode.key})`));
   fragment.appendChild(createMetaRow("Ruleset", result.mode.ruleset));
   fragment.appendChild(createMetaRow("Seed", result.seed));
   if (view === "next" || view === "directions") {
@@ -212,7 +298,7 @@ function populateModeOptions(elements) {
   for (const mode of rankedModes) {
     const option = document.createElement("option");
     option.value = mode.key;
-    option.textContent = `${mode.label} [${mode.key}]`;
+    option.textContent = `${displayModeLabel(mode)} [${mode.key}]`;
     elements.modeSelect.appendChild(option);
   }
   elements.modeSelect.value = rankedModes.some((mode) => mode.key === DEFAULT_MODE_KEY)
@@ -279,7 +365,7 @@ function runValidation(elements) {
       raw: {
         meta: {
           modeKey: mode.key,
-          modeLabel: mode.label,
+          modeLabel: displayModeLabel(mode),
           ruleset: mode.ruleset,
           seed
         },
@@ -311,7 +397,7 @@ function runValidation(elements) {
       raw: {
         meta: {
           modeKey: mode.key,
-          modeLabel: mode.label,
+          modeLabel: displayModeLabel(mode),
           ruleset: mode.ruleset,
           seed,
           stepCount
@@ -339,7 +425,7 @@ function runValidation(elements) {
     raw: {
       meta: {
         modeKey: mode.key,
-        modeLabel: mode.label,
+        modeLabel: displayModeLabel(mode),
         ruleset: mode.ruleset,
         seed
       },
@@ -363,6 +449,7 @@ function runValidation(elements) {
 export function bootstrapRankedSeedValidatorPage() {
   if (typeof document === "undefined") return;
   const elements = getElements();
+  applyStaticCopy();
   populateModeOptions(elements);
   applyExample(elements);
   syncView(elements);

@@ -7,14 +7,14 @@
   var FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
   var LEGEND_VALUES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var DIMENSIONS = [
-    { key: "background", tabLabel: "\u80cc\u666f", panelLabel: "\u80cc\u666f\u989c\u8272" },
-    { key: "text", tabLabel: "\u6587\u5b57", panelLabel: "\u6587\u5b57\u989c\u8272" },
-    { key: "border", tabLabel: "\u8fb9\u6846", panelLabel: "\u8fb9\u6846\u989c\u8272" },
-    { key: "glow", tabLabel: "\u53d1\u5149", panelLabel: "\u53d1\u5149\u989c\u8272" }
+    { key: "background", tabLabelZh: "\u80cc\u666f", tabLabelEn: "Background", panelLabelZh: "\u80cc\u666f\u989c\u8272", panelLabelEn: "Background Color" },
+    { key: "text", tabLabelZh: "\u6587\u5b57", tabLabelEn: "Text", panelLabelZh: "\u6587\u5b57\u989c\u8272", panelLabelEn: "Text Color" },
+    { key: "border", tabLabelZh: "\u8fb9\u6846", tabLabelEn: "Border", panelLabelZh: "\u8fb9\u6846\u989c\u8272", panelLabelEn: "Border Color" },
+    { key: "glow", tabLabelZh: "\u53d1\u5149", tabLabelEn: "Glow", panelLabelZh: "\u53d1\u5149\u989c\u8272", panelLabelEn: "Glow Color" }
   ];
   var BOARD_LABELS = {
-    pow2: "2048",
-    fibonacci: "\u6590\u6ce2\u90a3\u5951"
+    pow2: { zh: "2048", en: "2048" },
+    fibonacci: { zh: "\u6590\u6ce2\u90a3\u5951", en: "Fibonacci" }
   };
   var REQUIRED_THEME_API_NAMES = [
     "getTilePalettes",
@@ -438,14 +438,37 @@
     function isEnglishUi() {
       var i18n = toRecord(global.UII18N);
       var getLanguage = asFunction(i18n.getLanguage);
-      if (!getLanguage) return false;
-      return resolveText(getLanguage.call(i18n)).toLowerCase().indexOf("en") === 0;
+      var lang = getLanguage ? resolveText(getLanguage.call(i18n)) : "";
+      if (!lang) {
+        try {
+          lang = resolveText(global.localStorage && global.localStorage.getItem("ui_language_v1"));
+        } catch (_err) {
+          lang = "";
+        }
+      }
+      return lang.toLowerCase().indexOf("en") === 0;
     }
 
     function lockedPaletteMessage() {
       return isEnglishUi()
         ? "Built-in palettes are read-only. Create a copy before editing colors."
         : "\u5185\u7f6e\u4e3b\u9898\u4e0d\u53ef\u76f4\u63a5\u4fee\u6539\u989c\u8272\uff0c\u8bf7\u5148\u65b0\u5efa\u526f\u672c\u540e\u518d\u7f16\u8f91\u3002";
+    }
+
+    function dimensionText(dimension, field) {
+      var isEn = isEnglishUi();
+      for (var i = 0; i < DIMENSIONS.length; i += 1) {
+        if (DIMENSIONS[i].key === dimension) {
+          if (field === "panel") return isEn ? DIMENSIONS[i].panelLabelEn : DIMENSIONS[i].panelLabelZh;
+          return isEn ? DIMENSIONS[i].tabLabelEn : DIMENSIONS[i].tabLabelZh;
+        }
+      }
+      return isEn ? "Background" : "\u80cc\u666f";
+    }
+
+    function boardText(board) {
+      var item = BOARD_LABELS[board] || BOARD_LABELS.pow2;
+      return isEnglishUi() ? item.en : item.zh;
     }
 
     var missingDomIds = collectMissingDomIds([
@@ -537,10 +560,12 @@
     }
 
     function renderDimensionTabs() {
+      dimensionTabsEl.setAttribute("aria-label", isEnglishUi() ? "Color Dimensions" : "\u989c\u8272\u7ef4\u5ea6");
       var buttons = dimensionTabsEl.querySelectorAll(".palette-dimension-tab");
       for (var i = 0; i < buttons.length; i += 1) {
         var button = buttons[i];
         var key = resolveText(button.getAttribute("data-dimension"));
+        button.textContent = dimensionText(key, "tab");
         if (key === state.selectedDimension) {
           button.classList.add("is-active");
         } else {
@@ -549,7 +574,7 @@
       }
       for (var j = 0; j < DIMENSIONS.length; j += 1) {
         if (DIMENSIONS[j].key === state.selectedDimension) {
-          editorPanelHeadEl.textContent = DIMENSIONS[j].panelLabel;
+          editorPanelHeadEl.textContent = dimensionText(DIMENSIONS[j].key, "panel");
           break;
         }
       }
@@ -913,14 +938,8 @@
       var activeName = resolveText(activePalette.name || activeId || "--");
       var locked = isLockedPalette(activePalette);
       state.activeColorIndex = Math.max(0, Math.min(15, Number(state.activeColorIndex) || 0));
-      var boardLabel = BOARD_LABELS[state.selectedBoard] || BOARD_LABELS.pow2;
-      var dimensionLabel = "\u80cc\u666f";
-      for (var i = 0; i < DIMENSIONS.length; i += 1) {
-        if (DIMENSIONS[i].key === state.selectedDimension) {
-          dimensionLabel = DIMENSIONS[i].tabLabel;
-          break;
-        }
-      }
+      var boardLabel = boardText(state.selectedBoard);
+      var dimensionLabel = dimensionText(state.selectedDimension, "tab");
 
       currentNameEl.textContent = activeName;
       currentNameEl.setAttribute("data-palette-name-bound", "1");

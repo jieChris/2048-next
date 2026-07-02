@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ranked Seed Validator</title>
+  <title>排位种子校验器</title>
   <style>
     :root {
       color-scheme: dark;
@@ -383,16 +383,16 @@
 <body>
   <main class="validator-shell">
     <section class="validator-hero">
-      <p class="validator-kicker">Offline Validation Surface</p>
-      <h1 class="validator-title">Ranked Seed Validator</h1>
+      <p class="validator-kicker">离线验证工具</p>
+      <h1 class="validator-title">排位种子校验器</h1>
       <p class="validator-intro">
-        只用于本地安全验证。手工输入 ranked 模式、seed、棋盘和 stepCount，
-        复现 deterministic 出块结果。这个页面不会连接线上页面，也不会读取浏览器运行时里的 seed。
+        只用于本地安全验证。手工输入排位模式、种子、棋盘和 stepCount，
+        复现确定性出块结果。这个页面不会连接线上页面，也不会读取浏览器运行时里的种子。
       </p>
       <div class="validator-badges">
-        <span class="validator-badge">Manual seed input only</span>
-        <span class="validator-badge">Offline / local verification</span>
-        <span class="validator-badge">No live extraction</span>
+        <span class="validator-badge">仅手动输入种子</span>
+        <span class="validator-badge">离线 / 本地验证</span>
+        <span class="validator-badge">不读取线上状态</span>
       </div>
     </section>
 
@@ -401,12 +401,12 @@
         <h2>输入</h2>
 
         <div class="validator-field">
-          <label for="validator-mode">Ranked 模式</label>
+          <label for="validator-mode">排位模式</label>
           <select id="validator-mode"></select>
         </div>
 
         <div class="validator-field">
-          <label for="validator-seed">Seed</label>
+          <label for="validator-seed">种子</label>
           <input id="validator-seed" type="text" inputmode="numeric" placeholder="例如 424242">
           <small>使用十进制非负整数。当前后端实际发的是 32 位无符号整数。</small>
         </div>

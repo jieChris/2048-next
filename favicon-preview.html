@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Favicon Preview</title>
+  <title>网站图标预览</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
   <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260606-fillframe">
@@ -151,7 +151,7 @@
 </head>
 <body>
   <main>
-    <h1>Favicon Preview</h1>
+    <h1>网站图标预览</h1>
     <section class="preview-grid" aria-label="favicon previews">
       <article class="preview-panel">
         <h2>Chrome 标签页模拟</h2>
@@ -263,5 +263,63 @@
       </article>
     </section>
   </main>
+  <script>
+    (function () {
+      var lang = "";
+      try { lang = String(localStorage.getItem("ui_language_v1") || "").toLowerCase(); } catch (_err) {}
+      if (lang.indexOf("en") !== 0) return;
+      document.documentElement.lang = "en";
+      document.title = "Favicon Preview";
+      var pairs = [
+        ["Chrome 标签页模拟", "Chrome tab mock"],
+        ["网站图标预览", "Favicon Preview"],
+        ["线上旧图标", "Legacy production icon"],
+        ["真实尺寸", "Actual sizes"],
+        ["放大检查", "Magnified inspection"],
+        ["PNG 图标", "PNG icons"],
+        ["旧版 PNG 图标", "Legacy PNG icons"],
+        ["旧版 PNG 满幅", "Legacy PNG full frame"],
+        ["当前原图", "Current source image"],
+        ["中心裁切 1.5x", "Center crop 1.5x"],
+        ["中心裁切 1.5x 拉高", "Center crop 1.5x tall"],
+        ["铺满图框", "Fill frame"],
+        ["线上当前版本", "Current production version"],
+        ["用于看裁切边缘", "Check cropped edges"],
+        ["线上旧资源", "Legacy production assets"],
+        ["180px 线上旧 PNG", "180px legacy production PNG"],
+        ["683x719，当前处理基准", "683x719 current processing baseline"],
+        ["683px 中心裁切", "683px center crop"],
+        ["683x719，高度 +5.21%", "683x719, height +5.21%"],
+        ["578px 视觉满幅裁切", "578px visual fill-frame crop"]
+      ];
+      var attrPairs = [
+        ["页签图标 32px", "Tab icon 32px"],
+        ["旧版 16px favicon", "Legacy 16px favicon"],
+        ["旧版 24px favicon", "Legacy 24px favicon"],
+        ["旧版 32px favicon", "Legacy 32px favicon"],
+        ["放大 favicon", "Magnified favicon"],
+        ["旧版 Apple touch icon 48px", "Legacy Apple touch icon 48px"],
+        ["旧版 ICO 32px", "Legacy ICO 32px"],
+        ["旧版 PNG 满幅 logo", "Legacy PNG full-frame logo"],
+        ["当前原图 logo", "Current source logo"],
+        ["中心裁切 1.5x logo", "Center crop 1.5x logo"],
+        ["中心裁切 1.5x 高度拉伸 logo", "Center crop 1.5x tall logo"],
+        ["铺满图框 logo", "Fill-frame logo"]
+      ];
+      pairs.sort(function (a, b) { return b[0].length - a[0].length; });
+      attrPairs.sort(function (a, b) { return b[0].length - a[0].length; });
+      function translate(text, list) {
+        var out = String(text || "");
+        for (var i = 0; i < list.length; i += 1) out = out.split(list[i][0]).join(list[i][1]);
+        return out;
+      }
+      document.querySelectorAll("h1,h2,.label").forEach(function (node) {
+        node.textContent = translate(node.textContent, pairs);
+      });
+      document.querySelectorAll("[alt]").forEach(function (node) {
+        node.setAttribute("alt", translate(node.getAttribute("alt"), attrPairs));
+      });
+    })();
+  </script>
 </body>
 </html>

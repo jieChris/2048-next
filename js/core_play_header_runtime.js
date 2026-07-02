@@ -15,11 +15,43 @@
         .trim()
         .toLowerCase();
     } catch (_err) {}
+    if (lang.indexOf("en") !== 0 && lang.indexOf("zh") !== 0) {
+      try {
+        var storage = globalLike && globalLike.localStorage;
+        if (storage && typeof storage.getItem === "function") {
+          lang = String(storage.getItem("ui_language_v1") || "").trim().toLowerCase();
+        }
+      } catch (_err2) {}
+    }
     return lang.indexOf("en") === 0 ? "en" : "zh";
   }
 
   function localizeFallbackModeLabel(raw, lang) {
-    if (lang === "en") return String(raw || "");
+    if (lang === "en") {
+      return String(raw || "")
+        .replace(/斐波那契/gu, "Fibonacci")
+        .replace(/标准版/gu, "Standard")
+        .replace(/经典版/gu, "Classic")
+        .replace(/封顶版|封顶/gu, "Capped")
+        .replace(/练习板/gu, "Practice Board")
+        .replace(/无撤回/gu, "No Undo")
+        .replace(/可撤回/gu, "Undo")
+        .replace(/自定义4率/gu, "Custom 4-Rate")
+        .replace(/概率/gu, "Spawn")
+        .replace(/限次撤回/gu, "Limited Undo")
+        .replace(/连击加分/gu, "Combo Scoring")
+        .replace(/方向锁/gu, "Direction Lock")
+        .replace(/障碍块/gu, "Obstacle Blocks")
+        .replace(/道具模式/gu, "Item Mode")
+        .replace(/石头模式/gu, "Stone Mode")
+        .replace(/限时模式/gu, "Timed")
+        .replace(/（/gu, " (")
+        .replace(/）/gu, ")")
+        .replace(/，/gu, ", ")
+        .replace(/次/gu, " Uses")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
     return String(raw || "")
       .replace(/Diagonal/gi, "斜向")
       .replace(/Fibonacci/gi, "斐波那契")
@@ -42,7 +74,7 @@
         : null;
     if (modeCatalog && key) {
       var mode = modeCatalog.getMode(key);
-      if (mode && typeof mode.label === "string" && mode.label) return mode.label;
+      if (mode && typeof mode.label === "string" && mode.label) return localizeFallbackModeLabel(mode.label, lang);
     }
     return localizeFallbackModeLabel((modeConfig && modeConfig.label) || "", lang);
   }

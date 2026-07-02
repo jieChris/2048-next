@@ -99,6 +99,10 @@
       incomingClaimFromPrefix: "来自持有者：",
       labelCase: "档案 ID",
       labelTargetNickname: "目标用户昵称",
+      casePlaceholder: "例如：档案-001",
+      targetNicknamePlaceholder: "例如：玩家A",
+      heldSnapshotBoardAria: "当前持有存档快照棋盘",
+      segmentBoardAria: "选定分段的最后盘面",
       designateTarget: "指定递交",
       labelOp: "幂等操作 ID（可选）",
       labelPayload: "提交快照（JSON 或回放代码）",
@@ -218,6 +222,10 @@
       incomingClaimFromPrefix: "Current holder: ",
       labelCase: "Case ID",
       labelTargetNickname: "Target User Nickname",
+      casePlaceholder: "Example: case-001",
+      targetNicknamePlaceholder: "Example: PlayerA",
+      heldSnapshotBoardAria: "Current held-case snapshot board",
+      segmentBoardAria: "Selected segment final board",
       designateTarget: "Designate Handoff",
       labelOp: "Idempotency Op ID (Optional)",
       labelPayload: "Submit Payload (JSON or replay code)",
@@ -1738,6 +1746,8 @@
 
   function applyLocalizedText() {
     var copy = currentCopy();
+    document.documentElement.lang = state.language === "en" ? "en" : "zh-CN";
+    document.title = copy.title;
     if (refs.titleEl) refs.titleEl.textContent = copy.title;
     if (refs.subtitleEl) refs.subtitleEl.textContent = copy.subtitle;
     if (refs.navHome) refs.navHome.textContent = copy.navHome;
@@ -1776,6 +1786,10 @@
     if (refs.incomingClaimTitleEl) refs.incomingClaimTitleEl.textContent = copy.incomingClaimTitle;
     if (refs.labelCase) refs.labelCase.textContent = copy.labelCase;
     if (refs.labelTargetNickname) refs.labelTargetNickname.textContent = copy.labelTargetNickname;
+    if (refs.caseInput) refs.caseInput.setAttribute("placeholder", copy.casePlaceholder);
+    if (refs.targetNicknameInput) refs.targetNicknameInput.setAttribute("placeholder", copy.targetNicknamePlaceholder);
+    if (refs.heldSnapshotBoardEl) refs.heldSnapshotBoardEl.setAttribute("aria-label", copy.heldSnapshotBoardAria);
+    if (refs.replaySegmentBoardEl) refs.replaySegmentBoardEl.setAttribute("aria-label", copy.segmentBoardAria);
     if (refs.labelOp) refs.labelOp.textContent = copy.labelOp;
     if (refs.labelPayload) refs.labelPayload.textContent = copy.labelPayload;
     renderAdvancedPanelState();

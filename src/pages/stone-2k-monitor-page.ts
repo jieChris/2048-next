@@ -31,10 +31,151 @@ type ApiResult = {
 
 type StatusState = "idle" | "busy" | "ok" | "err";
 type LockState = "locked" | "unlocked";
+type PageLang = "zh" | "en";
 
 const REFRESH_INTERVAL_MS = 15000;
 const MONITOR_ACCESS_PASSCODE = "stone2k-_gjWBeZM7fDtML0SaQDr7ZKE3oa7c6pwi2f4qN13B7w";
 const MONITOR_ACCESS_STORAGE_KEY = "stone-2k-monitor.access-granted";
+const UI_LANGUAGE_KEY = "ui_language_v1";
+
+const COPY: Record<PageLang, Record<string, string>> = {
+  zh: {
+    title: "2K 封顶成绩监测",
+    gateHeading: "输入访问口令",
+    gateCopy: "该页面仅供内部查看。输入正确口令后，才会加载监测内容。",
+    passcode: "访问口令",
+    passcodePlaceholder: "请输入访问口令",
+    passcodeError: "口令错误，请重新输入。",
+    enterMonitor: "进入监测页",
+    backModes: "返回模式列表",
+    heroTitle: "2K 封顶成绩监测",
+    heroCopy: "独立查看 4x4 2048 封顶模式上传的隐藏统计，不进入公开排行榜。",
+    badgeLocked: "需要访问口令",
+    badgeUnlocked: "已验证访问口令",
+    hintLocked: "输入访问口令后，才会加载该监测页的数据。",
+    hintUnlocked: "当前会话已解锁，可查看实时成绩、盘面和筛选结果。",
+    relock: "重新上锁",
+    navAria: "页面导航",
+    modes: "模式列表",
+    startCapped: "开始封顶模式",
+    filterAria: "筛选与刷新",
+    names: "玩家昵称列表",
+    namesPlaceholder: "留空查看全部；多个昵称可用换行、逗号、中文逗号分隔。",
+    namesHelp: "支持单个昵称精查，也支持一次监控多个玩家。",
+    limit: "条数",
+    sort: "排序",
+    scoreDesc: "分数降序",
+    scoreAsc: "分数升序",
+    timeDesc: "时间降序",
+    timeAsc: "时间升序",
+    startAt: "开始时间",
+    endAt: "结束时间",
+    latestOnly: "每人仅最高一条",
+    autoRefresh: "自动刷新",
+    refresh: "刷新数据",
+    preparing: "正在准备数据源…",
+    statsAria: "概览统计",
+    count: "记录数",
+    bestScore: "最高分",
+    bestTile: "最高砖块",
+    latest: "最近上传",
+    runsTitle: "实时成绩",
+    runsCopy: "按分数降序展示，点击一行可预览最终盘面。",
+    exportJson: "导出 JSON",
+    previewTitle: "盘面预览",
+    previewMeta: "选择一条成绩查看详情。",
+    noBoard: "暂无盘面",
+    player: "玩家",
+    score: "分数",
+    duration: "耗时",
+    time: "时间",
+    reason: "原因",
+    maxTile: "最大砖块",
+    noRows: "暂无成绩，可调整昵称筛选、时间范围，或等待用户上传。",
+    refreshing: "正在刷新 2K 封顶成绩…",
+    loadFailed: "加载失败",
+    loadedPrefix: "已加载 ",
+    loadedSuffix: " 条成绩，最后刷新：",
+    emptyPasscode: "请输入访问口令。",
+    passcodeWrongStatus: "访问口令错误。",
+    passcodeOk: "口令正确，正在加载数据…",
+    relocked: "页面已重新上锁，请输入访问口令。",
+    relockedStatus: "页面已上锁。",
+    lockedPrompt: "请输入访问口令以进入监测页。",
+    lockedStatus: "该页面已上锁，请先输入访问口令。",
+    hours: "时",
+    minutes: "分",
+    seconds: "秒"
+  },
+  en: {
+    title: "2K Capped Run Monitor",
+    gateHeading: "Enter Access Passcode",
+    gateCopy: "This internal page loads monitoring data only after the correct passcode is entered.",
+    passcode: "Access Passcode",
+    passcodePlaceholder: "Enter access passcode",
+    passcodeError: "Incorrect passcode. Please try again.",
+    enterMonitor: "Enter Monitor",
+    backModes: "Back To Modes",
+    heroTitle: "2K Capped Run Monitor",
+    heroCopy: "View hidden stats uploaded from 4x4 2048 capped mode without publishing them to the public leaderboard.",
+    badgeLocked: "Passcode Required",
+    badgeUnlocked: "Passcode Verified",
+    hintLocked: "Enter the passcode before loading monitor data.",
+    hintUnlocked: "This session is unlocked. Real-time runs, boards, and filters are available.",
+    relock: "Lock Again",
+    navAria: "Page navigation",
+    modes: "Modes",
+    startCapped: "Start Capped Mode",
+    filterAria: "Filters and refresh",
+    names: "Player Nicknames",
+    namesPlaceholder: "Leave blank for all; separate multiple nicknames with new lines or commas.",
+    namesHelp: "Supports exact lookup for one nickname or monitoring multiple players at once.",
+    limit: "Limit",
+    sort: "Sort",
+    scoreDesc: "Score Descending",
+    scoreAsc: "Score Ascending",
+    timeDesc: "Time Descending",
+    timeAsc: "Time Ascending",
+    startAt: "Start Time",
+    endAt: "End Time",
+    latestOnly: "Best run only per player",
+    autoRefresh: "Auto Refresh",
+    refresh: "Refresh Data",
+    preparing: "Preparing data source...",
+    statsAria: "Overview statistics",
+    count: "Records",
+    bestScore: "Best Score",
+    bestTile: "Best Tile",
+    latest: "Latest Upload",
+    runsTitle: "Live Runs",
+    runsCopy: "Sorted by score descending. Click a row to preview the final board.",
+    exportJson: "Export JSON",
+    previewTitle: "Board Preview",
+    previewMeta: "Select a run to view details.",
+    noBoard: "No board",
+    player: "Player",
+    score: "Score",
+    duration: "Duration",
+    time: "Time",
+    reason: "Reason",
+    maxTile: "Max Tile",
+    noRows: "No runs yet. Adjust nickname or time filters, or wait for uploads.",
+    refreshing: "Refreshing 2K capped runs...",
+    loadFailed: "Load failed",
+    loadedPrefix: "Loaded ",
+    loadedSuffix: " runs, last refresh: ",
+    emptyPasscode: "Please enter the access passcode.",
+    passcodeWrongStatus: "Incorrect access passcode.",
+    passcodeOk: "Passcode accepted. Loading data...",
+    relocked: "Page is locked again. Enter the access passcode.",
+    relockedStatus: "Page locked.",
+    lockedPrompt: "Enter the access passcode to open the monitor.",
+    lockedStatus: "This page is locked. Enter the access passcode first.",
+    hours: "h",
+    minutes: "m",
+    seconds: "s"
+  }
+};
 
 let latestRows: Capped2kRun[] = [];
 let selectedId = "";
@@ -49,13 +190,26 @@ function toText(value: unknown): string {
   return value == null ? "" : String(value);
 }
 
+function currentLang(): PageLang {
+  try {
+    const raw = toText(window.localStorage.getItem(UI_LANGUAGE_KEY)).trim().toLowerCase();
+    if (raw.startsWith("en")) return "en";
+  } catch (_err) {}
+  return "zh";
+}
+
+function t(key: string): string {
+  const lang = currentLang();
+  return COPY[lang][key] || COPY.zh[key] || key;
+}
+
 function toNumber(value: unknown, fallback = 0): number {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
 
 function formatInteger(value: unknown): string {
-  return Math.floor(toNumber(value, 0)).toLocaleString("zh-CN");
+  return Math.floor(toNumber(value, 0)).toLocaleString(currentLang() === "en" ? "en-US" : "zh-CN");
 }
 
 function escapeHtml(value: string): string {
@@ -81,6 +235,80 @@ function setStatus(message: string, state: StatusState = "idle"): void {
   node.textContent = message;
   if (state === "idle") node.removeAttribute("data-state");
   else node.setAttribute("data-state", state);
+}
+
+function setLabelText(selector: string, text: string): void {
+  const label = document.querySelector<HTMLElement>(selector);
+  if (!label) return;
+  const first = label.childNodes[0];
+  if (first && first.nodeType === Node.TEXT_NODE) first.textContent = text;
+  else label.insertBefore(document.createTextNode(text), label.firstChild);
+}
+
+function applyStaticCopy(): void {
+  const lang = currentLang();
+  document.documentElement.lang = lang === "en" ? "en" : "zh-CN";
+  document.title = t("title");
+  setText("stone-status", t("preparing"));
+  const bySelector = (selector: string, text: string): void => {
+    const node = document.querySelector<HTMLElement>(selector);
+    if (node) node.textContent = text;
+  };
+  bySelector(".stone-access-card h2", t("gateHeading"));
+  bySelector(".stone-access-copy", t("gateCopy"));
+  bySelector("#stone-access-submit", t("enterMonitor"));
+  bySelector(".stone-access-actions a", t("backModes"));
+  bySelector(".stone-hero h1", t("heroTitle"));
+  bySelector(".stone-hero-copy p:not(.stone-kicker)", t("heroCopy"));
+  bySelector("#stone-change-key", t("relock"));
+  bySelector(".stone-nav a[href='modes.html']", t("modes"));
+  bySelector(".stone-nav a[href='capped_2048.html']", t("startCapped"));
+  bySelector(".stone-field-help", t("namesHelp"));
+  bySelector("#stone-refresh", t("refresh"));
+  bySelector("#stone-export", t("exportJson"));
+  bySelector(".stone-table-panel h2", t("runsTitle"));
+  bySelector(".stone-table-panel .stone-panel-head p", t("runsCopy"));
+  bySelector(".stone-preview-panel h2", t("previewTitle"));
+  bySelector("#stone-preview-meta", t("previewMeta"));
+  bySelector("#stone-board-preview", t("noBoard"));
+  setLabelText("label[for='stone-access-key']", t("passcode"));
+  setLabelText("label[for='stone-filter-names']", t("names"));
+  setLabelText("label[for='stone-filter-limit']", t("limit"));
+  setLabelText("label[for='stone-sort-by']", t("sort"));
+  setLabelText("label[for='stone-start-at']", t("startAt"));
+  setLabelText("label[for='stone-end-at']", t("endAt"));
+  const passcodeInput = byId<HTMLInputElement>("stone-access-key");
+  if (passcodeInput) passcodeInput.placeholder = t("passcodePlaceholder");
+  const namesInput = byId<HTMLTextAreaElement>("stone-filter-names");
+  if (namesInput) namesInput.placeholder = t("namesPlaceholder");
+  const errorNode = byId("stone-access-error");
+  if (errorNode) errorNode.textContent = t("passcodeError");
+  const nav = document.querySelector<HTMLElement>(".stone-nav");
+  if (nav) nav.setAttribute("aria-label", t("navAria"));
+  const control = document.querySelector<HTMLElement>(".stone-control-card");
+  if (control) control.setAttribute("aria-label", t("filterAria"));
+  const stats = document.querySelector<HTMLElement>(".stone-stats-grid");
+  if (stats) stats.setAttribute("aria-label", t("statsAria"));
+  const latestLabel = document.querySelectorAll<HTMLElement>(".stone-check span");
+  if (latestLabel[0]) latestLabel[0].textContent = t("latestOnly");
+  if (latestLabel[1]) latestLabel[1].textContent = t("autoRefresh");
+  const options = byId<HTMLSelectElement>("stone-sort-by")?.options;
+  if (options) {
+    if (options[0]) options[0].textContent = t("scoreDesc");
+    if (options[1]) options[1].textContent = t("scoreAsc");
+    if (options[2]) options[2].textContent = t("timeDesc");
+    if (options[3]) options[3].textContent = t("timeAsc");
+  }
+  const statLabels = document.querySelectorAll<HTMLElement>(".stone-stat-card span");
+  if (statLabels[0]) statLabels[0].textContent = t("count");
+  if (statLabels[1]) statLabels[1].textContent = t("bestScore");
+  if (statLabels[2]) statLabels[2].textContent = t("bestTile");
+  if (statLabels[3]) statLabels[3].textContent = t("latest");
+  const detailLabels = document.querySelectorAll<HTMLElement>(".stone-detail-list dt");
+  if (detailLabels[0]) detailLabels[0].textContent = t("player");
+  if (detailLabels[1]) detailLabels[1].textContent = t("score");
+  if (detailLabels[2]) detailLabels[2].textContent = t("duration");
+  if (detailLabels[3]) detailLabels[3].textContent = t("time");
 }
 
 function setButtonBusy(id: string, busy: boolean): void {
@@ -147,12 +375,12 @@ function setAccessMeta(state: LockState, message = ""): void {
   const hint = byId("stone-access-hint");
   if (badge) {
     badge.setAttribute("data-state", state);
-    badge.textContent = state === "unlocked" ? "已验证访问口令" : "需要访问口令";
+    badge.textContent = state === "unlocked" ? t("badgeUnlocked") : t("badgeLocked");
   }
   if (hint) {
     hint.textContent = state === "unlocked"
-      ? "当前会话已解锁，可查看实时成绩、盘面和筛选结果。"
-      : message || "输入访问口令后，才会加载该监测页的数据。";
+      ? t("hintUnlocked")
+      : message || t("hintLocked");
   }
 }
 
@@ -163,7 +391,7 @@ function clearMonitorData(): void {
   renderTable([]);
 }
 
-function lockMonitor(message = "请输入访问口令以进入监测页。", clearInput = false): void {
+function lockMonitor(message = t("lockedPrompt"), clearInput = false): void {
   clearMonitorData();
   setLockState("locked");
   setAccessMeta("locked", message);
@@ -198,7 +426,7 @@ function formatDateTime(value: unknown): string {
   if (!text) return "--";
   const date = new Date(text);
   if (Number.isNaN(date.getTime())) return text;
-  return date.toLocaleString("zh-CN", { hour12: false });
+  return date.toLocaleString(currentLang() === "en" ? "en-US" : "zh-CN", { hour12: false });
 }
 
 function formatDuration(value: unknown): string {
@@ -208,9 +436,14 @@ function formatDuration(value: unknown): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}时 ${minutes}分 ${seconds}秒`;
-  if (minutes > 0) return `${minutes}分 ${seconds}秒`;
-  return `${seconds}秒`;
+  if (currentLang() === "en") {
+    if (hours > 0) return `${hours}${t("hours")} ${minutes}${t("minutes")} ${seconds}${t("seconds")}`;
+    if (minutes > 0) return `${minutes}${t("minutes")} ${seconds}${t("seconds")}`;
+    return `${seconds}${t("seconds")}`;
+  }
+  if (hours > 0) return `${hours}${t("hours")} ${minutes}${t("minutes")} ${seconds}${t("seconds")}`;
+  if (minutes > 0) return `${minutes}${t("minutes")} ${seconds}${t("seconds")}`;
+  return `${seconds}${t("seconds")}`;
 }
 
 function getRunId(row: Capped2kRun, index: number): string {
@@ -229,7 +462,7 @@ function renderBoard(row: Capped2kRun | null): void {
   const board = normalizeBoard(row?.final_board);
   if (!board.length) {
     target.className = "stone-board-preview empty";
-    target.textContent = "暂无盘面";
+    target.textContent = t("noBoard");
     return;
   }
   target.className = "stone-board-preview";
@@ -242,7 +475,7 @@ function renderBoard(row: Capped2kRun | null): void {
 
 function renderSelected(row: Capped2kRun | null): void {
   renderBoard(row);
-  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : "选择一条成绩查看详情。");
+  setText("stone-preview-meta", row ? `#${escapeHtml(toText(row.id).slice(0, 10) || toText(row.user_id))}` : t("previewMeta"));
   setText("stone-detail-nickname", row ? toText(row.nickname) || "--" : "--");
   setText("stone-detail-score", row ? formatInteger(row.score) : "--");
   setText("stone-detail-duration", row ? formatDuration(row.duration_ms) : "--");
@@ -266,7 +499,7 @@ function renderTable(rows: Capped2kRun[]): void {
   const target = byId("stone-table-wrap");
   if (!target) return;
   if (!rows.length) {
-    target.innerHTML = '<div class="stone-empty">暂无成绩，可调整昵称筛选、时间范围，或等待用户上传。</div>';
+    target.innerHTML = '<div class="stone-empty">' + escapeHtml(t("noRows")) + '</div>';
     renderSelected(null);
     return;
   }
@@ -284,7 +517,7 @@ function renderTable(rows: Capped2kRun[]): void {
     </tr>`;
   }).join("");
   target.innerHTML = `<table class="stone-runs-table"><thead><tr>
-    <th>#</th><th>玩家</th><th>分数</th><th>最大砖块</th><th>耗时</th><th>时间</th><th>原因</th>
+    <th>#</th><th>${escapeHtml(t("player"))}</th><th>${escapeHtml(t("score"))}</th><th>${escapeHtml(t("maxTile"))}</th><th>${escapeHtml(t("duration"))}</th><th>${escapeHtml(t("time"))}</th><th>${escapeHtml(t("reason"))}</th>
   </tr></thead><tbody>${body}</tbody></table>`;
   target.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((rowNode) => {
     rowNode.addEventListener("click", () => {
@@ -303,7 +536,7 @@ async function refreshRuns(): Promise<boolean> {
   if (refreshInFlight || getLockState() !== "unlocked") return false;
   refreshInFlight = true;
   setButtonBusy("stone-refresh", true);
-  setStatus("正在刷新 2K 封顶成绩…", "busy");
+  setStatus(t("refreshing"), "busy");
   try {
     const result = await createMonitorService().listRuns({
       names: getInputValue("stone-filter-names"),
@@ -314,16 +547,16 @@ async function refreshRuns(): Promise<boolean> {
       latestOnly: isChecked("stone-filter-latest")
     });
     if (result.success !== true) {
-      throw new Error(toText(result.error || result.message || result.code || "加载失败"));
+      throw new Error(toText(result.error || result.message || result.code || t("loadFailed")));
     }
     latestRows = normalizeRows(result);
     const total = typeof result.total === "number" ? Number(result.total) : null;
     renderStats(latestRows, Number.isFinite(total) ? total : null);
     renderTable(latestRows);
-    setStatus(`已加载 ${formatInteger(typeof total === "number" ? total : latestRows.length)} 条成绩，最后刷新：${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`, "ok");
+    setStatus(`${t("loadedPrefix")}${formatInteger(typeof total === "number" ? total : latestRows.length)}${t("loadedSuffix")}${new Date().toLocaleTimeString(currentLang() === "en" ? "en-US" : "zh-CN", { hour12: false })}`, "ok");
     return true;
   } catch (error) {
-    setStatus("加载失败：" + (error instanceof Error ? error.message : String(error)), "err");
+    setStatus(t("loadFailed") + ": " + (error instanceof Error ? error.message : String(error)), "err");
     return false;
   } finally {
     refreshInFlight = false;
@@ -355,13 +588,13 @@ function restartAutoRefresh(): void {
 async function submitAccessKey(): Promise<void> {
   const key = getInputValue("stone-access-key");
   if (!key) {
-    setGateError("请输入访问口令。");
+    setGateError(t("emptyPasscode"));
     byId<HTMLInputElement>("stone-access-key")?.focus();
     return;
   }
   if (key !== MONITOR_ACCESS_PASSCODE) {
-    setGateError("口令错误，请重新输入。");
-    setStatus("访问口令错误。", "err");
+    setGateError(t("passcodeError"));
+    setStatus(t("passcodeWrongStatus"), "err");
     byId<HTMLInputElement>("stone-access-key")?.focus();
     return;
   }
@@ -369,19 +602,20 @@ async function submitAccessKey(): Promise<void> {
   setStoredAccess(true);
   unlockMonitor();
   restartAutoRefresh();
-  setStatus("口令正确，正在加载数据…", "busy");
+  setStatus(t("passcodeOk"), "busy");
   await refreshRuns();
   setGateBusy(false);
 }
 
 function resetAccessKey(): void {
   setStoredAccess(false);
-  lockMonitor("页面已重新上锁，请输入访问口令。", true);
+  lockMonitor(t("relocked"), true);
   restartAutoRefresh();
-  setStatus("页面已上锁。", "idle");
+  setStatus(t("relockedStatus"), "idle");
 }
 
 export function bootstrapStone2kMonitorPage(): void {
+  applyStaticCopy();
   byId("stone-refresh")?.addEventListener("click", () => void refreshRuns());
   byId("stone-export")?.addEventListener("click", downloadJson);
   byId("stone-auto-refresh")?.addEventListener("change", restartAutoRefresh);
@@ -406,7 +640,7 @@ export function bootstrapStone2kMonitorPage(): void {
     return;
   }
 
-  lockMonitor("请输入访问口令以进入监测页。", true);
+  lockMonitor(t("lockedPrompt"), true);
   restartAutoRefresh();
-  setStatus("该页面已上锁，请先输入访问口令。", "idle");
+  setStatus(t("lockedStatus"), "idle");
 }

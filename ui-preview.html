@@ -117,5 +117,41 @@
       </div>
     </section>
   </main>
+  <script>
+    (function () {
+      var lang = "";
+      try { lang = String(localStorage.getItem("ui_language_v1") || "").toLowerCase(); } catch (_err) {}
+      if (lang.indexOf("en") !== 0) return;
+      document.documentElement.lang = "en";
+      var pairs = [
+        ["UI 预览工作台", "UI Preview Workbench"],
+        ["游戏页右侧排行榜预览", "Game-page right leaderboard preview"],
+        ["当前排行榜配色", "Current leaderboard palette"],
+        ["暖金扁平排行榜配色", "Warm flat leaderboard palette"],
+        ["低饱和扁平排行榜配色", "Muted flat leaderboard palette"],
+        ["清爽扁平排行榜配色", "Crisp flat leaderboard palette"],
+        ["当前基准", "Current baseline"],
+        ["线上色彩", "Production colors"],
+        ["A. NEXT 标志色", "A. NEXT brand colors"],
+        ["推荐", "Recommended"],
+        ["B. 竞技克制", "B. Competitive restraint"],
+        ["稳重", "Stable"],
+        ["C. 清爽活力", "C. Fresh energy"],
+        ["更年轻", "Younger"],
+        ["8192摆烂-288852", "8192-casual-288852"]
+      ];
+      function translate(text) {
+        var out = String(text || "");
+        for (var i = 0; i < pairs.length; i += 1) out = out.split(pairs[i][0]).join(pairs[i][1]);
+        return out;
+      }
+      document.querySelectorAll("h1,span,small,.name").forEach(function (node) {
+        node.textContent = translate(node.textContent);
+      });
+      document.querySelectorAll("[aria-label]").forEach(function (node) {
+        node.setAttribute("aria-label", translate(node.getAttribute("aria-label")));
+      });
+    })();
+  </script>
 </body>
 </html>

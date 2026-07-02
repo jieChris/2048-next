@@ -10,6 +10,230 @@ type RescueModeOption = {
 };
 
 const ADMIN_DENIED_REDIRECT = "beta-login.html?admin_required=1&next=admin.html";
+const UI_LANGUAGE_KEY = "ui_language_v1";
+const CJK_RE = /[\u3400-\u9fff\uf900-\ufaff]/u;
+const ADMIN_EN_REPLACEMENTS = ([
+  ["查看 Postgres 表数据、执行查询、签发恢复对局。", "View Postgres table data, run queries, and issue rescue games."],
+  ["使用当前登录 token 验证 Admin API。", "Verify Admin API with the current sign-in token."],
+  ["选择表快速查看，或输入 SQL，支持导出结果。", "Select a table for quick viewing, or enter SQL and export results."],
+  ["将邮箱加入受邀用户行列；用户之后注册同一邮箱即可获得内测资格。", "Add emails to the invited-user allowlist. Users can then register with the same email to gain beta access."],
+  ["仅最高权限管理员可设立或罢黜其他超级管理员；ID 0 不可被撤销。", "Only the root administrator can appoint or revoke other super admins. ID 0 cannot be revoked."],
+  ["为指定用户签发一份待确认的恢复盘面。", "Issue a pending rescue board for a specified user."],
+  ["上传 replay-v1 文件，后端自动解析盘面、分数、统计和回放数据。", "Upload a replay-v1 file so the backend can parse board, score, stats, and replay data."],
+  ["创建成就、维护规则、上传图标，并对用户手动发放或回填历史记录。", "Create achievements, maintain rules, upload icons, and manually grant or backfill user history."],
+  ["规则会在保存时整体替换。可先保存草稿，再启用。", "Rules are fully replaced on save. Save as draft first, then activate."],
+  ["输入 4x4 盘面 JSON，例如", "Enter 4x4 board JSON, for example"],
+  ["简要说明为什么签发这份恢复单。", "Briefly explain why this rescue offer is being issued."],
+  ["简要说明为什么签发这份恢复单", "Briefly explain why this rescue offer is being issued"],
+  ["说明这个成就代表什么。", "Describe what this achievement represents."],
+  ["确认执行成就回填？该操作应当由后端保证幂等。", "Run achievement backfill? The backend should guarantee idempotency."],
+  ["权限状态", "Authorization Status"],
+  ["管理后台", "Admin Console"],
+  ["账户中心", "Account Center"],
+  ["账号中心", "Account Center"],
+  ["回到游戏", "Back To Game"],
+  ["未验证", "Not Verified"],
+  ["检查管理权限", "Check Admin Access"],
+  ["刷新表列表", "Refresh Table List"],
+  ["数据查询", "Data Query"],
+  ["数据表", "Data Table"],
+  ["每页条数", "Rows Per Page"],
+  ["页码", "Page"],
+  ["加载表数据", "Load Table Data"],
+  ["导出查询结果", "Export Query Result"],
+  ["自定义 SQL", "Custom SQL"],
+  ["执行查询", "Run Query"],
+  ["内测用户管理", "Beta User Management"],
+  ["刷新名单", "Refresh Allowlist"],
+  ["邮箱", "Email"],
+  ["备注", "Note"],
+  ["状态", "Status"],
+  ["仅有效", "Active Only"],
+  ["全部", "All"],
+  ["已撤销", "Revoked"],
+  ["加入内测", "Add To Beta"],
+  ["超级管理员管理", "Super Admin Management"],
+  ["刷新列表", "Refresh List"],
+  ["用户 ID / 昵称", "User ID / Nickname"],
+  ["用户 ID（可选）", "User ID (Optional)"],
+  ["成就 ID（可选）", "Achievement ID (Optional)"],
+  ["输入用户 ID", "Enter User ID"],
+  ["例如 17 或 Jay", "Example: 17 or Jay"],
+  ["用户 ID", "User ID"],
+  ["输入要授权的用户 ID", "Enter user ID to authorize"],
+  ["设为超级管理员", "Set As Super Admin"],
+  ["签发恢复对局", "Issue Rescue Game"],
+  ["分数", "Score"],
+  ["时长", "Duration"],
+  ["恢复起始分数", "Initial rescue score"],
+  ["恢复起始时长", "Initial rescue duration"],
+  ["过期小时", "Expiry Hours"],
+  ["从回放文件签发", "Issue From Replay File"],
+  ["回放文件", "Replay File"],
+  ["或直接粘贴回放内容", "Or Paste Replay Content Directly"],
+  ["上传并签发恢复单", "Upload And Issue Rescue Offer"],
+  ["盘面 JSON", "Board JSON"],
+  ["原因", "Reason"],
+  ["签发恢复单", "Issue Rescue Offer"],
+  ["查看恢复单", "View Rescue Offers"],
+  ["成就管理", "Achievement Management"],
+  ["刷新成就", "Refresh Achievements"],
+  ["新建草稿", "New Draft"],
+  ["搜索", "Search"],
+  ["名称 / ID / 系列", "Name / ID / Series"],
+  ["草稿", "Draft"],
+  ["已启用", "Active"],
+  ["已归档", "Archived"],
+  ["名称", "Name"],
+  ["例如：首次 2048", "Example: First 2048"],
+  ["系列 ID", "Series ID"],
+  ["例如：tile-2048", "Example: tile-2048"],
+  ["等级", "Level"],
+  ["排序", "Sort"],
+  ["图标 URL", "Icon URL"],
+  ["简介", "Description"],
+  ["获得规则", "Unlock Rules"],
+  ["规则类型", "Rule Type"],
+  ["首次达成方块", "First Tile Reached"],
+  ["第 N 次达成方块", "Nth Tile Reached"],
+  ["活动排名", "Event Rank"],
+  ["手动发放", "Manual Grant"],
+  ["方块", "Tile"],
+  ["次数", "Count"],
+  ["可选 mode_key", "Optional mode_key"],
+  ["活动 ID", "Event ID"],
+  ["名次", "Rank"],
+  ["添加规则", "Add Rule"],
+  ["创建成就", "Create Achievement"],
+  ["保存修改", "Save Changes"],
+  ["选择图标", "Choose Icon"],
+  ["上传图标", "Upload Icon"],
+  ["历史回填", "History Backfill"],
+  ["执行回填", "Run Backfill"],
+  ["发放成就", "Grant Achievement"],
+  ["来源", "Source"],
+  ["来源 / 批次 / 说明", "Source / batch / note"],
+  ["手动", "Manual"],
+  ["活动", "Event"],
+  ["回填", "Backfill"],
+  ["检查中", "Checking"],
+  ["已授权", "Authorized"],
+  ["管理员权限正常", "Admin access OK"],
+  ["未登录", "Not Signed In"],
+  ["无权限", "No Access"],
+  ["权限检查失败", "Access check failed"],
+  ["正在加载数据表", "Loading tables"],
+  ["加载表失败", "Failed to load table"],
+  ["无可用数据表", "No tables available"],
+  ["请先选择数据表", "Select a data table first"],
+  ["正在加载", "Loading"],
+  ["请输入 SQL", "Enter SQL"],
+  ["正在执行 SQL", "Running SQL"],
+  ["没有可导出的查询结果", "No query result to export"],
+  ["已导出当前结果", "Current result exported"],
+  ["盘面 JSON 必须是 4x4 数组", "Board JSON must be a 4x4 array"],
+  ["请填写用户 ID 并选择模式", "Enter user ID and select a mode"],
+  ["正在签发恢复单", "Issuing rescue offer"],
+  ["签发失败", "Issue failed"],
+  ["已签发恢复单", "Rescue offer issued"],
+  ["请填写用户 ID / 昵称并选择模式", "Enter user ID / nickname and select a mode"],
+  ["请选择回放文件或粘贴回放内容", "Select a replay file or paste replay content"],
+  ["正在解析回放并签发恢复单", "Parsing replay and issuing rescue offer"],
+  ["从回放签发失败", "Failed to issue from replay"],
+  ["已从回放签发恢复单", "Rescue offer issued from replay"],
+  ["正在查看恢复单", "Loading rescue offers"],
+  ["查看失败", "View failed"],
+  ["暂无恢复单记录", "No rescue offers"],
+  ["签发时间", "Issued At"],
+  ["恢复单状态", "Rescue Status"],
+  ["对局状态", "Game Status"],
+  ["恢复单", "Rescue Offer"],
+  ["恢复分数", "Rescue Score"],
+  ["恢复时长", "Rescue Duration"],
+  ["最终分数", "Final Score"],
+  ["最终记录", "Final Record"],
+  ["会话", "Session"],
+  ["接受时间", "Accepted At"],
+  ["拒绝时间", "Rejected At"],
+  ["结束时间", "Finished At"],
+  ["待处理", "Pending"],
+  ["已接受", "Accepted"],
+  ["已应用", "Applied"],
+  ["已拒绝", "Rejected"],
+  ["已过期", "Expired"],
+  ["未开始", "Not Started"],
+  ["已接受未应用", "Accepted Not Applied"],
+  ["已应用，未关联排位会话", "Applied, No Ranked Session"],
+  ["游戏进行中", "Game In Progress"],
+  ["已结束", "Finished"],
+  ["已废弃", "Abandoned"],
+  ["有效", "Active"],
+  ["暂无内测名单记录", "No beta allowlist records"],
+  ["撤销", "Revoke"],
+  ["无操作", "No Action"],
+  ["无备注", "No Note"],
+  ["撤销于", "Revoked At"],
+  ["当前有效", "Currently Active"],
+  ["资格", "Access"],
+  ["操作", "Actions"],
+  ["暂无超级管理员记录", "No super admin records"],
+  ["最高权限", "Root Admin"],
+  ["未设置邮箱", "Email Not Set"],
+  ["创建时间未知", "Creation Time Unknown"],
+  ["暂无登录记录", "No Login Record"],
+  ["创建", "Created"],
+  ["最近登录", "Last Login"],
+  ["正在加载超级管理员列表", "Loading super admins"],
+  ["加载失败", "Load failed"],
+  ["授权失败", "Authorization failed"],
+  ["已设为超级管理员", "Super admin granted"],
+  ["只有最高权限管理员可以设立超级管理员", "Only the root administrator can grant super admin access"],
+  ["只有最高权限管理员可以撤销超级管理员", "Only the root administrator can revoke super admin access"],
+  ["请填写有效用户 ID", "Enter a valid user ID"],
+  ["最高权限管理员不可被撤销", "Root administrator cannot be revoked"],
+  ["正在撤销超级管理员权限", "Revoking super admin access"],
+  ["撤销失败", "Revoke failed"],
+  ["已撤销超级管理员权限", "Super admin access revoked"],
+  ["正在加载内测名单", "Loading beta allowlist"],
+  ["加载名单失败", "Failed to load allowlist"],
+  ["请填写有效邮箱", "Enter a valid email"],
+  ["正在加入内测名单", "Adding to beta allowlist"],
+  ["加入失败", "Add failed"],
+  ["已加入内测名单", "Added to beta allowlist"],
+  ["正在撤销内测资格", "Revoking beta access"],
+  ["已撤销内测资格", "Beta access revoked"],
+  ["暂无成就定义", "No achievement definitions"],
+  ["暂无规则", "No rules"],
+  ["删除", "Delete"],
+  ["请填写成就名称和简介", "Enter achievement name and description"],
+  ["正在加载成就", "Loading achievements"],
+  ["加载成就失败", "Failed to load achievements"],
+  ["正在创建成就", "Creating achievement"],
+  ["创建失败", "Create failed"],
+  ["成就已创建", "Achievement created"],
+  ["请先选择一个成就，或点击创建成就", "Select an achievement first, or click Create Achievement"],
+  ["正在保存成就", "Saving achievement"],
+  ["保存失败", "Save failed"],
+  ["规则保存失败", "Rule save failed"],
+  ["成就已保存", "Achievement saved"],
+  ["请先选择成就和图标文件", "Select an achievement and icon file first"],
+  ["正在上传图标", "Uploading icon"],
+  ["图标上传失败", "Icon upload failed"],
+  ["图标已上传", "Icon uploaded"],
+  ["请填写用户 ID 和成就 ID", "Enter user ID and achievement ID"],
+  ["正在发放成就", "Granting achievement"],
+  ["发放失败", "Grant failed"],
+  ["成就已发放", "Achievement granted"],
+  ["正在执行回填", "Running backfill"],
+  ["回填失败", "Backfill failed"],
+  ["回填任务已提交", "Backfill task submitted"],
+  ["已切换到新建草稿", "Switched to new draft"],
+  ["请选择模式", "Select mode"],
+  ["无撤回", "No Undo"],
+  ["有撤回", "Undo"],
+  ["合成 2048 结束", "Reach 2048 End"],
+  ["斐波那契", "Fibonacci"]
+] as Array<[string, string]>).sort((a, b) => b[0].length - a[0].length);
 const RESCUE_MODE_OPTIONS: RescueModeOption[] = [
   { label: "4x4 \u65e0\u64a4\u56de", modeKey: "standard_4x4_pow2_no_undo", modeBucket: "standard_no_undo" },
   { label: "4x4 \u6709\u64a4\u56de", modeKey: "classic_4x4_pow2_undo", modeBucket: "standard_undo" },
@@ -40,6 +264,7 @@ let latestSuperAdminRows: JsonRecord[] = [];
 let selectedAchievementId = "";
 let selectedAchievementRules: JsonRecord[] = [];
 const tipTimers = new WeakMap<HTMLElement, number>();
+let adminEnglishObserver: MutationObserver | null = null;
 
 function byId<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -47,6 +272,132 @@ function byId<T extends HTMLElement>(id: string): T | null {
 
 function toText(value: unknown): string {
   return value == null ? "" : String(value);
+}
+
+function isEnglishUi(): boolean {
+  try {
+    return toText(window.localStorage.getItem(UI_LANGUAGE_KEY)).trim().toLowerCase().startsWith("en");
+  } catch (_err) {
+    return false;
+  }
+}
+
+function translateAdminTextToEnglish(value: string): string {
+  let out = String(value || "");
+  if (!CJK_RE.test(out)) return out;
+  for (const [zh, en] of ADMIN_EN_REPLACEMENTS) {
+    out = out.split(zh).join(en);
+  }
+  out = out
+    .replace(/已加载\s*(\d+)\s*张表/gu, "Loaded $1 table(s)")
+    .replace(/已加载\s*(\d+)\s*行/gu, "Loaded $1 row(s)")
+    .replace(/SQL 已返回\s*(\d+)\s*行/gu, "SQL returned $1 row(s)")
+    .replace(/已返回\s*(\d+)\s*条恢复单/gu, "Returned $1 rescue offer(s)")
+    .replace(/已加载\s*(\d+)\s*条记录/gu, "Loaded $1 record(s)")
+    .replace(/已加载\s*(\d+)\s*个超级管理员/gu, "Loaded $1 super admin(s)")
+    .replace(/已加载\s*(\d+)\s*个成就/gu, "Loaded $1 achievement(s)")
+    .replace(/等级\s*(\d+)/gu, "Level $1")
+    .replace(/(\d+)\s*条规则/gu, "$1 rule(s)")
+    .replace(/分数\s*/gu, "Score ")
+    .replace(/数组/gu, "array")
+    .replace(/批次/gu, "batch")
+    .replace(/说明/gu, "note")
+    .replace(/起始/gu, "initial ")
+    .replace(/未知/gu, "Unknown")
+    .replace(/模式/gu, "Mode")
+    .replace(/用户/gu, "User")
+    .replace(/邮箱/gu, "Email")
+    .replace(/状态/gu, "Status")
+    .replace(/备注/gu, "Note")
+    .replace(/操作/gu, "Actions")
+    .replace(/恢复/gu, "Rescue")
+    .replace(/成就/gu, "Achievement")
+    .replace(/规则/gu, "Rule")
+    .replace(/正在/gu, "")
+    .replace(/失败/gu, "Failed")
+    .replace(/成功/gu, "Succeeded")
+    .replace(/：/gu, ": ")
+    .replace(/（/gu, " (")
+    .replace(/）/gu, ")")
+    .replace(/，/gu, ", ")
+    .replace(/。/gu, ".")
+    .replace(/\s+/g, " ")
+    .trim();
+  return out;
+}
+
+function shouldSkipAdminTranslationNode(node: Node): boolean {
+  const parent = node.parentElement;
+  if (!parent) return true;
+  return !!parent.closest("script,style,textarea,input,pre,code");
+}
+
+function applyAdminEnglishText(root: ParentNode = document): void {
+  if (!isEnglishUi()) return;
+  document.documentElement.lang = "en";
+  document.title = "2048 Admin Console";
+  const walker = document.createTreeWalker(
+    root as unknown as Node,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (shouldSkipAdminTranslationNode(node)) return NodeFilter.FILTER_REJECT;
+        return CJK_RE.test(node.textContent || "") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    }
+  );
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+  for (const node of textNodes) {
+    node.textContent = translateAdminTextToEnglish(node.textContent || "");
+  }
+  const attrElements: HTMLElement[] = [];
+  if (root instanceof HTMLElement && root.matches("[placeholder],[title],[aria-label],[value],option")) {
+    attrElements.push(root);
+  }
+  attrElements.push(...Array.from((root as ParentNode).querySelectorAll<HTMLElement>("[placeholder],[title],[aria-label],[value],option")));
+  attrElements.forEach((element) => {
+    for (const attr of ["placeholder", "title", "aria-label", "value"]) {
+      const value = element.getAttribute(attr);
+      if (value && CJK_RE.test(value)) element.setAttribute(attr, translateAdminTextToEnglish(value));
+    }
+  });
+}
+
+function installAdminEnglishTranslator(): void {
+  if (!isEnglishUi() || adminEnglishObserver) return;
+  applyAdminEnglishText(document);
+  adminEnglishObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of Array.from(mutation.addedNodes)) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (!shouldSkipAdminTranslationNode(node) && CJK_RE.test(node.textContent || "")) {
+            node.textContent = translateAdminTextToEnglish(node.textContent || "");
+          }
+          continue;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          applyAdminEnglishText(node as Element);
+        }
+      }
+      if (mutation.type === "characterData") {
+        const node = mutation.target;
+        if (!shouldSkipAdminTranslationNode(node) && CJK_RE.test(node.textContent || "")) {
+          node.textContent = translateAdminTextToEnglish(node.textContent || "");
+        }
+      }
+      if (mutation.type === "attributes" && mutation.target.nodeType === Node.ELEMENT_NODE) {
+        applyAdminEnglishText(mutation.target as Element);
+      }
+    }
+  });
+  adminEnglishObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ["placeholder", "title", "aria-label", "value"]
+  });
 }
 
 function stringify(value: unknown): string {
@@ -1210,6 +1561,10 @@ function bindTipReset(): void {
 export function bootstrapAdminPage(): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
+  installAdminEnglishTranslator();
+  window.addEventListener("storage", (event) => {
+    if (event.key === UI_LANGUAGE_KEY) installAdminEnglishTranslator();
+  });
   if (!initialAccessCheckDone) setAdminAccessState("checking");
   initRescueModeSelect();
   clearAchievementForm();

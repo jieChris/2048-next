@@ -76,7 +76,7 @@ function ensureThemeSettingsGlobals(): void {
 function applyThemePageCopy(): void {
   const lang = typeof globalWindow.UII18N?.getLanguage === "function"
     ? globalWindow.UII18N.getLanguage()
-    : "zh";
+    : window.localStorage.getItem("ui_language_v1") || "zh";
   const isEnglish = String(lang || "").toLowerCase().startsWith("en");
   const title = isEnglish ? "Palette Center" : "\u8272\u677f\u4e2d\u5fc3";
   const subtitle = isEnglish
@@ -158,6 +158,7 @@ function applyThemePageCopy(): void {
   const editorPanelHead = document.getElementById("palette-editor-panel-head");
   const previewPanelHead = document.getElementById("palette-preview-panel-head");
   const dimensionTabs = document.querySelectorAll(".palette-dimension-tab");
+  const dimensionTabList = document.getElementById("palette-dimension-tabs");
 
   if (kicker) kicker.textContent = copy.kicker;
   if (pageTitle) pageTitle.textContent = title;
@@ -183,6 +184,7 @@ function applyThemePageCopy(): void {
   if (nameInput) nameInput.setAttribute("placeholder", copy.namePlaceholder);
   if (editorPanelHead) editorPanelHead.textContent = copy.editorPanel;
   if (previewPanelHead) previewPanelHead.textContent = copy.boardPreview;
+  if (dimensionTabList) dimensionTabList.setAttribute("aria-label", isEnglish ? "Color Dimensions" : "\u989c\u8272\u7ef4\u5ea6");
   if (dimensionTabs[0]) dimensionTabs[0].textContent = copy.background;
   if (dimensionTabs[1]) dimensionTabs[1].textContent = copy.text;
   if (dimensionTabs[2]) dimensionTabs[2].textContent = copy.border;

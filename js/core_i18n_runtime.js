@@ -171,6 +171,10 @@
     ["色板", "Palette"], ["新建", "Create"], ["新建副本", "New Copy"], ["重命名", "Rename"], ["删除", "Delete"], ["导出", "Export"], ["导入", "Import"],
     ["标准 16 色", "Standard 16 Colors"], ["斐波那契 16 色", "Fibonacci 16 Colors"],
     ["胜利提示", "Win Prompt"], ["合成 2048 后弹出胜利提示", "Show win prompt after reaching 2048"],
+    ["背景音乐", "Background Music"], ["夜间模式", "Night Mode"],
+    ["开启后在当前页面循环播放背景音乐", "Loop background music on this page when enabled"],
+    ["为页面切换成柔和的夜间模式", "Switch this page to a softer night mode"],
+    ["问题反馈交流群：", "Feedback group: "],
     ["点击这里返回首页", "Click here to return Home"], ["点击下方数字后点击棋盘，可自定义当前盘面。", "Pick a number, then click cells to edit the board."],
     ["练习板支持直通局面与基线重试。", "Practice board supports direct board transfer and baseline retries."],
     ["模式加载中...", "Loading mode..."], ["模式简介", "Mode Intro"], ["模式排名榜单", "Mode Rankings"],
@@ -202,6 +206,7 @@
     ["合并数字，合成 2048 方块！ 本页为无撤回版。", "Create the 2048 tile! This page has no undo."],
     ["合并数字，合成 2048 方块！ 按 Z 可撤销。", "Merge numbers to create the 2048 tile! Press Z to undo."],
     ["玩法说明： 使用方向键、WASD 或 KHJL 移动方块。本页不支持撤回。按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Undo is disabled on this page. Press R to restart. When two tiles with the same number touch, they merge into one."],
+    ["玩法说明：使用方向键、WASD 或 KHJL 移动方块。当前页面为无撤回模式。按 R 重新开始。相同数字方块接触时会合并。", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. This page is no-undo mode. Press R to restart. Tiles with the same number merge when they touch."],
     ["玩法说明： 使用方向键、WASD 或 KHJL 移动方块。按 Z 撤回，按 R 重新开始。当两个相同数字的方块接触时，它们会合并成一个！", "How to play: Use Arrow keys, WASD, or KHJL to move tiles. Press Z to undo and R to restart. When two tiles with the same number touch, they merge into one."],
     ["方向键", "Arrow keys"],
     ["移动方块", "move tiles"],
@@ -614,9 +619,9 @@
   function applyPageSpecificText(lang) {
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
-    if (page === "index.html" || page === "2048.html") {
+    if (page === "index.html" || page === "2048.html" || page === "index_test.html") {
       var indexCopyZh = "欢迎加入中国第一2048交流群：<a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>问题反馈交流群：<a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
-      var indexCopyEn = "欢迎加入中国第一2048交流群：<a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>Feedback QQ group: <a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
+      var indexCopyEn = "Join the 2048 community group: <a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>Feedback QQ group: <a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
       var intro = global.document.querySelector(".game-intro");
       if (intro) {
         setTextIfChanged(intro, lang === "en"
