@@ -17,7 +17,7 @@ describe("breakout easter egg assets", () => {
     const indexHtml = readFileSync(indexPath, "utf8");
     const assets = readdirSync(assetsPath);
     expect(indexHtml).toContain("./assets/");
-    expect(indexHtml).toContain("./host-bridge.css?v=20260703-mobile-controls-dock");
+    expect(indexHtml).toContain("./host-bridge.css?v=20260703-mobile-controls-half-hit-area");
     expect(indexHtml).toContain("./host-bridge.js?v=20260626-window-controls");
     const bridgeCss = readFileSync(path.join(BREAKOUT_ROOT, "host-bridge.css"), "utf8");
     expect(bridgeCss).toContain(".modal-overlay.breakout-overlay");

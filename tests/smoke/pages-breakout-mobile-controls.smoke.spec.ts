@@ -56,20 +56,42 @@ test.describe("Breakout easter egg mobile controls", () => {
     await expect(controls.getByRole("button", { name: /向右移动|Move Right/i })).toBeVisible();
 
     const movementLayout = await page.evaluate(() => {
-      const stageRect = document.querySelector(".breakout-stage")?.getBoundingClientRect();
-      const controlsRect = document
-        .querySelector(".breakout-mobile-controls")
+      const moveControlsRect = document
+        .querySelector(".breakout-mobile-move-controls")
         ?.getBoundingClientRect();
+      const leftButtonRect = document
+        .querySelector(".breakout-mobile-move-btn.is-left")
+        ?.getBoundingClientRect();
+      const rightButtonRect = document
+        .querySelector(".breakout-mobile-move-btn.is-right")
+        ?.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const leftTarget = document.elementFromPoint(viewportWidth * 0.25, viewportHeight * 0.75);
+      const rightTarget = document.elementFromPoint(viewportWidth * 0.75, viewportHeight * 0.75);
       return {
-        stageBottom: stageRect?.bottom ?? null,
-        controlsTop: controlsRect?.top ?? null
+        moveControlsTop: moveControlsRect?.top ?? null,
+        moveControlsBottom: moveControlsRect?.bottom ?? null,
+        leftButtonLeft: leftButtonRect?.left ?? null,
+        leftButtonRight: leftButtonRect?.right ?? null,
+        rightButtonLeft: rightButtonRect?.left ?? null,
+        rightButtonRight: rightButtonRect?.right ?? null,
+        viewportWidth,
+        viewportHeight,
+        leftHitIsLeftButton: Boolean(leftTarget?.closest?.(".breakout-mobile-move-btn.is-left")),
+        rightHitIsRightButton: Boolean(rightTarget?.closest?.(".breakout-mobile-move-btn.is-right"))
       };
     });
 
-    expect(movementLayout.controlsTop).not.toBeNull();
-    expect(movementLayout.stageBottom).not.toBeNull();
-    expect(Number(movementLayout.controlsTop)).toBeGreaterThanOrEqual(
-      Number(movementLayout.stageBottom) + 8
-    );
+    expect(movementLayout.moveControlsTop).not.toBeNull();
+    expect(movementLayout.moveControlsBottom).not.toBeNull();
+    expect(Number(movementLayout.moveControlsTop)).toBeCloseTo(movementLayout.viewportHeight / 2, 1);
+    expect(Number(movementLayout.moveControlsBottom)).toBeCloseTo(movementLayout.viewportHeight, 1);
+    expect(Number(movementLayout.leftButtonLeft)).toBeCloseTo(0, 1);
+    expect(Number(movementLayout.leftButtonRight)).toBeCloseTo(movementLayout.viewportWidth / 2, 1);
+    expect(Number(movementLayout.rightButtonLeft)).toBeCloseTo(movementLayout.viewportWidth / 2, 1);
+    expect(Number(movementLayout.rightButtonRight)).toBeCloseTo(movementLayout.viewportWidth, 1);
+    expect(movementLayout.leftHitIsLeftButton).toBe(true);
+    expect(movementLayout.rightHitIsRightButton).toBe(true);
   });
 });
