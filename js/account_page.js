@@ -70,6 +70,9 @@
   var DEFAULT_BOARD_METRIC = "score";
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var AUTH_API_TIMEOUT_MS = 30000;
+  var BEIJING_TIMEZONE = "Asia/Shanghai";
+  var DATETIME_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+  var beijingDateFormatter = null;
 
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
@@ -802,8 +805,93 @@
     setTip(node, "", "");
   }
 
+  function resolveBeijingDateFormatter() {
+    if (beijingDateFormatter) return beijingDateFormatter;
+    try {
+      beijingDateFormatter = new Intl.DateTimeFormat("en-GB", {
+        timeZone: BEIJING_TIMEZONE,
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    } catch (_err) {
+      beijingDateFormatter = null;
+    }
+    return beijingDateFormatter;
+  }
+
+  function formatTimestampInBeijing(ts) {
+    if (!Number.isFinite(ts) || ts <= 0) return "";
+
+    var formatter = resolveBeijingDateFormatter();
+    if (formatter && typeof formatter.formatToParts === "function") {
+      var parts = formatter.formatToParts(new Date(ts));
+      var map = Object.create(null);
+      for (var i = 0; i < parts.length; i += 1) {
+        var part = parts[i];
+        if (part && part.type && part.type !== "literal") map[part.type] = part.value;
+      }
+      if (map.year && map.month && map.day && map.hour && map.minute && map.second) {
+        return map.year + "-" + map.month + "-" + map.day + " " + map.hour + ":" + map.minute + ":" + map.second;
+      }
+    }
+
+    var shifted = new Date(ts + 8 * 60 * 60 * 1000);
+    var year = shifted.getUTCFullYear();
+    var month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+    var day = String(shifted.getUTCDate()).padStart(2, "0");
+    var hour = String(shifted.getUTCHours()).padStart(2, "0");
+    var minute = String(shifted.getUTCMinutes()).padStart(2, "0");
+    var second = String(shifted.getUTCSeconds()).padStart(2, "0");
+    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+  }
+
+  function parseUtcDatetimeText(raw) {
+    var text = toText(raw).trim();
+    var normalized = text
+      .replace("T", " ")
+      .replace(/\.\d+$/i, "")
+      .replace(/\.\d+Z$/i, "Z");
+    var match = normalized.match(DATETIME_TEXT_PATTERN);
+    if (!match) return 0;
+    var year = Number(match[1]);
+    var month = Number(match[2]) - 1;
+    var day = Number(match[3]);
+    var hour = Number(match[4]);
+    var minute = Number(match[5]);
+    var second = Number(match[6]);
+    return Date.UTC(year, month, day, hour, minute, second);
+  }
+
+  function parseDateTs(raw) {
+    var source = toText(raw).trim();
+    if (!source) return 0;
+
+    var utcTs = parseUtcDatetimeText(source);
+    if (Number.isFinite(utcTs) && utcTs > 0) return utcTs;
+
+    var normalized = source.replace(" ", "T");
+    var ts = Date.parse(normalized);
+    if (Number.isFinite(ts)) return ts;
+    ts = Date.parse(source);
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
   function formatDate(raw) {
-    return toText(raw).trim() || "--";
+    var text = toText(raw).trim();
+    if (!text) return "--";
+
+    var hasExplicitTimezone = /Z$/i.test(text) || /[+-]\d{2}:?\d{2}$/i.test(text);
+    var ts = hasExplicitTimezone ? parseDateTs(text) : parseUtcDatetimeText(text);
+    if (!Number.isFinite(ts) || ts <= 0) {
+      ts = parseDateTs(text);
+    }
+    if (!Number.isFinite(ts) || ts <= 0) return text;
+    return formatTimestampInBeijing(ts) || text;
   }
 
   function resolvePagerMeta(result, fallbackPage, pageSize, itemCount) {

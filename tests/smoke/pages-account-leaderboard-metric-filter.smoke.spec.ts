@@ -21,7 +21,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                   user_id: 1,
                   nickname: "Alice",
                   score: 4096,
-                  game_date: "2026-03-25 10:00:00"
+                  game_date: "2026-03-25T10:00:00Z"
                 }
               ]
             }),
@@ -40,14 +40,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const initialSnapshot = await page.evaluate(() => {
       const value = (document.querySelector("#account-board-list .account-score") as HTMLElement | null)?.textContent || "";
+      const date = (document.querySelector("#account-board-list .account-date") as HTMLElement | null)?.textContent || "";
       const options = Array.from(document.querySelectorAll("#account-board-metric option")).map((option) =>
         (option as HTMLOptionElement).value
       );
       const calls = ((window as any).__accountMetricCalls as string[]) || [];
-      return { value, options, calls };
+      return { value, date, options, calls };
     });
 
     expect(initialSnapshot.value).toBe("4096");
+    expect(initialSnapshot.date).toBe("2026-03-25 18:00:00");
+    expect(initialSnapshot.date).not.toContain("T");
+    expect(initialSnapshot.date).not.toContain("Z");
     expect(initialSnapshot.options).toEqual(["score"]);
     expect(initialSnapshot.calls.length).toBeGreaterThan(0);
     expect(initialSnapshot.calls[0]).toBe("score");
