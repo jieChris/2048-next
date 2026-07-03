@@ -24,6 +24,18 @@ test.describe("Breakout easter egg mobile controls", () => {
         modalBottom: modalRect?.bottom ?? null,
         stageWidth: stageRect?.width ?? null,
         stageHeight: stageRect?.height ?? null,
+        stageInlineWidth: Number(
+          (document.querySelector(".breakout-stage") as HTMLElement | null)?.style.width.replace(
+            "px",
+            ""
+          ) || 0
+        ),
+        stageInlineHeight: Number(
+          (document.querySelector(".breakout-stage") as HTMLElement | null)?.style.height.replace(
+            "px",
+            ""
+          ) || 0
+        ),
         stageBottom: stageRect?.bottom ?? null,
         controlsTop: controlsRect?.top ?? null,
         controlsBottom: controlsRect?.bottom ?? null,
@@ -36,6 +48,8 @@ test.describe("Breakout easter egg mobile controls", () => {
     expect(Number(initialLayout.stageWidth)).toBeGreaterThanOrEqual(
       initialLayout.viewportWidth - 32
     );
+    expect(Number(initialLayout.stageWidth)).toBeCloseTo(Number(initialLayout.stageInlineWidth), 1);
+    expect(Number(initialLayout.stageHeight)).toBeCloseTo(Number(initialLayout.stageInlineHeight), 1);
     expect(Number(initialLayout.stageHeight) / Number(initialLayout.stageWidth)).toBeCloseTo(
       1080 / 760,
       2
