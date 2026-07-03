@@ -17,7 +17,7 @@ describe("breakout easter egg assets", () => {
     const indexHtml = readFileSync(indexPath, "utf8");
     const assets = readdirSync(assetsPath);
     expect(indexHtml).toContain("./assets/");
-    expect(indexHtml).toContain("./host-bridge.css?v=20260703-mobile-hud-shields");
+    expect(indexHtml).toContain("./host-bridge.css?v=20260703-drop-tile-fit");
     expect(indexHtml).toContain("./host-bridge.js?v=20260626-window-controls");
     const bridgeCss = readFileSync(path.join(BREAKOUT_ROOT, "host-bridge.css"), "utf8");
     expect(bridgeCss).toContain(".modal-overlay.breakout-overlay");
@@ -28,6 +28,12 @@ describe("breakout easter egg assets", () => {
     }
     expect(bridgeCss).toContain(".breakout-drop::before");
     expect(bridgeCss).toContain(".breakout-drop-icon");
+    expect(bridgeCss).toMatch(
+      /\.breakout-drop-tile_1024 \{[\s\S]*--breakout-drop-tile-font-size: 6px;[\s\S]*\}/
+    );
+    expect(bridgeCss).toMatch(
+      /\.breakout-drop-tile_2048 \{[\s\S]*--breakout-drop-tile-font-size: 6px;[\s\S]*\}/
+    );
     const builtAssetText = assets
       .filter((fileName) => fileName.endsWith(".js") || fileName.endsWith(".css"))
       .map((fileName) => readFileSync(path.join(assetsPath, fileName), "utf8"))

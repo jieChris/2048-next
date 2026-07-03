@@ -134,14 +134,14 @@ body {
   --breakout-drop-tile-value: "1024";
   --breakout-drop-tile-background: #edc53f;
   --breakout-drop-tile-color: #f9f6f2;
-  --breakout-drop-tile-font-size: 8px;
+  --breakout-drop-tile-font-size: 6px;
 }
 
 .breakout-drop-tile_2048 {
   --breakout-drop-tile-value: "2048";
   --breakout-drop-tile-background: #edc22e;
   --breakout-drop-tile-color: #f9f6f2;
-  --breakout-drop-tile-font-size: 8px;
+  --breakout-drop-tile-font-size: 6px;
 }
 
 .breakout-hud {
