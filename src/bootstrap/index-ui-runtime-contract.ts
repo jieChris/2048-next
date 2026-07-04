@@ -33,23 +33,6 @@ export interface IndexUiModalRuntimeContracts {
   settingsModalPageHostRuntime: Record<string, unknown>;
 }
 
-export interface IndexUiHomeGuideRuntimeContracts {
-  homeGuideRuntime: Record<string, unknown>;
-  homeGuideStartupHostRuntime: Record<string, unknown>;
-  homeGuideSettingsHostRuntime: Record<string, unknown>;
-  homeGuidePageHostRuntime: Record<string, unknown>;
-  homeGuideDomHostRuntime: Record<string, unknown>;
-  homeGuideDoneNoticeHostRuntime: Record<string, unknown>;
-  homeGuideHighlightHostRuntime: Record<string, unknown>;
-  homeGuidePanelHostRuntime: Record<string, unknown>;
-  homeGuideFinishHostRuntime: Record<string, unknown>;
-  homeGuideStartHostRuntime: Record<string, unknown>;
-  homeGuideControlsHostRuntime: Record<string, unknown>;
-  homeGuideStepFlowHostRuntime: Record<string, unknown>;
-  homeGuideStepHostRuntime: Record<string, unknown>;
-  homeGuideStepViewHostRuntime: Record<string, unknown>;
-}
-
 export interface IndexUiCoreRuntimeContracts {
   timerModuleRuntime: Record<string, unknown>;
   timerModuleSettingsHostRuntime: Record<string, unknown>;
@@ -95,7 +78,6 @@ export interface IndexUiCoreRuntimeContracts {
 
 export interface IndexUiRuntimeContractsBundle {
   modalContracts: IndexUiModalRuntimeContracts;
-  homeGuideContracts: IndexUiHomeGuideRuntimeContracts;
   coreContracts: IndexUiCoreRuntimeContracts;
 }
 
@@ -110,14 +92,10 @@ export function resolveIndexUiRuntimeContractsCompat(
     const bundle = toRecord(resolveBundle(windowLike));
     if (
       isRecord(bundle.modalContracts) &&
-      isRecord(bundle.homeGuideContracts) &&
       isRecord(bundle.coreContracts)
     ) {
       return {
         modalContracts: asContractShape<IndexUiModalRuntimeContracts>(bundle.modalContracts),
-        homeGuideContracts: asContractShape<IndexUiHomeGuideRuntimeContracts>(
-          bundle.homeGuideContracts
-        ),
         coreContracts: asContractShape<IndexUiCoreRuntimeContracts>(bundle.coreContracts)
       };
     }
@@ -126,23 +104,17 @@ export function resolveIndexUiRuntimeContractsCompat(
   const resolveModalContracts = asFunction<(input: unknown) => unknown>(
     runtime.resolveIndexUiModalRuntimeContracts
   );
-  const resolveHomeGuideContracts = asFunction<(input: unknown) => unknown>(
-    runtime.resolveIndexUiHomeGuideRuntimeContracts
-  );
   const resolveCoreContracts = asFunction<(input: unknown) => unknown>(
     runtime.resolveIndexUiCoreRuntimeContracts
   );
 
-  if (!resolveModalContracts || !resolveHomeGuideContracts || !resolveCoreContracts) {
+  if (!resolveModalContracts || !resolveCoreContracts) {
     throw new Error("CoreIndexUiRuntimeContractRuntime is required");
   }
 
   return {
     modalContracts: asContractShape<IndexUiModalRuntimeContracts>(
       resolveModalContracts(windowLike)
-    ),
-    homeGuideContracts: asContractShape<IndexUiHomeGuideRuntimeContracts>(
-      resolveHomeGuideContracts(windowLike)
     ),
     coreContracts: asContractShape<IndexUiCoreRuntimeContracts>(resolveCoreContracts(windowLike))
   };
@@ -196,132 +168,6 @@ export function resolveIndexUiModalRuntimeContracts(windowLike: unknown): IndexU
         "applySettingsModalPageClose"
       ],
       "CoreSettingsModalPageHostRuntime is required"
-    )
-  };
-}
-
-export function resolveIndexUiHomeGuideRuntimeContracts(
-  windowLike: unknown
-): IndexUiHomeGuideRuntimeContracts {
-  const win = toRecord(windowLike);
-  return {
-    homeGuideRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideRuntime",
-      [
-        "resolveHomeGuidePathname",
-        "isHomePagePath",
-        "buildHomeGuideSteps",
-        "buildHomeGuidePanelInnerHtml",
-        "buildHomeGuideSettingsRowInnerHtml",
-        "readHomeGuideSeenValue",
-        "markHomeGuideSeen",
-        "shouldAutoStartHomeGuide",
-        "resolveHomeGuideAutoStart",
-        "resolveHomeGuideSettingsState",
-        "resolveHomeGuideStepUiState",
-        "resolveHomeGuideStepRenderState",
-        "resolveHomeGuideStepIndexState",
-        "resolveHomeGuideStepTargetState",
-        "resolveHomeGuideElevationPlan",
-        "resolveHomeGuideBindingState",
-        "resolveHomeGuideControlAction",
-        "resolveHomeGuideToggleAction",
-        "resolveHomeGuideLifecycleState",
-        "resolveHomeGuideSessionState",
-        "resolveHomeGuideLayerDisplayState",
-        "resolveHomeGuideFinishState",
-        "resolveHomeGuideTargetScrollState",
-        "resolveHomeGuideDoneNotice",
-        "resolveHomeGuideDoneNoticeStyle",
-        "resolveHomeGuidePanelLayout",
-        "isHomeGuideTargetVisible"
-      ],
-      "CoreHomeGuideRuntime is required"
-    ),
-    homeGuideStartupHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideStartupHostRuntime",
-      ["applyHomeGuideAutoStart"],
-      "CoreHomeGuideStartupHostRuntime is required"
-    ),
-    homeGuideSettingsHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideSettingsHostRuntime",
-      ["applyHomeGuideSettingsUi"],
-      "CoreHomeGuideSettingsHostRuntime is required"
-    ),
-    homeGuidePageHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuidePageHostRuntime",
-      [
-        "createHomeGuidePageResolvers",
-        "createHomeGuideLifecycleResolvers",
-        "applyHomeGuideSettingsPageInit",
-        "applyHomeGuideAutoStartPage",
-        "applyHomeGuideAutoStartPageFromContext"
-      ],
-      "CoreHomeGuidePageHostRuntime is required"
-    ),
-    homeGuideDomHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideDomHostRuntime",
-      ["applyHomeGuideDomEnsure"],
-      "CoreHomeGuideDomHostRuntime is required"
-    ),
-    homeGuideDoneNoticeHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideDoneNoticeHostRuntime",
-      ["applyHomeGuideDoneNotice"],
-      "CoreHomeGuideDoneNoticeHostRuntime is required"
-    ),
-    homeGuideHighlightHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideHighlightHostRuntime",
-      ["applyHomeGuideHighlightClear", "applyHomeGuideTargetElevation"],
-      "CoreHomeGuideHighlightHostRuntime is required"
-    ),
-    homeGuidePanelHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuidePanelHostRuntime",
-      ["applyHomeGuidePanelPosition", "resolveHomeGuideTargetVisibility"],
-      "CoreHomeGuidePanelHostRuntime is required"
-    ),
-    homeGuideFinishHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideFinishHostRuntime",
-      ["applyHomeGuideFinish", "applyHomeGuideFinishFromContext"],
-      "CoreHomeGuideFinishHostRuntime is required"
-    ),
-    homeGuideStartHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideStartHostRuntime",
-      ["applyHomeGuideStart"],
-      "CoreHomeGuideStartHostRuntime is required"
-    ),
-    homeGuideControlsHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideControlsHostRuntime",
-      ["applyHomeGuideControls"],
-      "CoreHomeGuideControlsHostRuntime is required"
-    ),
-    homeGuideStepFlowHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideStepFlowHostRuntime",
-      ["applyHomeGuideStepFlow"],
-      "CoreHomeGuideStepFlowHostRuntime is required"
-    ),
-    homeGuideStepHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideStepHostRuntime",
-      ["applyHomeGuideStep", "applyHomeGuideStepOrchestration"],
-      "CoreHomeGuideStepHostRuntime is required"
-    ),
-    homeGuideStepViewHostRuntime: ensureRuntime(
-      win,
-      "CoreHomeGuideStepViewHostRuntime",
-      ["applyHomeGuideStepView"],
-      "CoreHomeGuideStepViewHostRuntime is required"
     )
   };
 }
@@ -395,7 +241,6 @@ export function resolveIndexUiCoreRuntimeContracts(
       "CorePracticeTransferRuntime",
       [
         "buildPracticeModeConfigFromCurrent",
-        "hasPracticeGuideSeen",
         "buildPracticeBoardUrl",
         "buildPracticeTransferToken",
         "buildPracticeTransferPayload",
@@ -650,7 +495,6 @@ export function resolveIndexUiCoreRuntimeContracts(
 export function resolveIndexUiRuntimeContracts(windowLike: unknown): IndexUiRuntimeContractsBundle {
   return {
     modalContracts: resolveIndexUiModalRuntimeContracts(windowLike),
-    homeGuideContracts: resolveIndexUiHomeGuideRuntimeContracts(windowLike),
     coreContracts: resolveIndexUiCoreRuntimeContracts(windowLike)
   };
 }

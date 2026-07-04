@@ -14,7 +14,6 @@ var indexUiRuntimeContractsBundle =
     windowLike
   );
 var modalContracts = indexUiRuntimeContractsBundle.modalContracts;
-var homeGuideContracts = indexUiRuntimeContractsBundle.homeGuideContracts;
 var coreContracts = indexUiRuntimeContractsBundle.coreContracts;
 var indexUiPageHostRuntime = coreContracts.indexUiPageHostRuntime;
 var indexUiPageResolversHostRuntime = coreContracts.indexUiPageResolversHostRuntime;
@@ -35,7 +34,6 @@ var indexUiBootstrapResolvers = indexUiPageHostRuntime.createIndexUiBootstrapRes
   indexUiPageActionsHostRuntime: indexUiPageActionsHostRuntime,
   coreContracts: coreContracts,
   modalContracts: modalContracts,
-  homeGuideContracts: homeGuideContracts,
   documentLike: document,
   windowLike: windowLike,
   tryUndoFromUi: tryUndoFromUi
@@ -60,8 +58,6 @@ indexUiPageHostRuntime.applyIndexUiPageBootstrap({
   initTimerModuleSettingsUI: indexUiBootstrapResolvers.initTimerModuleSettingsUI,
   initMobileHintToggle: indexUiBootstrapResolvers.initMobileHintToggle,
   initMobileUndoTopButton: indexUiBootstrapResolvers.initMobileUndoTopButton,
-  initHomeGuideSettingsUI: indexUiBootstrapResolvers.initHomeGuideSettingsUI,
-  autoStartHomeGuideIfNeeded: indexUiBootstrapResolvers.autoStartHomeGuideIfNeeded,
   initMobileTimerboxToggle: indexUiBootstrapResolvers.initMobileTimerboxToggle,
   requestResponsiveGameRelayout: indexUiBootstrapResolvers.requestResponsiveGameRelayout,
   syncMobileTimerboxUI: indexUiBootstrapResolvers.syncMobileTimerboxUI,

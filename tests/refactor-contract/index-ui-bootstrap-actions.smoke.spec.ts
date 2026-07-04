@@ -282,7 +282,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         }
       };
       try {
-        window.localStorage.setItem("practice_guide_shown_v2", "1");
       } catch (_err) {}
       window.open = function (url?: string | URL | undefined) {
         openedUrl = String(url || "");
@@ -322,7 +321,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.openedUrl).toContain("Practice_board.html");
     expect(snapshot.openedUrl).toContain("practice_token=");
     expect(snapshot.openedUrl).toContain("practice_ruleset=pow2");
-    expect(snapshot.openedUrl).toContain("practice_guide_seen=1");
+    expect(snapshot.openedUrl).toContain("practice_token=");
   });
 
 });

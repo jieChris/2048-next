@@ -205,8 +205,8 @@
       date: "2026-02-21",
       title: "封顶模式与练习板更新",
       title_en: "Capped Modes & Practice Board Update",
-      content: "新增多个封顶模式入口，支持从棋盘直接跳转练习板；练习板功能更新并加入新手指引。",
-      content_en: "Added multiple capped-mode entries and direct board-to-practice navigation. Practice board was updated with a beginner guide."
+      content: "新增多个封顶模式入口，并支持从棋盘直接跳转练习板。",
+      content_en: "Added multiple capped-mode entries and direct board-to-practice navigation."
     },
     {
       id: "2026-02-21-v1.8",

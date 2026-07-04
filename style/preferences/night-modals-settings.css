@@ -1,5 +1,4 @@
-html[data-night-background="1"] .replay-modal-overlay,
-html[data-night-background="1"] .home-guide-overlay {
+html[data-night-background="1"] .replay-modal-overlay {
   background: rgba(3, 7, 15, 0.78) !important;
 }
 
@@ -8,8 +7,7 @@ html[data-night-background="1"] .settings-modal-content,
 html[data-night-background="1"] .announcement-modal-content,
 html[data-night-background="1"] .mobile-hint-modal-content,
 html[data-night-background="1"] .mobile-hint-body,
-html[data-night-background="1"] .replay-diagnostics-panel,
-html[data-night-background="1"] .home-guide-panel {
+html[data-night-background="1"] .replay-diagnostics-panel {
   background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
   border-color: var(--night-line);
   color: var(--night-ink);
@@ -19,13 +17,10 @@ html[data-night-background="1"] .home-guide-panel {
 html[data-night-background="1"] .replay-modal-content h3,
 html[data-night-background="1"] .settings-modal-content h3,
 html[data-night-background="1"] .announcement-modal-content h3,
-html[data-night-background="1"] .mobile-hint-modal-content h3,
-html[data-night-background="1"] .home-guide-title {
+html[data-night-background="1"] .mobile-hint-modal-content h3 {
   color: var(--night-ink);
 }
 
-html[data-night-background="1"] .home-guide-step,
-html[data-night-background="1"] .home-guide-desc,
 html[data-night-background="1"] .replay-diagnostics-summary,
 html[data-night-background="1"] .mobile-hint-body,
 html[data-night-background="1"] .announcement-version,
@@ -123,4 +118,3 @@ html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled +
 html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled + .settings-switch-slider::after {
   background: rgba(225, 220, 212, 0.72);
 }
-

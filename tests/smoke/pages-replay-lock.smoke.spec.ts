@@ -89,8 +89,6 @@ test.describe("Replay Lock Smoke", () => {
     });
 
     await page.addInitScript(() => {
-      window.localStorage.setItem("practice_guide_shown_v2", "1");
-      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
       window.localStorage.setItem(
         "playModeSinglePageLock:v1:practice",
         JSON.stringify({

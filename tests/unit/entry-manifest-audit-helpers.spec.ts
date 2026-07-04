@@ -489,96 +489,6 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
-  it("tracks home-guide-done-notice-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_done_notice_host_runtime.js",
-      symbolName: "coreHomeGuideDoneNoticeHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-highlight-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_highlight_host_runtime.js",
-      symbolName: "coreHomeGuideHighlightHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-panel-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_panel_host_runtime.js",
-      symbolName: "coreHomeGuidePanelHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-finish-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_finish_host_runtime.js",
-      symbolName: "coreHomeGuideFinishHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-start-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_start_host_runtime.js",
-      symbolName: "coreHomeGuideStartHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-controls-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_controls_host_runtime.js",
-      symbolName: "coreHomeGuideControlsHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-step-flow-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_step_flow_host_runtime.js",
-      symbolName: "coreHomeGuideStepFlowHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-step-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_step_host_runtime.js",
-      symbolName: "coreHomeGuideStepHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-settings-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_settings_host_runtime.js",
-      symbolName: "coreHomeGuideSettingsHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-startup-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_startup_host_runtime.js",
-      symbolName: "coreHomeGuideStartupHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-page-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_page_host_runtime.js",
-      symbolName: "coreHomeGuidePageHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_runtime.js",
-      symbolName: "coreHomeGuideRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide runtime as a retired Vite bundled runtime script", () => {
-    expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
-      scriptPath: "core_home_guide_runtime.js"
-    });
-  });
-
   it("tracks special-rules runtime as a retired Vite bundled runtime script", () => {
     expect(BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS).toContainEqual({
       scriptPath: "core_special_rules_runtime.js"
@@ -819,20 +729,6 @@ describe("entry-manifest-audit helpers", () => {
     });
   });
 
-  it("tracks home-guide-dom-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_dom_host_runtime.js",
-      symbolName: "coreHomeGuideDomHostRuntimeUrl"
-    });
-  });
-
-  it("tracks home-guide-step-view-host runtime as a retired active-manifest script", () => {
-    expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
-      scriptPath: "core_home_guide_step_view_host_runtime.js",
-      symbolName: "coreHomeGuideStepViewHostRuntimeUrl"
-    });
-  });
-
   it("tracks home-startup-host runtime as a retired active-manifest script", () => {
     expect(RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS).toContainEqual({
       scriptPath: "core_home_startup_host_runtime.js",
@@ -926,10 +822,10 @@ describe("entry-manifest-audit helpers", () => {
   it("detects retired runtime references in Vite bundle config content", () => {
     expect(() =>
       ensureRetiredRuntimeScriptAbsent(
-        'const HOME_STANDARD_DEFERRED_FILES = ["core_home_guide_runtime.js"];',
+        'const HOME_STANDARD_DEFERRED_FILES = ["core_special_rules_runtime.js"];',
         "vite.config.ts",
         {
-          scriptPath: "core_home_guide_runtime.js"
+          scriptPath: "core_special_rules_runtime.js"
         }
       )
     ).toThrow(/vite\.config\.ts: retired runtime script still referenced/);

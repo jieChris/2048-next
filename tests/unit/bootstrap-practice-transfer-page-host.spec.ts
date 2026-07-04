@@ -32,8 +32,6 @@ describe("bootstrap practice transfer page host", () => {
       practiceTransferHostRuntime: { id: "host" },
       practiceTransferRuntime: { id: "runtime" },
       storageRuntime: { id: "storage" },
-      guideShownKey: "guide-key",
-      guideSeenFlag: "guide-seen=1",
       localStorageKey: "local-key",
       sessionStorageKey: "session-key",
       documentLike: { id: "doc" },
@@ -46,8 +44,6 @@ describe("bootstrap practice transfer page host", () => {
       practiceTransferHostRuntime: { id: "host" },
       practiceTransferRuntime: { id: "runtime" },
       storageRuntime: { id: "storage" },
-      guideShownKey: "guide-key",
-      guideSeenFlag: "guide-seen=1",
       localStorageKey: "local-key",
       sessionStorageKey: "session-key",
       documentLike: { id: "doc" },
@@ -87,8 +83,6 @@ describe("bootstrap practice transfer page host", () => {
       },
       manager: { id: "manager" },
       gameModeConfig: { ruleset: "pow2" },
-      guideShownKey: "guide_key",
-      guideSeenFlag: "guide_seen=1",
       localStorageKey: "local_key",
       sessionStorageKey: "session_key",
       documentLike: { id: "doc" },
@@ -112,8 +106,6 @@ describe("bootstrap practice transfer page host", () => {
         practiceTransferRuntime: { id: "runtime" },
         localStorageLike: { id: "local" },
         sessionStorageLike: { id: "session" },
-        guideShownKey: "guide_key",
-        guideSeenFlag: "guide_seen=1",
         localStorageKey: "local_key",
         sessionStorageKey: "session_key"
       })
@@ -169,8 +161,6 @@ describe("bootstrap practice transfer page host", () => {
           return opts.storageName === "localStorage" ? { id: "local" } : { id: "session" };
         }
       },
-      guideShownKey: "guide_key",
-      guideSeenFlag: "guide_seen=1",
       localStorageKey: "local_key",
       sessionStorageKey: "session_key",
       windowLike: {

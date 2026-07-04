@@ -129,7 +129,6 @@ describe("bootstrap settings modal page host", () => {
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
     const initWinPromptSettingsUI = vi.fn();
-    const initHomeGuideSettingsUI = vi.fn();
 
     const resolvers = createSettingsModalActionResolvers({
       settingsModalPageHostRuntime: {
@@ -142,8 +141,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     });
 
     resolvers.openSettingsModal();
@@ -156,8 +154,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     });
     expect(applySettingsModalPageClose).toHaveBeenCalledWith({
       settingsModalHostRuntime,
@@ -185,7 +182,6 @@ describe("bootstrap settings modal page host", () => {
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
     const initWinPromptSettingsUI = vi.fn();
-    const initHomeGuideSettingsUI = vi.fn();
 
     const result = applySettingsModalPageOpen({
       settingsModalHostRuntime: {
@@ -196,8 +192,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     });
 
     expect(applySettingsModalOpenOrchestration).toHaveBeenCalledWith({
@@ -206,8 +201,7 @@ describe("bootstrap settings modal page host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     });
     expect(result).toEqual({
       hasApplyOpenApi: true,

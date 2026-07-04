@@ -208,62 +208,6 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
     symbolName: "coreIndexUiStartupHostRuntimeUrl"
   },
   {
-    scriptPath: "core_home_guide_done_notice_host_runtime.js",
-    symbolName: "coreHomeGuideDoneNoticeHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_highlight_host_runtime.js",
-    symbolName: "coreHomeGuideHighlightHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_panel_host_runtime.js",
-    symbolName: "coreHomeGuidePanelHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_finish_host_runtime.js",
-    symbolName: "coreHomeGuideFinishHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_start_host_runtime.js",
-    symbolName: "coreHomeGuideStartHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_controls_host_runtime.js",
-    symbolName: "coreHomeGuideControlsHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_step_flow_host_runtime.js",
-    symbolName: "coreHomeGuideStepFlowHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_step_host_runtime.js",
-    symbolName: "coreHomeGuideStepHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_settings_host_runtime.js",
-    symbolName: "coreHomeGuideSettingsHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_startup_host_runtime.js",
-    symbolName: "coreHomeGuideStartupHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_page_host_runtime.js",
-    symbolName: "coreHomeGuidePageHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_runtime.js",
-    symbolName: "coreHomeGuideRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_dom_host_runtime.js",
-    symbolName: "coreHomeGuideDomHostRuntimeUrl"
-  },
-  {
-    scriptPath: "core_home_guide_step_view_host_runtime.js",
-    symbolName: "coreHomeGuideStepViewHostRuntimeUrl"
-  },
-  {
     scriptPath: "core_home_startup_host_runtime.js",
     symbolName: "coreHomeStartupHostRuntimeUrl"
   },
@@ -310,9 +254,6 @@ const RETIRED_RUNTIME_SCRIPT_MANIFEST_REFS = [
 ];
 
 const BUNDLED_RETIRED_RUNTIME_SCRIPT_REFS = [
-  {
-    scriptPath: "core_home_guide_runtime.js"
-  },
   {
     scriptPath: "core_special_rules_runtime.js"
   },

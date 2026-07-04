@@ -40,7 +40,6 @@
     if (invoke(source.initThemeSettingsUI)) initCallCount += 1;
     if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
     if (invoke(source.initWinPromptSettingsUI)) initCallCount += 1;
-    if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;
 
     return {
       didOpen: didOpen,

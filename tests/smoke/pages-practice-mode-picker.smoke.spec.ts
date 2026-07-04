@@ -36,8 +36,6 @@ async function openPracticeModePanel(page: import("@playwright/test").Page) {
 test.describe("Practice Board Mode Picker", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("practice_guide_shown_v2", "1");
-      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
     });
   });
 

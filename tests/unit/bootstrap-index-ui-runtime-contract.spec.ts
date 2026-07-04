@@ -4,7 +4,6 @@ import {
   resolveIndexUiRuntimeContracts,
   resolveIndexUiRuntimeContractsCompat,
   resolveIndexUiCoreRuntimeContracts,
-  resolveIndexUiHomeGuideRuntimeContracts,
   resolveIndexUiModalRuntimeContracts
 } from "../../src/bootstrap/index-ui-runtime-contract";
 
@@ -35,87 +34,6 @@ function createModalRuntimeContext() {
       createSettingsModalActionResolvers() {},
       applySettingsModalPageOpen() {},
       applySettingsModalPageClose() {}
-    }
-  };
-}
-
-function createHomeGuideRuntimeContext() {
-  return {
-    CoreHomeGuideRuntime: {
-      resolveHomeGuidePathname() {},
-      isHomePagePath() {},
-      buildHomeGuideSteps() {},
-      buildHomeGuidePanelInnerHtml() {},
-      buildHomeGuideSettingsRowInnerHtml() {},
-      readHomeGuideSeenValue() {},
-      markHomeGuideSeen() {},
-      shouldAutoStartHomeGuide() {},
-      resolveHomeGuideAutoStart() {},
-      resolveHomeGuideSettingsState() {},
-      resolveHomeGuideStepUiState() {},
-      resolveHomeGuideStepRenderState() {},
-      resolveHomeGuideStepIndexState() {},
-      resolveHomeGuideStepTargetState() {},
-      resolveHomeGuideElevationPlan() {},
-      resolveHomeGuideBindingState() {},
-      resolveHomeGuideControlAction() {},
-      resolveHomeGuideToggleAction() {},
-      resolveHomeGuideLifecycleState() {},
-      resolveHomeGuideSessionState() {},
-      resolveHomeGuideLayerDisplayState() {},
-      resolveHomeGuideFinishState() {},
-      resolveHomeGuideTargetScrollState() {},
-      resolveHomeGuideDoneNotice() {},
-      resolveHomeGuideDoneNoticeStyle() {},
-      resolveHomeGuidePanelLayout() {},
-      isHomeGuideTargetVisible() {}
-    },
-    CoreHomeGuideStartupHostRuntime: {
-      applyHomeGuideAutoStart() {}
-    },
-    CoreHomeGuideSettingsHostRuntime: {
-      applyHomeGuideSettingsUi() {}
-    },
-    CoreHomeGuidePageHostRuntime: {
-      createHomeGuidePageResolvers() {},
-      createHomeGuideLifecycleResolvers() {},
-      applyHomeGuideSettingsPageInit() {},
-      applyHomeGuideAutoStartPage() {},
-      applyHomeGuideAutoStartPageFromContext() {}
-    },
-    CoreHomeGuideDomHostRuntime: {
-      applyHomeGuideDomEnsure() {}
-    },
-    CoreHomeGuideDoneNoticeHostRuntime: {
-      applyHomeGuideDoneNotice() {}
-    },
-    CoreHomeGuideHighlightHostRuntime: {
-      applyHomeGuideHighlightClear() {},
-      applyHomeGuideTargetElevation() {}
-    },
-    CoreHomeGuidePanelHostRuntime: {
-      applyHomeGuidePanelPosition() {},
-      resolveHomeGuideTargetVisibility() {}
-    },
-    CoreHomeGuideFinishHostRuntime: {
-      applyHomeGuideFinish() {},
-      applyHomeGuideFinishFromContext() {}
-    },
-    CoreHomeGuideStartHostRuntime: {
-      applyHomeGuideStart() {}
-    },
-    CoreHomeGuideControlsHostRuntime: {
-      applyHomeGuideControls() {}
-    },
-    CoreHomeGuideStepFlowHostRuntime: {
-      applyHomeGuideStepFlow() {}
-    },
-    CoreHomeGuideStepHostRuntime: {
-      applyHomeGuideStep() {},
-      applyHomeGuideStepOrchestration() {}
-    },
-    CoreHomeGuideStepViewHostRuntime: {
-      applyHomeGuideStepView() {}
     }
   };
 }
@@ -159,7 +77,6 @@ function createCoreRuntimeContext() {
     },
     CorePracticeTransferRuntime: {
       buildPracticeModeConfigFromCurrent() {},
-      hasPracticeGuideSeen() {},
       buildPracticeBoardUrl() {},
       buildPracticeTransferToken() {},
       buildPracticeTransferPayload() {},
@@ -309,7 +226,6 @@ describe("bootstrap index ui runtime contract", () => {
   it("resolves runtime contracts from compat helper via aggregate entry", () => {
     const resolveIndexUiRuntimeContracts = vi.fn(() => ({
       modalContracts: { id: "modal" },
-      homeGuideContracts: { id: "guide" },
       coreContracts: { id: "core" }
     }));
     const runtimeLike = { resolveIndexUiRuntimeContracts };
@@ -319,17 +235,14 @@ describe("bootstrap index ui runtime contract", () => {
 
     expect(resolveIndexUiRuntimeContracts).toHaveBeenCalledWith(windowLike);
     expect(contracts.modalContracts).toEqual({ id: "modal" });
-    expect(contracts.homeGuideContracts).toEqual({ id: "guide" });
     expect(contracts.coreContracts).toEqual({ id: "core" });
   });
 
   it("resolves runtime contracts from compat helper via legacy entries", () => {
     const resolveIndexUiModalRuntimeContracts = vi.fn(() => ({ id: "modal" }));
-    const resolveIndexUiHomeGuideRuntimeContracts = vi.fn(() => ({ id: "guide" }));
     const resolveIndexUiCoreRuntimeContracts = vi.fn(() => ({ id: "core" }));
     const runtimeLike = {
       resolveIndexUiModalRuntimeContracts,
-      resolveIndexUiHomeGuideRuntimeContracts,
       resolveIndexUiCoreRuntimeContracts
     };
     const windowLike = { id: "window-like" };
@@ -337,10 +250,8 @@ describe("bootstrap index ui runtime contract", () => {
     const contracts = resolveIndexUiRuntimeContractsCompat(runtimeLike, windowLike);
 
     expect(resolveIndexUiModalRuntimeContracts).toHaveBeenCalledWith(windowLike);
-    expect(resolveIndexUiHomeGuideRuntimeContracts).toHaveBeenCalledWith(windowLike);
     expect(resolveIndexUiCoreRuntimeContracts).toHaveBeenCalledWith(windowLike);
     expect(contracts.modalContracts).toEqual({ id: "modal" });
-    expect(contracts.homeGuideContracts).toEqual({ id: "guide" });
     expect(contracts.coreContracts).toEqual({ id: "core" });
   });
 
@@ -353,13 +264,11 @@ describe("bootstrap index ui runtime contract", () => {
   it("resolves aggregated index ui runtime contracts bundle", () => {
     const context = {
       ...createModalRuntimeContext(),
-      ...createHomeGuideRuntimeContext(),
       ...createCoreRuntimeContext()
     };
     const contracts = resolveIndexUiRuntimeContracts(context);
 
     expect(typeof contracts.modalContracts.replayModalRuntime.applyReplayModalOpen).toBe("function");
-    expect(typeof contracts.homeGuideContracts.homeGuideRuntime.buildHomeGuideSteps).toBe("function");
     expect(typeof contracts.coreContracts.indexUiStartupHostRuntime.applyIndexUiStartup).toBe(
       "function"
     );
@@ -391,39 +300,6 @@ describe("bootstrap index ui runtime contract", () => {
     };
     expect(() => resolveIndexUiModalRuntimeContracts(context)).toThrowError(
       "CoreSettingsModalPageHostRuntime is required"
-    );
-  });
-
-  it("resolves home guide runtime contracts from window context", () => {
-    const contracts = resolveIndexUiHomeGuideRuntimeContracts(createHomeGuideRuntimeContext());
-    expect(typeof contracts.homeGuideRuntime.buildHomeGuideSteps).toBe("function");
-    expect(typeof contracts.homeGuideStepHostRuntime.applyHomeGuideStepOrchestration).toBe(
-      "function"
-    );
-    expect(typeof contracts.homeGuidePageHostRuntime.createHomeGuidePageResolvers).toBe("function");
-    expect(typeof contracts.homeGuidePageHostRuntime.createHomeGuideLifecycleResolvers).toBe(
-      "function"
-    );
-    expect(typeof contracts.homeGuidePageHostRuntime.applyHomeGuideAutoStartPageFromContext).toBe(
-      "function"
-    );
-  });
-
-  it("throws when home guide runtime contract is missing", () => {
-    const context = createHomeGuideRuntimeContext();
-    delete (context as { CoreHomeGuideRuntime?: unknown }).CoreHomeGuideRuntime;
-    expect(() => resolveIndexUiHomeGuideRuntimeContracts(context)).toThrowError(
-      "CoreHomeGuideRuntime is required"
-    );
-  });
-
-  it("throws when home guide step host runtime contract is incomplete", () => {
-    const context = createHomeGuideRuntimeContext();
-    context.CoreHomeGuideStepHostRuntime = {
-      applyHomeGuideStep() {}
-    };
-    expect(() => resolveIndexUiHomeGuideRuntimeContracts(context)).toThrowError(
-      "CoreHomeGuideStepHostRuntime is required"
     );
   });
 

@@ -53,7 +53,6 @@ describe("first-load performance assets", () => {
     const homeFamilyBootstrap = readFileSync("src/entries/home-family-bootstrap.ts", "utf8");
     const indexUiBootstrap = readFileSync("src/entries/index-ui-bootstrap.ts", "utf8");
     const idleOnlyRuntimeImports = [
-      '"../bootstrap/home-guide"',
       '"../bootstrap/settings-modal-page-host"',
       '"../bootstrap/replay-export"',
       '"../bootstrap/index-ui-startup-host"'
@@ -63,6 +62,8 @@ describe("first-load performance assets", () => {
       expect(homeFamilyBootstrap).not.toContain(runtimeImport);
       expect(indexUiBootstrap).toContain(runtimeImport);
     }
+    expect(homeFamilyBootstrap).not.toContain('"../bootstrap/home-guide"');
+    expect(indexUiBootstrap).not.toContain('"../bootstrap/home-guide"');
   });
 
   it("uses swap font loading for Clear Sans faces", () => {

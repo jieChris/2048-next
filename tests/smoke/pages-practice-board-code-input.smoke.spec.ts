@@ -25,7 +25,7 @@ async function readAndDismissGameDialogAlert(page: Page): Promise<string> {
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("practice board code input applies a valid board payload", async ({ page }) => {
-    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+    const response = await page.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Practice board response should exist").not.toBeNull();
@@ -76,7 +76,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("practice board code input rejects invalid payloads without changing the board", async ({ page }) => {
-    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+    const response = await page.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Practice board response should exist").not.toBeNull();
@@ -137,7 +137,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("practice board code input maps 12/8 digits to 4x3/4x2 and updates background grid", async ({ page }) => {
-    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+    const response = await page.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Practice board response should exist").not.toBeNull();
@@ -251,7 +251,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("practice board code input does not trigger game hotkeys while typing", async ({ page }) => {
-    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+    const response = await page.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Practice board response should exist").not.toBeNull();
@@ -312,7 +312,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("practice board code input rejects tiles above capped mode limit", async ({ page }) => {
-    const response = await page.goto("/Practice_board.html?practice_guide_seen=1", {
+    const response = await page.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Practice board response should exist").not.toBeNull();

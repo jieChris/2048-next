@@ -54,62 +54,6 @@ describe("bootstrap index ui page actions host", () => {
           };
         }
       },
-      homeGuidePageHostRuntime: {
-        createHomeGuidePageResolvers() {
-          trace.push("home-guide:page");
-          return {
-            isHomePage() {
-              trace.push("home-guide:is-home");
-              return true;
-            },
-            getHomeGuideSteps() {
-              trace.push("home-guide:steps");
-              return [];
-            },
-            ensureHomeGuideDom() {
-              trace.push("home-guide:ensure-dom");
-            },
-            clearHomeGuideHighlight() {
-              trace.push("home-guide:clear");
-            },
-            elevateHomeGuideTarget() {
-              trace.push("home-guide:elevate");
-            },
-            positionHomeGuidePanel() {
-              trace.push("home-guide:position");
-            },
-            isElementVisibleForGuide() {
-              trace.push("home-guide:visible");
-              return true;
-            },
-            showHomeGuideDoneNotice() {
-              trace.push("home-guide:done");
-            },
-            finishHomeGuide() {
-              trace.push("home-guide:finish");
-            },
-            showHomeGuideStep() {
-              trace.push("home-guide:step");
-            },
-            startHomeGuide() {
-              trace.push("home-guide:start");
-            }
-          };
-        },
-        createHomeGuideLifecycleResolvers() {
-          trace.push("home-guide:lifecycle");
-          return {
-            initHomeGuideSettingsUI() {
-              trace.push("home-guide:init-settings");
-              return "guide-settings";
-            },
-            autoStartHomeGuideIfNeeded() {
-              trace.push("home-guide:auto-start");
-              return "guide-auto";
-            }
-          };
-        }
-      },
       replayPageHostRuntime: {
         createReplayPageActionResolvers() {
           trace.push("replay:actions");
@@ -135,8 +79,6 @@ describe("bootstrap index ui page actions host", () => {
     expect(resolvers.removeLegacyUndoSettingsUI()).toBe("remove-legacy");
     expect(resolvers.initTimerModuleSettingsUI()).toBe("timer");
     expect(resolvers.openPracticeBoardFromCurrent()).toBe("practice");
-    expect(resolvers.initHomeGuideSettingsUI()).toBe("guide-settings");
-    expect(resolvers.autoStartHomeGuideIfNeeded()).toBe("guide-auto");
     expect(resolvers.exportReplay()).toBe("export");
     expect(resolvers.closeReplayModal()).toBe("close-replay");
     expect(resolvers.openSettingsModal()).toBe("open");
@@ -144,8 +86,6 @@ describe("bootstrap index ui page actions host", () => {
 
     expect(trace).toContain("settings:init");
     expect(trace).toContain("practice:actions");
-    expect(trace).toContain("home-guide:page");
-    expect(trace).toContain("home-guide:lifecycle");
     expect(trace).toContain("replay:actions");
   });
 
@@ -155,7 +95,7 @@ describe("bootstrap index ui page actions host", () => {
     );
   });
 
-  it("throws when home guide page resolver contract is incomplete", () => {
+  it("throws when replay page action resolver contract is incomplete", () => {
     expect(() =>
       createIndexUiPageActionResolvers({
         settingsModalPageHostRuntime: {
@@ -181,31 +121,15 @@ describe("bootstrap index ui page actions host", () => {
             };
           }
         },
-        homeGuidePageHostRuntime: {
-          createHomeGuidePageResolvers() {
-            return {
-              isHomePage() {
-                return true;
-              }
-            };
-          },
-          createHomeGuideLifecycleResolvers() {
-            return {
-              initHomeGuideSettingsUI() {},
-              autoStartHomeGuideIfNeeded() {}
-            };
-          }
-        },
         replayPageHostRuntime: {
           createReplayPageActionResolvers() {
             return {
               showReplayModal() {},
-              closeReplayModal() {},
-              exportReplay() {}
+              closeReplayModal() {}
             };
           }
         }
       })
-    ).toThrowError("CoreHomeGuidePageHostRuntime is required");
+    ).toThrowError("CoreReplayPageHostRuntime is required");
   });
 });

@@ -62,8 +62,6 @@ export function applyIndexUiStartup(input: {
   initTimerModuleSettingsUI?: unknown;
   initMobileHintToggle?: unknown;
   initMobileUndoTopButton?: unknown;
-  initHomeGuideSettingsUI?: unknown;
-  autoStartHomeGuideIfNeeded?: unknown;
   initMobileTimerboxToggle?: unknown;
   requestResponsiveGameRelayout?: unknown;
   nowMs?: unknown;
@@ -95,8 +93,6 @@ export function applyIndexUiStartup(input: {
   if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
   if (invoke(source.initMobileHintToggle)) initCallCount += 1;
   if (invoke(source.initMobileUndoTopButton)) initCallCount += 1;
-  if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;
-  if (invoke(source.autoStartHomeGuideIfNeeded)) initCallCount += 1;
 
   let appliedGameOverUndoBinding = false;
   const gameOverUndoHostRuntime = toRecord(source.gameOverUndoHostRuntime);

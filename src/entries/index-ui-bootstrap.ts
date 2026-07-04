@@ -2,20 +2,6 @@ import * as indexUiPageActionsHostRuntime from "../bootstrap/index-ui-page-actio
 import * as indexUiPageHostRuntime from "../bootstrap/index-ui-page-host";
 import * as indexUiPageResolversHostRuntime from "../bootstrap/index-ui-page-resolvers-host";
 import * as indexUiRuntimeContractRuntime from "../bootstrap/index-ui-runtime-contract";
-import { installHomeGuideRuntime } from "../bootstrap/home-guide";
-import { installHomeGuideControlsHostRuntime } from "../bootstrap/home-guide-controls-host";
-import { installHomeGuideDomHostRuntime } from "../bootstrap/home-guide-dom-host";
-import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-done-notice-host";
-import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
-import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-highlight-host";
-import { installHomeGuidePageHostRuntime } from "../bootstrap/home-guide-page-host";
-import { installHomeGuidePanelHostRuntime } from "../bootstrap/home-guide-panel-host";
-import { installHomeGuideSettingsHostRuntime } from "../bootstrap/home-guide-settings-host";
-import { installHomeGuideStartHostRuntime } from "../bootstrap/home-guide-start-host";
-import { installHomeGuideStartupHostRuntime } from "../bootstrap/home-guide-startup-host";
-import { installHomeGuideStepFlowHostRuntime } from "../bootstrap/home-guide-step-flow-host";
-import { installHomeGuideStepHostRuntime } from "../bootstrap/home-guide-step-host";
-import { installHomeGuideStepViewHostRuntime } from "../bootstrap/home-guide-step-view-host";
 import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
 import * as mobileHintRuntime from "../bootstrap/mobile-hint";
 import * as mobileHintHostRuntime from "../bootstrap/mobile-hint-host";
@@ -121,20 +107,6 @@ function installIndexUiRuntimeGlobals(): void {
 }
 
 function installIndexUiHostRuntimes(): void {
-  installHomeGuideRuntime();
-  installHomeGuideControlsHostRuntime();
-  installHomeGuideDomHostRuntime();
-  installHomeGuideDoneNoticeHostRuntime();
-  installHomeGuideFinishHostRuntime();
-  installHomeGuideHighlightHostRuntime();
-  installHomeGuidePanelHostRuntime();
-  installHomeGuidePageHostRuntime();
-  installHomeGuideSettingsHostRuntime();
-  installHomeGuideStartHostRuntime();
-  installHomeGuideStepFlowHostRuntime();
-  installHomeGuideStepHostRuntime();
-  installHomeGuideStepViewHostRuntime();
-  installHomeGuideStartupHostRuntime();
   installIndexUiStartupHostRuntime();
   installReplayExportRuntime();
   installReplayModalRuntime();
@@ -164,7 +136,6 @@ export function applyIndexUiBootstrapFromTsRuntime(): void {
     windowLike
   );
   const modalContracts = indexUiRuntimeContractsBundle.modalContracts;
-  const homeGuideContracts = indexUiRuntimeContractsBundle.homeGuideContracts;
   const coreContracts = indexUiRuntimeContractsBundle.coreContracts;
   const indexUiPageHostRuntimeGlobal = toRecord(coreContracts.indexUiPageHostRuntime);
   const createIndexUiTryUndoHandler = asFunction<(input: unknown) => () => boolean>(
@@ -188,7 +159,6 @@ export function applyIndexUiBootstrapFromTsRuntime(): void {
     indexUiPageActionsHostRuntime: coreContracts.indexUiPageActionsHostRuntime,
     coreContracts,
     modalContracts,
-    homeGuideContracts,
     documentLike: document,
     windowLike,
     tryUndoFromUi
@@ -211,8 +181,6 @@ export function applyIndexUiBootstrapFromTsRuntime(): void {
     initTimerModuleSettingsUI: indexUiBootstrapResolvers.initTimerModuleSettingsUI,
     initMobileHintToggle: indexUiBootstrapResolvers.initMobileHintToggle,
     initMobileUndoTopButton: indexUiBootstrapResolvers.initMobileUndoTopButton,
-    initHomeGuideSettingsUI: indexUiBootstrapResolvers.initHomeGuideSettingsUI,
-    autoStartHomeGuideIfNeeded: indexUiBootstrapResolvers.autoStartHomeGuideIfNeeded,
     initMobileTimerboxToggle: indexUiBootstrapResolvers.initMobileTimerboxToggle,
     requestResponsiveGameRelayout: indexUiBootstrapResolvers.requestResponsiveGameRelayout,
     syncMobileTimerboxUI: indexUiBootstrapResolvers.syncMobileTimerboxUI,

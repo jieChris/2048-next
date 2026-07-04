@@ -56,8 +56,6 @@
     if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
     if (invoke(source.initMobileHintToggle)) initCallCount += 1;
     if (invoke(source.initMobileUndoTopButton)) initCallCount += 1;
-    if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;
-    if (invoke(source.autoStartHomeGuideIfNeeded)) initCallCount += 1;
 
     var appliedGameOverUndoBinding = false;
     var gameOverUndoHostRuntime = toRecord(source.gameOverUndoHostRuntime);

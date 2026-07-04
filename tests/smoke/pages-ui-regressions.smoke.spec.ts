@@ -104,8 +104,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         await routeI18nAuditApi(page);
         await page.addInitScript((value) => {
           window.localStorage.setItem("ui_language_v1", value);
-          window.localStorage.setItem("practice_guide_shown_v2", "1");
-          window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
         }, lang);
         const response = await page.goto(target, { waitUntil: "domcontentloaded" });
         expect(response, `${target} response should exist`).not.toBeNull();
@@ -128,7 +126,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {
       window.localStorage.setItem("ui_language_v1", "en");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem("settings_timer_module_view_v1", "timer");
     });
 
@@ -175,7 +172,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem(
         "settings_timer_module_view_by_mode_v1",
         JSON.stringify({ standard_4x4_pow2_no_undo: "timer" })
@@ -265,7 +261,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "leaderboard-shell-token");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem(
         "settings_timer_module_view_by_mode_v1",
         JSON.stringify({ standard_4x4_pow2_no_undo: "hidden" })
@@ -314,7 +309,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("settings toolkit entry buttons align with their setting columns", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
@@ -409,72 +403,37 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(seeded).toBe(true);
   }
 
-  test("homepage guide overlay does not block timer scroll controls", async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.removeItem("home_guide_seen_v1");
-    });
-
+  test("homepage does not render the retired guide overlay", async ({ page }) => {
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(
-      page,
-      () => {
-        const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-        return (
-          !!(window as any).CoreHomeGuideRuntime?.buildHomeGuideSteps &&
-          !!overlay &&
-          window.getComputedStyle(overlay).display === "block" &&
-          String(document.body.className || "").indexOf("home-guide-active") !== -1
-        );
-      },
-      12_000
-    );
 
     const beforeClick = await page.evaluate(() => {
-      const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
       const row65536 = document.getElementById("timer-row-65536") as HTMLElement | null;
       return {
-        overlayDisplay: overlay ? window.getComputedStyle(overlay).display : null,
-        bodyClassName: String(document.body.className || ""),
-        row65536Display: row65536 ? window.getComputedStyle(row65536).display : null,
-        row65536Hidden: row65536 ? row65536.getAttribute("data-scroll-hidden") : null
+        hasGuideRuntime: !!(window as any).CoreHomeGuideRuntime,
+        hasGuideOverlay: !!document.getElementById("home-guide-overlay"),
+        bodyHasGuideClass: document.body.classList.contains("home-guide-active"),
+        row65536Exists: !!row65536
       };
     });
 
-    expect(beforeClick.overlayDisplay).toBe("block");
-    expect(beforeClick.bodyClassName).toContain("home-guide-active");
-    expect(beforeClick.row65536Display).toBe("none");
-    expect(beforeClick.row65536Hidden).toBe("1");
-
-    await page.locator('#timer-scroll-controls [data-scroll-dir="1"]').click();
-    await page.waitForTimeout(150);
-
-    const afterClick = await page.evaluate(() => {
-      const row65536 = document.getElementById("timer-row-65536") as HTMLElement | null;
-      return {
-        row65536Display: row65536 ? window.getComputedStyle(row65536).display : null,
-        row65536Hidden: row65536 ? row65536.getAttribute("data-scroll-hidden") : null
-      };
-    });
-
-    expect(afterClick.row65536Display).not.toBe("none");
-    expect(afterClick.row65536Hidden).not.toBe("1");
+    expect(beforeClick.hasGuideRuntime).toBe(false);
+    expect(beforeClick.hasGuideOverlay).toBe(false);
+    expect(beforeClick.bodyHasGuideClass).toBe(false);
+    expect(beforeClick.row65536Exists).toBe(true);
   });
 
-  test("homepage guide overlay does not block export replay action", async ({ page }) => {
+  test("export replay action works without retired guide runtime", async ({ page }) => {
     await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
       clearPrefetch: true,
       clearSavedState: true,
       seed: 602,
       token: "smoke-token-guide-export"
     });
-    await page.addInitScript(() => {
-      window.localStorage.removeItem("home_guide_seen_v1");
-    });
 
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
@@ -482,19 +441,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(
-      page,
-      () => {
-        const overlay = document.getElementById("home-guide-overlay") as HTMLElement | null;
-        return (
-          !!overlay &&
-          window.getComputedStyle(overlay).display === "block" &&
-          String(document.body.className || "").indexOf("home-guide-active") !== -1 &&
-          typeof (window as any).exportReplay === "function"
-        );
-      },
-      12_000
-    );
+    await page.waitForFunction(() => typeof (window as any).exportReplay === "function");
+    await expect(page.locator("#home-guide-overlay")).toHaveCount(0);
 
     await page.locator("#top-export-replay-btn").click();
     await expect(page.locator("#replay-modal")).toBeVisible();
@@ -592,8 +540,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     page
   }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("practice_guide_shown_v2", "1");
-      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
     });
 
     const response = await page.goto("/PKU2048.html?practice_fresh=1", {
@@ -721,8 +667,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("practice board keeps setup editable after first move", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("practice_guide_shown_v2", "1");
-      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
     });
 
     const response = await page.goto("/Practice_board.html?practice_fresh=1", {
@@ -820,7 +764,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Bob");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/2048.html", {
@@ -986,7 +929,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
@@ -1066,7 +1008,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
     });
@@ -1142,7 +1083,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     try {
@@ -1220,7 +1160,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Hui");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     try {

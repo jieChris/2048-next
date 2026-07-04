@@ -73,9 +73,6 @@ describe("home family bootstrap ranked session ordering", () => {
     const idleCallbacks: Array<() => void> = [];
     const installSettingsModalHostRuntime = vi.fn();
     const installSettingsModalPageHostRuntime = vi.fn();
-    const installHomeGuideRuntime = vi.fn();
-    const installHomeGuideSettingsHostRuntime = vi.fn();
-    const installHomeGuideStartupHostRuntime = vi.fn();
     const installIndexUiStartupHostRuntime = vi.fn();
     const applyIndexUiBootstrapFromTsRuntime = vi.fn();
     const applyIndexUiPageBootstrap = vi.fn();
@@ -90,8 +87,6 @@ describe("home family bootstrap ranked session ordering", () => {
       initTimerModuleSettingsUI: vi.fn(),
       initMobileHintToggle: vi.fn(),
       initMobileUndoTopButton: vi.fn(),
-      initHomeGuideSettingsUI: vi.fn(),
-      autoStartHomeGuideIfNeeded: vi.fn(),
       initMobileTimerboxToggle: vi.fn(),
       requestResponsiveGameRelayout: vi.fn(),
       syncMobileTimerboxUI: vi.fn(),
@@ -153,15 +148,6 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/bootstrap/settings-modal-page-host", () => ({
       installSettingsModalPageHostRuntime
     }));
-    vi.doMock("../../src/bootstrap/home-guide", () => ({
-      installHomeGuideRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-settings-host", () => ({
-      installHomeGuideSettingsHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-startup-host", () => ({
-      installHomeGuideStartupHostRuntime
-    }));
     vi.doMock("../../src/bootstrap/index-ui-startup-host", () => ({
       installIndexUiStartupHostRuntime
     }));
@@ -169,7 +155,6 @@ describe("home family bootstrap ranked session ordering", () => {
       const actual = await importOriginal<typeof import("../../src/bootstrap/index-ui-runtime-contract")>();
       const contracts = {
         modalContracts: {},
-        homeGuideContracts: {},
         coreContracts: {
           gameOverUndoHostRuntime: {},
           indexUiStartupHostRuntime: {},
@@ -240,9 +225,6 @@ describe("home family bootstrap ranked session ordering", () => {
     const loadedScriptText = loadCalls.flat().join("\n");
     expect(installSettingsModalHostRuntime).not.toHaveBeenCalled();
     expect(installSettingsModalPageHostRuntime).not.toHaveBeenCalled();
-    expect(installHomeGuideRuntime).not.toHaveBeenCalled();
-    expect(installHomeGuideSettingsHostRuntime).not.toHaveBeenCalled();
-    expect(installHomeGuideStartupHostRuntime).not.toHaveBeenCalled();
     expect(installIndexUiStartupHostRuntime).not.toHaveBeenCalled();
     expect(loadedScriptText).not.toContain("home_standard_deferred_bundle.js");
     expect(loadedScriptText).toContain("core_bgm_runtime.js");

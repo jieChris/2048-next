@@ -29,7 +29,6 @@ export function applySettingsModalOpenOrchestration(input: {
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
   initWinPromptSettingsUI?: unknown;
-  initHomeGuideSettingsUI?: unknown;
 }): SettingsModalOpenHostResult {
   const source = toRecord(input);
   const replayModalRuntime = toRecord(source.replayModalRuntime);
@@ -50,7 +49,6 @@ export function applySettingsModalOpenOrchestration(input: {
   if (invoke(source.initThemeSettingsUI)) initCallCount += 1;
   if (invoke(source.initTimerModuleSettingsUI)) initCallCount += 1;
   if (invoke(source.initWinPromptSettingsUI)) initCallCount += 1;
-  if (invoke(source.initHomeGuideSettingsUI)) initCallCount += 1;
 
   return {
     didOpen,

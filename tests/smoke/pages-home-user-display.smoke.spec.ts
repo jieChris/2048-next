@@ -237,7 +237,6 @@ test.describe("Home user display", () => {
 
   test("settings toolkit links align with the setting columns", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/2048.html?toolkit-align-smoke=1", {

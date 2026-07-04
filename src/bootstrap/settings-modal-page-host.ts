@@ -283,15 +283,13 @@ const CANONICAL_SETTINGS_ROW_IDS = [
   "timer-module-view-toggle",
   "top-button-style-settings-row",
   "ui-language-settings-row",
-  "home-guide-trigger-btn",
   "toolkit-entry-row"
 ] as const;
 
 const DYNAMIC_SETTINGS_ROW_IDS = [
   "timer-module-view-toggle",
   "top-button-style-settings-row",
-  "ui-language-settings-row",
-  "home-guide-trigger-btn"
+  "ui-language-settings-row"
 ] as const;
 
 function reorderSettingsRows(content: unknown): void {
@@ -503,7 +501,6 @@ export function createSettingsModalActionResolvers(input: {
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
   initWinPromptSettingsUI?: unknown;
-  initHomeGuideSettingsUI?: unknown;
 }): SettingsModalActionResolvers {
   const source = toRecord(input);
   const pageHostRuntime = toRecord(source.settingsModalPageHostRuntime);
@@ -521,8 +518,7 @@ export function createSettingsModalActionResolvers(input: {
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-        initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-        initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+        initWinPromptSettingsUI: source.initWinPromptSettingsUI
       });
     }
     return applySettingsModalPageOpen({
@@ -533,8 +529,7 @@ export function createSettingsModalActionResolvers(input: {
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-      initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-      initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+      initWinPromptSettingsUI: source.initWinPromptSettingsUI
     });
   }
 
@@ -576,7 +571,6 @@ export function applySettingsModalPageOpen(input: {
   initThemeSettingsUI?: unknown;
   initTimerModuleSettingsUI?: unknown;
   initWinPromptSettingsUI?: unknown;
-  initHomeGuideSettingsUI?: unknown;
 }): SettingsModalPageOpenResult {
   const source = toRecord(input);
   const hostRuntime = toRecord(source.settingsModalHostRuntime);
@@ -601,8 +595,7 @@ export function applySettingsModalPageOpen(input: {
     removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
     initThemeSettingsUI: source.initThemeSettingsUI,
     initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-    initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-    initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+    initWinPromptSettingsUI: source.initWinPromptSettingsUI
   });
 
   return {

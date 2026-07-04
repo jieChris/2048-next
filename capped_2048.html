@@ -22,37 +22,6 @@
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; script-src 'self' 'unsafe-inline' https://www.google-analytics.com; style-src 'self' 'unsafe-inline';">
   <style>
-    #guide-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 2000;
-        display: none;
-    }
-    #guide-message {
-        position: absolute;
-        color: white;
-        font-weight: bold;
-        font-size: 24px;
-        z-index: 2002;
-        pointer-events: none;
-    }
-    #guide-arrow {
-        font-size: 40px;
-        display: block;
-        line-height: 1;
-        margin-bottom: 5px;
-    }
-    .guide-highlight {
-        position: relative;
-        z-index: 2001;
-        background: #faf8ef;
-        box-shadow: 0 0 0 5px #faf8ef, 0 0 20px 10px rgba(255, 255, 255, 0.5);
-        border-radius: 4px;
-    }
     .timer-scroll-btn {
         display: inline-flex;
         align-items: center;
@@ -108,11 +77,6 @@
   </style>
 </head>
 <body data-mode-id="capped_4x4_pow2_no_undo" data-page="game">
-  <div id="guide-overlay">
-      <div id="guide-message">
-          <span id="guide-arrow">→</span>
-          点击下方数字后点击棋盘，可自定义当前盘面。     </div>
-  </div>
   <div class="container">
     <div class="stats-left">
       <div id="stats-4-rate">4率: 10%</div>

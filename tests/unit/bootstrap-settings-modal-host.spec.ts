@@ -12,7 +12,6 @@ describe("bootstrap settings modal host", () => {
     const initThemeSettingsUI = vi.fn();
     const initTimerModuleSettingsUI = vi.fn();
     const initWinPromptSettingsUI = vi.fn();
-    const initHomeGuideSettingsUI = vi.fn();
     const documentLike = { key: "document" };
 
     const result = applySettingsModalOpenOrchestration({
@@ -23,13 +22,12 @@ describe("bootstrap settings modal host", () => {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     });
 
     expect(result).toEqual({
       didOpen: true,
-      initCallCount: 5
+      initCallCount: 4
     });
     expect(applySettingsModalOpen).toHaveBeenCalledTimes(1);
     expect(applySettingsModalOpen).toHaveBeenCalledWith({
@@ -39,7 +37,6 @@ describe("bootstrap settings modal host", () => {
     expect(initThemeSettingsUI).toHaveBeenCalledTimes(1);
     expect(initTimerModuleSettingsUI).toHaveBeenCalledTimes(1);
     expect(initWinPromptSettingsUI).toHaveBeenCalledTimes(1);
-    expect(initHomeGuideSettingsUI).toHaveBeenCalledTimes(1);
   });
 
   it("returns partial open result when replay runtime is missing", () => {

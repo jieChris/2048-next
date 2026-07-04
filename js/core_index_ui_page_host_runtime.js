@@ -84,7 +84,6 @@
     var source = toRecord(input);
     var coreContracts = toRecord(source.coreContracts);
     var modalContracts = toRecord(source.modalContracts);
-    var homeGuideContracts = toRecord(source.homeGuideContracts);
     var environment = resolveIndexUiBootstrapEnvironment(source);
 
     var createIndexUiMobileResolvers = asFunction(
@@ -176,14 +175,6 @@
       throw new Error("CoreIndexUiPageActionsHostRuntime is required");
     }
 
-    var practiceGuideShownKey =
-      typeof source.practiceGuideShownKey === "string" && source.practiceGuideShownKey
-        ? source.practiceGuideShownKey
-        : "practice_guide_shown_v2";
-    var practiceGuideSeenFlag =
-      typeof source.practiceGuideSeenFlag === "string" && source.practiceGuideSeenFlag
-        ? source.practiceGuideSeenFlag
-        : "practice_guide_seen_v2=1";
     var practiceTransferKey =
       typeof source.practiceTransferKey === "string" && source.practiceTransferKey
         ? source.practiceTransferKey
@@ -192,27 +183,6 @@
       typeof source.practiceTransferSessionKey === "string" && source.practiceTransferSessionKey
         ? source.practiceTransferSessionKey
         : "practice_board_transfer_session_v1";
-    var homeGuideSeenKey =
-      typeof source.homeGuideSeenKey === "string" && source.homeGuideSeenKey
-        ? source.homeGuideSeenKey
-        : "home_guide_seen_v1";
-    var homeGuidePanelMargin =
-      typeof source.homeGuidePanelMargin === "number" && isFinite(source.homeGuidePanelMargin)
-        ? source.homeGuidePanelMargin
-        : 12;
-    var homeGuideDefaultPanelHeight =
-      typeof source.homeGuideDefaultPanelHeight === "number" &&
-      isFinite(source.homeGuideDefaultPanelHeight)
-        ? source.homeGuideDefaultPanelHeight
-        : 160;
-    var homeGuideMaxAdvanceLoops =
-      typeof source.homeGuideMaxAdvanceLoops === "number" && isFinite(source.homeGuideMaxAdvanceLoops)
-        ? source.homeGuideMaxAdvanceLoops
-        : 32;
-    var homeGuideAutoStartDelayMs =
-      typeof source.homeGuideAutoStartDelayMs === "number" && isFinite(source.homeGuideAutoStartDelayMs)
-        ? source.homeGuideAutoStartDelayMs
-        : 0;
 
     var pageActionResolvers = toRecord(
       createIndexUiPageActionResolvers({
@@ -229,20 +199,6 @@
         practiceTransferHostRuntime: coreContracts.practiceTransferHostRuntime,
         practiceTransferRuntime: coreContracts.practiceTransferRuntime,
         storageRuntime: coreContracts.storageRuntime,
-        homeGuidePageHostRuntime: homeGuideContracts.homeGuidePageHostRuntime,
-        homeGuideRuntime: homeGuideContracts.homeGuideRuntime,
-        homeGuideDomHostRuntime: homeGuideContracts.homeGuideDomHostRuntime,
-        homeGuideHighlightHostRuntime: homeGuideContracts.homeGuideHighlightHostRuntime,
-        homeGuidePanelHostRuntime: homeGuideContracts.homeGuidePanelHostRuntime,
-        homeGuideDoneNoticeHostRuntime: homeGuideContracts.homeGuideDoneNoticeHostRuntime,
-        homeGuideFinishHostRuntime: homeGuideContracts.homeGuideFinishHostRuntime,
-        homeGuideStepHostRuntime: homeGuideContracts.homeGuideStepHostRuntime,
-        homeGuideStepFlowHostRuntime: homeGuideContracts.homeGuideStepFlowHostRuntime,
-        homeGuideStepViewHostRuntime: homeGuideContracts.homeGuideStepViewHostRuntime,
-        homeGuideStartHostRuntime: homeGuideContracts.homeGuideStartHostRuntime,
-        homeGuideControlsHostRuntime: homeGuideContracts.homeGuideControlsHostRuntime,
-        homeGuideSettingsHostRuntime: homeGuideContracts.homeGuideSettingsHostRuntime,
-        homeGuideStartupHostRuntime: homeGuideContracts.homeGuideStartupHostRuntime,
         mobileViewportRuntime: coreContracts.mobileViewportRuntime,
         replayPageHostRuntime: modalContracts.replayPageHostRuntime,
         replayExportRuntime: modalContracts.replayExportRuntime,
@@ -255,16 +211,8 @@
         consoleLike: environment.consoleLike,
         setTimeoutLike: environment.setTimeoutLike,
         clearTimeoutLike: environment.clearTimeoutLike,
-        guideShownKey: practiceGuideShownKey,
-        guideSeenFlag: practiceGuideSeenFlag,
         localStorageKey: practiceTransferKey,
-        sessionStorageKey: practiceTransferSessionKey,
-        homeGuideSeenKey: homeGuideSeenKey,
-        homeGuideMobileUiMaxWidth: mobileUiMaxWidth,
-        homeGuidePanelMargin: homeGuidePanelMargin,
-        homeGuideDefaultPanelHeight: homeGuideDefaultPanelHeight,
-        homeGuideMaxAdvanceLoops: homeGuideMaxAdvanceLoops,
-        homeGuideAutoStartDelayMs: homeGuideAutoStartDelayMs
+        sessionStorageKey: practiceTransferSessionKey
       })
     );
 
@@ -281,8 +229,6 @@
       removeLegacyUndoSettingsUI: pageActionResolvers.removeLegacyUndoSettingsUI,
       initTimerModuleSettingsUI: pageActionResolvers.initTimerModuleSettingsUI,
       openPracticeBoardFromCurrent: pageActionResolvers.openPracticeBoardFromCurrent,
-      initHomeGuideSettingsUI: pageActionResolvers.initHomeGuideSettingsUI,
-      autoStartHomeGuideIfNeeded: pageActionResolvers.autoStartHomeGuideIfNeeded,
       closeReplayModal: pageActionResolvers.closeReplayModal,
       exportReplay: pageActionResolvers.exportReplay,
       openSettingsModal: pageActionResolvers.openSettingsModal,
@@ -369,8 +315,6 @@
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
         initMobileHintToggle: source.initMobileHintToggle,
         initMobileUndoTopButton: source.initMobileUndoTopButton,
-        initHomeGuideSettingsUI: source.initHomeGuideSettingsUI,
-        autoStartHomeGuideIfNeeded: source.autoStartHomeGuideIfNeeded,
         initMobileTimerboxToggle: source.initMobileTimerboxToggle,
         requestResponsiveGameRelayout: source.requestResponsiveGameRelayout,
         nowMs: nowMs

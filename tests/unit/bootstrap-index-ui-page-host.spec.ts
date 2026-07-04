@@ -99,12 +99,6 @@ describe("bootstrap index ui page host", () => {
             openPracticeBoardFromCurrent() {
               trace.push("actions:open-practice");
             },
-            initHomeGuideSettingsUI() {
-              trace.push("actions:init-home-guide");
-            },
-            autoStartHomeGuideIfNeeded() {
-              trace.push("actions:auto-home-guide");
-            },
             closeReplayModal() {
               trace.push("actions:close-replay");
             },
@@ -161,22 +155,6 @@ describe("bootstrap index ui page host", () => {
         replayModalRuntime: { id: "replay-modal-runtime" },
         replayPageHostRuntime: { id: "replay-page-host" },
         replayExportRuntime: { id: "replay-export-runtime" }
-      },
-      homeGuideContracts: {
-        homeGuidePageHostRuntime: { id: "home-guide-page" },
-        homeGuideRuntime: { id: "home-guide-runtime" },
-        homeGuideDomHostRuntime: { id: "home-guide-dom-host" },
-        homeGuideHighlightHostRuntime: { id: "home-guide-highlight-host" },
-        homeGuidePanelHostRuntime: { id: "home-guide-panel-host" },
-        homeGuideDoneNoticeHostRuntime: { id: "home-guide-done-notice-host" },
-        homeGuideFinishHostRuntime: { id: "home-guide-finish-host" },
-        homeGuideStepHostRuntime: { id: "home-guide-step-host" },
-        homeGuideStepFlowHostRuntime: { id: "home-guide-step-flow-host" },
-        homeGuideStepViewHostRuntime: { id: "home-guide-step-view-host" },
-        homeGuideStartHostRuntime: { id: "home-guide-start-host" },
-        homeGuideControlsHostRuntime: { id: "home-guide-controls-host" },
-        homeGuideSettingsHostRuntime: { id: "home-guide-settings-host" },
-        homeGuideStartupHostRuntime: { id: "home-guide-startup-host" }
       },
       documentLike: { body: { id: "body" } },
       windowLike,
@@ -248,8 +226,6 @@ describe("bootstrap index ui page host", () => {
       initTimerModuleSettingsUI: vi.fn(),
       initMobileHintToggle: vi.fn(),
       initMobileUndoTopButton: vi.fn(),
-      initHomeGuideSettingsUI: vi.fn(),
-      autoStartHomeGuideIfNeeded: vi.fn(),
       initMobileTimerboxToggle: vi.fn(),
       requestResponsiveGameRelayout: vi.fn(),
       syncMobileTimerboxUI: vi.fn(),

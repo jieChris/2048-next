@@ -15,15 +15,6 @@
     return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
   }
 
-  function safeReadStorageItem(storage, key) {
-    if (!storage || !key) return null;
-    try {
-      return storage.getItem(key);
-    } catch (_err) {
-      return null;
-    }
-  }
-
   function safeSetStorageItem(storage, key, value) {
     if (!storage || !key || typeof storage.setItem !== "function") return false;
     try {
@@ -34,40 +25,9 @@
     }
   }
 
-  function hasCookieFlag(cookie, key, value) {
-    if (!cookie || !key) return false;
-    return cookie.indexOf(key + "=" + value) !== -1;
-  }
-
-  function hasWindowNameFlag(windowName, flag) {
-    if (!windowName || !flag) return false;
-    return windowName.indexOf(flag) !== -1;
-  }
-
   function appendQueryParam(url, key, value) {
     var sep = url.indexOf("?") === -1 ? "?" : "&";
     return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-  }
-
-  function hasPracticeGuideSeen(options) {
-    var opts = options || {};
-    var guideShownKey =
-      typeof opts.guideShownKey === "string" && opts.guideShownKey
-        ? opts.guideShownKey
-        : "practice_guide_shown_v2";
-    var guideSeenFlag =
-      typeof opts.guideSeenFlag === "string" && opts.guideSeenFlag
-        ? opts.guideSeenFlag
-        : "practice_guide_seen_v2=1";
-    var cookie = typeof opts.cookie === "string" ? opts.cookie : "";
-    var windowName = typeof opts.windowName === "string" ? opts.windowName : "";
-
-    return (
-      safeReadStorageItem(opts.localStorageLike || null, guideShownKey) === "1" ||
-      safeReadStorageItem(opts.sessionStorageLike || null, guideShownKey) === "1" ||
-      hasCookieFlag(cookie, guideShownKey, "1") ||
-      hasWindowNameFlag(windowName, guideSeenFlag)
-    );
   }
 
   function buildPracticeBoardUrl(options) {
@@ -86,9 +46,6 @@
     url = appendQueryParam(url, "practice_ruleset", ruleset);
     if (practiceModeKey) {
       url = appendQueryParam(url, "practice_mode_key", practiceModeKey);
-    }
-    if (opts.includeGuideSeen) {
-      url = appendQueryParam(url, "practice_guide_seen", "1");
     }
     if (opts.includePayload && typeof opts.payload === "string" && opts.payload) {
       url = appendQueryParam(url, "practice_payload", opts.payload);
@@ -183,19 +140,10 @@
       nowMs: opts.nowMs
     });
     var payloadString = JSON.stringify(payload);
-    var guideSeen = hasPracticeGuideSeen({
-      localStorageLike: opts.localStorageLike || null,
-      sessionStorageLike: opts.sessionStorageLike || null,
-      guideShownKey: opts.guideShownKey,
-      guideSeenFlag: opts.guideSeenFlag,
-      cookie: opts.cookie,
-      windowName: opts.windowName
-    });
     var baseUrl = buildPracticeBoardUrl({
       token: token,
       practiceRuleset: practiceRuleset,
       practiceModeKey: practiceModeKey,
-      includeGuideSeen: guideSeen,
       basePath: opts.basePath
     });
     var persistResult = persistPracticeTransferPayload({
@@ -212,7 +160,6 @@
         modeConfig: modeConfig,
         payload: payload,
         payloadString: payloadString,
-        guideSeen: guideSeen,
         persisted: true,
         persistedTarget: persistResult.target,
         openUrl: baseUrl,
@@ -224,7 +171,6 @@
       token: token,
       practiceRuleset: practiceRuleset,
       practiceModeKey: practiceModeKey,
-      includeGuideSeen: guideSeen,
       includePayload: true,
       payload: payloadString,
       basePath: opts.basePath
@@ -235,7 +181,6 @@
       modeConfig: modeConfig,
       payload: payload,
       payloadString: payloadString,
-      guideSeen: guideSeen,
       persisted: false,
       persistedTarget: persistResult.target,
       openUrl: urlWithPayload,
@@ -317,7 +262,6 @@
   global.CorePracticeTransferRuntime = global.CorePracticeTransferRuntime || {};
   global.CorePracticeTransferRuntime.cloneJsonSafe = cloneJsonSafe;
   global.CorePracticeTransferRuntime.appendQueryParam = appendQueryParam;
-  global.CorePracticeTransferRuntime.hasPracticeGuideSeen = hasPracticeGuideSeen;
   global.CorePracticeTransferRuntime.buildPracticeBoardUrl = buildPracticeBoardUrl;
   global.CorePracticeTransferRuntime.buildPracticeTransferToken = buildPracticeTransferToken;
   global.CorePracticeTransferRuntime.buildPracticeTransferPayload = buildPracticeTransferPayload;

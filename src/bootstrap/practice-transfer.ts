@@ -34,20 +34,10 @@ export interface StorageLike {
   setItem?(key: string, value: string): void;
 }
 
-export interface PracticeGuideSeenOptions {
-  localStorageLike?: StorageLike | null | undefined;
-  sessionStorageLike?: StorageLike | null | undefined;
-  guideShownKey?: string | null | undefined;
-  guideSeenFlag?: string | null | undefined;
-  cookie?: string | null | undefined;
-  windowName?: string | null | undefined;
-}
-
 export interface BuildPracticeBoardUrlOptions {
   token: string;
   practiceRuleset?: string | null | undefined;
   practiceModeKey?: string | null | undefined;
-  includeGuideSeen?: boolean;
   includePayload?: boolean;
   payload?: string | null | undefined;
   basePath?: string | null | undefined;
@@ -90,10 +80,6 @@ export interface CreatePracticeTransferNavigationPlanOptions extends PracticeTra
   board: unknown;
   localStorageLike?: StorageLike | null | undefined;
   sessionStorageLike?: StorageLike | null | undefined;
-  guideShownKey?: string | null | undefined;
-  guideSeenFlag?: string | null | undefined;
-  cookie?: string | null | undefined;
-  windowName?: string | null | undefined;
   localStorageKey?: string | null | undefined;
   sessionStorageKey?: string | null | undefined;
   nowMs?: number | null | undefined;
@@ -108,7 +94,6 @@ export interface PracticeTransferNavigationPlan {
   modeConfig: PracticeTransferModeConfig;
   payload: PracticeTransferPayload;
   payloadString: string;
-  guideSeen: boolean;
   persisted: boolean;
   persistedTarget: "local" | "session" | "none";
   openUrl: string;
@@ -137,15 +122,6 @@ function toPositiveInt(value: unknown, fallback: number): number {
   return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
 }
 
-function safeReadStorageItem(storage: StorageLike | null | undefined, key: string): string | null {
-  if (!storage || !key) return null;
-  try {
-    return storage.getItem(key);
-  } catch (_err) {
-    return null;
-  }
-}
-
 function safeSetStorageItem(storage: StorageLike | null | undefined, key: string, value: string): boolean {
   if (!storage || !key || typeof storage.setItem !== "function") return false;
   try {
@@ -156,36 +132,9 @@ function safeSetStorageItem(storage: StorageLike | null | undefined, key: string
   }
 }
 
-function hasCookieFlag(cookie: string, key: string, value: string): boolean {
-  if (!cookie || !key) return false;
-  return cookie.indexOf(key + "=" + value) !== -1;
-}
-
-function hasWindowNameFlag(windowName: string, flag: string): boolean {
-  if (!windowName || !flag) return false;
-  return windowName.indexOf(flag) !== -1;
-}
-
 export function appendQueryParam(url: string, key: string, value: string): string {
   const sep = url.indexOf("?") === -1 ? "?" : "&";
   return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-}
-
-export function hasPracticeGuideSeen(options: PracticeGuideSeenOptions): boolean {
-  const opts = options || {};
-  const guideShownKey =
-    typeof opts.guideShownKey === "string" && opts.guideShownKey ? opts.guideShownKey : "practice_guide_shown_v2";
-  const guideSeenFlag =
-    typeof opts.guideSeenFlag === "string" && opts.guideSeenFlag ? opts.guideSeenFlag : "practice_guide_seen_v2=1";
-  const cookie = typeof opts.cookie === "string" ? opts.cookie : "";
-  const windowName = typeof opts.windowName === "string" ? opts.windowName : "";
-
-  return (
-    safeReadStorageItem(opts.localStorageLike || null, guideShownKey) === "1" ||
-    safeReadStorageItem(opts.sessionStorageLike || null, guideShownKey) === "1" ||
-    hasCookieFlag(cookie, guideShownKey, "1") ||
-    hasWindowNameFlag(windowName, guideSeenFlag)
-  );
 }
 
 export function buildPracticeBoardUrl(options: BuildPracticeBoardUrlOptions): string {
@@ -201,9 +150,6 @@ export function buildPracticeBoardUrl(options: BuildPracticeBoardUrlOptions): st
   url = appendQueryParam(url, "practice_ruleset", ruleset);
   if (practiceModeKey) {
     url = appendQueryParam(url, "practice_mode_key", practiceModeKey);
-  }
-  if (opts.includeGuideSeen) {
-    url = appendQueryParam(url, "practice_guide_seen", "1");
   }
   if (opts.includePayload && typeof opts.payload === "string" && opts.payload) {
     url = appendQueryParam(url, "practice_payload", opts.payload);
@@ -300,19 +246,10 @@ export function createPracticeTransferNavigationPlan(
     nowMs: opts.nowMs
   });
   const payloadString = JSON.stringify(payload);
-  const guideSeen = hasPracticeGuideSeen({
-    localStorageLike: opts.localStorageLike || null,
-    sessionStorageLike: opts.sessionStorageLike || null,
-    guideShownKey: opts.guideShownKey,
-    guideSeenFlag: opts.guideSeenFlag,
-    cookie: opts.cookie,
-    windowName: opts.windowName
-  });
   const baseUrl = buildPracticeBoardUrl({
     token,
     practiceRuleset,
     practiceModeKey,
-    includeGuideSeen: guideSeen,
     basePath: opts.basePath
   });
   const persistResult = persistPracticeTransferPayload({
@@ -329,7 +266,6 @@ export function createPracticeTransferNavigationPlan(
       modeConfig,
       payload,
       payloadString,
-      guideSeen,
       persisted: true,
       persistedTarget: persistResult.target,
       openUrl: baseUrl,
@@ -341,7 +277,6 @@ export function createPracticeTransferNavigationPlan(
     token,
     practiceRuleset,
     practiceModeKey,
-    includeGuideSeen: guideSeen,
     includePayload: true,
     payload: payloadString,
     basePath: opts.basePath
@@ -352,7 +287,6 @@ export function createPracticeTransferNavigationPlan(
     modeConfig,
     payload,
     payloadString,
-    guideSeen,
     persisted: false,
     persistedTarget: persistResult.target,
     openUrl: urlWithPayload,

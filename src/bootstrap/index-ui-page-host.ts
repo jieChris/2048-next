@@ -29,8 +29,6 @@ export interface IndexUiBootstrapResolvers {
   removeLegacyUndoSettingsUI: unknown;
   initTimerModuleSettingsUI: unknown;
   openPracticeBoardFromCurrent: unknown;
-  initHomeGuideSettingsUI: unknown;
-  autoStartHomeGuideIfNeeded: unknown;
   closeReplayModal: unknown;
   exportReplay: unknown;
   openSettingsModal: unknown;
@@ -122,7 +120,6 @@ export function createIndexUiBootstrapResolvers(input: {
   indexUiPageActionsHostRuntime?: unknown;
   coreContracts?: unknown;
   modalContracts?: unknown;
-  homeGuideContracts?: unknown;
   documentLike?: unknown;
   windowLike?: unknown;
   locationLike?: unknown;
@@ -134,22 +131,14 @@ export function createIndexUiBootstrapResolvers(input: {
   tryUndoFromUi?: unknown;
   practiceTransferKey?: unknown;
   practiceTransferSessionKey?: unknown;
-  practiceGuideShownKey?: unknown;
-  practiceGuideSeenFlag?: unknown;
   mobileTimerboxCollapsedKey?: unknown;
   mobileUiMaxWidth?: unknown;
   timerboxCollapseMaxWidth?: unknown;
   compactGameViewportMaxWidth?: unknown;
-  homeGuideSeenKey?: unknown;
-  homeGuidePanelMargin?: unknown;
-  homeGuideDefaultPanelHeight?: unknown;
-  homeGuideMaxAdvanceLoops?: unknown;
-  homeGuideAutoStartDelayMs?: unknown;
 }): IndexUiBootstrapResolvers {
   const source = toRecord(input);
   const coreContracts = toRecord(source.coreContracts);
   const modalContracts = toRecord(source.modalContracts);
-  const homeGuideContracts = toRecord(source.homeGuideContracts);
   const environment = resolveIndexUiBootstrapEnvironment(source);
 
   const createIndexUiMobileResolvers = asFunction<(payload: unknown) => unknown>(
@@ -241,14 +230,6 @@ export function createIndexUiBootstrapResolvers(input: {
     throw new Error("CoreIndexUiPageActionsHostRuntime is required");
   }
 
-  const practiceGuideShownKey =
-    typeof source.practiceGuideShownKey === "string" && source.practiceGuideShownKey
-      ? source.practiceGuideShownKey
-      : "practice_guide_shown_v2";
-  const practiceGuideSeenFlag =
-    typeof source.practiceGuideSeenFlag === "string" && source.practiceGuideSeenFlag
-      ? source.practiceGuideSeenFlag
-      : "practice_guide_seen_v2=1";
   const practiceTransferKey =
     typeof source.practiceTransferKey === "string" && source.practiceTransferKey
       ? source.practiceTransferKey
@@ -257,30 +238,6 @@ export function createIndexUiBootstrapResolvers(input: {
     typeof source.practiceTransferSessionKey === "string" && source.practiceTransferSessionKey
       ? source.practiceTransferSessionKey
       : "practice_board_transfer_session_v1";
-  const homeGuideSeenKey =
-    typeof source.homeGuideSeenKey === "string" && source.homeGuideSeenKey
-      ? source.homeGuideSeenKey
-      : "home_guide_seen_v1";
-  const homeGuidePanelMargin =
-    typeof source.homeGuidePanelMargin === "number" && Number.isFinite(source.homeGuidePanelMargin)
-      ? source.homeGuidePanelMargin
-      : 12;
-  const homeGuideDefaultPanelHeight =
-    typeof source.homeGuideDefaultPanelHeight === "number" &&
-    Number.isFinite(source.homeGuideDefaultPanelHeight)
-      ? source.homeGuideDefaultPanelHeight
-      : 160;
-  const homeGuideMaxAdvanceLoops =
-    typeof source.homeGuideMaxAdvanceLoops === "number" &&
-    Number.isFinite(source.homeGuideMaxAdvanceLoops)
-      ? source.homeGuideMaxAdvanceLoops
-      : 32;
-  const homeGuideAutoStartDelayMs =
-    typeof source.homeGuideAutoStartDelayMs === "number" &&
-    Number.isFinite(source.homeGuideAutoStartDelayMs)
-      ? source.homeGuideAutoStartDelayMs
-      : 0;
-
   const pageActionResolvers = toRecord(
     createIndexUiPageActionResolvers({
       settingsModalPageHostRuntime: modalContracts.settingsModalPageHostRuntime,
@@ -296,20 +253,6 @@ export function createIndexUiBootstrapResolvers(input: {
       practiceTransferHostRuntime: coreContracts.practiceTransferHostRuntime,
       practiceTransferRuntime: coreContracts.practiceTransferRuntime,
       storageRuntime: coreContracts.storageRuntime,
-      homeGuidePageHostRuntime: homeGuideContracts.homeGuidePageHostRuntime,
-      homeGuideRuntime: homeGuideContracts.homeGuideRuntime,
-      homeGuideDomHostRuntime: homeGuideContracts.homeGuideDomHostRuntime,
-      homeGuideHighlightHostRuntime: homeGuideContracts.homeGuideHighlightHostRuntime,
-      homeGuidePanelHostRuntime: homeGuideContracts.homeGuidePanelHostRuntime,
-      homeGuideDoneNoticeHostRuntime: homeGuideContracts.homeGuideDoneNoticeHostRuntime,
-      homeGuideFinishHostRuntime: homeGuideContracts.homeGuideFinishHostRuntime,
-      homeGuideStepHostRuntime: homeGuideContracts.homeGuideStepHostRuntime,
-      homeGuideStepFlowHostRuntime: homeGuideContracts.homeGuideStepFlowHostRuntime,
-      homeGuideStepViewHostRuntime: homeGuideContracts.homeGuideStepViewHostRuntime,
-      homeGuideStartHostRuntime: homeGuideContracts.homeGuideStartHostRuntime,
-      homeGuideControlsHostRuntime: homeGuideContracts.homeGuideControlsHostRuntime,
-      homeGuideSettingsHostRuntime: homeGuideContracts.homeGuideSettingsHostRuntime,
-      homeGuideStartupHostRuntime: homeGuideContracts.homeGuideStartupHostRuntime,
       mobileViewportRuntime: coreContracts.mobileViewportRuntime,
       replayPageHostRuntime: modalContracts.replayPageHostRuntime,
       replayExportRuntime: modalContracts.replayExportRuntime,
@@ -322,16 +265,8 @@ export function createIndexUiBootstrapResolvers(input: {
       consoleLike: environment.consoleLike,
       setTimeoutLike: environment.setTimeoutLike,
       clearTimeoutLike: environment.clearTimeoutLike,
-      guideShownKey: practiceGuideShownKey,
-      guideSeenFlag: practiceGuideSeenFlag,
       localStorageKey: practiceTransferKey,
-      sessionStorageKey: practiceTransferSessionKey,
-      homeGuideSeenKey: homeGuideSeenKey,
-      homeGuideMobileUiMaxWidth: mobileUiMaxWidth,
-      homeGuidePanelMargin: homeGuidePanelMargin,
-      homeGuideDefaultPanelHeight: homeGuideDefaultPanelHeight,
-      homeGuideMaxAdvanceLoops: homeGuideMaxAdvanceLoops,
-      homeGuideAutoStartDelayMs: homeGuideAutoStartDelayMs
+      sessionStorageKey: practiceTransferSessionKey
     })
   );
 
@@ -348,8 +283,6 @@ export function createIndexUiBootstrapResolvers(input: {
     removeLegacyUndoSettingsUI: pageActionResolvers.removeLegacyUndoSettingsUI,
     initTimerModuleSettingsUI: pageActionResolvers.initTimerModuleSettingsUI,
     openPracticeBoardFromCurrent: pageActionResolvers.openPracticeBoardFromCurrent,
-    initHomeGuideSettingsUI: pageActionResolvers.initHomeGuideSettingsUI,
-    autoStartHomeGuideIfNeeded: pageActionResolvers.autoStartHomeGuideIfNeeded,
     closeReplayModal: pageActionResolvers.closeReplayModal,
     exportReplay: pageActionResolvers.exportReplay,
     openSettingsModal: pageActionResolvers.openSettingsModal,
@@ -375,8 +308,6 @@ export function applyIndexUiPageBootstrap(input: {
   initTimerModuleSettingsUI?: unknown;
   initMobileHintToggle?: unknown;
   initMobileUndoTopButton?: unknown;
-  initHomeGuideSettingsUI?: unknown;
-  autoStartHomeGuideIfNeeded?: unknown;
   initMobileTimerboxToggle?: unknown;
   requestResponsiveGameRelayout?: unknown;
   syncMobileTimerboxUI?: unknown;
@@ -469,8 +400,6 @@ export function applyIndexUiPageBootstrap(input: {
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
       initMobileHintToggle: source.initMobileHintToggle,
       initMobileUndoTopButton: source.initMobileUndoTopButton,
-      initHomeGuideSettingsUI: source.initHomeGuideSettingsUI,
-      autoStartHomeGuideIfNeeded: source.autoStartHomeGuideIfNeeded,
       initMobileTimerboxToggle: source.initMobileTimerboxToggle,
       requestResponsiveGameRelayout: source.requestResponsiveGameRelayout,
       nowMs: nowMs

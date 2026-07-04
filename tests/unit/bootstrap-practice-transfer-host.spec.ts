@@ -62,7 +62,7 @@ describe("bootstrap practice transfer host", () => {
     expect(alertLike).toHaveBeenCalledWith("练习板链接生成失败。");
   });
 
-  it("opens practice board with cookie/windowName context", () => {
+  it("opens practice board with storage context", () => {
     const open = vi.fn();
     const createPracticeTransferNavigationPlan = vi.fn(() => ({
       openUrl: "Practice_board.html?practice_token=abc"
@@ -73,12 +73,10 @@ describe("bootstrap practice transfer host", () => {
       gameModeConfig: { ruleset: "pow2" },
       localStorageLike: { getItem: vi.fn() },
       sessionStorageLike: { getItem: vi.fn() },
-      guideShownKey: "guide_key",
-      guideSeenFlag: "guide_seen=1",
       localStorageKey: "local_key",
       sessionStorageKey: "session_key",
-      documentLike: { cookie: "guide_key=1" },
-      windowLike: { name: "guide_seen=1", open },
+      documentLike: { id: "doc" },
+      windowLike: { open },
       practiceTransferRuntime: {
         resolvePracticeTransferPrecheck() {
           return {
@@ -93,10 +91,8 @@ describe("bootstrap practice transfer host", () => {
 
     expect(createPracticeTransferNavigationPlan).toHaveBeenCalledWith(
       expect.objectContaining({
-        cookie: "guide_key=1",
-        windowName: "guide_seen=1",
-        guideShownKey: "guide_key",
-        guideSeenFlag: "guide_seen=1"
+        localStorageKey: "local_key",
+        sessionStorageKey: "session_key"
       })
     );
     expect(open).toHaveBeenCalledWith("Practice_board.html?practice_token=abc", "_blank");

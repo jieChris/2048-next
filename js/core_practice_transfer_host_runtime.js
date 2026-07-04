@@ -15,24 +15,6 @@
     return typeof value === "function" ? value : null;
   }
 
-  function readCookie(documentLike) {
-    var doc = toRecord(documentLike);
-    try {
-      return typeof doc.cookie === "string" ? doc.cookie : "";
-    } catch (_err) {
-      return "";
-    }
-  }
-
-  function readWindowName(windowLike) {
-    var win = toRecord(windowLike);
-    try {
-      return typeof win.name === "string" ? win.name : "";
-    } catch (_err) {
-      return "";
-    }
-  }
-
   var STANDALONE_DISPLAY_MODE_QUERIES = [
     "(display-mode: standalone)",
     "(display-mode: window-controls-overlay)",
@@ -134,10 +116,6 @@
         board: precheckBoard,
         localStorageLike: source.localStorageLike || null,
         sessionStorageLike: source.sessionStorageLike || null,
-        guideShownKey: source.guideShownKey,
-        guideSeenFlag: source.guideSeenFlag,
-        cookie: readCookie(source.documentLike),
-        windowName: readWindowName(source.windowLike),
         localStorageKey: source.localStorageKey,
         sessionStorageKey: source.sessionStorageKey
       })

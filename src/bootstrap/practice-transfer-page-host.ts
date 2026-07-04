@@ -50,8 +50,6 @@ export function createPracticeTransferPageActionResolvers(input: {
   practiceTransferHostRuntime?: unknown;
   practiceTransferRuntime?: unknown;
   storageRuntime?: unknown;
-  guideShownKey?: unknown;
-  guideSeenFlag?: unknown;
   localStorageKey?: unknown;
   sessionStorageKey?: unknown;
   documentLike?: unknown;
@@ -70,8 +68,6 @@ export function createPracticeTransferPageActionResolvers(input: {
         practiceTransferHostRuntime: source.practiceTransferHostRuntime,
         practiceTransferRuntime: source.practiceTransferRuntime,
         storageRuntime: source.storageRuntime,
-        guideShownKey: source.guideShownKey,
-        guideSeenFlag: source.guideSeenFlag,
         localStorageKey: source.localStorageKey,
         sessionStorageKey: source.sessionStorageKey,
         documentLike: source.documentLike,
@@ -83,8 +79,6 @@ export function createPracticeTransferPageActionResolvers(input: {
       practiceTransferHostRuntime: source.practiceTransferHostRuntime,
       practiceTransferRuntime: source.practiceTransferRuntime,
       storageRuntime: source.storageRuntime,
-      guideShownKey: source.guideShownKey,
-      guideSeenFlag: source.guideSeenFlag,
       localStorageKey: source.localStorageKey,
       sessionStorageKey: source.sessionStorageKey,
       documentLike: source.documentLike,
@@ -111,8 +105,6 @@ export function applyPracticeTransferPageAction(input: {
   storageRuntime?: unknown;
   manager?: unknown;
   gameModeConfig?: unknown;
-  guideShownKey?: unknown;
-  guideSeenFlag?: unknown;
   localStorageKey?: unknown;
   sessionStorageKey?: unknown;
   documentLike?: unknown;
@@ -154,8 +146,6 @@ export function applyPracticeTransferPageAction(input: {
     practiceTransferRuntime: source.practiceTransferRuntime || null,
     localStorageLike,
     sessionStorageLike,
-    guideShownKey: source.guideShownKey,
-    guideSeenFlag: source.guideSeenFlag,
     localStorageKey: source.localStorageKey,
     sessionStorageKey: source.sessionStorageKey,
     documentLike: source.documentLike || null,
@@ -182,8 +172,6 @@ export function applyPracticeTransferPageActionFromContext(input: {
   practiceTransferHostRuntime?: unknown;
   practiceTransferRuntime?: unknown;
   storageRuntime?: unknown;
-  guideShownKey?: unknown;
-  guideSeenFlag?: unknown;
   localStorageKey?: unknown;
   sessionStorageKey?: unknown;
   documentLike?: unknown;
@@ -199,8 +187,6 @@ export function applyPracticeTransferPageActionFromContext(input: {
     storageRuntime: source.storageRuntime,
     manager,
     gameModeConfig,
-    guideShownKey: source.guideShownKey,
-    guideSeenFlag: source.guideSeenFlag,
     localStorageKey: source.localStorageKey,
     sessionStorageKey: source.sessionStorageKey,
     documentLike: source.documentLike,

@@ -10,24 +10,6 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
-function readCookie(documentLike: unknown): string {
-  const doc = toRecord(documentLike);
-  try {
-    return typeof doc.cookie === "string" ? doc.cookie : "";
-  } catch (_err) {
-    return "";
-  }
-}
-
-function readWindowName(windowLike: unknown): string {
-  const win = toRecord(windowLike);
-  try {
-    return typeof win.name === "string" ? win.name : "";
-  } catch (_err) {
-    return "";
-  }
-}
-
 const STANDALONE_DISPLAY_MODE_QUERIES = [
   "(display-mode: standalone)",
   "(display-mode: window-controls-overlay)",
@@ -106,8 +88,6 @@ export function applyPracticeTransferFromCurrent(input: {
   practiceTransferRuntime?: unknown;
   localStorageLike?: unknown;
   sessionStorageLike?: unknown;
-  guideShownKey?: unknown;
-  guideSeenFlag?: unknown;
   localStorageKey?: unknown;
   sessionStorageKey?: unknown;
   planFailedMessage?: unknown;
@@ -153,10 +133,6 @@ export function applyPracticeTransferFromCurrent(input: {
       board: precheckBoard,
       localStorageLike: source.localStorageLike || null,
       sessionStorageLike: source.sessionStorageLike || null,
-      guideShownKey: source.guideShownKey,
-      guideSeenFlag: source.guideSeenFlag,
-      cookie: readCookie(source.documentLike),
-      windowName: readWindowName(source.windowLike),
       localStorageKey: source.localStorageKey,
       sessionStorageKey: source.sessionStorageKey
     })

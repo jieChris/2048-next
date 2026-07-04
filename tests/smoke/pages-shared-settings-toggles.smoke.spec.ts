@@ -4,9 +4,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("night mode toggle stays synced across two pages", async ({ page }) => {
     const context = page.context();
     await context.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
-      window.localStorage.setItem("practice_guide_shown_v2", "1");
-      window.localStorage.setItem("practice_guide_mobile_shown_v1", "1");
       window.localStorage.setItem("settings_night_background_enabled_v1", "0");
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.removeItem("settings_night_theme_auto_applied_v1");
@@ -21,7 +18,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(firstResponse, "Home response should exist").not.toBeNull();
     expect(firstResponse?.ok(), "Home response should be 2xx").toBeTruthy();
 
-    const secondResponse = await secondPage.goto("/Practice_board.html?practice_guide_seen=1", {
+    const secondResponse = await secondPage.goto("/Practice_board.html", {
       waitUntil: "domcontentloaded"
     });
     expect(secondResponse, "Practice board response should exist").not.toBeNull();
@@ -73,7 +70,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     page
   }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem("settings_bgm_enabled_v1", "0");
       window.localStorage.setItem("settings_night_background_enabled_v1", "0");
       window.localStorage.setItem("theme_profile_v1", "classic");
@@ -119,7 +115,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#night-bg-settings-row .settings-toggle-title")).toHaveText(
       "夜间模式"
     );
-    await expect(page.locator("#home-guide-trigger-btn")).toHaveCount(0);
 
     await page.click("label.settings-switch[for='bgm-toggle']");
     await page.waitForFunction(() => {
@@ -273,7 +268,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return;
       }
       window.localStorage.setItem("__night_theme_palette_regression_seeded_v1", "1");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
       window.localStorage.setItem("settings_night_background_enabled_v1", "1");
       window.localStorage.setItem("theme_profile_v1", "midnight_nebula");
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
@@ -400,12 +394,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.bodyAfterDisplay).toBe("none");
   });
 
-  test("account page follows night mode preference and exposes the guide entry", async ({
+  test("account page does not render retired guide entry in night mode", async ({
     page
   }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("settings_night_background_enabled_v1", "1");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const response = await page.goto("/account.html", {
@@ -422,50 +415,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     }, null, { timeout: 15000 });
 
-    await expect(page.locator("#account-guide-title")).toHaveText("新手指引");
-    await expect(page.locator("#account-open-guide-btn")).toHaveText("打开指引");
-
     const snapshot = await page.evaluate(() => {
-      const guideCard = document.querySelector(".account-guide-card");
       return {
         dataAttribute: document.documentElement.getAttribute("data-night-background") || "",
-        guideCardBackgroundImage: guideCard
-          ? window.getComputedStyle(guideCard).backgroundImage
-          : "",
-        guideCardBorderColor: guideCard ? window.getComputedStyle(guideCard).borderColor : ""
+        hasGuideCard: !!document.querySelector(".account-guide-card"),
+        hasGuideButton: !!document.getElementById("account-open-guide-btn")
       };
     });
 
     expect(snapshot.dataAttribute).toBe("1");
-    expect(snapshot.guideCardBackgroundImage).toContain("linear-gradient");
-    expect(snapshot.guideCardBorderColor).toContain("181, 198, 221");
-  });
-
-  test("account guide entry reopens the home guide flow on the home page", async ({ page }) => {
-    const response = await page.goto("/account.html", {
-      waitUntil: "domcontentloaded"
-    });
-    expect(response, "Account response should exist").not.toBeNull();
-    expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
-    await expect(page.locator("body")).toBeVisible();
-    await page.evaluate(() => {
-      window.localStorage.setItem("home_guide_seen_v1", "1");
-    });
-
-    await page.waitForFunction(() => {
-      return document.body?.getAttribute("data-i18n-ready") === "1";
-    }, null, { timeout: 15000 });
-
-    await page.click("#account-open-guide-btn");
-    await page.waitForURL("**/2048.html", { timeout: 15000 });
-    await page.waitForFunction(() => {
-      return (
-        window.localStorage.getItem("home_guide_seen_v1") === "0" &&
-        !!(window as any).CoreHomeGuideRuntime &&
-        !!(window as any).CoreHomeGuideStartupHostRuntime &&
-        location.pathname.endsWith("/2048.html")
-      );
-    }, null, { timeout: 15000 });
+    expect(snapshot.hasGuideCard).toBe(false);
+    expect(snapshot.hasGuideButton).toBe(false);
   });
 
   test("night preference reaches utility and direct pages with darkened key surfaces", async ({
@@ -473,7 +433,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
   }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("settings_night_background_enabled_v1", "1");
-      window.localStorage.setItem("home_guide_seen_v1", "1");
     });
 
     const targets = [

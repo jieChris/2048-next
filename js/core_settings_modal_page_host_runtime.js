@@ -268,15 +268,13 @@
     "timer-module-view-toggle",
     "top-button-style-settings-row",
     "ui-language-settings-row",
-    "home-guide-trigger-btn",
     "toolkit-entry-row"
   ];
 
   var DYNAMIC_SETTINGS_ROW_IDS = [
     "timer-module-view-toggle",
     "top-button-style-settings-row",
-    "ui-language-settings-row",
-    "home-guide-trigger-btn"
+    "ui-language-settings-row"
   ];
 
   function arrayIncludes(list, value) {
@@ -518,8 +516,7 @@
           removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
           initThemeSettingsUI: source.initThemeSettingsUI,
           initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-          initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-          initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+          initWinPromptSettingsUI: source.initWinPromptSettingsUI
         });
       }
       return applySettingsModalPageOpen({
@@ -530,8 +527,7 @@
         removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
         initThemeSettingsUI: source.initThemeSettingsUI,
         initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-        initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-        initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+        initWinPromptSettingsUI: source.initWinPromptSettingsUI
       });
     }
 
@@ -579,8 +575,7 @@
       removeLegacyUndoSettingsUI: source.removeLegacyUndoSettingsUI,
       initThemeSettingsUI: source.initThemeSettingsUI,
       initTimerModuleSettingsUI: source.initTimerModuleSettingsUI,
-      initWinPromptSettingsUI: source.initWinPromptSettingsUI,
-      initHomeGuideSettingsUI: source.initHomeGuideSettingsUI
+      initWinPromptSettingsUI: source.initWinPromptSettingsUI
     });
 
     return {

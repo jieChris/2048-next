@@ -151,15 +151,6 @@
   }
 }
 
-body.home-guide-active #timer-scroll-controls {
-  position: relative;
-  z-index: 3240;
-}
-
-body.home-guide-active .top-action-buttons {
-  z-index: 3240;
-}
-
 #timerbox.timerbox-hidden-mode {
   position: relative;
 }
@@ -189,4 +180,3 @@ html[data-initial-timer-leaderboard="1"] #timerbox > #timer-leaderboard-panel {
 #timerbox.timerbox-leaderboard-mode > #timer-leaderboard-panel {
   display: block !important;
 }
-

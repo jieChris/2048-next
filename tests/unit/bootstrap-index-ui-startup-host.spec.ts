@@ -65,8 +65,6 @@ describe("bootstrap index ui startup host", () => {
       initTimerModuleSettingsUI: () => marks.push("initTimerModule"),
       initMobileHintToggle: () => marks.push("initMobileHint"),
       initMobileUndoTopButton: () => marks.push("initMobileUndoTop"),
-      initHomeGuideSettingsUI: () => marks.push("initHomeGuide"),
-      autoStartHomeGuideIfNeeded: () => marks.push("autoStartGuide"),
       initMobileTimerboxToggle: () => marks.push("initTimerbox"),
       requestResponsiveGameRelayout,
       nowMs: () => 123,
@@ -76,7 +74,7 @@ describe("bootstrap index ui startup host", () => {
     expect(result).toEqual({
       appliedTopActionBindings: true,
       appliedGameOverUndoBinding: true,
-      initCallCount: 9,
+      initCallCount: 7,
       boundResponsiveRelayoutListeners: true
     });
     expect(windowLike.__responsiveGameRelayoutBound).toBe(true);
@@ -87,8 +85,6 @@ describe("bootstrap index ui startup host", () => {
       "initTimerModule",
       "initMobileHint",
       "initMobileUndoTop",
-      "initHomeGuide",
-      "autoStartGuide",
       "gameOverUndo",
       "initTimerbox",
       "requestRelayout",

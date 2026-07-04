@@ -14,20 +14,6 @@ describe("index-ui-bootstrap runtime globals", () => {
     const runtimeContractTarget: Record<string, unknown> = {};
     const pageHostTarget: Record<string, unknown> = {};
     const applyIndexUiPageBootstrap = vi.fn();
-    const installHomeGuideRuntime = vi.fn();
-    const installHomeGuideControlsHostRuntime = vi.fn();
-    const installHomeGuideDomHostRuntime = vi.fn();
-    const installHomeGuideDoneNoticeHostRuntime = vi.fn();
-    const installHomeGuideFinishHostRuntime = vi.fn();
-    const installHomeGuideHighlightHostRuntime = vi.fn();
-    const installHomeGuidePageHostRuntime = vi.fn();
-    const installHomeGuidePanelHostRuntime = vi.fn();
-    const installHomeGuideSettingsHostRuntime = vi.fn();
-    const installHomeGuideStartHostRuntime = vi.fn();
-    const installHomeGuideStartupHostRuntime = vi.fn();
-    const installHomeGuideStepFlowHostRuntime = vi.fn();
-    const installHomeGuideStepHostRuntime = vi.fn();
-    const installHomeGuideStepViewHostRuntime = vi.fn();
     const installIndexUiStartupHostRuntime = vi.fn();
     const installReplayExportRuntime = vi.fn();
     const installReplayModalRuntime = vi.fn();
@@ -36,11 +22,9 @@ describe("index-ui-bootstrap runtime globals", () => {
     const installSettingsModalPageHostRuntime = vi.fn();
     const createIndexUiTryUndoHandler = vi.fn(() => vi.fn(() => false));
     const createIndexUiBootstrapResolvers = vi.fn(() => ({
-      autoStartHomeGuideIfNeeded: vi.fn(),
       closeReplayModal: vi.fn(),
       closeSettingsModal: vi.fn(),
       exportReplay: vi.fn(),
-      initHomeGuideSettingsUI: vi.fn(),
       initMobileHintToggle: vi.fn(),
       initMobileTimerboxToggle: vi.fn(),
       initMobileUndoTopButton: vi.fn(),
@@ -99,42 +83,6 @@ describe("index-ui-bootstrap runtime globals", () => {
 
     vi.stubGlobal("document", {});
     vi.stubGlobal("window", windowRecord);
-    vi.doMock("../../src/bootstrap/home-guide", () => ({ installHomeGuideRuntime }));
-    vi.doMock("../../src/bootstrap/home-guide-controls-host", () => ({
-      installHomeGuideControlsHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-dom-host", () => ({ installHomeGuideDomHostRuntime }));
-    vi.doMock("../../src/bootstrap/home-guide-done-notice-host", () => ({
-      installHomeGuideDoneNoticeHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-finish-host", () => ({
-      installHomeGuideFinishHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-highlight-host", () => ({
-      installHomeGuideHighlightHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-page-host", () => ({
-      installHomeGuidePageHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-panel-host", () => ({
-      installHomeGuidePanelHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-settings-host", () => ({
-      installHomeGuideSettingsHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-start-host", () => ({
-      installHomeGuideStartHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-startup-host", () => ({
-      installHomeGuideStartupHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-step-flow-host", () => ({
-      installHomeGuideStepFlowHostRuntime
-    }));
-    vi.doMock("../../src/bootstrap/home-guide-step-host", () => ({ installHomeGuideStepHostRuntime }));
-    vi.doMock("../../src/bootstrap/home-guide-step-view-host", () => ({
-      installHomeGuideStepViewHostRuntime
-    }));
     vi.doMock("../../src/bootstrap/index-ui-startup-host", () => ({
       installIndexUiStartupHostRuntime
     }));
@@ -159,7 +107,6 @@ describe("index-ui-bootstrap runtime globals", () => {
           topActionBindingsHostRuntime: {},
           undoActionRuntime: {}
         },
-        homeGuideContracts: {},
         modalContracts: {}
       }))
     }));
@@ -182,20 +129,6 @@ describe("index-ui-bootstrap runtime globals", () => {
     expect(windowRecord.__indexUiPageBootstrapCalls).toBe(1);
     expect(applyIndexUiPageBootstrap).toHaveBeenCalledTimes(1);
     for (const installRuntime of [
-      installHomeGuideRuntime,
-      installHomeGuideControlsHostRuntime,
-      installHomeGuideDomHostRuntime,
-      installHomeGuideDoneNoticeHostRuntime,
-      installHomeGuideFinishHostRuntime,
-      installHomeGuideHighlightHostRuntime,
-      installHomeGuidePageHostRuntime,
-      installHomeGuidePanelHostRuntime,
-      installHomeGuideSettingsHostRuntime,
-      installHomeGuideStartHostRuntime,
-      installHomeGuideStartupHostRuntime,
-      installHomeGuideStepFlowHostRuntime,
-      installHomeGuideStepHostRuntime,
-      installHomeGuideStepViewHostRuntime,
       installIndexUiStartupHostRuntime,
       installReplayExportRuntime,
       installReplayModalRuntime,

@@ -8,7 +8,6 @@ import {
   buildPracticeModeConfigFromCurrent,
   cloneJsonSafe,
   createPracticeTransferNavigationPlan,
-  hasPracticeGuideSeen,
   persistPracticeTransferPayload,
   resolvePracticeTransferPrecheck
 } from "../../src/bootstrap/practice-transfer";
@@ -97,65 +96,24 @@ describe("bootstrap practice transfer", () => {
     expect(cloneJsonSafe(undefined as never)).toBeNull();
   });
 
-  it("detects practice guide seen from local/session storage, cookie, and window name", () => {
-    expect(
-      hasPracticeGuideSeen({
-        localStorageLike: { getItem: () => "1" },
-        guideShownKey: "k"
-      })
-    ).toBe(true);
-    expect(
-      hasPracticeGuideSeen({
-        sessionStorageLike: { getItem: () => "1" },
-        guideShownKey: "k"
-      })
-    ).toBe(true);
-    expect(
-      hasPracticeGuideSeen({
-        guideShownKey: "k",
-        cookie: "foo=1; k=1; bar=2"
-      })
-    ).toBe(true);
-    expect(
-      hasPracticeGuideSeen({
-        guideSeenFlag: "flag=1",
-        windowName: "abc flag=1 xyz"
-      })
-    ).toBe(true);
-  });
-
-  it("returns false when no guide-seen marker exists", () => {
-    expect(
-      hasPracticeGuideSeen({
-        localStorageLike: { getItem: () => null },
-        sessionStorageLike: { getItem: () => null },
-        guideShownKey: "practice_guide_shown_v2",
-        guideSeenFlag: "practice_guide_seen_v2=1",
-        cookie: "",
-        windowName: ""
-      })
-    ).toBe(false);
-  });
-
-  it("builds practice board url with optional guide and payload", () => {
+  it("builds practice board url with optional payload", () => {
     const noPayload = buildPracticeBoardUrl({
       token: "abc 123",
-      practiceRuleset: "fibonacci",
-      includeGuideSeen: true
+      practiceRuleset: "fibonacci"
     });
     const withPayload = buildPracticeBoardUrl({
       token: "abc 123",
       practiceRuleset: "pow2",
-      includeGuideSeen: false,
       includePayload: true,
       payload: "{\"token\":\"x\"}"
     });
 
     expect(noPayload).toContain("Practice_board.html?practice_token=abc%20123");
     expect(noPayload).toContain("practice_ruleset=fibonacci");
-    expect(noPayload).toContain("practice_guide_seen=1");
+    expect(noPayload).not.toContain("practice_guide_seen");
     expect(withPayload).toContain("practice_ruleset=pow2");
     expect(withPayload).toContain("practice_payload=%7B%22token%22%3A%22x%22%7D");
+    expect(withPayload).not.toContain("practice_guide_seen");
   });
 
   it("appends query params for urls with and without existing search", () => {
@@ -269,8 +227,8 @@ describe("bootstrap practice transfer", () => {
         board_height: 2
       },
       localStorageLike: {
-        getItem(key: string) {
-          return key === "practice_guide_shown_v2" ? "1" : null;
+        getItem() {
+          return null;
         },
         setItem(key: string, value: string) {
           writes.push("local:" + key + ":" + value);
@@ -293,11 +251,10 @@ describe("bootstrap practice transfer", () => {
     expect(plan.persistedTarget).toBe("local");
     expect(plan.usedPayloadInUrl).toBe(false);
     expect(plan.practiceRuleset).toBe("pow2");
-    expect(plan.guideSeen).toBe(true);
     expect(plan.openUrl).toContain("Practice_board.html");
     expect(plan.openUrl).toContain("practice_token=p1700000000000_4fzzzx");
     expect(plan.openUrl).toContain("practice_ruleset=pow2");
-    expect(plan.openUrl).toContain("practice_guide_seen=1");
+    expect(plan.openUrl).not.toContain("practice_guide_seen");
     expect(writes).toEqual(["local:practice_board_transfer_v1:" + plan.payloadString]);
   });
 

@@ -10,31 +10,11 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
   return typeof value === "function" ? (value as T) : null;
 }
 
-function resolveNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function resolveHomeGuideState(value: unknown): Record<string, unknown> {
-  if (isRecord(value)) return value;
-  return {
-    active: false,
-    fromSettings: false,
-    index: 0,
-    steps: [],
-    target: null,
-    elevated: [],
-    panel: null,
-    overlay: null
-  };
-}
-
 export interface IndexUiPageActionResolvers {
   initThemeSettingsUI: () => unknown;
   removeLegacyUndoSettingsUI: () => unknown;
   initTimerModuleSettingsUI: () => unknown;
   openPracticeBoardFromCurrent: () => unknown;
-  initHomeGuideSettingsUI: () => unknown;
-  autoStartHomeGuideIfNeeded: () => unknown;
   showReplayModal: () => unknown;
   closeReplayModal: () => unknown;
   exportReplay: () => unknown;
@@ -56,20 +36,6 @@ export function createIndexUiPageActionResolvers(input: {
   practiceTransferHostRuntime?: unknown;
   practiceTransferRuntime?: unknown;
   storageRuntime?: unknown;
-  homeGuidePageHostRuntime?: unknown;
-  homeGuideRuntime?: unknown;
-  homeGuideDomHostRuntime?: unknown;
-  homeGuideHighlightHostRuntime?: unknown;
-  homeGuidePanelHostRuntime?: unknown;
-  homeGuideDoneNoticeHostRuntime?: unknown;
-  homeGuideFinishHostRuntime?: unknown;
-  homeGuideStepHostRuntime?: unknown;
-  homeGuideStepFlowHostRuntime?: unknown;
-  homeGuideStepViewHostRuntime?: unknown;
-  homeGuideStartHostRuntime?: unknown;
-  homeGuideControlsHostRuntime?: unknown;
-  homeGuideSettingsHostRuntime?: unknown;
-  homeGuideStartupHostRuntime?: unknown;
   mobileViewportRuntime?: unknown;
   replayPageHostRuntime?: unknown;
   replayExportRuntime?: unknown;
@@ -82,17 +48,8 @@ export function createIndexUiPageActionResolvers(input: {
   consoleLike?: unknown;
   setTimeoutLike?: unknown;
   clearTimeoutLike?: unknown;
-  guideShownKey?: unknown;
-  guideSeenFlag?: unknown;
   localStorageKey?: unknown;
   sessionStorageKey?: unknown;
-  homeGuideSeenKey?: unknown;
-  homeGuideState?: unknown;
-  homeGuideMobileUiMaxWidth?: unknown;
-  homeGuidePanelMargin?: unknown;
-  homeGuideDefaultPanelHeight?: unknown;
-  homeGuideMaxAdvanceLoops?: unknown;
-  homeGuideAutoStartDelayMs?: unknown;
 }): IndexUiPageActionResolvers {
   const source = toRecord(input);
 
@@ -155,8 +112,6 @@ export function createIndexUiPageActionResolvers(input: {
       practiceTransferHostRuntime: source.practiceTransferHostRuntime,
       practiceTransferRuntime: source.practiceTransferRuntime,
       storageRuntime: source.storageRuntime,
-      guideShownKey: source.guideShownKey,
-      guideSeenFlag: source.guideSeenFlag,
       localStorageKey: source.localStorageKey,
       sessionStorageKey: source.sessionStorageKey,
       documentLike: source.documentLike || null,
@@ -170,100 +125,6 @@ export function createIndexUiPageActionResolvers(input: {
   );
   if (!openPracticeBoardFromCurrent) {
     throw new Error("CorePracticeTransferPageHostRuntime is required");
-  }
-
-  const homeGuideState = resolveHomeGuideState(source.homeGuideState);
-  const homeGuideSeenKey =
-    typeof source.homeGuideSeenKey === "string" && source.homeGuideSeenKey
-      ? source.homeGuideSeenKey
-      : "home_guide_seen_v1";
-
-  const homeGuidePageHostRuntime = toRecord(source.homeGuidePageHostRuntime);
-  const createHomeGuidePageResolvers = asFunction<(payload: unknown) => unknown>(
-    homeGuidePageHostRuntime.createHomeGuidePageResolvers
-  );
-  const createHomeGuideLifecycleResolvers = asFunction<(payload: unknown) => unknown>(
-    homeGuidePageHostRuntime.createHomeGuideLifecycleResolvers
-  );
-  if (!createHomeGuidePageResolvers || !createHomeGuideLifecycleResolvers) {
-    throw new Error("CoreHomeGuidePageHostRuntime is required");
-  }
-
-  const homeGuidePageResolvers = toRecord(
-    createHomeGuidePageResolvers({
-      homeGuideRuntime: source.homeGuideRuntime,
-      locationLike: source.locationLike || null,
-      isCompactViewport: source.isCompactGameViewport,
-      homeGuideDomHostRuntime: source.homeGuideDomHostRuntime,
-      homeGuideHighlightHostRuntime: source.homeGuideHighlightHostRuntime,
-      homeGuidePanelHostRuntime: source.homeGuidePanelHostRuntime,
-      homeGuideDoneNoticeHostRuntime: source.homeGuideDoneNoticeHostRuntime,
-      mobileViewportRuntime: source.mobileViewportRuntime,
-      documentLike: source.documentLike || null,
-      windowLike: source.windowLike || null,
-      homeGuideState,
-      mobileUiMaxWidth: resolveNumber(source.homeGuideMobileUiMaxWidth, 760),
-      panelMargin: resolveNumber(source.homeGuidePanelMargin, 12),
-      defaultPanelHeight: resolveNumber(source.homeGuideDefaultPanelHeight, 160),
-      setTimeoutLike: source.setTimeoutLike,
-      clearTimeoutLike: source.clearTimeoutLike,
-      homeGuideFinishHostRuntime: source.homeGuideFinishHostRuntime,
-      homeGuideStepHostRuntime: source.homeGuideStepHostRuntime,
-      homeGuideStepFlowHostRuntime: source.homeGuideStepFlowHostRuntime,
-      homeGuideStepViewHostRuntime: source.homeGuideStepViewHostRuntime,
-      homeGuideStartHostRuntime: source.homeGuideStartHostRuntime,
-      homeGuideControlsHostRuntime: source.homeGuideControlsHostRuntime,
-      storageRuntime: source.storageRuntime,
-      seenKey: homeGuideSeenKey,
-      maxAdvanceLoops: resolveNumber(source.homeGuideMaxAdvanceLoops, 32)
-    })
-  );
-
-  const isHomePage = asFunction<() => unknown>(homeGuidePageResolvers.isHomePage);
-  const startHomeGuide = asFunction<() => unknown>(homeGuidePageResolvers.startHomeGuide);
-  if (
-    !isHomePage ||
-    !asFunction(homeGuidePageResolvers.getHomeGuideSteps) ||
-    !asFunction(homeGuidePageResolvers.ensureHomeGuideDom) ||
-    !asFunction(homeGuidePageResolvers.clearHomeGuideHighlight) ||
-    !asFunction(homeGuidePageResolvers.elevateHomeGuideTarget) ||
-    !asFunction(homeGuidePageResolvers.positionHomeGuidePanel) ||
-    !asFunction(homeGuidePageResolvers.isElementVisibleForGuide) ||
-    !asFunction(homeGuidePageResolvers.showHomeGuideDoneNotice) ||
-    !asFunction(homeGuidePageResolvers.finishHomeGuide) ||
-    !asFunction(homeGuidePageResolvers.showHomeGuideStep) ||
-    !startHomeGuide
-  ) {
-    throw new Error("CoreHomeGuidePageHostRuntime is required");
-  }
-
-  const homeGuideLifecycleResolvers = toRecord(
-    createHomeGuideLifecycleResolvers({
-      homeGuidePageHostRuntime: source.homeGuidePageHostRuntime,
-      homeGuideSettingsHostRuntime: source.homeGuideSettingsHostRuntime,
-      homeGuideStartupHostRuntime: source.homeGuideStartupHostRuntime,
-      documentLike: source.documentLike || null,
-      windowLike: source.windowLike || null,
-      locationLike: source.locationLike || null,
-      homeGuideRuntime: source.homeGuideRuntime,
-      homeGuideState,
-      isHomePage,
-      startHomeGuide,
-      storageRuntime: source.storageRuntime,
-      seenKey: homeGuideSeenKey,
-      setTimeoutLike: source.setTimeoutLike,
-      autoStartDelayMs: resolveNumber(source.homeGuideAutoStartDelayMs, 0)
-    })
-  );
-
-  const initHomeGuideSettingsUI = asFunction<() => unknown>(
-    homeGuideLifecycleResolvers.initHomeGuideSettingsUI
-  );
-  const autoStartHomeGuideIfNeeded = asFunction<() => unknown>(
-    homeGuideLifecycleResolvers.autoStartHomeGuideIfNeeded
-  );
-  if (!initHomeGuideSettingsUI || !autoStartHomeGuideIfNeeded) {
-    throw new Error("CoreHomeGuidePageHostRuntime is required");
   }
 
   const replayPageHostRuntime = toRecord(source.replayPageHostRuntime);
@@ -304,8 +165,7 @@ export function createIndexUiPageActionResolvers(input: {
       removeLegacyUndoSettingsUI,
       initThemeSettingsUI,
       initTimerModuleSettingsUI,
-      initWinPromptSettingsUI,
-      initHomeGuideSettingsUI
+      initWinPromptSettingsUI
     })
   );
 
@@ -322,8 +182,6 @@ export function createIndexUiPageActionResolvers(input: {
     removeLegacyUndoSettingsUI,
     initTimerModuleSettingsUI,
     openPracticeBoardFromCurrent,
-    initHomeGuideSettingsUI,
-    autoStartHomeGuideIfNeeded,
     showReplayModal,
     closeReplayModal,
     exportReplay,
