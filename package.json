@@ -11,7 +11,7 @@
     "api:types": "openapi-typescript openapi/2048next.v1.yaml -o src/services/generated-api/2048next-v1.ts",
     "api:types:check": "node scripts/check-openapi-types.mjs",
     "api:docs": "vite --host 127.0.0.1 --open /api-docs.html",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/precompress-dist.mjs",
     "preview": "npm run build && node scripts/preview-cloud-api.mjs",
     "preview:raw": "vite preview --open",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",

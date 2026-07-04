@@ -1,6 +1,6 @@
 import "../../js/core_bootstrap_runtime.js";
-import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
-import { showCappedGuideOverlay } from "./home-family-shared";
 
+const { bootstrapHomeFamilyPage } = await import("./home-family-bootstrap");
 await bootstrapHomeFamilyPage("capped");
+const { showCappedGuideOverlay } = await import("./home-family-shared");
 showCappedGuideOverlay();

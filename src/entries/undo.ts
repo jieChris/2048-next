@@ -1,3 +1,3 @@
-import { bootstrapHomeFamilyPage } from "./home-family-bootstrap";
+const { bootstrapHomeFamilyPage } = await import("./home-family-bootstrap");
 
 await bootstrapHomeFamilyPage("undo");

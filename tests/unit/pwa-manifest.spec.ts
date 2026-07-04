@@ -28,7 +28,7 @@ describe("PWA manifest", () => {
     for (const htmlPath of HTML_WITH_MANIFEST) {
       const html = readFileSync(htmlPath, "utf8");
       expect(html, htmlPath).toContain(
-        '<link rel="manifest" href="/site.webmanifest?v=20260703-pwa-root">'
+        '<link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">'
       );
       expect(html, htmlPath).not.toContain('href="site.webmanifest');
       expect(html, htmlPath).not.toContain('href="./assets/site-');
@@ -42,8 +42,8 @@ describe("PWA manifest", () => {
     expect(manifest.start_url).toBe("/2048.html");
     expect(manifest.scope).toBe("/");
     expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
-      "/meta/icon-192.png?v=20260703-pwa-root",
-      "/meta/icon-512.png?v=20260703-pwa-root"
+      "/meta/icon-192.png?v=20260704-png-opt",
+      "/meta/icon-512.png?v=20260704-png-opt"
     ]);
     expect(existsSync("public/meta/icon-192.png")).toBe(true);
     expect(existsSync("public/meta/icon-512.png")).toBe(true);

@@ -18,25 +18,10 @@ import { installGameManagerRuntimeAccessorHelpersRuntime } from "../bootstrap/ga
 import { installGameManagerRuntimeCallHelpersRuntime } from "../bootstrap/game-manager-runtime-call-helpers-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
-import { installHomeGuideRuntime } from "../bootstrap/home-guide";
-import { installHomeGuideControlsHostRuntime } from "../bootstrap/home-guide-controls-host";
-import { installHomeGuideDomHostRuntime } from "../bootstrap/home-guide-dom-host";
-import { installHomeGuideDoneNoticeHostRuntime } from "../bootstrap/home-guide-done-notice-host";
-import { installHomeGuideFinishHostRuntime } from "../bootstrap/home-guide-finish-host";
-import { installHomeGuideHighlightHostRuntime } from "../bootstrap/home-guide-highlight-host";
-import { installHomeGuidePanelHostRuntime } from "../bootstrap/home-guide-panel-host";
-import { installHomeGuidePageHostRuntime } from "../bootstrap/home-guide-page-host";
-import { installHomeGuideSettingsHostRuntime } from "../bootstrap/home-guide-settings-host";
-import { installHomeGuideStartHostRuntime } from "../bootstrap/home-guide-start-host";
-import { installHomeGuideStepFlowHostRuntime } from "../bootstrap/home-guide-step-flow-host";
-import { installHomeGuideStepHostRuntime } from "../bootstrap/home-guide-step-host";
-import { installHomeGuideStepViewHostRuntime } from "../bootstrap/home-guide-step-view-host";
-import { installHomeGuideStartupHostRuntime } from "../bootstrap/home-guide-startup-host";
 import { installHomeModeRuntime } from "../bootstrap/home-mode";
 import { installHomePageHostRuntime } from "../bootstrap/home-page-host";
 import { installHomeRuntimeContractRuntime } from "../bootstrap/home-runtime-contract";
 import { installHomeStartupHostRuntime } from "../bootstrap/home-startup-host";
-import { installIndexUiStartupHostRuntime } from "../bootstrap/index-ui-startup-host";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
 import { installModeCatalogRuntime } from "../bootstrap/mode-catalog";
 import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
@@ -51,20 +36,15 @@ import { installReplayCodecRuntime } from "../bootstrap/replay-codec-runtime";
 import { installReplayControlRuntime } from "../bootstrap/replay-control-runtime";
 import { installReplayDispatchRuntime } from "../bootstrap/replay-dispatch-runtime";
 import { installReplayExecutionRuntime } from "../bootstrap/replay-execution-runtime";
-import { installReplayExportRuntime } from "../bootstrap/replay-export";
 import { installReplayFlowRuntime } from "../bootstrap/replay-flow-runtime";
 import { installReplayImportRuntime } from "../bootstrap/replay-import-runtime";
 import { installReplayLifecycleRuntime } from "../bootstrap/replay-lifecycle-runtime";
 import { installReplayLoopRuntime } from "../bootstrap/replay-loop-runtime";
-import { installReplayModalRuntime } from "../bootstrap/replay-modal";
-import { installReplayPageHostRuntime } from "../bootstrap/replay-page-host";
 import { installReplayTimerRuntime } from "../bootstrap/replay-timer-runtime";
 import { installReplayV4ActionsRuntime } from "../bootstrap/replay-v4-actions-runtime";
 import { installResponsiveRelayoutRuntime } from "../bootstrap/responsive-relayout";
 import { installResponsiveRelayoutHostRuntime } from "../bootstrap/responsive-relayout-host";
 import { installScoringRuntime } from "../bootstrap/scoring-runtime";
-import { installSettingsModalHostRuntime } from "../bootstrap/settings-modal-host";
-import { installSettingsModalPageHostRuntime } from "../bootstrap/settings-modal-page-host";
 import { installTimerIntervalRuntime } from "../bootstrap/timer-interval-runtime";
 import { installUndoActionRuntime } from "../bootstrap/undo-action";
 import { installUndoRestoreRuntime } from "../bootstrap/undo-restore-runtime";
@@ -125,7 +105,6 @@ import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
-const LEGACY_REPLAY_HELPERS_RUNTIME_URL = "./js/core_game_manager_replay_helpers_runtime.js?v=20260617-replay-compat";
 const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "core",
   "capped-core",
@@ -139,7 +118,12 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "i18n"
 ]);
 const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260625-ranked-cache";
-const INDEX_DEFERRED_BUNDLE_URL = "./js/home_standard_deferred_bundle.js?v=20260625-ranked-cache";
+const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
+  "core_bgm_runtime",
+  "core_night_mode_runtime",
+  "core_top_button_style_runtime",
+  "core_i18n_runtime"
+] as const;
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
@@ -197,6 +181,16 @@ function bindHomeFamilyMobilePageScrollLock(): void {
   });
 }
 
+function resolveIndexDeferredSideEffectScripts(): readonly string[] {
+  return resolveHomeFamilyScriptsByCapabilities([
+    "settings-and-panel",
+    "top-button-style",
+    "i18n"
+  ]).filter((scriptUrl) =>
+    INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES.some((runtimeName) => scriptUrl.includes(runtimeName))
+  );
+}
+
 async function runBootstrapPipeline(pageId: string): Promise<void> {
   const descriptor = resolvePageDescriptor(pageId);
   const hooks = createBootstrapPipeline(descriptor);
@@ -206,7 +200,6 @@ async function runBootstrapPipeline(pageId: string): Promise<void> {
 }
 
 async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapability[]): Promise<void> {
-  await loadLegacyScriptsSequentially([LEGACY_REPLAY_HELPERS_RUNTIME_URL]);
   const startupCapabilities = capabilities.filter((capability) =>
     GAME_STARTUP_CAPABILITIES.has(capability)
   );
@@ -240,10 +233,21 @@ function scheduleIndexDeferredRuntimeLoad(): void {
   if (typeof window === "undefined") return;
 
   const loadDeferredRuntime = () => {
-    void loadLegacyScriptsSequentially([
-      INDEX_DEFERRED_BUNDLE_URL,
-      ...resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"])
-    ]).catch(() => {});
+    const sideEffectScripts = resolveIndexDeferredSideEffectScripts();
+    const sideEffectsReady =
+      sideEffectScripts.length > 0 ? loadLegacyScriptsSequentially(sideEffectScripts) : Promise.resolve();
+
+    void sideEffectsReady
+      .then(() => {
+        return import("./index-ui-bootstrap");
+      })
+      .then(({ applyIndexUiBootstrapFromTsRuntime }) => {
+        applyIndexUiBootstrapFromTsRuntime();
+      })
+      .then(() => {
+        return loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"]));
+      })
+      .catch(() => {});
   };
 
   const requestIdleCallback = (
@@ -297,20 +301,6 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installFlyingClickEffectRuntime();
   installGameOverUndoHostRuntime();
   installGridScanRuntime();
-  installHomeGuideRuntime();
-  installHomeGuideControlsHostRuntime();
-  installHomeGuideDomHostRuntime();
-  installHomeGuideDoneNoticeHostRuntime();
-  installHomeGuideFinishHostRuntime();
-  installHomeGuideHighlightHostRuntime();
-  installHomeGuidePanelHostRuntime();
-  installHomeGuidePageHostRuntime();
-  installHomeGuideSettingsHostRuntime();
-  installHomeGuideStartHostRuntime();
-  installHomeGuideStepFlowHostRuntime();
-  installHomeGuideStepHostRuntime();
-  installHomeGuideStepViewHostRuntime();
-  installHomeGuideStartupHostRuntime();
   installHomeStartupHostRuntime();
   installModeCatalogRuntime();
   installRulesRuntime();
@@ -364,7 +354,6 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoActionRuntime();
   installHomeRuntimeContractRuntime();
   installHomePageHostRuntime();
-  installIndexUiStartupHostRuntime();
   installGameSettingsStorageRuntime();
   installMergeEffectsRuntime();
   installMoveApplyRuntime();
@@ -380,19 +369,14 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installReplayControlRuntime();
   installReplayDispatchRuntime();
   installReplayExecutionRuntime();
-  installReplayExportRuntime();
   installReplayFlowRuntime();
   installReplayLifecycleRuntime();
   installReplayLoopRuntime();
-  installReplayModalRuntime();
-  installReplayPageHostRuntime();
   installReplayTimerRuntime();
   installGameManagerReplayHelperGlobals();
   installScoringRuntime();
   installResponsiveRelayoutRuntime();
   installResponsiveRelayoutHostRuntime();
-  installSettingsModalHostRuntime();
-  installSettingsModalPageHostRuntime();
   installTimerIntervalRuntime();
   installUndoRestoreRuntime();
   installUndoRestorePayloadRuntime();
@@ -401,7 +385,6 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
   if (pageId === "index") {
-    await loadLegacyScriptsSequentially([LEGACY_REPLAY_HELPERS_RUNTIME_URL]);
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     scheduleIndexDeferredRuntimeLoad();
     return;

@@ -26,13 +26,13 @@ describe("wide logo asset", () => {
   it("stores the height-stretched wide logo sources, including a small first-paint asset", () => {
     expect(readPngSize("meta/logo.png")).toEqual({ width: 976, height: 400 });
     expect(readPngSize("meta/logo-tall.png")).toEqual({ width: 976, height: 421 });
-    expect(readPngSize("meta/logo-tall-small.png")).toEqual({ width: 468, height: 202 });
+    expect(readPngSize("meta/logo-tall-small.png")).toEqual({ width: 234, height: 101 });
   });
 
   it("uses the small stretched logo file without fixed display-height stretching", () => {
     for (const file of WIDE_LOGO_HTML_FILES) {
       const html = readFileSync(file, "utf8");
-      expect(html, file).toContain("meta/logo-tall-small.png?v=20260607-logo-small");
+      expect(html, file).toContain("meta/logo-tall-small.png?v=20260704-logo-small");
       expect(html, file).not.toContain("meta/logo.png");
       expect(html, file).not.toContain("meta/logo-tall.png");
       expect(html, file).not.toMatch(/height\s*:\s*10(?:1|6\.2621)px/);
