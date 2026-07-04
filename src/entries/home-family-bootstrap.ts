@@ -124,6 +124,13 @@ const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
   "core_top_button_style_runtime",
   "core_i18n_runtime"
 ] as const;
+const LEGACY_INDEX_UI_RUNTIME_NAMES = [
+  "core_index_ui_runtime_contract_runtime",
+  "core_index_ui_page_host_runtime",
+  "core_index_ui_page_resolvers_host_runtime",
+  "core_index_ui_page_actions_host_runtime",
+  "index_ui"
+] as const;
 
 function readNightBackgroundPreference(): boolean {
   if (typeof window === "undefined") {
@@ -191,6 +198,30 @@ function resolveIndexDeferredSideEffectScripts(): readonly string[] {
   );
 }
 
+function shouldApplyIndexUiBootstrapFromTs(capabilities: readonly RuntimeCapability[]): boolean {
+  return capabilities.includes("index-tail") || capabilities.includes("play");
+}
+
+function filterLegacyIndexUiScripts(scripts: readonly string[]): readonly string[] {
+  return scripts.filter(
+    (scriptUrl) =>
+      !LEGACY_INDEX_UI_RUNTIME_NAMES.some((runtimeName) => scriptUrl.includes(runtimeName))
+  );
+}
+
+function resolveHomeFamilyRuntimeScriptsForLoad(
+  capabilities: readonly RuntimeCapability[],
+  useTsIndexUiBootstrap: boolean
+): readonly string[] {
+  const scripts = resolveHomeFamilyScriptsByCapabilities(capabilities);
+  return useTsIndexUiBootstrap ? filterLegacyIndexUiScripts(scripts) : scripts;
+}
+
+async function applyIndexUiBootstrapFromTsRuntime(): Promise<void> {
+  const { applyIndexUiBootstrapFromTsRuntime } = await import("./index-ui-bootstrap");
+  applyIndexUiBootstrapFromTsRuntime();
+}
+
 async function runBootstrapPipeline(pageId: string): Promise<void> {
   const descriptor = resolvePageDescriptor(pageId);
   const hooks = createBootstrapPipeline(descriptor);
@@ -200,11 +231,17 @@ async function runBootstrapPipeline(pageId: string): Promise<void> {
 }
 
 async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapability[]): Promise<void> {
+  const useTsIndexUiBootstrap = shouldApplyIndexUiBootstrapFromTs(capabilities);
   const startupCapabilities = capabilities.filter((capability) =>
     GAME_STARTUP_CAPABILITIES.has(capability)
   );
   if (startupCapabilities.length === 0 || startupCapabilities.length === capabilities.length) {
-    await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(capabilities));
+    await loadLegacyScriptsSequentially(
+      resolveHomeFamilyRuntimeScriptsForLoad(capabilities, useTsIndexUiBootstrap)
+    );
+    if (useTsIndexUiBootstrap) {
+      await applyIndexUiBootstrapFromTsRuntime();
+    }
     return;
   }
 
@@ -218,14 +255,21 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
     (capability) => !UI_STARTUP_CAPABILITIES.has(capability)
   );
 
-  await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(startupCapabilities));
+  await loadLegacyScriptsSequentially(
+    resolveHomeFamilyRuntimeScriptsForLoad(startupCapabilities, useTsIndexUiBootstrap)
+  );
   if (uiStartupCapabilities.length > 0) {
-    await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(uiStartupCapabilities));
+    await loadLegacyScriptsSequentially(
+      resolveHomeFamilyRuntimeScriptsForLoad(uiStartupCapabilities, useTsIndexUiBootstrap)
+    );
+  }
+  if (useTsIndexUiBootstrap) {
+    await applyIndexUiBootstrapFromTsRuntime();
   }
   if (backgroundCapabilities.length > 0) {
-    void loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(backgroundCapabilities)).catch(
-      () => {}
-    );
+    void loadLegacyScriptsSequentially(
+      resolveHomeFamilyRuntimeScriptsForLoad(backgroundCapabilities, useTsIndexUiBootstrap)
+    ).catch(() => {});
   }
 }
 
@@ -239,10 +283,7 @@ function scheduleIndexDeferredRuntimeLoad(): void {
 
     void sideEffectsReady
       .then(() => {
-        return import("./index-ui-bootstrap");
-      })
-      .then(({ applyIndexUiBootstrapFromTsRuntime }) => {
-        applyIndexUiBootstrapFromTsRuntime();
+        return applyIndexUiBootstrapFromTsRuntime();
       })
       .then(() => {
         return loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"]));

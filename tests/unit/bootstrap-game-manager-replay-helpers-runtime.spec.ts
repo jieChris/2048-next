@@ -420,6 +420,99 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayStartBoardMatrix).toEqual(manager.practiceRestartBoardMatrix);
   });
 
+  it("rejects custom practice tiles above the active capped max tile", () => {
+    class Tile {
+      x: number;
+      y: number;
+      value: number;
+
+      constructor(position: { x: number; y: number }, value: number) {
+        this.x = position.x;
+        this.y = position.y;
+        this.value = value;
+      }
+    }
+
+    const cells: Array<Array<InstanceType<typeof Tile> | null>> = [[null]];
+    const manager = {
+      modeKey: "practice",
+      maxTile: 64,
+      modeConfig: { key: "practice", max_tile: 64, special_rules: { enforce_max_tile: true } },
+      grid: {
+        eachCell(callback: (x: number, y: number, tile: unknown) => void) {
+          callback(0, 0, cells[0][0]);
+        },
+        cellContent({ x, y }: { x: number; y: number }) {
+          return cells[y]?.[x] || null;
+        },
+        insertTile(tile: InstanceType<typeof Tile>) {
+          cells[tile.y][tile.x] = tile;
+        },
+        removeTile(tile: InstanceType<typeof Tile>) {
+          cells[tile.y][tile.x] = null;
+        }
+      },
+      getWindowLike: () => ({ Tile }),
+      actuate: vi.fn()
+    };
+
+    expect(insertCustomTile(manager, 0, 0, 128)).toBe(false);
+    expect(cells[0][0]).toBeNull();
+    expect(manager.actuate).not.toHaveBeenCalled();
+  });
+
+  it("skips non-terminal win prompts but persists capped win-stop sessions", () => {
+    const savedRecords: Record<string, unknown>[] = [];
+    const resultWrites: Record<string, unknown>[] = [];
+    const baseManager = {
+      sessionSubmitDone: false,
+      replayMode: false,
+      over: false,
+      won: true,
+      keepPlaying: false,
+      modeKey: "standard_4x4_pow2_no_undo",
+      score: 2048,
+      grid: createGrid(),
+      getDurationMs: vi.fn(() => 1200),
+      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
+        return {
+          scope: {},
+          method(record: Record<string, unknown>) {
+            savedRecords.push(record);
+            return { id: `local-${savedRecords.length}` };
+          }
+        };
+      }),
+      writeLocalStorageJsonPayload: vi.fn((_key: string, payload: Record<string, unknown>) => {
+        resultWrites.push(payload);
+      })
+    };
+
+    tryAutoSubmitOnGameOver(baseManager);
+
+    expect(savedRecords).toHaveLength(0);
+    expect(resultWrites.at(-1)).toMatchObject({ ok: false, skipped: true, reason: "not_game_over" });
+    expect(baseManager.sessionSubmitDone).toBe(false);
+
+    const cappedManager = {
+      ...baseManager,
+      modeKey: "capped_4x4_pow2_64_no_undo",
+      modeConfig: { max_tile: 64, special_rules: { enforce_max_tile: true } },
+      sessionSubmitDone: false
+    };
+
+    tryAutoSubmitOnGameOver(cappedManager);
+
+    expect(savedRecords).toHaveLength(1);
+    expect(savedRecords[0]).toMatchObject({
+      mode_key: "capped_4x4_pow2_64_no_undo",
+      end_reason: "win_stop"
+    });
+    expect(resultWrites.at(-1)).toMatchObject({ ok: true, local_saved: true });
+    expect(cappedManager.sessionSubmitDone).toBe(true);
+  });
+
   it("auto-submits terminal local history records with replay fallback evidence", () => {
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];

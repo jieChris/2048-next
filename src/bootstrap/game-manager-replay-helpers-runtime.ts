@@ -979,7 +979,28 @@ function syncPracticeRestartBoardSnapshot(manager: ManagerLike): void {
 }
 
 export function isSessionTerminated(manager: ManagerLike): boolean {
-  return !!manager && (!!manager.over || (!!manager.won && !manager.keepPlaying));
+  return isTerminalSessionForPersistence(manager);
+}
+
+function shouldAutoSubmitCompletedWinState(manager: ManagerLike): boolean {
+  if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
+  const modeConfig = toRecord(manager.modeConfig);
+  const maxTile = Math.floor(Number(modeConfig.max_tile));
+  if (Number.isInteger(maxTile) && maxTile > 0) return true;
+  const specialRules = isRecord(modeConfig.special_rules)
+    ? modeConfig.special_rules
+    : toRecord(manager.specialRules);
+  return specialRules.enforce_max_tile === true;
+}
+
+export function isTerminalSessionForPersistence(manager: ManagerLike): boolean {
+  if (!manager || manager.replayMode) return false;
+  return !!manager.over || shouldAutoSubmitCompletedWinState(manager);
+}
+
+function resolveTerminalSessionEndReason(manager: ManagerLike): string {
+  if (!isTerminalSessionForPersistence(manager)) return "";
+  return manager.over ? "game_over" : "win_stop";
 }
 
 function resolveReplayModeTag(modeKey: unknown, fallbackMode: unknown): string {
@@ -1065,9 +1086,21 @@ export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, v
   const grid = toRecord(manager.grid);
   const position = { x: Number(x), y: Number(y) };
   const numericValue = Number(value);
-  if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(numericValue)) {
+  if (!Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isInteger(numericValue) || numericValue < 0) {
     return false;
   }
+  if (asFunction<(x: unknown, y: unknown) => boolean>(manager.isBlockedCell)?.call(manager, x, y)) {
+    throw new Error("Blocked cell cannot be edited");
+  }
+  const modeConfigMaxTile = Math.floor(Number(toRecord(manager.modeConfig).max_tile));
+  const managerMaxTile = Math.floor(Number(manager.maxTile));
+  const maxTile =
+    Number.isFinite(modeConfigMaxTile) && modeConfigMaxTile > 0
+      ? modeConfigMaxTile
+      : Number.isFinite(managerMaxTile) && managerMaxTile > 0
+        ? managerMaxTile
+        : null;
+  if (maxTile && numericValue > maxTile) return false;
   const windowLike = toRecord(manager.getWindowLike ? asFunction<() => unknown>(manager.getWindowLike)?.call(manager) : null);
   const TileCtor =
     typeof windowLike.Tile === "function"
@@ -1079,8 +1112,16 @@ export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, v
   const removeTile = asFunction<(tile: unknown) => unknown>(grid.removeTile);
   const existing = cellContent ? cellContent.call(grid, position) : null;
   if (existing && removeTile) removeTile.call(grid, existing);
+  if (numericValue === 0) {
+    syncPracticeRestartBoardSnapshot(manager);
+    clearTransientTileVisualState(manager);
+    const actuate = asFunction<() => unknown>(manager.actuate);
+    if (actuate) actuate.call(manager);
+    return true;
+  }
   insertTile.call(grid, new TileCtor(position, numericValue));
   syncPracticeRestartBoardSnapshot(manager);
+  clearTransientTileVisualState(manager);
   const actuate = asFunction<() => unknown>(manager.actuate);
   if (actuate) actuate.call(manager);
   return true;
@@ -1321,8 +1362,32 @@ function resolveLocalHistorySave(manager: ManagerLike): { scope: unknown; method
   return method ? { scope: resolved.scope || null, method } : null;
 }
 
+function writeAutoSubmitResultRecord(manager: ManagerLike, payload: unknown): void {
+  const writeResult = asFunction<(key: string, payload: unknown) => unknown>(manager.writeLocalStorageJsonPayload);
+  if (writeResult) {
+    writeResult.call(manager, "last_session_submit_result_v1", payload);
+  }
+}
+
+function writeAutoSubmitSkippedResult(manager: ManagerLike, reason: string): void {
+  writeAutoSubmitResultRecord(manager, {
+    at: new Date().toISOString(),
+    ok: false,
+    skipped: true,
+    reason
+  });
+}
+
 export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
-  if (!manager || manager.sessionSubmitDone || manager.replayMode || !isSessionTerminated(manager)) return;
+  if (!manager || manager.sessionSubmitDone) return;
+  if (manager.replayMode) {
+    writeAutoSubmitSkippedResult(manager, "replay_mode");
+    return;
+  }
+  if (!isTerminalSessionForPersistence(manager)) {
+    writeAutoSubmitSkippedResult(manager, "not_game_over");
+    return;
+  }
   const endedAt = new Date().toISOString();
   const replayString = serializeReplay(manager);
   const record = {
@@ -1331,23 +1396,29 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
     final_board: getFinalBoardMatrix(manager),
     duration_ms: manager.getDurationMs ? asFunction<() => unknown>(manager.getDurationMs)?.call(manager) : 0,
     ended_at: endedAt,
+    end_reason: resolveTerminalSessionEndReason(manager) || "game_over",
     replay: serializeReplayV3(manager),
     replay_string: replayString
   };
   const saveRecord = resolveLocalHistorySave(manager);
-  const saved = saveRecord ? toRecord(saveRecord.method.call(saveRecord.scope, record)) : {};
-  manager.sessionSubmitDone = true;
-  const writeResult = asFunction<(key: string, payload: unknown) => unknown>(manager.writeLocalStorageJsonPayload);
-  if (writeResult) {
-    writeResult.call(manager, "last_session_submit_result_v1", {
+  if (!saveRecord) {
+    writeAutoSubmitResultRecord(manager, {
       at: endedAt,
-      ok: !!saveRecord,
-      local_saved: !!saveRecord,
-      record_id: saved.id || null,
-      mode_key: record.mode_key,
-      score: record.score
+      ok: false,
+      reason: "local_history_store_missing"
     });
+    return;
   }
+  const saved = toRecord(saveRecord.method.call(saveRecord.scope, record));
+  manager.sessionSubmitDone = true;
+  writeAutoSubmitResultRecord(manager, {
+    at: endedAt,
+    ok: true,
+    local_saved: true,
+    record_id: saved.id || null,
+    mode_key: record.mode_key,
+    score: record.score
+  });
 }
 
 export interface GameManagerReplayHelpersRuntime {
@@ -1385,6 +1456,7 @@ export function installGameManagerReplayHelperGlobals(
     exportReplayAsV9VerseBlob,
     serializeReplayAsV9RplBase64,
     tryAutoSubmitOnGameOver,
+    isTerminalSessionForPersistence,
     isSessionTerminated,
     serializeReplay,
     applyReplayImportActions,
