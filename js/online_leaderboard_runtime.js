@@ -3259,6 +3259,19 @@ function shouldAutoLoadOnlineLeaderboard() {
     });
   }
 
+  function requestAccountBestScoreStartupSync() {
+    runPromiseSafely(function () {
+      return syncAccountBestScoreForCurrentMode({ force: true });
+    });
+    if (typeof global.setTimeout === "function") {
+      global.setTimeout(function () {
+        runPromiseSafely(function () {
+          return syncAccountBestScoreForCurrentMode({ force: true });
+        });
+      }, 0);
+    }
+  }
+
   function renderModeIntroLeaderboard(list) {
     var host = byId("mode-intro-leaderboard");
     if (!host) return;
@@ -4231,9 +4244,7 @@ function init() {
     runPromiseSafely(function () {
       return retryPendingScoreSubmit({ forcePendingRetry: true });
     });
-    runPromiseSafely(function () {
-      return syncAccountBestScoreForCurrentMode({ force: true });
-    });
+    requestAccountBestScoreStartupSync();
     refreshTimerLeaderboardPanel(true);
     if (byId("mode-intro-leaderboard")) {
       refreshLeaderboard(getCurrentModeKey());

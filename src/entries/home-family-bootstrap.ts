@@ -273,22 +273,28 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
   }
 }
 
+async function runIndexDeferredRuntimeLoad(): Promise<void> {
+  const sideEffectScripts = resolveIndexDeferredSideEffectScripts();
+  const sideEffectsReady =
+    sideEffectScripts.length > 0 ? loadLegacyScriptsSequentially(sideEffectScripts) : Promise.resolve();
+  const indexUiReady = sideEffectsReady
+    .then(() => applyIndexUiBootstrapFromTsRuntime())
+    .catch(() => {});
+  const leaderboardReady = loadLegacyScriptsSequentially(
+    resolveHomeFamilyScriptsByCapabilities(["leaderboard"])
+  );
+
+  await Promise.all([indexUiReady, leaderboardReady]);
+}
+
 function scheduleIndexDeferredRuntimeLoad(): void {
   if (typeof window === "undefined") return;
 
+  let started = false;
   const loadDeferredRuntime = () => {
-    const sideEffectScripts = resolveIndexDeferredSideEffectScripts();
-    const sideEffectsReady =
-      sideEffectScripts.length > 0 ? loadLegacyScriptsSequentially(sideEffectScripts) : Promise.resolve();
-
-    void sideEffectsReady
-      .then(() => {
-        return applyIndexUiBootstrapFromTsRuntime();
-      })
-      .then(() => {
-        return loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement", "leaderboard"]));
-      })
-      .catch(() => {});
+    if (started) return;
+    started = true;
+    void runIndexDeferredRuntimeLoad().catch(() => {});
   };
 
   const requestIdleCallback = (
@@ -299,7 +305,6 @@ function scheduleIndexDeferredRuntimeLoad(): void {
 
   if (typeof requestIdleCallback === "function") {
     requestIdleCallback(loadDeferredRuntime, { timeout: 1_000 });
-    return;
   }
 
   window.setTimeout(loadDeferredRuntime, 0);
@@ -427,6 +432,9 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoTileSnapshotRuntime();
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
+    if (manifest.capabilities.includes("announcement")) {
+      await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement"]));
+    }
     scheduleIndexDeferredRuntimeLoad();
     return;
   }

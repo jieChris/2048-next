@@ -217,10 +217,9 @@ describe("home family bootstrap ranked session ordering", () => {
 
     await bootstrapHomeFamilyPage("index");
     for (const callback of idleCallbacks) callback();
-    await Promise.resolve();
-    for (let i = 0; i < 5; i += 1) {
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 0));
-    }
+    await vi.waitFor(() => {
+      expect(applyIndexUiBootstrapFromTsRuntime).toHaveBeenCalledTimes(1);
+    });
 
     const loadedScriptText = loadCalls.flat().join("\n");
     expect(installSettingsModalHostRuntime).not.toHaveBeenCalled();
@@ -232,7 +231,6 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(loadedScriptText).toContain("core_top_button_style_runtime.js");
     expect(loadedScriptText).toContain("core_i18n_runtime.js");
     expect(loadedScriptText).not.toContain("index_ui.js");
-    expect(applyIndexUiBootstrapFromTsRuntime).toHaveBeenCalledTimes(1);
   });
 
   it("installs the pre-accessor manager-forward bindings runtime before loading game scripts", async () => {
