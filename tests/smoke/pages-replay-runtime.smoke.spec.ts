@@ -29,6 +29,28 @@ async function importReplayFileAndConfirm(
   await expect(importedFileName).toHaveText(expectedBaseName);
 }
 
+async function importReplayFilePayloadAndConfirm(
+  page: Page,
+  filePayload: { name: string; mimeType: string; buffer: Buffer },
+  expectedBaseName: string
+) {
+  const importedFileName = page.locator("#replay-imported-file-name");
+
+  await expect(importedFileName).toBeHidden();
+
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.locator("#import-replay-file-btn").click()
+  ]);
+  await fileChooser.setFiles(filePayload);
+
+  await page.waitForFunction(() => {
+    const manager = (window as any).game_manager;
+    return Array.isArray(manager?.replayMoves) && manager.replayMoves.length > 0;
+  });
+  await expect(importedFileName).toHaveText(expectedBaseName);
+}
+
 async function importReplayFileByDropAndConfirm(
   page: Page,
   fileName: string,
@@ -67,6 +89,7 @@ async function installLiveReplaySourceSession(page: Page, modeKey: string, seed:
   await installRankedSessionForMode(page, modeKey, {
     clearPrefetch: true,
     clearSavedState: true,
+    resetStorage: true,
     seed,
     token: `smoke-token-live-replay-${modeKey}-${seed}`
   });
@@ -621,6 +644,57 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.bannerText).toContain(".vrs");
     expect(snapshot.bannerText).toContain("v1");
     expect(snapshot.stepTimerText).not.toBe("0.0000 s");
+  });
+
+  test("replay page imports Latin-1 legacy VRS text files", async ({ page }) => {
+    const response = await page.goto("/replay.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Replay response should exist").not.toBeNull();
+    expect(response?.ok(), "Replay response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await page.evaluate(() => {
+      (window as any).__replayAlerts = [];
+      window.alert = function (msg?: unknown) {
+        (window as any).__replayAlerts.push(typeof msg === "string" ? msg : String(msg));
+      };
+    });
+
+    await importReplayFilePayloadAndConfirm(
+      page,
+      {
+        name: "latin1-vrs-replay.vrs",
+        mimeType: "text/plain",
+        buffer: Buffer.from([
+          0x34, 0x78, 0x34, 0x2d, 0x31, 0x5f, 0xbe, 0xfa, 0x30, 0xbe, 0xfd, 0x67, 0xbe, 0xfa, 0x68
+        ])
+      },
+      "latin1-vrs-replay"
+    );
+
+    const snapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const banner = document.getElementById("replay-compatibility-banner") as HTMLElement | null;
+      const style = banner ? window.getComputedStyle(banner) : null;
+      return {
+        replayMovesLength: Array.isArray(manager?.replayMoves) ? manager.replayMoves.length : 0,
+        modeKey: manager?.modeKey || manager?.mode?.key || "",
+        alerts: Array.isArray((window as any).__replayAlerts) ? (window as any).__replayAlerts.slice() : [],
+        bannerVisible: !!banner && style?.display !== "none",
+        bannerText: banner ? banner.textContent || "" : ""
+      };
+    });
+
+    expect(snapshot.replayMovesLength).toBe(1);
+    expect(snapshot.modeKey).toBe("standard_4x4_pow2_no_undo");
+    expect(snapshot.alerts).toEqual([]);
+    expect(snapshot.bannerVisible).toBe(true);
+    expect(snapshot.bannerText).toContain(".vrs");
   });
 
   test("replay page import file chooser only accepts txt vrs and rpl", async ({ page }) => {

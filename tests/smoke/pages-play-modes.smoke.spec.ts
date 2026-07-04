@@ -317,6 +317,92 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(typeof snapshot?.interaction).toBe("boolean");
   });
 
+  test("undo page renders restored tiles on the undo actuation frame", async ({ page }) => {
+    await installRankedSessionForMode(page, "classic_4x4_pow2_undo", {
+      seed: 717,
+      token: "undo-actuation-classic-token",
+      clearSavedState: true
+    });
+
+    const response = await page.goto("/undo_2048.html", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Undo response should exist").not.toBeNull();
+    expect(response?.ok(), "Undo response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          manager.grid &&
+          manager.grid.cells &&
+          typeof manager.restartWithBoard === "function" &&
+          typeof manager.move === "function" &&
+          typeof (window as any).handle_undo === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      manager.restartWithBoard(
+        [
+          [2, 2, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        manager.modeConfig || null,
+        {
+          preserveSeed: true,
+          preserveMode: true,
+          skipStartTiles: true,
+          disableStateRestore: true
+        }
+      );
+      manager.clearTransientTileVisualState?.();
+      manager.actuate();
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+      });
+      manager.move(1);
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      (window as any).handle_undo();
+    });
+
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          if (!(manager && manager.grid && manager.grid.cells)) {
+            return {
+              firstRow: [],
+              tilePositions: []
+            };
+          }
+          const firstRow = [0, 1, 2, 3].map((x) => manager.grid.cells[x]?.[0]?.value || 0);
+          const tilePositions = Array.from(document.querySelectorAll(".tile-container .tile"))
+            .map((tile) => {
+              return (
+                Array.from(tile.classList).find((className) =>
+                  className.startsWith("tile-position-")
+                ) || ""
+              );
+            })
+            .sort();
+          return {
+            firstRow,
+            tilePositions
+          };
+        });
+      }, {
+        message: "undo should actuate the restored board without waiting for the next move"
+      })
+      .toEqual({
+        firstRow: [2, 2, 0, 0],
+        tilePositions: ["tile-position-1-1", "tile-position-2-1"]
+      });
+  });
+
   test("play page suppresses 2048 win prompt when win-prompt setting is disabled", async ({ page }) => {
     await installRankedSessionForMode(page, "classic_4x4_pow2_undo", {
       seed: 515,

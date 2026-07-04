@@ -18,6 +18,33 @@ const REPLAY_V1_EXT_MODE_KEY = 1;
 const REPLAY_V1_EXT_RULESET = 2;
 const REPLAY_V1_EXT_CHALLENGE_ID = 3;
 const REPLAY_V1_EXT_SEED = 4;
+const LEGACY_VRS_NEW_CHARSET =
+  "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+  Array.from({ length: 64 }, (_unused, index) => String.fromCharCode(0xc0 + index)).join("") +
+  "\u00a4\u00be";
+const LEGACY_VRS_VARIANTS = {
+  "2x4": { width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
+  "3x3": { width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
+  "3x4": { width: 4, height: 3, modeKey: "board_3x4_pow2_no_undo" },
+  "4x4": { width: 4, height: 4, modeKey: "standard_4x4_pow2_no_undo" }
+};
+const V9_VERSE_ASCII_CHARSET = Array.from({ length: 95 }, (_unused, index) =>
+  String.fromCharCode(32 + index)
+).join("");
+const V9_VERSE_PNG_CHARSET =
+  V9_VERSE_ASCII_CHARSET +
+  "\u811f\u7709\u8305\u8292\u76f2\u813f\u6c13\u83bd\u951a\u6bdb\u732b\u8302\u536f\u77db\u811b\u811c\u8121\u5fd9\u811d\u4e48\u679a\u8c8c\u6ca1\u9709\u6bcf\u8130\u813a\u9176\u62e2\u8134\u8133\u8320\u8c29";
+const V9_VERSE_PNG_CHARSET_LEGACY =
+  V9_VERSE_ASCII_CHARSET +
+  "\u00c7\u00fc\u00e9\u00e2\u00e4\u00e0\u00e5\u00e7\u00ea\u00eb\u00e8\u00ef\u00ee\u00ec\u00c4\u00c5\u00c9\u00e6\u00c6\u00f4\u00f6\u00f2\u00fb\u00f9\u00ff\u00d6\u00dc\u00f8\u00a3\u00d8\u00d7\u0192\u00e1";
+const REPLAY_SEEK_CHECKPOINT_INTERVAL = 32;
+
+type BoardMatrix = number[][];
+type ReplaySpawn = { x: number; y: number; value: number };
+type ReplayCheckpoint = { index: number; board: BoardMatrix };
+type GridLike = { insertTile?: (tile: unknown) => unknown };
+
+let v9VerseRepairRuntime: { map: Record<string, string>; maxKeyLength: number } | null = null;
 
 type ManagerLike = Record<string, unknown>;
 type WindowLike = Record<string, unknown>;
@@ -40,6 +67,95 @@ function cloneJsonSafe(value: unknown): unknown {
   } catch (_error) {
     return null;
   }
+}
+
+function cloneBoardMatrix(board: BoardMatrix): BoardMatrix {
+  return board.map((row) => row.slice());
+}
+
+function normalizeBoardMatrix(board: unknown): BoardMatrix | null {
+  if (!Array.isArray(board) || board.length === 0) return null;
+  const width = Array.isArray(board[0]) ? board[0].length : 0;
+  if (!width) return null;
+  const normalized: BoardMatrix = [];
+  for (const sourceRow of board) {
+    if (!Array.isArray(sourceRow) || sourceRow.length !== width) return null;
+    const row = [];
+    for (const value of sourceRow) row.push(Math.floor(Number(value) || 0));
+    normalized.push(row);
+  }
+  return normalized;
+}
+
+function boardMatricesEqual(left: unknown, right: BoardMatrix): boolean {
+  const normalizedLeft = normalizeBoardMatrix(left);
+  if (!normalizedLeft || normalizedLeft.length !== right.length) return false;
+  for (let y = 0; y < right.length; y += 1) {
+    if (normalizedLeft[y].length !== right[y].length) return false;
+    for (let x = 0; x < right[y].length; x += 1) {
+      if (normalizedLeft[y][x] !== Math.floor(Number(right[y][x]) || 0)) return false;
+    }
+  }
+  return true;
+}
+
+function findGridConstructor(manager: ManagerLike): (new (width: number, height: number) => GridLike) | null {
+  const windowLike = getWindowLikeForManager(manager);
+  if (typeof windowLike.Grid === "function") return windowLike.Grid as new (width: number, height: number) => GridLike;
+  const existingCtor = toRecord(manager.grid).constructor;
+  return typeof existingCtor === "function" && existingCtor !== Object
+    ? (existingCtor as new (width: number, height: number) => GridLike)
+    : null;
+}
+
+function findTileConstructor(manager: ManagerLike): (new (position: unknown, value: number) => unknown) | null {
+  const windowLike = getWindowLikeForManager(manager);
+  if (typeof windowLike.Tile === "function") return windowLike.Tile as new (position: unknown, value: number) => unknown;
+  const cells = Array.isArray(toRecord(manager.grid).cells) ? (toRecord(manager.grid).cells as unknown[][]) : [];
+  for (const column of cells) {
+    if (!Array.isArray(column)) continue;
+    for (const cell of column) {
+      if (!cell) continue;
+      const ctor = toRecord(cell).constructor;
+      if (typeof ctor === "function" && ctor !== Object) return ctor as new (position: unknown, value: number) => unknown;
+    }
+  }
+  return null;
+}
+
+function applyBoardMatrixDirectly(manager: ManagerLike, board: BoardMatrix): boolean {
+  const GridCtor = findGridConstructor(manager);
+  const TileCtor = findTileConstructor(manager);
+  if (!GridCtor || !TileCtor) return false;
+  const height = board.length;
+  const width = board[0]?.length || 0;
+  if (!width || !height) return false;
+  const grid = new GridCtor(width, height);
+  const insertTile = asFunction<(tile: unknown) => unknown>(grid.insertTile);
+  if (!insertTile) return false;
+  const isBlockedCell = asFunction<(x: number, y: number) => boolean>(manager.isBlockedCell);
+  const isStoneValue = asFunction<(value: number) => boolean>(manager.isStoneValue);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const value = Math.floor(Number(board[y][x]) || 0);
+      if (value <= 0) continue;
+      if (isBlockedCell && isBlockedCell.call(manager, x, y)) return false;
+      const tile = toRecord(new TileCtor({ x, y }, value));
+      if (isStoneValue && isStoneValue.call(manager, value)) tile.isStone = true;
+      insertTile.call(grid, tile);
+    }
+  }
+  const setRuntimeGrid = asFunction<(grid: unknown) => unknown>(manager.setRuntimeGrid);
+  if (setRuntimeGrid) setRuntimeGrid.call(manager, grid);
+  else manager.grid = grid;
+  return boardMatricesEqual(getFinalBoardMatrix(manager), board);
+}
+
+function ensureReplayBoardApplied(manager: ManagerLike, board: unknown): void {
+  const normalized = normalizeBoardMatrix(board);
+  if (!normalized) return;
+  if (boardMatricesEqual(getFinalBoardMatrix(manager), normalized)) return;
+  applyBoardMatrixDirectly(manager, normalized);
 }
 
 function encodeBase64(input: string, windowLike?: WindowLike): string {
@@ -250,7 +366,8 @@ function applyStructuredReplaySession(
   envelope: Record<string, unknown>,
   replayModeConfig: unknown
 ): boolean {
-  const actions = Array.isArray(envelope.actions) ? envelope.actions.slice() : [];
+  const replayMoves = Array.isArray(envelope.replayMoves) ? envelope.replayMoves : [];
+  const actions = Array.isArray(envelope.actions) ? envelope.actions.slice() : replayMoves.slice();
   const spawns = Array.isArray(envelope.replaySpawns) ? envelope.replaySpawns.slice() : [];
   const initialBoard = cloneJsonSafe(envelope.initialBoard) || envelope.initialBoard || null;
   let applied = false;
@@ -272,22 +389,31 @@ function applyStructuredReplaySession(
     );
     if (restartWithBoard) {
       restartWithBoard.call(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
+      ensureReplayBoardApplied(manager, envelope.initialBoard);
     }
     applied = true;
   }
 
   if (!applied) return false;
+  manager.score = 0;
+  manager.successfulMoveCount = 0;
+  manager.moveHistory = [];
   manager.replayMoves = actions;
   manager.replaySpawns = spawns;
   manager.replayIndex = 0;
   manager.replayMode = true;
   manager.replayPaused = false;
   manager.replayRunning = false;
+  manager.isPaused = true;
   manager.replayDelay = 200;
   if (initialBoard) {
     manager.replayStartBoardMatrix = initialBoard;
     manager.initialBoardMatrix = cloneJsonSafe(initialBoard) || initialBoard;
   }
+  manager.replaySeekCheckpointHistory = Array.isArray(envelope.replaySeekCheckpoints)
+    ? envelope.replaySeekCheckpoints
+    : [];
+  manager.replayStateHistory = [];
   return true;
 }
 
@@ -315,6 +441,323 @@ function parseStructuredReplayJson(manager: ManagerLike, text: string): Record<s
   return null;
 }
 
+function decodeLegacyVrsToken(chunk: string, chunkIndex: number): number {
+  if (chunk.length !== 3) throw `Invalid VRS token length at index ${String(chunkIndex)}`;
+  const value0 = LEGACY_VRS_NEW_CHARSET.indexOf(chunk.charAt(0));
+  const value1 = LEGACY_VRS_NEW_CHARSET.indexOf(chunk.charAt(1));
+  const value2 = LEGACY_VRS_NEW_CHARSET.indexOf(chunk.charAt(2));
+  if (value0 < 0 || value1 < 0 || value2 < 0) {
+    throw `Invalid VRS token at index ${String(chunkIndex)}`;
+  }
+  return (value0 << 14) + (value1 << 7) + value2;
+}
+
+function decodeLegacyVrsStep(binary: number): { move: number; spawn: { x: number; y: number; value: number } } {
+  const moveMap = [0, 2, 3, 1];
+  const valueBit = (binary >> 2) & 3;
+  if (valueBit !== 0 && valueBit !== 1) throw "Invalid VRS spawn value";
+  return {
+    move: moveMap[binary & 3],
+    spawn: {
+      x: (binary >> 4) & 7,
+      y: (binary >> 7) & 7,
+      value: valueBit === 1 ? 4 : 2
+    }
+  };
+}
+
+function applyLegacyVrsStartupSpawn(board: number[][], spawn: { x: number; y: number; value: number }): void {
+  if (!Array.isArray(board[spawn.y]) || board[spawn.y][spawn.x] !== 0) {
+    throw "Invalid VRS startup collision";
+  }
+  board[spawn.y][spawn.x] = spawn.value;
+}
+
+function parseLegacyVrsText(manager: ManagerLike, text: string): Record<string, unknown> | null {
+  const match = /^(\d+x\d+)-[^_]*_(.*)$/.exec(text);
+  if (!match) return null;
+  const variant = LEGACY_VRS_VARIANTS[match[1] as keyof typeof LEGACY_VRS_VARIANTS];
+  if (!variant) return null;
+  const movesText = match[2] || "";
+  if (movesText.length < 6) throw "Invalid VRS replay payload";
+  const initialBoard = Array.from({ length: variant.height }, () => Array.from({ length: variant.width }, () => 0));
+  const replayMoves = [];
+  const replaySpawns = [];
+  let tokenCount = 0;
+  for (let index = 0; index < movesText.length; index += 3) {
+    const chunk = movesText.slice(index, index + 3);
+    if (chunk.length < 3) break;
+    const step = decodeLegacyVrsStep(decodeLegacyVrsToken(chunk, tokenCount));
+    if (step.spawn.x >= variant.width || step.spawn.y >= variant.height) throw "Invalid VRS spawn coordinates";
+    if (tokenCount < 2) applyLegacyVrsStartupSpawn(initialBoard, step.spawn);
+    else {
+      replayMoves.push(step.move);
+      replaySpawns.push(step.spawn);
+    }
+    tokenCount += 1;
+  }
+  if (tokenCount < 2) throw "Invalid VRS replay payload";
+  const resolveModeConfig = asFunction<(modeKey: string) => unknown>(manager.resolveModeConfig);
+  const modeKey = !resolveModeConfig || resolveModeConfig.call(manager, variant.modeKey)
+    ? variant.modeKey
+    : String(manager.modeKey || manager.mode || variant.modeKey);
+  return { kind: "v9rpl", modeKey, initialBoard, replayMoves, replaySpawns };
+}
+
+function createCharMap(chars: string): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (let index = 0; index < chars.length; index += 1) map[chars.charAt(index)] = index;
+  return map;
+}
+
+function hasOwnChar(map: Record<string, number>, char: string): boolean {
+  return Object.prototype.hasOwnProperty.call(map, char);
+}
+
+function isAsciiVerseChar(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return code >= 32 && code <= 126;
+}
+
+function decodeUtf8BytesAsGb18030(text: string, decoder: TextDecoder): string {
+  if (!text || typeof TextEncoder !== "function") return "";
+  try {
+    const decoded = decoder.decode(new TextEncoder().encode(text));
+    if (!decoded || decoded.includes("\ufffd")) return "";
+    return decoded;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function repairPriority(sourceText: string, currentMap: Record<string, number>): number {
+  let score = 0;
+  for (let index = 0; index < sourceText.length; index += 1) {
+    const char = sourceText.charAt(index);
+    if (hasOwnChar(currentMap, char)) score += 2;
+    else if (isAsciiVerseChar(char)) score += 1;
+  }
+  return score;
+}
+
+function putRepairEntry(
+  map: Record<string, { value: string; priority: number } | null>,
+  brokenText: string,
+  sourceText: string,
+  currentMap: Record<string, number>
+): void {
+  if (!brokenText || !sourceText || brokenText === sourceText || brokenText.includes("\ufffd")) return;
+  const priority = repairPriority(sourceText, currentMap);
+  const existing = map[brokenText];
+  if (!existing || priority > existing.priority) {
+    map[brokenText] = { value: sourceText, priority };
+    return;
+  }
+  if (priority === existing.priority && existing.value !== sourceText) map[brokenText] = null;
+}
+
+function buildV9VerseRepairRuntime(): { map: Record<string, string>; maxKeyLength: number } {
+  if (v9VerseRepairRuntime) return v9VerseRepairRuntime;
+  let decoder: TextDecoder | null = null;
+  try {
+    decoder = new TextDecoder("gb18030");
+  } catch (_error) {
+    try {
+      decoder = new TextDecoder("gbk");
+    } catch (_fallbackError) {}
+  }
+  if (!decoder) {
+    v9VerseRepairRuntime = { map: {}, maxKeyLength: 0 };
+    return v9VerseRepairRuntime;
+  }
+  const currentMap = createCharMap(V9_VERSE_PNG_CHARSET);
+  const sourceChars = Array.from(new Set((V9_VERSE_PNG_CHARSET + V9_VERSE_PNG_CHARSET_LEGACY).split("")));
+  const entries: Record<string, { value: string; priority: number } | null> = {};
+  for (const first of sourceChars) {
+    for (const second of sourceChars) {
+      if (isAsciiVerseChar(first) && isAsciiVerseChar(second)) continue;
+      const source = first + second;
+      const oneStep = decodeUtf8BytesAsGb18030(source, decoder);
+      putRepairEntry(entries, oneStep, source, currentMap);
+      putRepairEntry(entries, decodeUtf8BytesAsGb18030(oneStep, decoder), source, currentMap);
+    }
+  }
+  const map: Record<string, string> = {};
+  let maxKeyLength = 0;
+  for (const key of Object.keys(entries)) {
+    const entry = entries[key];
+    if (!entry) continue;
+    map[key] = entry.value;
+    if (key.length > maxKeyLength) maxKeyLength = key.length;
+  }
+  v9VerseRepairRuntime = { map, maxKeyLength };
+  return v9VerseRepairRuntime;
+}
+
+function hasUnsupportedV9VerseChars(
+  body: string,
+  currentMap: Record<string, number>,
+  legacyMap: Record<string, number>
+): boolean {
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body.charAt(index);
+    if (hasOwnChar(currentMap, char) || hasOwnChar(legacyMap, char)) continue;
+    return true;
+  }
+  return false;
+}
+
+function repairV9VerseBody(body: string): string {
+  const currentMap = createCharMap(V9_VERSE_PNG_CHARSET);
+  const legacyMap = createCharMap(V9_VERSE_PNG_CHARSET_LEGACY);
+  if (!hasUnsupportedV9VerseChars(body, currentMap, legacyMap)) return body;
+  const runtime = buildV9VerseRepairRuntime();
+  if (!runtime.maxKeyLength) return body;
+  let nextBody = body;
+  for (let pass = 0; pass < 2; pass += 1) {
+    let repaired = "";
+    let changed = false;
+    for (let index = 0; index < nextBody.length;) {
+      let matchedKey = "";
+      let replacement = "";
+      let length = Math.min(runtime.maxKeyLength, nextBody.length - index);
+      while (length > 1) {
+        const slice = nextBody.slice(index, index + length);
+        if (Object.prototype.hasOwnProperty.call(runtime.map, slice)) {
+          matchedKey = slice;
+          replacement = runtime.map[slice];
+          break;
+        }
+        length -= 1;
+      }
+      if (!matchedKey) {
+        repaired += nextBody.charAt(index);
+        index += 1;
+      } else {
+        repaired += replacement;
+        index += matchedKey.length;
+        changed = true;
+      }
+    }
+    nextBody = repaired;
+    if (!changed || !hasUnsupportedV9VerseChars(nextBody, currentMap, legacyMap)) break;
+  }
+  return nextBody;
+}
+
+function resolveV9VerseMapForBody(body: string): Record<string, number> {
+  const currentMap = createCharMap(V9_VERSE_PNG_CHARSET);
+  const legacyMap = createCharMap(V9_VERSE_PNG_CHARSET_LEGACY);
+  let hasCurrentSpecial = false;
+  let hasLegacySpecial = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body.charAt(index);
+    if (isAsciiVerseChar(char)) continue;
+    if (hasOwnChar(currentMap, char)) hasCurrentSpecial = true;
+    if (hasOwnChar(legacyMap, char)) hasLegacySpecial = true;
+  }
+  return hasLegacySpecial && !hasCurrentSpecial ? legacyMap : currentMap;
+}
+
+function createEmptyV9Board(): BoardMatrix {
+  return Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
+}
+
+function decodeV9VerseToken(map: Record<string, number>, body: string, index: number): number {
+  const char = body.charAt(index);
+  if (!hasOwnChar(map, char)) throw `Invalid replay char at index ${String(index)}`;
+  return Number(map[char]);
+}
+
+function decodeV9VerseSpawn(token: number): ReplaySpawn {
+  const spawnPos = ((token & 3) << 2) + ((token & 15) >> 2);
+  return {
+    x: spawnPos % 4,
+    y: Math.floor(spawnPos / 4),
+    value: (((token >> 4) & 1) + 1) === 2 ? 4 : 2
+  };
+}
+
+function applyV9Spawn(board: BoardMatrix, spawn: ReplaySpawn): void {
+  if (!Array.isArray(board[spawn.y]) || board[spawn.y][spawn.x] !== 0) {
+    throw "Invalid replay spawn collision";
+  }
+  board[spawn.y][spawn.x] = spawn.value;
+}
+
+function mergeV9Line(line: number[]): number[] {
+  const compact = line.filter((value) => value > 0);
+  const merged: number[] = [];
+  for (let index = 0; index < compact.length; index += 1) {
+    if (index + 1 < compact.length && compact[index] === compact[index + 1]) {
+      merged.push(compact[index] * 2);
+      index += 1;
+    } else {
+      merged.push(compact[index]);
+    }
+  }
+  while (merged.length < 4) merged.push(0);
+  return merged;
+}
+
+function applyV9Move(board: BoardMatrix, v9Move: number): BoardMatrix {
+  const next = cloneBoardMatrix(board);
+  if (v9Move === 0 || v9Move === 1) {
+    for (let y = 0; y < 4; y += 1) {
+      const source = v9Move === 0 ? board[y].slice() : board[y].slice().reverse();
+      const row = mergeV9Line(source);
+      if (v9Move === 1) row.reverse();
+      next[y] = row;
+    }
+    return next;
+  }
+  for (let x = 0; x < 4; x += 1) {
+    const source = [board[0][x], board[1][x], board[2][x], board[3][x]];
+    if (v9Move === 3) source.reverse();
+    const column = mergeV9Line(source);
+    if (v9Move === 3) column.reverse();
+    for (let y = 0; y < 4; y += 1) next[y][x] = column[y];
+  }
+  return next;
+}
+
+function parseV9VerseText(text: string): Record<string, unknown> | null {
+  const prefix = "replay_";
+  if (text.slice(0, prefix.length).toLowerCase() !== prefix) return null;
+  let body = repairV9VerseBody(text.slice(prefix.length));
+  if (body.length < 2) throw "Invalid replay payload";
+  const map = resolveV9VerseMapForBody(body);
+  const initialBoard = createEmptyV9Board();
+  applyV9Spawn(initialBoard, decodeV9VerseSpawn(decodeV9VerseToken(map, body, 0)));
+  applyV9Spawn(initialBoard, decodeV9VerseSpawn(decodeV9VerseToken(map, body, 1)));
+  let currentBoard = cloneBoardMatrix(initialBoard);
+  const replayMoves: number[] = [];
+  const replaySpawns: ReplaySpawn[] = [];
+  const checkpoints: ReplayCheckpoint[] = [{ index: 0, board: cloneBoardMatrix(initialBoard) }];
+  const moveChunkToV9Move = [2, 1, 3, 0];
+  for (let index = 2; index < body.length; index += 1) {
+    const token = decodeV9VerseToken(map, body, index);
+    const v9Move = moveChunkToV9Move[(token >> 5) & 3];
+    const internalDirection = v9Move === 0 ? 3 : v9Move === 1 ? 1 : v9Move === 2 ? 0 : 2;
+    const spawn = decodeV9VerseSpawn(token);
+    currentBoard = applyV9Move(currentBoard, v9Move);
+    applyV9Spawn(currentBoard, spawn);
+    replayMoves.push(internalDirection);
+    replaySpawns.push(spawn);
+    if (replayMoves.length % REPLAY_SEEK_CHECKPOINT_INTERVAL === 0) {
+      checkpoints.push({ index: replayMoves.length, board: cloneBoardMatrix(currentBoard) });
+    }
+  }
+  return {
+    kind: "v9rpl",
+    modeKey: "standard_4x4_pow2_no_undo",
+    initialBoard,
+    replayMoves,
+    replaySpawns,
+    replaySeekCheckpoints: checkpoints
+  };
+}
+
 function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<string, unknown> | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
@@ -333,6 +776,10 @@ function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<s
       replaySpawns: actions.replaySpawns
     };
   }
+  const legacyVrs = parseLegacyVrsText(manager, trimmed);
+  if (legacyVrs) return legacyVrs;
+  const legacyVerse = parseV9VerseText(trimmed);
+  if (legacyVerse) return legacyVerse;
   return parseStructuredReplayJson(manager, trimmed);
 }
 
@@ -642,11 +1089,18 @@ export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, v
 export function pauseReplay(manager: ManagerLike): void {
   manager.replayPaused = true;
   manager.replayRunning = false;
+  manager.isPaused = true;
+  if (manager.replayTimer) {
+    clearTimeout(manager.replayTimer as ReturnType<typeof setTimeout>);
+    manager.replayTimer = null;
+  }
 }
 
 export function resumeReplay(manager: ManagerLike): void {
   manager.replayPaused = false;
   manager.replayRunning = true;
+  manager.isPaused = false;
+  queueNativeReplayTick(manager);
 }
 
 export function setReplaySpeed(manager: ManagerLike, multiplier: unknown): number {
@@ -656,17 +1110,162 @@ export function setReplaySpeed(manager: ManagerLike, multiplier: unknown): numbe
   return normalized;
 }
 
+function findReplayCheckpoint(manager: ManagerLike, target: number): ReplayCheckpoint | null {
+  const checkpoints = Array.isArray(manager.replaySeekCheckpointHistory)
+    ? manager.replaySeekCheckpointHistory
+    : [];
+  let best: ReplayCheckpoint | null = null;
+  for (const item of checkpoints) {
+    const checkpoint = toRecord(item);
+    const index = Math.floor(Number(checkpoint.index));
+    if (!Number.isInteger(index) || index > target) continue;
+    if (!Array.isArray(checkpoint.board)) continue;
+    if (!best || index > best.index) {
+      best = { index, board: checkpoint.board as BoardMatrix };
+    }
+  }
+  return best;
+}
+
+function restartReplayAtBoard(manager: ManagerLike, board: BoardMatrix, replayIndex: number): void {
+  const restartWithBoard = asFunction<(board: unknown, modeConfig: unknown, options?: unknown) => unknown>(
+    manager.restartWithBoard
+  );
+  if (restartWithBoard) {
+    restartWithBoard.call(manager, cloneBoardMatrix(board), manager.modeConfig || null, { asReplay: true });
+    ensureReplayBoardApplied(manager, board);
+  }
+  manager.replayMode = true;
+  manager.replayIndex = replayIndex;
+}
+
+function restartReplayForSeek(manager: ManagerLike, target: number): number {
+  const checkpoint = findReplayCheckpoint(manager, target);
+  if (checkpoint) {
+    restartReplayAtBoard(manager, checkpoint.board, checkpoint.index);
+    return checkpoint.index;
+  }
+  if (Array.isArray(manager.replayStartBoardMatrix)) {
+    restartReplayAtBoard(manager, manager.replayStartBoardMatrix as BoardMatrix, 0);
+    return 0;
+  }
+  const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown) => unknown>(manager.restartWithSeed);
+  if (restartWithSeed && typeof manager.initialSeed !== "undefined") {
+    restartWithSeed.call(manager, manager.initialSeed, manager.modeConfig || null);
+  }
+  manager.replayMode = true;
+  manager.replayIndex = 0;
+  return 0;
+}
+
+function dispatchReplayAction(manager: ManagerLike, action: unknown): void {
+  if (action === -1) {
+    callManagerMethod(manager, "move", [-1]);
+    return;
+  }
+  if (Array.isArray(action)) {
+    const kind = String(action[0] || "");
+    if (kind === "m") {
+      callManagerMethod(manager, "move", [action[1]]);
+      return;
+    }
+    if (kind === "u") {
+      callManagerMethod(manager, "move", [-1]);
+      return;
+    }
+    if (kind === "p") {
+      const insert = asFunction<(x: unknown, y: unknown, value: unknown) => unknown>(manager.insertCustomTile);
+      if (insert) insert.call(manager, action[1], action[2], action[3]);
+      else insertCustomTile(manager, action[1], action[2], action[3]);
+      return;
+    }
+    throw "Unknown replay action";
+  }
+  callManagerMethod(manager, "move", [action]);
+}
+
+function executeReplayActionAt(manager: ManagerLike, index: number): void {
+  const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
+  if (index < 0 || index >= moves.length) return;
+  const action = moves[index];
+  if (Array.isArray(manager.replaySpawns) && !Array.isArray(action)) {
+    manager.forcedSpawn = manager.replaySpawns[index];
+  }
+  dispatchReplayAction(manager, action);
+  manager.replayIndex = index + 1;
+}
+
+function queueNativeReplayTick(manager: ManagerLike): void {
+  if (manager.replayTimer) clearTimeout(manager.replayTimer as ReturnType<typeof setTimeout>);
+  const delay = Math.max(1, Math.floor(Number(manager.replayDelay) || 200));
+  manager.replayTimer = setTimeout(() => {
+    manager.replayTimer = null;
+    if (!manager.replayRunning || manager.replayPaused) return;
+    const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
+    const index = Math.floor(Number(manager.replayIndex) || 0);
+    if (index >= moves.length) {
+      pauseReplay(manager);
+      return;
+    }
+    executeReplayActionAt(manager, index);
+    if (Math.floor(Number(manager.replayIndex) || 0) >= moves.length) {
+      pauseReplay(manager);
+      return;
+    }
+    queueNativeReplayTick(manager);
+  }, delay);
+}
+
+function withSingleFinalActuate(manager: ManagerLike, callback: () => void): void {
+  const originalActuate = asFunction<(...args: unknown[]) => unknown>(manager.actuate);
+  if (!originalActuate) {
+    callback();
+    return;
+  }
+  let actuated = false;
+  manager.actuate = function (this: unknown) {
+    actuated = true;
+  };
+  try {
+    callback();
+  } finally {
+    manager.actuate = originalActuate;
+    if (actuated) originalActuate.call(manager);
+  }
+}
+
 export function seekReplay(manager: ManagerLike, targetIndex: unknown): number {
   const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
   const target = Math.max(0, Math.min(moves.length, Math.floor(Number(targetIndex) || 0)));
-  manager.replayIndex = target;
+  const current = Math.max(0, Math.min(moves.length, Math.floor(Number(manager.replayIndex) || 0)));
+  if (target === current) return target;
+  withSingleFinalActuate(manager, () => {
+    let start = current;
+    const checkpoint = findReplayCheckpoint(manager, target);
+    if (target < current || (checkpoint && checkpoint.index > current)) {
+      start = restartReplayForSeek(manager, target);
+    }
+    for (let index = start; index < target; index += 1) executeReplayActionAt(manager, index);
+    manager.replayIndex = target;
+  });
+  manager.replayPaused = true;
+  manager.replayRunning = false;
+  manager.isPaused = true;
   return target;
+}
+
+function normalizeReplayStepDelta(delta: unknown): number {
+  const value = Number(delta);
+  if (!Number.isFinite(value)) return 0;
+  return value > 0 ? Math.floor(value) : Math.ceil(value);
 }
 
 export function stepReplay(manager: ManagerLike, delta: unknown): number {
   const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
-  const current = Math.floor(Number(manager.replayIndex) || 0);
-  const next = Math.max(0, Math.min(moves.length, current + Math.floor(Number(delta) || 0)));
+  const current = Math.max(0, Math.min(moves.length, Math.floor(Number(manager.replayIndex) || 0)));
+  const step = normalizeReplayStepDelta(delta);
+  const next = Math.max(0, Math.min(moves.length, current + step));
+  if (step > 0) return seekReplay(manager, next);
   manager.replayIndex = next;
   return next;
 }
@@ -791,6 +1390,7 @@ export function installGameManagerReplayHelperGlobals(
     applyReplayImportActions,
     importReplay,
     importV9RplBuffer,
+    LEGACY_VRS_NEW_CHARSET: Array.from(LEGACY_VRS_NEW_CHARSET),
     pauseReplay,
     resumeReplay,
     setReplaySpeed,

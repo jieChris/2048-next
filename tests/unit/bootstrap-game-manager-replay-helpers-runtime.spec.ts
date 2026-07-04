@@ -5,6 +5,7 @@ import {
   importReplay,
   insertCustomTile,
   installGameManagerReplayHelperGlobals,
+  seekReplay,
   serializeReplay,
   serializeReplayV3,
   tryAutoSubmitOnGameOver
@@ -169,6 +170,158 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayIndex).toBe(0);
     expect(manager.replayMode).toBe(true);
     expect(manager.restartWithSeed).toHaveBeenCalledWith(0.25, { key: "standard_4x4_pow2_no_undo" });
+  });
+
+  it("imports legacy VRS text replays", () => {
+    const manager = {
+      replayMoves: [],
+      replaySpawns: [],
+      replayIndex: 99,
+      replayMode: false,
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithBoard: vi.fn(),
+      loadUndoSettingForMode: vi.fn(() => false),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ forcedUndoSetting: null })),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn()
+    };
+
+    const ok = importReplay(manager, "4x4-0000000000000000_00000g683");
+
+    expect(ok).toBe(true);
+    expect(manager.restartWithBoard).toHaveBeenCalledWith(
+      [
+        [2, 2, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      { key: "standard_4x4_pow2_no_undo" },
+      { asReplay: true }
+    );
+    expect(manager.replayMoves).toEqual([1]);
+    expect(manager.replayIndex).toBe(0);
+    expect(manager.replayMode).toBe(true);
+  });
+
+  it("restores imported replay start board when restartWithBoard leaves the current grid unchanged", () => {
+    class TestTile {
+      x: number;
+      y: number;
+      value: number;
+
+      constructor(position: { x: number; y: number }, value: number) {
+        this.x = position.x;
+        this.y = position.y;
+        this.value = value;
+      }
+    }
+
+    class TestGrid {
+      width: number;
+      height: number;
+      size: number;
+      cells: Array<Array<TestTile | null>>;
+
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+        this.size = width;
+        this.cells = Array.from({ length: width }, () => Array.from({ length: height }, () => null));
+      }
+
+      insertTile(tile: TestTile) {
+        this.cells[tile.x][tile.y] = tile;
+      }
+
+      eachCell(callback: (x: number, y: number, tile: TestTile | null) => void) {
+        for (let x = 0; x < this.width; x += 1) {
+          for (let y = 0; y < this.height; y += 1) callback(x, y, this.cells[x][y]);
+        }
+      }
+    }
+
+    const staleGrid = new TestGrid(4, 4);
+    staleGrid.insertTile(new TestTile({ x: 0, y: 0 }, 8));
+    const manager = {
+      width: 4,
+      height: 4,
+      grid: staleGrid,
+      replayMoves: [],
+      replaySpawns: [],
+      replayIndex: 99,
+      replayMode: false,
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithBoard: vi.fn(),
+      setRuntimeGrid(grid: TestGrid) {
+        this.grid = grid;
+      },
+      getWindowLike: () => ({ Grid: TestGrid, Tile: TestTile }),
+      loadUndoSettingForMode: vi.fn(() => false),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ forcedUndoSetting: null })),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn()
+    };
+
+    const ok = importReplay(manager, "4x4-0000000000000000_00000g683");
+
+    expect(ok).toBe(true);
+    expect(getFinalBoardMatrix(manager)).toEqual([
+      [2, 2, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ]);
+  });
+
+  it("imports legacy verse text replays", () => {
+    const manager = {
+      replayMoves: [],
+      replaySpawns: [],
+      replayIndex: 99,
+      replayMode: false,
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithBoard: vi.fn(),
+      loadUndoSettingForMode: vi.fn(() => false),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ forcedUndoSetting: null })),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn()
+    };
+
+    const ok = importReplay(manager, "replay_(!äfC");
+
+    expect(ok).toBe(true);
+    expect(manager.restartWithBoard).toHaveBeenCalled();
+    expect(manager.replayMoves.length).toBeGreaterThan(0);
+    expect(manager.replayMode).toBe(true);
+  });
+
+  it("seeks replay by dispatching moves with forced spawns", () => {
+    const moves: unknown[] = [];
+    const manager = {
+      replayMoves: [1, 2],
+      replaySpawns: [
+        { x: 0, y: 0, value: 2 },
+        { x: 1, y: 0, value: 4 }
+      ],
+      replayIndex: 0,
+      replayMode: true,
+      forcedSpawn: null as unknown,
+      replayStartBoardMatrix: [[2, 0], [0, 0]],
+      modeConfig: { key: "test" },
+      restartWithBoard: vi.fn(),
+      move: vi.fn(function (this: { forcedSpawn: unknown }, direction: unknown) {
+        moves.push([direction, this.forcedSpawn]);
+      })
+    };
+
+    seekReplay(manager, 2);
+
+    expect(moves).toEqual([
+      [1, { x: 0, y: 0, value: 2 }],
+      [2, { x: 1, y: 0, value: 4 }]
+    ]);
+    expect(manager.replayIndex).toBe(2);
   });
 
   it("infers rectangular replay mode keys from width then height when v1 metadata has no mode key", () => {

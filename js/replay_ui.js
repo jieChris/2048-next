@@ -1413,6 +1413,19 @@
     return text;
   }
 
+  function hasLegacyVrsTextHeaderBytes(bytes) {
+    if (!(bytes && bytes.length >= 5)) return false;
+    var header = "";
+    var maxHeaderLength = Math.min(bytes.length, 64);
+    for (var index = 0; index < maxHeaderLength; index += 1) {
+      var byteValue = bytes[index];
+      if (byteValue === 95) return /^(?:2x4|3x3|3x4|4x4)-[^_]*$/.test(header);
+      if (byteValue < 32 || byteValue > 126) return false;
+      header += String.fromCharCode(byteValue);
+    }
+    return false;
+  }
+
   function decodeReplayTextBuffer(buffer) {
     var bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || 0);
     if (!bytes.length) return "";
@@ -1424,6 +1437,9 @@
     }
     if (bytes.length >= 3 && bytes[0] === 239 && bytes[1] === 187 && bytes[2] === 191) {
       return decodeReplayTextBytes(bytes, "utf-8", { fatal: true, start: 3 });
+    }
+    if (hasLegacyVrsTextHeaderBytes(bytes)) {
+      return decodeReplayTextBytes(bytes, "iso-8859-1", { fatal: false });
     }
     var encodings = ["utf-8", "gb18030", "big5", "shift_jis", "euc-kr"];
     for (var index = 0; index < encodings.length; index++) {

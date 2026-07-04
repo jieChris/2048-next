@@ -23,9 +23,13 @@ export async function installRankedSessionForMode(
     ({ modeKey: injectedModeKey, options: injectedOptions }) => {
       const opts = injectedOptions as InstallRankedSessionOptions;
       if (opts.resetStorage) {
+        const betaAccessSmokeBypass = window.localStorage.getItem("2048_beta_access_smoke_bypass_v1");
         window.localStorage.clear();
         window.sessionStorage.clear();
         window.name = "";
+        if (betaAccessSmokeBypass !== null) {
+          window.localStorage.setItem("2048_beta_access_smoke_bypass_v1", betaAccessSmokeBypass);
+        }
       }
 
       const authToken = opts.authToken === undefined ? "smoke_token" : opts.authToken;

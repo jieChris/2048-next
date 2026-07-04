@@ -670,6 +670,94 @@ function applyUndoRestoreState(manager, undoRestore) {
   }
 }
 
+function resolveCorePostUndoRecordRuntimeForUndoStats() {
+  if (typeof CorePostUndoRecordRuntime !== "undefined" && CorePostUndoRecordRuntime) return CorePostUndoRecordRuntime;
+  if (typeof window !== "undefined" && window && window.CorePostUndoRecordRuntime) return window.CorePostUndoRecordRuntime;
+  return null;
+}
+
+function resolveCoreReplayCodecRuntimeForUndoStats() {
+  if (typeof CoreReplayCodecRuntime !== "undefined" && CoreReplayCodecRuntime) return CoreReplayCodecRuntime;
+  if (typeof window !== "undefined" && window && window.CoreReplayCodecRuntime) return window.CoreReplayCodecRuntime;
+  return null;
+}
+
+function createPostUndoRecordPayload(manager, direction) {
+  return {
+    replayMode: !!manager.replayMode,
+    direction: direction,
+    hasSessionReplayV3: !!manager.sessionReplayV3
+  };
+}
+
+function createPostUndoRecordFallback(manager) {
+  if (manager.replayMode) {
+    return {
+      shouldRecordMoveHistory: false,
+      shouldAppendCompactUndo: false,
+      shouldPushSessionAction: false,
+      sessionAction: null
+    };
+  }
+  var shouldPushSessionAction = !!manager.sessionReplayV3;
+  return {
+    shouldRecordMoveHistory: true,
+    shouldAppendCompactUndo: true,
+    shouldPushSessionAction: shouldPushSessionAction,
+    sessionAction: shouldPushSessionAction ? ["u"] : null
+  };
+}
+
+function computePostUndoRecord(manager, direction) {
+  if (!manager) return null;
+  var runtime = resolveCorePostUndoRecordRuntimeForUndoStats();
+  if (runtime && typeof runtime.computePostUndoRecord === "function") {
+    return runtime.computePostUndoRecord(createPostUndoRecordPayload(manager, direction));
+  }
+  return createPostUndoRecordFallback(manager);
+}
+
+function appendCompactUndo(manager) {
+  if (!manager) return;
+  var runtime = resolveCoreReplayCodecRuntimeForUndoStats();
+  if (runtime && typeof runtime.appendCompactUndo === "function") {
+    manager.replayCompactLog = runtime.appendCompactUndo(manager.replayCompactLog);
+    return;
+  }
+  if (runtime && typeof runtime.encodeReplay128 === "function") {
+    manager.replayCompactLog = String(manager.replayCompactLog || "") + runtime.encodeReplay128(127) + runtime.encodeReplay128(1);
+  }
+}
+
+function resolveSessionReplayV1UndoDeltaMs(session, nowMs) {
+  var lastAt = Number(session && session.last_event_at_ms);
+  if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
+  var delta = Math.floor(nowMs - lastAt);
+  if (!Number.isFinite(delta) || delta < 0) delta = 0;
+  session.last_event_at_ms = nowMs;
+  return delta;
+}
+
+function canRecordSessionReplayV1Undo(manager, session) {
+  if (!(session && session.supported)) return false;
+  if (!manager || !manager.replayMode) return true;
+  return !(Array.isArray(manager.replayMoves) && manager.replayMoves.length > 0);
+}
+
+function recordSessionReplayV1Undo(manager, undoCount) {
+  var session = manager && manager.sessionReplayV1;
+  if (!canRecordSessionReplayV1Undo(manager, session)) return;
+  if (!Array.isArray(session.records)) session.records = [];
+  var count = Number(undoCount);
+  if (!Number.isInteger(count) || count <= 0) count = 1;
+  var nowMs = Date.now();
+  if (count === 1) {
+    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1UndoDeltaMs(session, nowMs) });
+    return;
+  }
+  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1UndoDeltaMs(session, nowMs) });
+}
+
 function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
   if (!manager || !postUndoRecord) return;
   if (postUndoRecord.shouldRecordMoveHistory) {

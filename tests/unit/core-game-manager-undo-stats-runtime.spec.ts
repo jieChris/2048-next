@@ -50,6 +50,12 @@ function loadUndoStatsRuntime(options?: {
       operations: Record<string, unknown>
     ) => boolean;
   };
+  postUndoRecordRuntime?: {
+    computePostUndoRecord?: (input: Record<string, unknown>) => Record<string, unknown>;
+  };
+  replayCodecRuntime?: {
+    appendCompactUndo?: (log: unknown) => string;
+  };
   undoRestoredTilesRuntime?: {
     applyUndoRestoredTiles?: (
       manager: Record<string, unknown> | null,
@@ -92,6 +98,8 @@ function loadUndoStatsRuntime(options?: {
     CoreGameManagerNormalizedUndoEntryRuntime: options?.normalizedUndoEntryRuntime,
     CoreGameManagerRedoRestoreStateRuntime: options?.redoRestoreStateRuntime,
     CoreGameManagerUndoMoveHandlerRuntime: options?.undoMoveHandlerRuntime,
+    CorePostUndoRecordRuntime: options?.postUndoRecordRuntime,
+    CoreReplayCodecRuntime: options?.replayCodecRuntime,
     CoreGameManagerUndoRestoredTilesRuntime: options?.undoRestoredTilesRuntime
   } as Record<string, unknown>;
 
@@ -254,5 +262,100 @@ describe("core game manager undo stats runtime", () => {
         writeRuntimeGridCellForUndo: expect.any(Function)
       })
     );
+  });
+
+  it("records post-undo artifacts through installed runtimes during undo restore", () => {
+    const computePostUndoRecord = vi.fn(() => ({
+      shouldRecordMoveHistory: true,
+      shouldAppendCompactUndo: true,
+      shouldPushSessionAction: true,
+      sessionAction: ["u"]
+    }));
+    const appendCompactUndo = vi.fn(() => "undo-log");
+    const handleUndoMove = vi.fn((manager, direction, operations) => {
+      const ops = operations as {
+        executeUndoRestorePipeline: (
+          manager: Record<string, unknown>,
+          direction: number
+        ) => unknown;
+        actuate: (manager: Record<string, unknown>) => void;
+      };
+      ops.executeUndoRestorePipeline(manager as Record<string, unknown>, direction);
+      ops.actuate(manager as Record<string, unknown>);
+      return true;
+    });
+    const runtime = loadUndoStatsRuntime({
+      undoMoveHandlerRuntime: {
+        handleUndoMove
+      },
+      postUndoRecordRuntime: {
+        computePostUndoRecord
+      },
+      replayCodecRuntime: {
+        appendCompactUndo
+      }
+    });
+    const manager = {
+      grid: {
+        cells: [
+          [null, null],
+          [null, null]
+        ],
+        build: vi.fn()
+      },
+      width: 2,
+      height: 2,
+      score: 16,
+      comboStreak: 0,
+      successfulMoveCount: 1,
+      lockConsumedAtMoveCount: -1,
+      lockedDirectionTurn: null,
+      lockedDirection: null,
+      undoUsed: 0,
+      undoLimit: null,
+      timerStatus: 1,
+      modeKey: "classic_4x4_pow2_undo",
+      mode: "classic_4x4_pow2_undo",
+      replayMode: false,
+      replayCompactLog: "",
+      moveHistory: [] as number[],
+      sessionReplayV1: { supported: true, records: [] as Record<string, unknown>[] },
+      sessionReplayV3: { actions: [] as unknown[] },
+      undoStack: [
+        {
+          score: 8,
+          tiles: [{ x: 0, y: 0, value: 8, previousPosition: { x: 1, y: 0 } }],
+          comboStreak: 0,
+          successfulMoveCount: 0,
+          lockConsumedAtMoveCount: -1,
+          lockedDirectionTurn: null,
+          lockedDirection: null,
+          undoUsed: 0
+        }
+      ],
+      redoStack: [],
+      normalizeUndoStackEntry: vi.fn((entry) => entry),
+      isNonArrayObject: (value: unknown) => !!value && typeof value === "object" && !Array.isArray(value),
+      isStoneValue: vi.fn(() => false),
+      setRuntimeScore: vi.fn(),
+      writeRuntimeGridCell: vi.fn(() => true),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ isUndoInteractionEnabled: true })),
+      actuator: {
+        clearMessage: vi.fn()
+      }
+    };
+
+    expect(runtime.handleUndoMove(manager, -1)).toBe(true);
+
+    expect(computePostUndoRecord).toHaveBeenCalledWith({
+      replayMode: false,
+      direction: -1,
+      hasSessionReplayV3: true
+    });
+    expect(appendCompactUndo).toHaveBeenCalledWith("");
+    expect(manager.moveHistory).toEqual([-1]);
+    expect(manager.replayCompactLog).toBe("undo-log");
+    expect(manager.sessionReplayV1.records[0]).toMatchObject({ kind: "undo1" });
+    expect(manager.sessionReplayV3.actions).toEqual([["u"]]);
   });
 });
