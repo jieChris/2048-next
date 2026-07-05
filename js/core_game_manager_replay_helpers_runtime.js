@@ -2280,6 +2280,22 @@ function decodeV9RplBase64ToBytes(manager, encodedBase64) {
   return bytes;
 }
 
+function decodeReplayUtf8Bytes(bytes) {
+  var normalized = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || 0);
+  if (typeof TextDecoder === "function") {
+    return new TextDecoder("utf-8").decode(normalized);
+  }
+  var binary = "";
+  for (var index = 0; index < normalized.length; index++) {
+    binary += String.fromCharCode(normalized[index] & 255);
+  }
+  try {
+    return decodeURIComponent(escape(binary));
+  } catch (_error) {
+    return binary;
+  }
+}
+
 function assertV9RplExportModeSupported(manager) {
   if (!manager) throw "Missing manager";
   if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) {
@@ -3287,7 +3303,13 @@ function parseV1RplBase64ReplayEnvelopeByBody(manager, encodedBase64) {
   var codec = resolveReplayV1CodecRuntime(manager);
   if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) throw "Replay v1 codec unavailable";
   var bytes = decodeV9RplBase64ToBytes(manager, encodedBase64);
-  return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
+  try {
+    return createReplayV1StructuredReplayEnvelope(manager, codec.decodeReplayV1Rpl(bytes));
+  } catch (error) {
+    var structured = tryParseReplayV3JsonEnvelope(manager, decodeReplayUtf8Bytes(bytes));
+    if (structured) return structured;
+    throw error;
+  }
 }
 
 function tryParseV1RplBase64ReplayEnvelope(manager, trimmed) {

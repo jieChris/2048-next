@@ -8,7 +8,6 @@ const WIDE_LOGO_HTML_FILES = [
   "PKU2048.html",
   "capped_2048.html",
   "history.html",
-  "index_test.html",
   "modes.html",
   "play.html",
   "undo_2048.html"
@@ -23,18 +22,17 @@ function readPngSize(path: string): { width: number; height: number } {
 }
 
 describe("wide logo asset", () => {
-  it("stores the height-stretched wide logo sources, including a small first-paint asset", () => {
+  it("stores the height-stretched wide logo source", () => {
     expect(readPngSize("meta/logo.png")).toEqual({ width: 976, height: 400 });
     expect(readPngSize("meta/logo-tall.png")).toEqual({ width: 976, height: 421 });
-    expect(readPngSize("meta/logo-tall-small.png")).toEqual({ width: 234, height: 101 });
   });
 
-  it("uses the small stretched logo file without fixed display-height stretching", () => {
+  it("uses the high-resolution stretched logo file without fixed display-height stretching", () => {
     for (const file of WIDE_LOGO_HTML_FILES) {
       const html = readFileSync(file, "utf8");
-      expect(html, file).toContain("meta/logo-tall-small.png?v=20260704-logo-small");
+      expect(html, file).toContain("meta/logo-tall.png?v=20260704-logo-hq");
       expect(html, file).not.toContain("meta/logo.png");
-      expect(html, file).not.toContain("meta/logo-tall.png");
+      expect(html, file).not.toContain("meta/logo-tall-small.png");
       expect(html, file).not.toMatch(/height\s*:\s*10(?:1|6\.2621)px/);
     }
 

@@ -8,8 +8,7 @@ const HOME_FAMILY_ENTRIES = [
   "src/entries/capped.ts",
   "src/entries/practice-board.ts",
   "src/entries/pku2048.ts",
-  "src/entries/replay.ts",
-  "src/entries/index-test-page.ts"
+  "src/entries/replay.ts"
 ] as const;
 
 describe("first-load performance assets", () => {
@@ -70,5 +69,12 @@ describe("first-load performance assets", () => {
     const css = readFileSync("style/fonts/clear-sans.css", "utf8");
 
     expect(css.match(/font-display:\s*swap;/g)).toHaveLength(3);
+  });
+
+  it("keeps the source-heavy favicon preview page out of production inputs", () => {
+    const viteConfig = readFileSync("vite.config.ts", "utf8");
+
+    expect(viteConfig).not.toMatch(/favicon_preview\s*:/);
+    expect(viteConfig).not.toContain('resolve(__dirname, "favicon-preview.html")');
   });
 });

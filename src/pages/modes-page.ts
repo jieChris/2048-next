@@ -34,24 +34,27 @@ const MODES_PAGE_COPY: Record<
       "relay_5x5.html": { title: "5×5 接力", subtitle: "测试版" }
     },
     tabs: {
-      nonundo: "无撤回",
-      undo: "可撤回",
+      standard: "标准",
+      fibonacci: "斐波那契",
       diagonal: "八方向",
       capped: "封顶",
-      entertainment: "娱乐",
-      tools: "工具入口"
+      special: "特殊玩法",
+      tools: "工具"
     },
     groups: [
-      "2 的幂 - 尺寸扩展",
-      "斐波那契",
-      "2 的幂 - 尺寸扩展",
-      "斐波那契",
-      "不可撤回",
+      "经典 - 无撤回",
+      "经典 - 可撤回",
+      "斐波那契 - 无撤回",
+      "斐波那契 - 可撤回",
       "八方向模式",
       "封顶模式",
+      "禁止目标",
+      "规则魔改",
       "其他页面"
     ],
     links: {
+      "2048.html": "4×4",
+      "undo_2048.html": "4×4",
       "play.html?mode_key=fib_4x4_no_undo": "斐波那契 4×4",
       "play.html?mode_key=fib_3x3_no_undo": "斐波那契 3×3",
       "play.html?mode_key=fib_4x3_no_undo": "斐波那契 4×3",
@@ -119,24 +122,27 @@ const MODES_PAGE_COPY: Record<
       "relay_5x5.html": { title: "5x5 Relay", subtitle: "Beta" }
     },
     tabs: {
-      nonundo: "No Undo",
-      undo: "Undo",
+      standard: "Standard",
+      fibonacci: "Fibonacci",
       diagonal: "8 Directions",
       capped: "Capped",
-      entertainment: "Fun",
+      special: "Special",
       tools: "Tools"
     },
     groups: [
-      "Powers of 2 - Size Variants",
-      "Fibonacci",
-      "Powers of 2 - Size Variants",
-      "Fibonacci",
-      "No Undo",
+      "Classic - No Undo",
+      "Classic - Undo",
+      "Fibonacci - No Undo",
+      "Fibonacci - Undo",
       "8-Direction Modes",
       "Capped Modes",
+      "Target Ban",
+      "Rule Variants",
       "Other Pages"
     ],
     links: {
+      "2048.html": "4x4",
+      "undo_2048.html": "4x4",
       "play.html?mode_key=fib_4x4_no_undo": "Fibonacci 4x4",
       "play.html?mode_key=fib_3x3_no_undo": "Fibonacci 3x3",
       "play.html?mode_key=fib_4x3_no_undo": "Fibonacci 4x3",

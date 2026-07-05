@@ -190,6 +190,20 @@ KeyboardInputManager.prototype.listen = function () {
   var diagonalAssistTouchId = null;
   var gameContainer = document.getElementsByClassName("game-container")[0];
   var diagonalAssistButton = null;
+  var TOUCH_THRESHOLD_STORAGE_KEY = "touch_swipe_threshold_px_v1";
+
+  function resolveTouchMoveThreshold() {
+    var fallback = 10;
+    try {
+      var value = window.localStorage && window.localStorage.getItem(TOUCH_THRESHOLD_STORAGE_KEY);
+      if (value == null || value === "") return fallback;
+      var threshold = Number(value);
+      if (!Number.isFinite(threshold)) return fallback;
+      return Math.min(28, Math.max(4, Math.round(threshold)));
+    } catch (_err) {
+      return fallback;
+    }
+  }
 
   function setDiagonalAssistActive(active) {
     var nextActive = !!active && isDiagonalModeEnabled();
@@ -203,10 +217,10 @@ KeyboardInputManager.prototype.listen = function () {
     }
   }
 
-  function resolveDiagonalDirectionByDelta(dx, dy) {
+  function resolveDiagonalDirectionByDelta(dx, dy, threshold) {
     var absDx = Math.abs(dx);
     var absDy = Math.abs(dy);
-    if (absDx <= 10 || absDy <= 10) return null;
+    if (absDx <= threshold || absDy <= threshold) return null;
     var ratio = absDx / absDy;
     if (ratio < 0.5 || ratio > 2) return null;
     if (dx > 0 && dy < 0) return 4; // up-right
@@ -215,8 +229,8 @@ KeyboardInputManager.prototype.listen = function () {
     return 7; // up-left
   }
 
-  function resolveNearestDiagonalDirection(dx, dy) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) <= 10) return null;
+  function resolveNearestDiagonalDirection(dx, dy, threshold) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) <= threshold) return null;
     var angle = Math.atan2(dy, dx) * (180 / Math.PI);
     if (angle < 0) angle += 360;
     var options = [
@@ -372,10 +386,11 @@ KeyboardInputManager.prototype.listen = function () {
     var dy = changedTouch.clientY - touchStartClientY;
     var absDy = Math.abs(dy);
 
-    if (Math.max(absDx, absDy) > 10) {
+    var touchMoveThreshold = resolveTouchMoveThreshold();
+    if (Math.max(absDx, absDy) > touchMoveThreshold) {
       var diagonalModeEnabled = isDiagonalModeEnabled();
       if (diagonalAssistActive && diagonalModeEnabled) {
-        var forcedDiagonalDirection = resolveNearestDiagonalDirection(dx, dy);
+        var forcedDiagonalDirection = resolveNearestDiagonalDirection(dx, dy, touchMoveThreshold);
         if (forcedDiagonalDirection != null) {
           self.emit("move", forcedDiagonalDirection);
         }
@@ -383,7 +398,7 @@ KeyboardInputManager.prototype.listen = function () {
         return;
       }
       if (diagonalModeEnabled) {
-        var diagonalDirection = resolveDiagonalDirectionByDelta(dx, dy);
+        var diagonalDirection = resolveDiagonalDirectionByDelta(dx, dy, touchMoveThreshold);
         if (diagonalDirection != null) {
           self.emit("move", diagonalDirection);
           touchStartPointerId = null;

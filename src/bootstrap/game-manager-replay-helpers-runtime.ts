@@ -181,6 +181,17 @@ function decodeBase64ToBytes(encoded: string, windowLike: WindowLike): Uint8Arra
   return new Uint8Array(0);
 }
 
+function decodeBytesToUtf8Text(bytes: Uint8Array): string {
+  if (typeof TextDecoder === "function") return new TextDecoder("utf-8").decode(bytes);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i] & 255);
+  try {
+    return decodeURIComponent(escape(binary));
+  } catch (_error) {
+    return binary;
+  }
+}
+
 function getWindowLikeForManager(manager: ManagerLike): WindowLike {
   const getWindowLike = asFunction<() => unknown>(manager.getWindowLike);
   const resolved = getWindowLike ? getWindowLike.call(manager) : null;
@@ -763,18 +774,25 @@ function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<s
   if (!trimmed) return null;
   const prefix = resolveReplayV1Base64Prefix(manager);
   if (trimmed.indexOf(prefix) === 0) {
-    const decoded = decodeReplayV1Rpl(decodeBase64ToBytes(trimmed.slice(prefix.length), getWindowLikeForManager(manager)));
-    const modeKey = resolveReplayModeKeyFromDecoded(manager, decoded as unknown as Record<string, unknown>);
-    const ruleset = resolveReplayRulesetFromDecoded(manager, decoded as unknown as Record<string, unknown>);
-    const initialBoard = replayV1InitTilesToBoard(decoded.width, decoded.height, decoded.initTiles || [], ruleset);
-    const actions = replayV1RecordsToReplayActions(decoded.records || [], decoded.width, ruleset);
-    return {
-      kind: "v1rpl",
-      modeKey,
-      initialBoard,
-      replayMoves: actions.replayMoves,
-      replaySpawns: actions.replaySpawns
-    };
+    const bytes = decodeBase64ToBytes(trimmed.slice(prefix.length), getWindowLikeForManager(manager));
+    try {
+      const decoded = decodeReplayV1Rpl(bytes);
+      const modeKey = resolveReplayModeKeyFromDecoded(manager, decoded as unknown as Record<string, unknown>);
+      const ruleset = resolveReplayRulesetFromDecoded(manager, decoded as unknown as Record<string, unknown>);
+      const initialBoard = replayV1InitTilesToBoard(decoded.width, decoded.height, decoded.initTiles || [], ruleset);
+      const actions = replayV1RecordsToReplayActions(decoded.records || [], decoded.width, ruleset);
+      return {
+        kind: "v1rpl",
+        modeKey,
+        initialBoard,
+        replayMoves: actions.replayMoves,
+        replaySpawns: actions.replaySpawns
+      };
+    } catch (error) {
+      const structured = parseStructuredReplayJson(manager, decodeBytesToUtf8Text(bytes));
+      if (structured) return structured;
+      throw error;
+    }
   }
   const legacyVrs = parseLegacyVrsText(manager, trimmed);
   if (legacyVrs) return legacyVrs;
@@ -871,23 +889,48 @@ export function computePostMoveRecord(manager: ManagerLike, direction: unknown):
   });
 }
 
+function resolveSessionReplayV1DeltaMs(session: Record<string, unknown>, nowMs: number): number {
+  let lastAt = Number(session.last_event_at_ms);
+  if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
+  let delta = Math.floor(nowMs - lastAt);
+  if (!Number.isFinite(delta) || delta < 0) delta = 0;
+  session.last_event_at_ms = nowMs;
+  return delta;
+}
+
+function canRecordSessionReplayV1(manager: ManagerLike, session: Record<string, unknown>): boolean {
+  if (!session.supported) return false;
+  if (!manager.replayMode) return true;
+  return !(Array.isArray(manager.replayMoves) && manager.replayMoves.length > 0);
+}
+
 export function recordSessionReplayV1Move(
   manager: ManagerLike,
   direction: unknown,
   spawn: unknown
 ): void {
   const session = toRecord(manager.sessionReplayV1);
-  if (!session) return;
+  if (!session || !canRecordSessionReplayV1(manager, session)) return;
+  const numericDirection = Number(direction);
+  if (!Number.isInteger(numericDirection) || numericDirection < 0 || numericDirection > 7) return;
+  const spawnRecord = toRecord(spawn);
+  const x = Number(spawnRecord.x);
+  const y = Number(spawnRecord.y);
+  const value = Number(spawnRecord.value);
+  const width = Math.floor(Number(manager.width || 4));
+  const height = Math.floor(Number(manager.height || width || 4));
+  if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= width || y >= height) return;
+  const isFibonacciMode = asFunction<() => unknown>(manager.isFibonacciMode);
+  const fib = !!(isFibonacciMode && isFibonacciMode.call(manager));
+  if (fib ? value !== 1 && value !== 2 : value !== 2 && value !== 4) return;
   const records = Array.isArray(session.records) ? session.records : [];
   session.records = records;
-  const spawnRecord = toRecord(spawn);
   records.push({
     kind: "move",
-    dir: Number(direction),
-    spawnIndex:
-      Number(spawnRecord.x || 0) + Number(spawnRecord.y || 0) * Math.max(1, Number(manager.width || 4)),
-    spawnValueBit: Number(spawnRecord.value) === 4 ? 1 : 0,
-    deltaMs: 0
+    dir: numericDirection,
+    spawnIndex: y * width + x,
+    spawnValueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0),
+    deltaMs: resolveSessionReplayV1DeltaMs(session, Date.now())
   });
 }
 

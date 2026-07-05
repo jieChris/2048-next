@@ -20,6 +20,7 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "password.html", entryPath: "./src/entries/password.ts" },
   { htmlPath: "user.html", entryPath: "./src/entries/user-profile.ts" },
   { htmlPath: "palette.html", entryPath: "./src/entries/palette.ts" },
+  { htmlPath: "touch_sensitivity.html", entryPath: "./src/entries/touch-sensitivity.ts" },
   { htmlPath: "replay.html", entryPath: "./src/entries/replay.ts" },
   { htmlPath: "play.html", entryPath: "./src/entries/play.ts" },
   { htmlPath: "undo_2048.html", entryPath: "./src/entries/undo.ts" },

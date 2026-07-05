@@ -485,10 +485,44 @@ export function applyReplayClipboardCopy(input: {
   }
 }
 
-function resolveReplayDownloadFilename(input: { replay?: unknown }): string {
-  const replay = input.replay == null ? "" : String(input.replay);
-  if (replay.startsWith("REPLAY_v1RPL_B64_")) return "replay-v1.txt";
-  return "replay.txt";
+function sanitizeReplayFilenamePart(value: unknown, fallback: string): string {
+  const text = String(value || "").trim().replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "");
+  return text || fallback;
+}
+
+function resolveReplayExportUsername(input: Record<string, unknown>): string {
+  const storage = resolveStorageLike({ windowLike: input.windowLike, storageName: "localStorage" });
+  const getItem = asFunction<(key: string) => unknown>(toRecord(storage).getItem);
+  if (!getItem) return "guest";
+  try {
+    return sanitizeReplayFilenamePart(getItem.call(storage, "2048_auth_nickname_v1"), "guest");
+  } catch (_error) {
+    return "guest";
+  }
+}
+
+function formatReplayExportDate(now: Date): string {
+  const year = String(now.getFullYear());
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}${month}${day}`;
+}
+
+function resolveReplayDownloadFilename(input: {
+  gameManager?: unknown;
+  windowLike?: unknown;
+  now?: unknown;
+}): string {
+  const source = toRecord(input);
+  const manager = toRecord(source.gameManager);
+  const username = resolveReplayExportUsername(source);
+  const mode = sanitizeReplayFilenamePart(
+    String(manager.modeKey || manager.mode || "").replace(/^standard_/, "").replace(/_pow2(?=_|$)/g, ""),
+    "mode"
+  );
+  const date = formatReplayExportDate(source.now instanceof Date ? source.now : new Date());
+  const score = sanitizeReplayFilenamePart(Math.floor(Number(manager.score) || 0), "0");
+  return `${username}-${mode}-${date}-${score}.txt`;
 }
 
 function resolveReplayModalButton(input: {
@@ -507,6 +541,7 @@ function resolveReplayModalButton(input: {
 
 function configureReplayDownloadButton(input: {
   replay?: unknown;
+  gameManager?: unknown;
   documentLike?: unknown;
   windowLike?: unknown;
   alertLike?: unknown;
@@ -528,7 +563,10 @@ function configureReplayDownloadButton(input: {
     if (!replay) return { downloaded: false };
     const result = triggerReplayFileDownload({
       blob: new Blob([replay], { type: "text/plain;charset=utf-8" }),
-      filename: resolveReplayDownloadFilename({ replay }),
+      filename: resolveReplayDownloadFilename({
+        gameManager: source.gameManager,
+        windowLike: source.windowLike
+      }),
       documentLike: source.documentLike,
       windowLike: source.windowLike
     });
@@ -694,6 +732,7 @@ export function applyReplayExport(input: {
     });
     configureReplayDownloadButton({
       replay,
+      gameManager: manager,
       documentLike: source.documentLike,
       windowLike: resolveWindowLike(source),
       alertLike: source.alertLike

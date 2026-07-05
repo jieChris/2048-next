@@ -173,6 +173,8 @@ describe("bootstrap replay export", () => {
   });
 
   it("adds a download-file action in replay modal export flow", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-05T12:00:00"));
     const writeText = vi.fn(() => Promise.resolve(undefined));
     const alertLike = vi.fn();
 
@@ -224,6 +226,8 @@ describe("bootstrap replay export", () => {
 
     applyReplayExport({
       gameManager: {
+        modeKey: "standard_4x4_pow2_no_undo",
+        score: 4096,
         serialize() {
           return "REPLAY_v1RPL_B64_abcd";
         }
@@ -236,6 +240,11 @@ describe("bootstrap replay export", () => {
       },
       documentLike,
       windowLike: {
+        localStorage: {
+          getItem: vi.fn((key: string) => (key === "2048_auth_nickname_v1" ? "Chris 玩家" : null)),
+          setItem: vi.fn(),
+          removeItem: vi.fn()
+        },
         URL: {
           createObjectURL,
           revokeObjectURL
@@ -248,15 +257,21 @@ describe("bootstrap replay export", () => {
     expect(downloadButton.style).toMatchObject({ display: "inline-block" });
 
     const clickResult = downloadButton.onclick?.();
-    expect(clickResult).toMatchObject({ downloaded: true, filename: "replay-v1.txt" });
+    expect(clickResult).toMatchObject({
+      downloaded: true,
+      filename: "Chris_玩家-4x4_no_undo-20260705-4096.txt"
+    });
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
     expect(anchors).toHaveLength(1);
-    expect(anchors[0]?.download).toBe("replay-v1.txt");
+    expect(anchors[0]?.download).toBe("Chris_玩家-4x4_no_undo-20260705-4096.txt");
     expect(removed).toContain(anchors[0]);
+    vi.useRealTimers();
   });
 
   it("supports function-shaped URL runtimes when downloading replay files", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-05T12:00:00"));
     const alertLike = vi.fn();
     const writeText = vi.fn(() => Promise.resolve(undefined));
     const anchorClick = vi.fn();
@@ -303,6 +318,8 @@ describe("bootstrap replay export", () => {
 
     applyReplayExport({
       gameManager: {
+        modeKey: "capped/unsafe",
+        score: 128,
         serialize() {
           return "REPLAY_v1RPL_B64_abcd";
         }
@@ -315,17 +332,23 @@ describe("bootstrap replay export", () => {
       },
       documentLike,
       windowLike: {
+        localStorage: {
+          getItem: vi.fn(() => ""),
+          setItem: vi.fn(),
+          removeItem: vi.fn()
+        },
         URL: URLRuntime
       },
       alertLike
     });
 
     const clickResult = downloadButton.onclick?.();
-    expect(clickResult).toMatchObject({ downloaded: true, filename: "replay-v1.txt" });
+    expect(clickResult).toMatchObject({ downloaded: true, filename: "guest-capped_unsafe-20260705-128.txt" });
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
     expect(anchorClick).toHaveBeenCalledTimes(1);
     expect(alertLike).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("adds an open-replay-page action in replay modal export flow", () => {

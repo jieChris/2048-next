@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 触屏灵敏度</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
+  <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
+  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/beta_access_preload.js?v=20260627-01"></script>
+  <link href="style/main.css?v=20260608-toolkit-align" rel="stylesheet" type="text/css">
+  <link href="style/touch_sensitivity_page.css?v=20260705-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="touch-sensitivity">
+  <main class="touch-page-shell">
+    <header class="touch-page-header">
+      <div>
+        <p id="touch-kicker" class="touch-kicker">2048 触屏设置</p>
+        <h1 id="touch-title" class="touch-title">触屏灵敏度</h1>
+        <p id="touch-subtitle" class="touch-subtitle">调好后直接回到游戏，正式棋盘会使用同一个触发距离。</p>
+      </div>
+      <nav class="touch-nav">
+        <a id="touch-back-palette" class="replay-button touch-nav-btn" href="palette.html">色板中心</a>
+        <a id="touch-back-game" class="replay-button touch-nav-btn" href="2048.html">回首页</a>
+      </nav>
+    </header>
+
+    <section class="touch-card">
+      <div class="touch-card-head">
+        <h2 id="touch-slider-heading">触发距离</h2>
+        <output id="touch-threshold-value" for="touch-threshold-slider">10 px</output>
+      </div>
+      <input id="touch-threshold-slider" class="touch-threshold-slider" type="range" min="4" max="28" step="1" value="10">
+      <p id="touch-threshold-hint" class="touch-hint">数值越小越灵敏；数值越大越不容易误触。</p>
+    </section>
+
+    <section class="touch-card touch-test-card">
+      <div class="touch-card-head">
+        <h2 id="touch-board-heading">测试棋盘</h2>
+        <button id="touch-test-reset" class="replay-button touch-reset-btn" type="button">重置</button>
+      </div>
+      <div id="touch-test-board" class="touch-test-board" aria-label="3x3 测试棋盘"></div>
+      <p id="touch-test-feedback" class="touch-feedback" aria-live="polite">在棋盘上滑动，测试当前触发距离。</p>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/touch-sensitivity.ts"></script>
+</body>
+</html>

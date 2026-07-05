@@ -36,6 +36,7 @@ export type RuntimeCapability =
   | "modes"
   | "relay-5x5"
   | "palette"
+  | "touch-sensitivity"
   | "stone-2k-monitor"
   | "user-profile"
   | "register"
@@ -144,15 +145,14 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     capabilities: ["palette"]
   },
   {
+    pageId: "touch-sensitivity",
+    htmlFile: "touch_sensitivity.html",
+    capabilities: ["touch-sensitivity"]
+  },
+  {
     pageId: "stone-2k-monitor",
     htmlFile: "stone_2k_monitor.html",
     capabilities: ["stone-2k-monitor"]
-  },
-  {
-    pageId: "index_test",
-    htmlFile: "index_test.html",
-    capabilities: ["core", "standard-startup", "test-ui", "i18n"],
-    devOnly: true
   }
 ] as const;
 

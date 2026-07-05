@@ -884,6 +884,7 @@ describe("entry-manifest-audit helpers", () => {
     expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "account-settings.ts")).toBe(true);
     expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "register.ts")).toBe(true);
     expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "password.ts")).toBe(true);
+    expect(PAGE_ENTRY_SPECS.some((entry) => entry.entryFile === "touch-sensitivity.ts")).toBe(true);
   });
 
   it("rejects missing page entry files and architecture drift", () => {

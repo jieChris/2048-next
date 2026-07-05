@@ -14,7 +14,6 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "PKU2048.html", entryFile: "pku2048.ts", pageId: "pku2048", architecture: "manifest-bootstrap" },
   { htmlFile: "play.html", entryFile: "play.ts", pageId: "play", architecture: "manifest-bootstrap" },
   { htmlFile: "replay.html", entryFile: "replay.ts", pageId: "replay", architecture: "manifest-bootstrap" },
-  { htmlFile: "index_test.html", entryFile: "index-test-page.ts", pageId: "index_test", architecture: "manifest-bootstrap" },
   { htmlFile: "account.html", entryFile: "account.ts", pageId: "account", architecture: "manifest-bootstrap" },
   { htmlFile: "account_settings.html", entryFile: "account-settings.ts", pageId: "account-settings", architecture: "manifest-bootstrap" },
   { htmlFile: "register.html", entryFile: "register.ts", pageId: "register", architecture: "manifest-bootstrap" },
@@ -23,6 +22,7 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "relay_5x5.html", entryFile: "relay-5x5.ts", pageId: "relay-5x5", architecture: "manifest-bootstrap" },
   { htmlFile: "modes.html", entryFile: "modes.ts", pageId: "modes", architecture: "manifest-bootstrap" },
   { htmlFile: "palette.html", entryFile: "palette.ts", pageId: "palette", architecture: "manifest-bootstrap" },
+  { htmlFile: "touch_sensitivity.html", entryFile: "touch-sensitivity.ts", pageId: "touch-sensitivity", architecture: "manifest-bootstrap" },
   { htmlFile: "user.html", entryFile: "user-profile.ts", pageId: "user-profile", architecture: "manifest-bootstrap" }
 ];
 

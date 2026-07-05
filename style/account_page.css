@@ -28,9 +28,89 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   gap: 14px;
 }
 
+body[data-page="account-hub"][data-auth-state] .account-grid {
+  grid-template-columns: 1fr;
+}
+
 .account-auth-card,
 .account-board-card {
   padding: 14px;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-auth-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) minmax(320px, 360px);
+  grid-template-areas:
+    "head form actions"
+    "tip tip tip";
+  align-items: center;
+  gap: 10px 12px;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-auth-title-row {
+  grid-area: head;
+  margin-bottom: 0;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-auth-form-surface {
+  grid-area: form;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-auth-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-login-captcha {
+  grid-column: 1 / -1;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-action-row {
+  grid-area: actions;
+  margin-top: 0;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-action-row .replay-button {
+  box-sizing: border-box;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  width: 100%;
+}
+
+body[data-page="account-hub"][data-auth-state="guest"] .account-tip {
+  grid-area: tip;
+  margin-top: 0;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-auth-card {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-auth-title-row {
+  margin-bottom: 0;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-auth-title-wrap h2 {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-user-card {
+  margin-top: 0;
+  padding: 10px 12px;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-user-card h3 {
+  margin-bottom: 6px;
+}
+
+body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 12px;
 }
 
 .account-auth-title-row {
@@ -39,6 +119,10 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.account-auth-title-row .panel-pill {
+  white-space: nowrap;
 }
 
 .account-auth-title-wrap {
@@ -137,9 +221,9 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
 
 .account-action-row {
   margin-top: 12px;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
   padding: 10px;
   border: 1px solid #e1d5c7;
   border-radius: 12px;
@@ -155,6 +239,34 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
   flex: 1 1 0;
   text-decoration: none;
   font-weight: 700;
+}
+
+.account-action-row #account-login-btn {
+  grid-column: 1 / -1;
+}
+
+.account-auth-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  color: #7d6048;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.account-auth-link:hover,
+.account-auth-link:focus-visible {
+  color: #4d4035;
+}
+
+.account-auth-link.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  text-decoration: none;
 }
 
 .account-action-row .replay-button:hover {
@@ -635,6 +747,15 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-pag
   color: #fff4e1;
 }
 
+html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link {
+  color: #f0dcc0;
+}
+
+html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:hover,
+html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:focus-visible {
+  color: #fff4e1;
+}
+
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-head-row {
   border-bottom-color: rgba(181, 198, 221, 0.12);
   background: linear-gradient(180deg, rgba(29, 43, 66, 0.98), rgba(19, 29, 45, 0.98));
@@ -677,6 +798,29 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
     grid-template-columns: 1fr;
   }
 
+  body[data-page="account-hub"][data-auth-state="guest"] .account-auth-card,
+  body[data-page="account-hub"][data-auth-state="authed"] .account-auth-card {
+    display: block;
+  }
+
+  body[data-page="account-hub"][data-auth-state="guest"] .account-auth-grid,
+  body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-page="account-hub"][data-auth-state="guest"] .account-auth-title-row {
+    margin-bottom: 10px;
+  }
+
+  body[data-page="account-hub"][data-auth-state="guest"] .account-action-row,
+  body[data-page="account-hub"][data-auth-state="guest"] .account-tip {
+    margin-top: 12px;
+  }
+
+  body[data-page="account-hub"][data-auth-state="authed"] .account-user-card {
+    margin-top: 12px;
+  }
+
   .account-board-head-row,
   .account-board-empty,
   .account-board-row {
@@ -689,14 +833,30 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
 
   .account-action-row .replay-button {
     min-width: 110px;
-    flex: 1 1 calc(33.33% - 6px);
   }
 }
 
 @media (max-width: 560px) {
   .account-page-shell {
-    width: calc(100vw - 12px);
+    width: calc(100% - 24px);
     margin: 10px auto 18px;
+  }
+
+  body[data-page="account-hub"] .palette-page-header {
+    align-items: stretch;
+  }
+
+  body[data-page="account-hub"] .palette-nav {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  body[data-page="account-hub"] .palette-nav-btn {
+    box-sizing: border-box;
+    min-width: 96px;
+    flex: 1 1 calc(33.33% - 8px);
+    padding: 0 10px;
+    text-align: center;
   }
 
   .account-board-tools {
@@ -728,7 +888,6 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
 
   .account-action-row .replay-button {
     min-width: 88px;
-    flex: 1 1 calc(50% - 6px);
   }
 
   .account-board-subtitle {

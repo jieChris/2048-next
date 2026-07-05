@@ -66,7 +66,7 @@ describe("runtime-manifest: getProductionPages", () => {
   it("excludes devOnly pages", () => {
     const prod = getProductionPages();
     expect(prod.every((p) => !p.devOnly)).toBe(true);
-    expect(prod.length).toBe(19);
+    expect(prod.length).toBe(20);
   });
 });
 

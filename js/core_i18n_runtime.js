@@ -622,7 +622,7 @@
   function applyPageSpecificText(lang) {
     var page = String((global.location && global.location.pathname) || "").split("/").pop() || "index.html";
     page = page.toLowerCase();
-    if (page === "index.html" || page === "2048.html" || page === "index_test.html") {
+    if (page === "index.html" || page === "2048.html") {
       var indexCopyZh = "欢迎加入中国第一2048交流群：<a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>问题反馈交流群：<a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
       var indexCopyEn = "Join the 2048 community group: <a href=\"https://qm.qq.com/q/vyQfeNUGY0\" target=\"_blank\" rel=\"noopener noreferrer\">94064339</a><br>Feedback QQ group: <a href=\"https://qm.qq.com/q/QkKc783jCW\" target=\"_blank\" rel=\"noopener noreferrer\">1103144436</a>";
       var intro = global.document.querySelector(".game-intro");

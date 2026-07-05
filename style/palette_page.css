@@ -60,12 +60,23 @@ body[data-page="palette-hub"].palette-swatch-open {
 .palette-nav {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .palette-nav-btn {
   min-height: 38px;
   line-height: 38px;
   padding: 0 16px;
+}
+
+.palette-touch-entry {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .palette-touch-entry {
+    display: inline-block;
+  }
 }
 
 .card-surface {
@@ -1011,6 +1022,10 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-board-pre
   .palette-page-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .palette-touch-entry {
+    display: inline-block;
   }
 
   .palette-toolbar {

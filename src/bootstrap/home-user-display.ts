@@ -34,7 +34,6 @@ const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "account-hub",
   "achievements",
   "admin",
-  "index_test",
   "modes",
   "palette",
   "palette-hub",

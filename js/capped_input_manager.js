@@ -75,6 +75,20 @@ CappedInputManager.prototype.listen = function () {
   // Listen to swipe events
   var touchStartClientX, touchStartClientY;
   var gameContainer = document.getElementsByClassName("game-container")[0];
+  var TOUCH_THRESHOLD_STORAGE_KEY = "touch_swipe_threshold_px_v1";
+
+  function resolveTouchMoveThreshold() {
+    var fallback = 10;
+    try {
+      var value = window.localStorage && window.localStorage.getItem(TOUCH_THRESHOLD_STORAGE_KEY);
+      if (value == null || value === "") return fallback;
+      var threshold = Number(value);
+      if (!Number.isFinite(threshold)) return fallback;
+      return Math.min(28, Math.max(4, Math.round(threshold)));
+    } catch (_err) {
+      return fallback;
+    }
+  }
 
   gameContainer.addEventListener("touchstart", function (event) {
     if (event.touches.length > 1) return;
@@ -97,7 +111,7 @@ CappedInputManager.prototype.listen = function () {
     var dy = event.changedTouches[0].clientY - touchStartClientY;
     var absDy = Math.abs(dy);
 
-    if (Math.max(absDx, absDy) > 10) {
+    if (Math.max(absDx, absDy) > resolveTouchMoveThreshold()) {
       // (right : left) : (down : up)
       self.emit("move", absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
     }

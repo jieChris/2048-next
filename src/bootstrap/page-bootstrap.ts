@@ -54,8 +54,7 @@ const PAGE_DESCRIPTORS: Record<string, Partial<PageCapabilityDescriptor>> = {
   register: {},
   password: {},
   modes: { needsI18n: true },
-  palette: { needsSettings: true },
-  index_test: { needsSettings: true, needsI18n: true, devOnly: true }
+  palette: { needsSettings: true }
 };
 
 export function resolvePageDescriptor(pageId: string): PageCapabilityDescriptor {

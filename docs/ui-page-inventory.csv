@@ -23,9 +23,8 @@ independent_page,source_html,5x5 接力模式,/relay_5x5.html,relay_page,relay_5
 independent_page,source_html,2K 封顶成绩监测,/stone_2k_monitor.html,monitor_page,stone_2k_monitor.html,production_build,成绩监测页
 independent_page,source_html,API 文档,/api-docs.html,docs_page,api-docs.html,production_build,接口文档
 independent_page,source_html,缓存修复,/cache-reset.html,utility_page,cache-reset.html,production_build,清缓存跳转页
-independent_page,source_html,Favicon Preview,/favicon-preview.html,preview_page,favicon-preview.html,production_build,图标预览
+independent_page,source_html,Favicon Preview,/favicon-preview.html,preview_page,favicon-preview.html,source_only_not_vite_build,图标预览（含大源图，开发查看）
 independent_page,source_html,UI 预览工作台,/ui-preview.html,preview_page,ui-preview.html,production_build,UI 预览
-independent_page,source_html,Index Test,/index_test.html,dev_test_page,index_test.html,production_build,测试/开发页但会构建
 independent_page,source_html,Breakout Easter Egg,/easter-eggs/breakout/index.html,easter_egg_page,public/easter-eggs/breakout/index.html,static_public_asset,彩蛋页
 independent_page,source_html,Ranked Seed Validator,/ranked_seed_validator.html,dev_tool_page,ranked_seed_validator.html,source_only_not_vite_build,源码存在但未纳入当前 Vite build
 overlay_or_dialog,runtime_ui,设置窗口,#settings-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,统一设置弹窗
@@ -34,7 +33,7 @@ overlay_or_dialog,runtime_ui,回放导出窗口,#replay-modal,modal,"2048.html; 
 overlay_or_dialog,runtime_ui,回放导入文本窗口,#replay-modal,modal,replay.html,production_build,同一 replay-modal 容器的导入用途
 overlay_or_dialog,runtime_ui,回放统计窗口,#replay-modal,modal,replay.html,production_build,回放页统计内容
 overlay_or_dialog,runtime_ui,回放速度设置窗口,#replay-modal,modal,replay.html,production_build,回放间隔/原速设置
-overlay_or_dialog,runtime_ui,版本公告窗口,#announcement-modal,modal,"2048.html; index_test.html",production_build,版本公告列表
+overlay_or_dialog,runtime_ui,版本公告窗口,#announcement-modal,modal,2048.html,production_build,版本公告列表
 overlay_or_dialog,runtime_ui,模式说明/排行榜窗口,#mode-intro-modal,modal,play.html,production_build,模式说明和排行榜预览
 overlay_or_dialog,runtime_ui,练习板模式选择窗口,#practice-mode-panel,dialog,Practice_board.html,production_build,选择练习模式
 overlay_or_dialog,runtime_ui,盘面代码输入窗口,#practice-board-code-panel,dialog,"Practice_board.html; PKU2048.html",production_build,输入盘面代码

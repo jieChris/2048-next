@@ -21,13 +21,13 @@ const PAGES = [
   "/beta-login.html",
   "/beta-access.html",
   "/palette.html",
+  "/touch_sensitivity.html",
   "/relay_5x5.html",
   "/stone_2k_monitor.html",
   "/api-docs.html",
   "/cache-reset.html",
   "/favicon-preview.html",
   "/ui-preview.html",
-  "/index_test.html",
   "/easter-eggs/breakout/index.html",
   "/ranked_seed_validator.html"
 ];

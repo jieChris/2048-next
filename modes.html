@@ -25,12 +25,12 @@
       --mode-line-strong: #bea78f;
       --mode-ink: #5f564b;
       --mode-ink-soft: #766b5f;
-      --mode-primary: #a66d3d;
-      --mode-primary-press: #8d572b;
-      --mode-primary-tint: #f5e6d6;
-      --mode-secondary: #4f786f;
-      --mode-secondary-tint: #dfece8;
-      --mode-shadow: rgba(90, 63, 34, 0.11);
+      --mode-primary: #2f86a0;
+      --mode-primary-press: #1f647d;
+      --mode-primary-tint: #dceff2;
+      --mode-secondary: #d79b32;
+      --mode-secondary-tint: #f8e8c3;
+      --mode-shadow: rgba(44, 116, 135, 0.13);
     }
 
     html,
@@ -98,22 +98,23 @@
     }
 
     .mode-frequent-title {
-      border: 1px solid var(--mode-line);
-      border-radius: 12px;
-      background: linear-gradient(180deg, #f9f3ea 0%, #f2e9dc 100%);
+      border: 0;
+      border-left: 5px solid var(--mode-secondary);
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(47, 134, 160, 0.08) 0%, rgba(215, 155, 50, 0.08) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(28px, 3.1vw, 34px);
+      font-size: clamp(23px, 2.7vw, 30px);
       font-weight: 700;
-      color: var(--mode-primary);
+      color: var(--mode-ink);
       line-height: 1.04;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
       writing-mode: vertical-rl;
       text-orientation: upright;
       padding: 8px 0;
       box-sizing: border-box;
-      box-shadow: inset 0 1px 0 #fff, 0 4px 10px rgba(96, 74, 44, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(47, 134, 160, 0.11);
     }
 
     .mode-priority-grid {
@@ -124,29 +125,58 @@
     }
 
     .mode-priority-card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
       text-decoration: none;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      border: 1px solid var(--mode-line);
-      background: linear-gradient(180deg, #fffdf9 0%, #f8f0e2 100%);
+      border: 0;
+      background: transparent;
       border-radius: 12px;
       color: var(--mode-ink) !important;
       box-sizing: border-box;
       min-height: 66px;
-      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+      transition: color 0.22s ease, transform 0.14s ease, box-shadow 0.22s ease;
       text-align: center;
       padding: 12px;
-      box-shadow: 0 2px 8px rgba(92, 74, 45, 0.08);
+      box-shadow:
+        inset 2px 2px 2px rgba(255, 255, 255, 0.76),
+        7px 7px 20px rgba(44, 116, 135, 0.12),
+        4px 4px 5px rgba(44, 116, 135, 0.08);
+    }
+
+    .mode-priority-card::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      z-index: -1;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #e0aa45 0%, #58aaa6 54%, #2f86a0 100%);
+      box-shadow:
+        -7px -7px 20px rgba(255, 255, 255, 0.78),
+        -4px -4px 5px rgba(255, 255, 255, 0.7),
+        7px 7px 20px rgba(44, 116, 135, 0.16),
+        4px 4px 5px rgba(44, 116, 135, 0.1);
+      transition: width 0.32s ease;
     }
 
     .mode-priority-card:hover {
-      background: linear-gradient(180deg, #fffaf2 0%, #f4e7d4 100%);
-      border-color: var(--mode-primary);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px var(--mode-shadow);
+      color: #fffaf2 !important;
+      transform: translateY(-1px);
+      box-shadow:
+        inset 2px 2px 4px rgba(25, 91, 111, 0.16),
+        7px 7px 18px rgba(44, 116, 135, 0.16);
       text-decoration: none;
+    }
+
+    .mode-priority-card:hover::after {
+      right: 0;
+      left: auto;
+      width: 100%;
     }
 
     .mode-priority-card strong {
@@ -160,6 +190,12 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--mode-secondary);
+    }
+
+    .mode-priority-card:hover strong,
+    .mode-priority-card:hover small {
+      color: #fffaf2;
+      text-shadow: 0 1px 0 rgba(15, 73, 91, 0.3);
     }
 
     @media (min-width: 901px) {
@@ -207,53 +243,72 @@
     }
 
     .mode-tab-bar {
+      position: relative;
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
       border-bottom: 1px solid var(--mode-line);
-      background: linear-gradient(180deg, #f8f3ea 0%, #f0e7d9 100%);
+      background: linear-gradient(180deg, #f4fbf9 0%, #f2eee6 100%);
+      isolation: isolate;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+
+    .mode-tab-indicator {
+      position: absolute;
+      z-index: 0;
+      left: var(--mode-tab-left, 10px);
+      top: var(--mode-tab-top, 10px);
+      width: var(--mode-tab-width, 0px);
+      height: var(--mode-tab-height, 0px);
+      border-radius: 9px;
+      background: linear-gradient(180deg, #fffdf8 0%, #f8f2e8 100%);
+      box-shadow:
+        0 8px 18px rgba(44, 116, 135, 0.12),
+        inset 0 0 0 1px rgba(47, 134, 160, 0.16),
+        inset 0 -3px 0 rgba(215, 155, 50, 0.45);
+      transition:
+        left 0.18s ease,
+        top 0.18s ease,
+        width 0.18s ease,
+        height 0.18s ease;
+      pointer-events: none;
     }
 
     .mode-tab-button {
       position: relative;
+      z-index: 1;
       border: 0;
-      border-right: 1px solid var(--mode-line);
+      border-radius: 9px;
       background: transparent;
       color: var(--mode-ink);
-      font-size: clamp(16px, 2vw, 20px);
+      font-size: clamp(15px, 1.7vw, 18px);
       font-weight: 600;
       line-height: 1.1;
-      min-height: 56px;
+      min-height: 46px;
       padding: 10px 10px;
       cursor: pointer;
-      transition: background 0.16s ease, color 0.16s ease;
+      transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
     }
 
     .mode-tab-button:last-child {
-      border-right: 0;
+      border: 0;
     }
 
     .mode-tab-button:hover {
-      background: rgba(166, 109, 61, 0.12);
-      color: #56493b;
+      background: rgba(255, 253, 248, 0.64);
+      color: var(--mode-primary-press);
     }
 
     .mode-tab-button.is-active {
-      background: linear-gradient(180deg, var(--mode-primary) 0%, var(--mode-primary-press) 100%);
+      background: transparent;
       font-weight: 700;
-      color: #fffaf2;
-      text-shadow: 0 1px 0 rgba(58, 37, 14, 0.22);
+      color: var(--mode-primary-press);
+      transform: translateY(-1px);
     }
 
     .mode-tab-button.is-active::after {
-      content: "";
-      position: absolute;
-      bottom: -6px;
-      left: 50%;
-      width: 14px;
-      height: 14px;
-      transform: translateX(-50%) rotate(45deg);
-      background: var(--mode-primary-press);
-      z-index: 2;
+      display: none;
     }
 
     .mode-tab-panels {
@@ -308,6 +363,9 @@
     }
 
     .mode-hub-btn {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -317,24 +375,54 @@
       text-align: center;
       text-decoration: none;
       color: var(--mode-ink) !important;
-      border: 1px solid var(--mode-line);
+      border: 0;
       border-radius: 10px;
-      background: linear-gradient(180deg, #fffefb 0%, #f8efe1 100%);
+      background: transparent;
       padding: 10px 12px;
       box-sizing: border-box;
       font-size: 16px;
       line-height: 1.25;
       font-weight: 600;
-      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
-      box-shadow: 0 2px 6px rgba(90, 66, 31, 0.08);
+      transition: color 0.22s ease, transform 0.14s ease, box-shadow 0.22s ease;
+      box-shadow:
+        inset 2px 2px 2px rgba(255, 255, 255, 0.76),
+        7px 7px 20px rgba(44, 116, 135, 0.12),
+        4px 4px 5px rgba(44, 116, 135, 0.08);
+    }
+
+    .mode-hub-btn::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      z-index: -1;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, #e0aa45 0%, #58aaa6 54%, #2f86a0 100%);
+      box-shadow:
+        -7px -7px 20px rgba(255, 255, 255, 0.78),
+        -4px -4px 5px rgba(255, 255, 255, 0.7),
+        7px 7px 20px rgba(44, 116, 135, 0.16),
+        4px 4px 5px rgba(44, 116, 135, 0.1);
+      transition: width 0.32s ease;
     }
 
     .mode-hub-btn:hover {
-      background: linear-gradient(180deg, #fff8ee 0%, #f4e3cb 100%);
-      border-color: var(--mode-primary);
+      color: #fffaf2 !important;
       transform: translateY(-1px);
-      box-shadow: 0 5px 12px var(--mode-shadow);
+      box-shadow:
+        inset 2px 2px 4px rgba(25, 91, 111, 0.16),
+        7px 7px 18px rgba(44, 116, 135, 0.16);
       text-decoration: none;
+    }
+
+    .mode-hub-btn:hover::after {
+      right: 0;
+      left: auto;
+      width: 100%;
+    }
+
+    .mode-hub-btn:active {
+      transform: translateY(1px);
     }
 
     .mode-priority-card:focus-visible,
@@ -352,11 +440,11 @@
       --mode-line-strong: rgba(213, 191, 150, 0.3);
       --mode-ink: #ece2d3;
       --mode-ink-soft: #b8c2d3;
-      --mode-primary: #c9955b;
-      --mode-primary-press: #a9713a;
-      --mode-primary-tint: rgba(201, 149, 91, 0.18);
-      --mode-secondary: #86aeb0;
-      --mode-secondary-tint: rgba(96, 140, 148, 0.18);
+      --mode-primary: #63b7c2;
+      --mode-primary-press: #2d7f98;
+      --mode-primary-tint: rgba(99, 183, 194, 0.18);
+      --mode-secondary: #e0b25a;
+      --mode-secondary-tint: rgba(224, 178, 90, 0.18);
       --mode-shadow: rgba(2, 6, 16, 0.34);
     }
 
@@ -390,8 +478,9 @@
     }
 
     html[data-night-background="1"] .mode-frequent-title {
-      background: linear-gradient(180deg, rgba(32, 46, 69, 0.96) 0%, rgba(18, 27, 42, 0.96) 100%);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 18px rgba(2, 6, 16, 0.28);
+      background: linear-gradient(180deg, rgba(99, 183, 194, 0.08) 0%, rgba(224, 178, 90, 0.08) 100%);
+      border-left-color: var(--mode-secondary);
+      box-shadow: inset 0 0 0 1px rgba(213, 191, 150, 0.12);
     }
 
     html[data-night-background="1"] .mode-priority-card,
@@ -413,46 +502,75 @@
     }
 
     html[data-night-background="1"] .mode-tab-bar {
-      background: linear-gradient(180deg, rgba(31, 45, 68, 0.95) 0%, rgba(20, 30, 46, 0.95) 100%);
+      background: linear-gradient(180deg, rgba(32, 50, 72, 0.92) 0%, rgba(21, 34, 52, 0.92) 100%);
       border-bottom-color: var(--mode-line);
     }
 
+    html[data-night-background="1"] .mode-tab-indicator {
+      background: linear-gradient(180deg, rgba(36, 57, 82, 0.96) 0%, rgba(25, 42, 64, 0.96) 100%);
+      box-shadow:
+        0 8px 18px rgba(2, 6, 16, 0.28),
+        inset 0 0 0 1px rgba(99, 183, 194, 0.2),
+        inset 0 -3px 0 rgba(224, 178, 90, 0.48);
+    }
+
     html[data-night-background="1"] .mode-tab-button {
-      border-right-color: var(--mode-line);
+      background: transparent;
+      border: 0;
       color: var(--mode-ink-soft);
     }
 
     html[data-night-background="1"] .mode-tab-button:hover {
-      background: rgba(201, 149, 91, 0.12);
-      color: var(--mode-ink);
+      background: rgba(255, 247, 236, 0.08);
+      color: #fff7ec;
     }
 
     html[data-night-background="1"] .mode-tab-button.is-active {
       color: #fff7ec;
-      text-shadow: 0 1px 0 rgba(57, 35, 12, 0.32);
-      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
     }
 
     html[data-night-background="1"] .mode-tab-button.is-active::after {
       box-shadow: 0 8px 14px rgba(2, 6, 16, 0.24);
     }
 
-    html[data-night-background="1"] .mode-hub-btn:hover,
+    html[data-night-background="1"] .mode-priority-card,
+    html[data-night-background="1"] .mode-hub-btn {
+      box-shadow:
+        inset 1px 1px 1px rgba(255, 255, 255, 0.08),
+        7px 7px 18px rgba(2, 6, 16, 0.24),
+        4px 4px 6px rgba(2, 6, 16, 0.18);
+    }
+
+    html[data-night-background="1"] .mode-priority-card::after,
+    html[data-night-background="1"] .mode-hub-btn::after {
+      background: linear-gradient(135deg, #e0b25a 0%, #63b7c2 56%, #2d7f98 100%);
+      box-shadow:
+        -7px -7px 18px rgba(255, 255, 255, 0.04),
+        7px 7px 18px rgba(2, 6, 16, 0.38),
+        4px 4px 6px rgba(2, 6, 16, 0.26);
+    }
+
     html[data-night-background="1"] .mode-priority-card:hover {
-      background: linear-gradient(180deg, rgba(42, 58, 84, 0.98) 0%, rgba(22, 34, 52, 0.98) 100%);
-      border-color: var(--mode-line-strong);
-      box-shadow: 0 12px 24px rgba(2, 6, 16, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      color: #fff7ec !important;
+      box-shadow:
+        inset 2px 2px 4px rgba(2, 6, 16, 0.34),
+        7px 7px 18px rgba(2, 6, 16, 0.28);
+    }
+
+    html[data-night-background="1"] .mode-priority-card:hover strong,
+    html[data-night-background="1"] .mode-priority-card:hover small {
+      color: #fff7ec;
+    }
+
+    html[data-night-background="1"] .mode-tab-button:nth-child(n),
+    html[data-night-background="1"] .mode-tab-button:last-child {
+      border: 0;
     }
 
     html[data-night-background="1"] .mode-tab-button:focus-visible,
     html[data-night-background="1"] .mode-priority-card:focus-visible,
     html[data-night-background="1"] .mode-hub-btn:focus-visible {
       outline-color: rgba(237, 195, 123, 0.9);
-    }
-
-    html[data-night-background="1"] .mode-tab-button:nth-child(n),
-    html[data-night-background="1"] .mode-tab-button:last-child {
-      border-color: var(--mode-line);
     }
 
     @media (max-width: 900px) {
@@ -481,15 +599,17 @@
 
       .mode-tab-bar {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        padding: 8px;
       }
 
       .mode-tab-button {
-        min-height: 52px;
-        border-bottom: 1px solid #d1c6b7;
+        min-height: 46px;
+        border-bottom: 0;
       }
 
       .mode-tab-button:nth-child(3n) {
-        border-right: 0;
+        border: 0;
       }
 
       .mode-tab-panels {
@@ -542,7 +662,7 @@
     <section class="mode-select-top">
       <div class="mode-brand-panel">
         <a href="2048.html" aria-label="返回首页">
-          <img class="mode-brand-logo" width="234" height="101" decoding="async" src="meta/logo-tall-small.png?v=20260704-logo-small" alt="2048 标志">
+          <img class="mode-brand-logo" width="234" height="101" decoding="async" src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 标志">
         </a>
         <h1 class="mode-brand-title">模式选择</h1>
       </div>
@@ -571,21 +691,23 @@
 
     <section class="mode-select-body">
       <div class="mode-tab-bar" role="tablist" aria-label="模式分类">
-        <button class="mode-tab-button is-active" type="button" data-tab-target="nonundo" role="tab" aria-selected="true">无撤回</button>
-        <button class="mode-tab-button" type="button" data-tab-target="undo" role="tab" aria-selected="false">可撤回</button>
+        <span class="mode-tab-indicator" aria-hidden="true"></span>
+        <button class="mode-tab-button is-active" type="button" data-tab-target="standard" role="tab" aria-selected="true">标准</button>
+        <button class="mode-tab-button" type="button" data-tab-target="fibonacci" role="tab" aria-selected="false">斐波那契</button>
         <button class="mode-tab-button" type="button" data-tab-target="diagonal" role="tab" aria-selected="false">八方向</button>
         <button class="mode-tab-button" type="button" data-tab-target="capped" role="tab" aria-selected="false">封顶</button>
-        <button class="mode-tab-button" type="button" data-tab-target="entertainment" role="tab" aria-selected="false">娱乐</button>
-        <button class="mode-tab-button" type="button" data-tab-target="tools" role="tab" aria-selected="false">工具入口</button>
+        <button class="mode-tab-button" type="button" data-tab-target="special" role="tab" aria-selected="false">特殊玩法</button>
+        <button class="mode-tab-button" type="button" data-tab-target="tools" role="tab" aria-selected="false">工具</button>
       </div>
 
       <div class="mode-tab-panels">
-        <div id="mode-tab-nonundo" class="mode-tab-panel is-active" data-tab-panel="nonundo" role="tabpanel">
-          <div class="mode-group-title">2 的幂 - 尺寸扩展</div>
+        <div id="mode-tab-standard" class="mode-tab-panel is-active" data-tab-panel="standard" role="tabpanel">
+          <div class="mode-group-title">经典 - 无撤回</div>
           <div class="mode-hub-actions mode-hub-actions--dense">
             <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_no_undo">3x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_no_undo">4x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_no_undo">4x2</a>
+            <a class="mode-hub-btn" href="2048.html">4x4</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_no_undo">5x5</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_no_undo">6x6</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_no_undo">7x7</a>
@@ -594,22 +716,12 @@
             <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_no_undo">10x10</a>
           </div>
 
-          <div class="mode-group-title">斐波那契</div>
-          <div class="mode-hub-actions mode-hub-actions--dense">
-            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_no_undo">斐波那契 4x4</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_no_undo">斐波那契 3x3</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_no_undo">斐波那契 4x3</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_no_undo">斐波那契 4x2</a>
-          </div>
-
-        </div>
-
-        <div id="mode-tab-undo" class="mode-tab-panel" data-tab-panel="undo" role="tabpanel" aria-hidden="true">
-          <div class="mode-group-title">2 的幂 - 尺寸扩展</div>
+          <div class="mode-group-title">经典 - 可撤回</div>
           <div class="mode-hub-actions mode-hub-actions--dense">
             <a class="mode-hub-btn" href="play.html?mode_key=board_3x3_pow2_undo">3x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_3x4_pow2_undo">4x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_2x4_pow2_undo">4x2</a>
+            <a class="mode-hub-btn" href="undo_2048.html">4x4</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_5x5_pow2_undo">5x5</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_6x6_pow2_undo">6x6</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_7x7_pow2_undo">7x7</a>
@@ -617,31 +729,23 @@
             <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_undo">9x9</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_undo">10x10</a>
           </div>
+        </div>
 
-          <div class="mode-group-title">斐波那契</div>
+        <div id="mode-tab-fibonacci" class="mode-tab-panel" data-tab-panel="fibonacci" role="tabpanel" aria-hidden="true">
+          <div class="mode-group-title">斐波那契 - 无撤回</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_no_undo">斐波那契 4x4</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_no_undo">斐波那契 3x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_no_undo">斐波那契 4x3</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_no_undo">斐波那契 4x2</a>
+          </div>
+
+          <div class="mode-group-title">斐波那契 - 可撤回</div>
           <div class="mode-hub-actions mode-hub-actions--dense">
             <a class="mode-hub-btn" href="play.html?mode_key=fib_4x4_undo">斐波那契 4x4</a>
             <a class="mode-hub-btn" href="play.html?mode_key=fib_3x3_undo">斐波那契 3x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=fib_4x3_undo">斐波那契 4x3</a>
             <a class="mode-hub-btn" href="play.html?mode_key=fib_4x2_undo">斐波那契 4x2</a>
-          </div>
-        </div>
-
-        <div id="mode-tab-entertainment" class="mode-tab-panel" data-tab-panel="entertainment" role="tabpanel" aria-hidden="true">
-          <div class="mode-group-title">不可撤回</div>
-          <div class="mode-hub-actions mode-hub-actions--dense mode-hub-actions--entertainment">
-            <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_no_undo">4x4 自定义4率</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=spawn50_3x3_pow2_no_undo">3x3 概率50/50</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=limit3_4x4_pow2_no_undo">限次撤回（3次）</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=limit5_4x4_pow2_no_undo">限次撤回（5次）</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=combo_4x4_pow2_no_undo">连击加分</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=dirlock5_4x4_pow2_no_undo">方向锁</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=obstacle_4x4_pow2_no_undo">障碍墙</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=item_4x4_pow2_no_undo">4x4 道具模式</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=stone_4x4_pow2_no_undo">4x4 石头模式</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=timed5s_4x4_pow2_no_undo">4x4 限时5秒</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（64~32k）</a>
-            <a class="mode-hub-btn" href="relay_5x5.html">5x5 接力模式</a>
           </div>
         </div>
 
@@ -663,6 +767,27 @@
             <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_no_undo">4x4 封顶2048</a>
             <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_4096_no_undo">4x4 封顶4096</a>
           </div>
+          <div class="mode-group-title">禁止目标</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（64~32k）</a>
+          </div>
+        </div>
+
+        <div id="mode-tab-special" class="mode-tab-panel" data-tab-panel="special" role="tabpanel" aria-hidden="true">
+          <div class="mode-group-title">规则魔改</div>
+          <div class="mode-hub-actions mode-hub-actions--dense mode-hub-actions--entertainment">
+            <a class="mode-hub-btn" href="play.html?mode_key=spawn_custom_4x4_pow2_no_undo">4x4 自定义4率</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=spawn50_3x3_pow2_no_undo">3x3 概率50/50</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=limit3_4x4_pow2_no_undo">限次撤回（3次）</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=limit5_4x4_pow2_no_undo">限次撤回（5次）</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=combo_4x4_pow2_no_undo">连击加分</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=dirlock5_4x4_pow2_no_undo">方向锁</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=obstacle_4x4_pow2_no_undo">障碍墙</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=item_4x4_pow2_no_undo">4x4 道具模式</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=stone_4x4_pow2_no_undo">4x4 石头模式</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=timed5s_4x4_pow2_no_undo">4x4 限时5秒</a>
+            <a class="mode-hub-btn" href="relay_5x5.html">5x5 接力模式</a>
+          </div>
         </div>
 
         <div id="mode-tab-tools" class="mode-tab-panel" data-tab-panel="tools" role="tabpanel" aria-hidden="true">
@@ -681,16 +806,28 @@
 
   <script>
     (function () {
+      var tabBar = document.querySelector(".mode-tab-bar");
       var tabButtons = document.querySelectorAll(".mode-tab-button[data-tab-target]");
       var tabPanels = document.querySelectorAll(".mode-tab-panel[data-tab-panel]");
 
+      function syncTabIndicator(button) {
+        if (!tabBar || !button) return;
+        tabBar.style.setProperty("--mode-tab-left", button.offsetLeft + "px");
+        tabBar.style.setProperty("--mode-tab-top", button.offsetTop + "px");
+        tabBar.style.setProperty("--mode-tab-width", button.offsetWidth + "px");
+        tabBar.style.setProperty("--mode-tab-height", button.offsetHeight + "px");
+      }
+
       function setActiveTab(targetKey) {
+        var activeButton = null;
         for (var i = 0; i < tabButtons.length; i += 1) {
           var button = tabButtons[i];
           var isActive = button.getAttribute("data-tab-target") === targetKey;
           button.classList.toggle("is-active", isActive);
           button.setAttribute("aria-selected", isActive ? "true" : "false");
+          if (isActive) activeButton = button;
         }
+        syncTabIndicator(activeButton);
 
         for (var j = 0; j < tabPanels.length; j += 1) {
           var panel = tabPanels[j];
@@ -713,6 +850,11 @@
           setActiveTab(tabKey);
         });
       }
+
+      setActiveTab("standard");
+      window.addEventListener("resize", function () {
+        syncTabIndicator(document.querySelector(".mode-tab-button.is-active[data-tab-target]"));
+      });
     })();
   </script>
   <script type="module" src="./src/entries/modes.ts"></script>

@@ -95,6 +95,7 @@ function applyThemePageCopy(): void {
         kicker: "2048 Palette Center",
         navHome: "Home",
         navPractice: "Practice Board",
+        navTouch: "Touch Sensitivity",
         themeSelectLabel: "Select Theme",
         themePreviewLabel: "Theme Preview",
         boardSelectLabel: "Board Select",
@@ -120,6 +121,7 @@ function applyThemePageCopy(): void {
         kicker: "2048 \u8272\u677f\u4e2d\u5fc3",
         navHome: "\u56de\u9996\u9875",
         navPractice: "\u7ec3\u4e60\u677f",
+        navTouch: "\u89e6\u5c4f\u7075\u654f\u5ea6",
         themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
         themePreviewLabel: "\u914d\u8272\u9884\u89c8",
         boardSelectLabel: "\u68cb\u76d8\u9009\u62e9",
@@ -174,6 +176,7 @@ function applyThemePageCopy(): void {
   if (panelPill) panelPill.textContent = pillText;
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
+  if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
   if (themePreviewLabel) themePreviewLabel.textContent = copy.themePreviewLabel;
   if (boardSelectLabel) boardSelectLabel.textContent = copy.boardSelectLabel;

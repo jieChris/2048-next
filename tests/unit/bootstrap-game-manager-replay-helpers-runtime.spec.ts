@@ -5,6 +5,7 @@ import {
   importReplay,
   insertCustomTile,
   installGameManagerReplayHelperGlobals,
+  recordSessionReplayV1Move,
   seekReplay,
   serializeReplay,
   serializeReplayV3,
@@ -59,6 +60,52 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(serializeReplay(manager)).toMatch(/^REPLAY_v1RPL_B64_encoded:/);
   });
 
+  it("imports JSON fallback replays exported with the v1 base64 envelope", () => {
+    const windowLike = {
+      btoa(value: string) {
+        return Buffer.from(value, "binary").toString("base64");
+      },
+      atob(value: string) {
+        return Buffer.from(value, "base64").toString("binary");
+      },
+      GameManager: {
+        REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_"
+      }
+    };
+    const manager = {
+      width: 2,
+      height: 2,
+      modeKey: "standard_4x4_pow2_no_undo",
+      score: 16,
+      seed: 0.5,
+      successfulMoveCount: 2,
+      sessionReplayV3: {
+        actions: [1, 2]
+      },
+      grid: createGrid(),
+      replayMoves: [] as unknown[],
+      replaySpawns: [] as unknown[],
+      replayIndex: 99,
+      replayMode: false,
+      getWindowLike: () => windowLike,
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithSeed: vi.fn(),
+      loadUndoSettingForMode: vi.fn(() => false),
+      resolveUndoPolicyStateForMode: vi.fn(() => ({ forcedUndoSetting: null })),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn()
+    };
+
+    const replayText = serializeReplay(manager);
+    const ok = importReplay(manager, replayText);
+
+    expect(ok).toBe(true);
+    expect(manager.restartWithSeed).toHaveBeenCalledWith(0.5, { key: "standard_4x4_pow2_no_undo" });
+    expect(manager.replayMoves).toEqual([1, 2]);
+    expect(manager.replayIndex).toBe(0);
+    expect(manager.replayMode).toBe(true);
+  });
+
   it("serializes supported session replay as a real replay v1 RPL payload", () => {
     const manager = {
       width: 2,
@@ -107,6 +154,30 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(decoded.height).toBe(2);
     expect(decoded.initTiles).toHaveLength(2);
     expect(decoded.records.some((record) => record.kind === "move")).toBe(true);
+  });
+
+  it("records compact replay v1 move deltas instead of zero-duration moves", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const manager = {
+      width: 2,
+      height: 2,
+      replayMode: false,
+      sessionReplayV1: {
+        supported: true,
+        last_event_at_ms: 1_000,
+        records: [] as unknown[]
+      }
+    };
+
+    vi.setSystemTime(1_456);
+    recordSessionReplayV1Move(manager, 1, { x: 1, y: 0, value: 4 });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 456 }
+    ]);
+    expect(manager.sessionReplayV1.last_event_at_ms).toBe(1_456);
+    vi.useRealTimers();
   });
 
   it("serializes diagonal sessions with structured seed, mode key, and actions for cloud replay", () => {

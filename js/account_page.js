@@ -142,7 +142,7 @@
       userNickname: "昵称：",
       userEmail: "邮箱：",
       userCreated: "注册时间：",
-      boardHeading: "在线排行榜",
+      boardHeading: "排行榜",
       boardSubtitle: "按模式和榜单筛选后查看排行。",
       boardFilterAria: "排行榜筛选",
       boardMode: "模式",
@@ -1166,6 +1166,9 @@
   function syncAuthState() {
     var token = getToken();
     var isAuthed = !!token;
+    if (global.document.body) {
+      global.document.body.setAttribute("data-auth-state", isAuthed ? "authed" : "guest");
+    }
 
     var stateTag = byId("account-auth-state-tag");
     if (stateTag) {
@@ -1417,7 +1420,6 @@
     global.document.title = t("pageTitle");
 
     var textMap = {
-      "account-kicker": t("kicker"),
       "account-title": t("title"),
       "account-subtitle": t("subtitle"),
       "account-nav-settings": t("navSettings"),

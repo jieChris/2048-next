@@ -2362,7 +2362,7 @@
 
 ## Updated Snapshot
 - `manifest-bootstrap`
-  - `index / undo / capped / practice / pku2048 / play / replay / index_test`
+  - `index / undo / capped / practice / pku2048 / play / replay`
   - `account / account-settings / history / register / password / modes / palette / user-profile`
 - `direct-module`
   - `none`
@@ -3080,7 +3080,7 @@ F sign-off 不是“看起来可以”，而是以下 4 项同时满足：
 - WS4-01/WS4-02（页面入口体系治理）：`in_progress`
   - 本批完成：`entry-manifest-audit` 从仅校验 `play/replay`，扩展为校验全部 16 个 2048 页面入口的架构分类。
   - 本批完成：显式固化两类入口：
-    - `manifest-bootstrap`：`index / undo / capped / practice / pku2048 / play / replay / index_test`
+    - `manifest-bootstrap`：`index / undo / capped / practice / pku2048 / play / replay`
     - `direct-module`：`account / account-settings / history / modes / palette / password / register / user-profile`
   - 本批完成：入口分类现由 `npm run audit:entry-manifest` 自动验证，避免新入口或旧入口改造悄然偏离既定架构。
   - 当前结论：2048 产品线页面入口已全部纳入清单；剩余债务已收敛为“已知 direct-module 入口待迁移”。
