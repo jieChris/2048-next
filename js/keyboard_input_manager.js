@@ -195,7 +195,13 @@ KeyboardInputManager.prototype.listen = function () {
   function resolveTouchMoveThreshold() {
     var fallback = 10;
     try {
-      var value = window.localStorage && window.localStorage.getItem(TOUCH_THRESHOLD_STORAGE_KEY);
+      var runtime = window.CoreStorageRuntime || null;
+      var storage = runtime && runtime.resolveStorageByName
+        ? runtime.resolveStorageByName({ windowLike: window, storageName: "localStorage" })
+        : null;
+      var value = runtime && runtime.safeReadStorageItem
+        ? runtime.safeReadStorageItem({ storageLike: storage, key: TOUCH_THRESHOLD_STORAGE_KEY })
+        : null;
       if (value == null || value === "") return fallback;
       var threshold = Number(value);
       if (!Number.isFinite(threshold)) return fallback;

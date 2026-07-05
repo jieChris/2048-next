@@ -1,3 +1,5 @@
+import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+
 export const TOUCH_THRESHOLD_STORAGE_KEY = "touch_swipe_threshold_px_v1";
 export const TOUCH_THRESHOLD_MIN = 4;
 export const TOUCH_THRESHOLD_MAX = 28;
@@ -134,12 +136,12 @@ function addTestTile(board: number[]): number[] {
 }
 
 function getLanguage(): "zh" | "en" {
-  try {
-    const value = window.localStorage.getItem("ui_language_v1") || document.documentElement.lang || "";
-    return value.toLowerCase().startsWith("en") ? "en" : "zh";
-  } catch (_err) {
-    return "zh";
-  }
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  const value = safeReadStorageItem({ storageLike, key: "ui_language_v1" }) || document.documentElement.lang || "";
+  return value.toLowerCase().startsWith("en") ? "en" : "zh";
 }
 
 function setText(id: string, text: string): void {
