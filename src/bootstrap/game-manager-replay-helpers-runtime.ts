@@ -41,7 +41,7 @@ const REPLAY_SEEK_CHECKPOINT_INTERVAL = 32;
 
 type BoardMatrix = number[][];
 type ReplaySpawn = { x: number; y: number; value: number };
-type ReplayCheckpoint = { index: number; board: BoardMatrix };
+type ReplayCheckpoint = { index: number; board: BoardMatrix; score?: number };
 type GridLike = { insertTile?: (tile: unknown) => unknown };
 
 let v9VerseRepairRuntime: { map: Record<string, string>; maxKeyLength: number } | null = null;
@@ -696,40 +696,48 @@ function applyV9Spawn(board: BoardMatrix, spawn: ReplaySpawn): void {
   board[spawn.y][spawn.x] = spawn.value;
 }
 
-function mergeV9Line(line: number[]): number[] {
+function mergeV9Line(line: number[]): { line: number[]; scoreDelta: number } {
   const compact = line.filter((value) => value > 0);
   const merged: number[] = [];
+  let scoreDelta = 0;
   for (let index = 0; index < compact.length; index += 1) {
     if (index + 1 < compact.length && compact[index] === compact[index + 1]) {
-      merged.push(compact[index] * 2);
+      const value = compact[index] * 2;
+      merged.push(value);
+      scoreDelta += value;
       index += 1;
     } else {
       merged.push(compact[index]);
     }
   }
   while (merged.length < 4) merged.push(0);
-  return merged;
+  return { line: merged, scoreDelta };
 }
 
-function applyV9Move(board: BoardMatrix, v9Move: number): BoardMatrix {
+function applyV9Move(board: BoardMatrix, v9Move: number): { board: BoardMatrix; scoreDelta: number } {
   const next = cloneBoardMatrix(board);
+  let scoreDelta = 0;
   if (v9Move === 0 || v9Move === 1) {
     for (let y = 0; y < 4; y += 1) {
       const source = v9Move === 0 ? board[y].slice() : board[y].slice().reverse();
-      const row = mergeV9Line(source);
+      const merged = mergeV9Line(source);
+      const row = merged.line;
+      scoreDelta += merged.scoreDelta;
       if (v9Move === 1) row.reverse();
       next[y] = row;
     }
-    return next;
+    return { board: next, scoreDelta };
   }
   for (let x = 0; x < 4; x += 1) {
     const source = [board[0][x], board[1][x], board[2][x], board[3][x]];
     if (v9Move === 3) source.reverse();
-    const column = mergeV9Line(source);
+    const merged = mergeV9Line(source);
+    const column = merged.line;
+    scoreDelta += merged.scoreDelta;
     if (v9Move === 3) column.reverse();
     for (let y = 0; y < 4; y += 1) next[y][x] = column[y];
   }
-  return next;
+  return { board: next, scoreDelta };
 }
 
 function parseV9VerseText(text: string): Record<string, unknown> | null {
@@ -742,21 +750,24 @@ function parseV9VerseText(text: string): Record<string, unknown> | null {
   applyV9Spawn(initialBoard, decodeV9VerseSpawn(decodeV9VerseToken(map, body, 0)));
   applyV9Spawn(initialBoard, decodeV9VerseSpawn(decodeV9VerseToken(map, body, 1)));
   let currentBoard = cloneBoardMatrix(initialBoard);
+  let currentScore = 0;
   const replayMoves: number[] = [];
   const replaySpawns: ReplaySpawn[] = [];
-  const checkpoints: ReplayCheckpoint[] = [{ index: 0, board: cloneBoardMatrix(initialBoard) }];
+  const checkpoints: ReplayCheckpoint[] = [{ index: 0, board: cloneBoardMatrix(initialBoard), score: 0 }];
   const moveChunkToV9Move = [2, 1, 3, 0];
   for (let index = 2; index < body.length; index += 1) {
     const token = decodeV9VerseToken(map, body, index);
     const v9Move = moveChunkToV9Move[(token >> 5) & 3];
     const internalDirection = v9Move === 0 ? 3 : v9Move === 1 ? 1 : v9Move === 2 ? 0 : 2;
     const spawn = decodeV9VerseSpawn(token);
-    currentBoard = applyV9Move(currentBoard, v9Move);
+    const moveResult = applyV9Move(currentBoard, v9Move);
+    currentBoard = moveResult.board;
+    currentScore += moveResult.scoreDelta;
     applyV9Spawn(currentBoard, spawn);
     replayMoves.push(internalDirection);
     replaySpawns.push(spawn);
     if (replayMoves.length % REPLAY_SEEK_CHECKPOINT_INTERVAL === 0) {
-      checkpoints.push({ index: replayMoves.length, board: cloneBoardMatrix(currentBoard) });
+      checkpoints.push({ index: replayMoves.length, board: cloneBoardMatrix(currentBoard), score: currentScore });
     }
   }
   return {
@@ -1205,19 +1216,29 @@ function findReplayCheckpoint(manager: ManagerLike, target: number): ReplayCheck
     if (!Number.isInteger(index) || index > target) continue;
     if (!Array.isArray(checkpoint.board)) continue;
     if (!best || index > best.index) {
-      best = { index, board: checkpoint.board as BoardMatrix };
+      const score = Number(checkpoint.score);
+      best = {
+        index,
+        board: checkpoint.board as BoardMatrix,
+        score: Number.isFinite(score) && score >= 0 ? score : undefined
+      };
     }
   }
   return best;
 }
 
-function restartReplayAtBoard(manager: ManagerLike, board: BoardMatrix, replayIndex: number): void {
+function restartReplayAtBoard(manager: ManagerLike, board: BoardMatrix, replayIndex: number, score?: number): void {
   const restartWithBoard = asFunction<(board: unknown, modeConfig: unknown, options?: unknown) => unknown>(
     manager.restartWithBoard
   );
   if (restartWithBoard) {
     restartWithBoard.call(manager, cloneBoardMatrix(board), manager.modeConfig || null, { asReplay: true });
     ensureReplayBoardApplied(manager, board);
+  }
+  if (Number.isFinite(score)) {
+    const setRuntimeScore = asFunction<(score: number) => unknown>(manager.setRuntimeScore);
+    if (setRuntimeScore) setRuntimeScore.call(manager, Number(score));
+    else manager.score = Number(score);
   }
   manager.replayMode = true;
   manager.replayIndex = replayIndex;
@@ -1226,7 +1247,7 @@ function restartReplayAtBoard(manager: ManagerLike, board: BoardMatrix, replayIn
 function restartReplayForSeek(manager: ManagerLike, target: number): number {
   const checkpoint = findReplayCheckpoint(manager, target);
   if (checkpoint) {
-    restartReplayAtBoard(manager, checkpoint.board, checkpoint.index);
+    restartReplayAtBoard(manager, checkpoint.board, checkpoint.index, checkpoint.score);
     return checkpoint.index;
   }
   if (Array.isArray(manager.replayStartBoardMatrix)) {

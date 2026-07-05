@@ -395,6 +395,34 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayIndex).toBe(2);
   });
 
+  it("restores checkpoint scores when seeking legacy text replays", () => {
+    const scores: unknown[] = [];
+    const manager = {
+      replayMoves: Array.from({ length: 33 }, () => 1),
+      replaySpawns: Array.from({ length: 33 }, () => ({ x: 0, y: 0, value: 2 })),
+      replayIndex: 31,
+      replayMode: true,
+      score: 999,
+      modeConfig: { key: "test" },
+      replaySeekCheckpointHistory: [
+        { index: 32, board: [[2, 4], [0, 0]], score: 208 }
+      ],
+      restartWithBoard: vi.fn(),
+      setRuntimeScore(value: number) {
+        this.score = value;
+      },
+      move() {
+        scores.push(this.score);
+      }
+    };
+
+    seekReplay(manager, 33);
+
+    expect(manager.restartWithBoard).toHaveBeenCalled();
+    expect(scores).toEqual([208]);
+    expect(manager.replayIndex).toBe(33);
+  });
+
   it("infers rectangular replay mode keys from width then height when v1 metadata has no mode key", () => {
     const importedModes: string[] = [];
     const replayText = (width: number, height: number) =>
