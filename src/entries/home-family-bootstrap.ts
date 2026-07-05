@@ -122,6 +122,7 @@ const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
   "core_bgm_runtime",
   "core_night_mode_runtime",
   "core_top_button_style_runtime",
+  "core_top_action_bindings_host_runtime",
   "core_i18n_runtime"
 ] as const;
 const LEGACY_INDEX_UI_RUNTIME_NAMES = [
@@ -192,6 +193,7 @@ function resolveIndexDeferredSideEffectScripts(): readonly string[] {
   return resolveHomeFamilyScriptsByCapabilities([
     "settings-and-panel",
     "top-button-style",
+    "index-tail",
     "i18n"
   ]).filter((scriptUrl) =>
     INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES.some((runtimeName) => scriptUrl.includes(runtimeName))

@@ -21,6 +21,10 @@ describe("index-ui-bootstrap runtime globals", () => {
     const installSettingsModalHostRuntime = vi.fn();
     const installSettingsModalPageHostRuntime = vi.fn();
     const createIndexUiTryUndoHandler = vi.fn(() => vi.fn(() => false));
+    const legacyApplyTopActionBindings = vi.fn();
+    const topActionBindingsTarget = {
+      applyTopActionBindings: legacyApplyTopActionBindings
+    };
     const createIndexUiBootstrapResolvers = vi.fn(() => ({
       closeReplayModal: vi.fn(),
       closeSettingsModal: vi.fn(),
@@ -78,7 +82,8 @@ describe("index-ui-bootstrap runtime globals", () => {
     });
     const windowRecord: Record<string, unknown> = {
       CoreIndexUiPageHostRuntime: pageHostProxy,
-      CoreIndexUiRuntimeContractRuntime: runtimeContractProxy
+      CoreIndexUiRuntimeContractRuntime: runtimeContractProxy,
+      CoreTopActionBindingsHostRuntime: topActionBindingsTarget
     };
 
     vi.stubGlobal("document", {});
@@ -124,6 +129,8 @@ describe("index-ui-bootstrap runtime globals", () => {
 
     expect(windowRecord.CoreIndexUiRuntimeContractRuntime).toBe(runtimeContractProxy);
     expect(windowRecord.CoreIndexUiPageHostRuntime).toBe(pageHostProxy);
+    expect(windowRecord.CoreTopActionBindingsHostRuntime).toBe(topActionBindingsTarget);
+    expect(topActionBindingsTarget.applyTopActionBindings).toBe(legacyApplyTopActionBindings);
     expect(windowRecord.__indexUiRuntimeContractCalls).toBe(1);
     expect(windowRecord.__indexUiTryUndoCalls).toBe(1);
     expect(windowRecord.__indexUiPageBootstrapCalls).toBe(1);

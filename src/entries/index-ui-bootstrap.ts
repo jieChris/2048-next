@@ -80,6 +80,7 @@ const INDEX_UI_RUNTIME_GLOBALS: readonly (readonly [string, Record<string, unkno
   ["CoreIndexUiPageResolversHostRuntime", indexUiPageResolversHostRuntime as unknown as Record<string, unknown>],
   ["CoreIndexUiPageActionsHostRuntime", indexUiPageActionsHostRuntime as unknown as Record<string, unknown>]
 ];
+const PRESERVE_EXISTING_RUNTIME_GLOBALS = new Set(["CoreTopActionBindingsHostRuntime"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
@@ -99,6 +100,12 @@ function installIndexUiRuntimeGlobals(): void {
   for (const [key, runtime] of INDEX_UI_RUNTIME_GLOBALS) {
     const existingRuntime = windowRecord[key];
     if (isRecord(existingRuntime)) {
+      if (
+        PRESERVE_EXISTING_RUNTIME_GLOBALS.has(key) &&
+        asFunction(existingRuntime.applyTopActionBindings)
+      ) {
+        continue;
+      }
       Object.assign(existingRuntime, runtime);
       continue;
     }

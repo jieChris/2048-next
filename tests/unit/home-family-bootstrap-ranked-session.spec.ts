@@ -208,7 +208,9 @@ describe("home family bootstrap ranked session ordering", () => {
           }
           if (capability === "top-button-style") return ["./js/core_top_button_style_runtime.js"];
           if (capability === "i18n") return ["./js/core_i18n_runtime.js"];
-          if (capability === "index-tail") return ["./js/index_ui.js"];
+          if (capability === "index-tail") {
+            return ["./js/core_top_action_bindings_host_runtime.js", "./js/index_ui.js"];
+          }
           return [`runtime:${capability}`];
         })
     }));
@@ -229,6 +231,7 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(loadedScriptText).toContain("core_bgm_runtime.js");
     expect(loadedScriptText).toContain("core_night_mode_runtime.js");
     expect(loadedScriptText).toContain("core_top_button_style_runtime.js");
+    expect(loadedScriptText).toContain("core_top_action_bindings_host_runtime.js");
     expect(loadedScriptText).toContain("core_i18n_runtime.js");
     expect(loadedScriptText).not.toContain("index_ui.js");
   });
