@@ -1370,9 +1370,7 @@ export function stepReplay(manager: ManagerLike, delta: unknown): number {
   const current = Math.max(0, Math.min(moves.length, Math.floor(Number(manager.replayIndex) || 0)));
   const step = normalizeReplayStepDelta(delta);
   const next = Math.max(0, Math.min(moves.length, current + step));
-  if (step > 0) return seekReplay(manager, next);
-  manager.replayIndex = next;
-  return next;
+  return seekReplay(manager, next);
 }
 
 export function applyReplayImportActions(manager: ManagerLike, payload: unknown): boolean {

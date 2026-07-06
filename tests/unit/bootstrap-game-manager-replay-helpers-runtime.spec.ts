@@ -9,6 +9,7 @@ import {
   seekReplay,
   serializeReplay,
   serializeReplayV3,
+  stepReplay,
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
 import { decodeReplayV1Rpl, encodeReplayV1Rpl } from "../../src/core/replay-codec";
@@ -393,6 +394,32 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       [2, { x: 1, y: 0, value: 4 }]
     ]);
     expect(manager.replayIndex).toBe(2);
+  });
+
+  it("rewinds replay steps through seek so the board is rebuilt", () => {
+    const moves: unknown[] = [];
+    const manager = {
+      replayMoves: [1, 2],
+      replaySpawns: [
+        { x: 0, y: 0, value: 2 },
+        { x: 1, y: 0, value: 4 }
+      ],
+      replayIndex: 2,
+      replayMode: true,
+      forcedSpawn: null as unknown,
+      replayStartBoardMatrix: [[2, 0], [0, 0]],
+      modeConfig: { key: "test" },
+      restartWithBoard: vi.fn(),
+      move: vi.fn(function (this: { forcedSpawn: unknown }, direction: unknown) {
+        moves.push([direction, this.forcedSpawn]);
+      })
+    };
+
+    stepReplay(manager, -1);
+
+    expect(manager.restartWithBoard).toHaveBeenCalled();
+    expect(moves).toEqual([[1, { x: 0, y: 0, value: 2 }]]);
+    expect(manager.replayIndex).toBe(1);
   });
 
   it("restores checkpoint scores when seeking legacy text replays", () => {

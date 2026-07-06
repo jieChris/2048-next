@@ -104,7 +104,7 @@ async function readAndDismissGameDialogAlert(page: Page): Promise<string> {
 }
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("replay step controls advance replay index deterministically and rewinds without seek", async ({ page }) => {
+  test("replay step controls advance replay index deterministically and rebuilds board on rewind", async ({ page }) => {
     const response = await page.goto("/replay.html", {
       waitUntil: "domcontentloaded"
     });
@@ -125,35 +125,32 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return typeof (window as any).replayUiSetReplaySpeed === "function";
     });
 
-    const snapshot = await page.evaluate(() => {
+    const snapshot = await page.evaluate((replayText) => {
       const manager = (window as any).game_manager;
       const originalAlert = window.alert;
       window.alert = function (_msg) {};
       try {
-        let ok = manager.import("replay_(!\u00e4fC");
-        if (!ok) {
-          ok = manager.import("replay_(!\u76f2fC");
-        }
+        const ok = manager.import(replayText);
         manager.pause();
-        const originalSeek = manager.seek;
-        let seekCallCount = 0;
-        manager.seek = function (...args: unknown[]) {
-          seekCallCount += 1;
-          return originalSeek.apply(this, args);
+        const readBoard = () => {
+          const columns = manager && manager.grid && Array.isArray(manager.grid.cells) ? manager.grid.cells : [];
+          return columns.map((column: Array<{ value: number } | null>) =>
+            Array.isArray(column) ? column.map((tile) => (tile ? Number(tile.value) || 0 : 0)) : []
+          );
         };
         const total = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
         const before = Number(manager.replayIndex);
+        const boardBefore = readBoard();
         manager.step(1);
         const afterPlusOne = Number(manager.replayIndex);
         manager.step(10);
         const afterPlusTen = Number(manager.replayIndex);
-        const seekCountBeforeBack = seekCallCount;
+        const boardAfterPlusTen = readBoard();
         manager.step(-1);
         const afterMinusOne = Number(manager.replayIndex);
-        const seekCountAfterMinusOne = seekCallCount;
         manager.step(-10);
         const afterMinusTen = Number(manager.replayIndex);
-        const seekCountAfterMinusTen = seekCallCount;
+        const boardAfterMinusTen = readBoard();
         return {
           ok,
           total,
@@ -162,14 +159,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
           afterPlusTen,
           afterMinusOne,
           afterMinusTen,
-          seekCountBeforeBack,
-          seekCountAfterMinusOne,
-          seekCountAfterMinusTen
+          boardBefore,
+          boardAfterPlusTen,
+          boardAfterMinusTen
         };
       } finally {
         window.alert = originalAlert;
       }
-    });
+    }, STABLE_SPARSE_CHECKPOINT_REPLAY_TEXT);
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.total).toBeGreaterThan(0);
@@ -177,8 +174,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.afterPlusTen).toBe(Math.min(snapshot.afterPlusOne + 10, snapshot.total));
     expect(snapshot.afterMinusOne).toBe(Math.max(snapshot.afterPlusTen - 1, 0));
     expect(snapshot.afterMinusTen).toBe(Math.max(snapshot.afterMinusOne - 10, 0));
-    expect(snapshot.seekCountAfterMinusOne).toBe(snapshot.seekCountBeforeBack);
-    expect(snapshot.seekCountAfterMinusTen).toBe(snapshot.seekCountAfterMinusOne);
+    expect(snapshot.boardAfterPlusTen).not.toEqual(snapshot.boardBefore);
+    expect(snapshot.boardAfterMinusTen).toEqual(snapshot.boardBefore);
   });
 
   test("replay seek keeps exact history bounded while building sparse checkpoints", async ({
@@ -318,7 +315,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.moveCountAfterWarmup).toBeGreaterThan(0);
-    expect(snapshot.moveCountAfterRewind).toBe(snapshot.moveCountAfterWarmup);
+    expect(snapshot.moveCountAfterRewind).toBeGreaterThan(snapshot.moveCountAfterWarmup);
     expect(snapshot.moveCountAfterForward).toBe(snapshot.moveCountAfterRewind + 1);
   });
 
