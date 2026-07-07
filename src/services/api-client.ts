@@ -53,6 +53,14 @@ function isUnavailableProxyPayload(data: JsonRecord): boolean {
   return data.success === false && toText(data.error || data.code) === "api_unavailable";
 }
 
+function requestMethod(options: RequestInit): string {
+  return toText(options.method || "GET").trim().toUpperCase() || "GET";
+}
+
+function canTryNextApiBase(options: RequestInit, headers: Headers): boolean {
+  return requestMethod(options) === "GET" && !headers.has("Authorization");
+}
+
 export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = {}): string[] {
   const remoteApiBase = normalizeBase(options.remoteApiBase || DEFAULT_REMOTE_API_BASE);
   const origin = toText(
@@ -85,18 +93,23 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
           if (shouldUseJsonContentType(requestOptions.body) && !headers.has("Content-Type")) {
             headers.set("Content-Type", "application/json");
           }
+          const allowFallback = canTryNextApiBase(requestOptions, headers);
           const response = await fetchLike(base + path, { ...requestOptions, headers });
           const data = (await response.json().catch(() => null)) as JsonRecord | null;
           if (data) {
             if (isUnavailableProxyPayload(data)) {
               lastError = "api_unavailable";
-              continue;
+              if (allowFallback) continue;
             }
             return data;
           }
           lastError = toText(response.statusText || response.status);
+          if (!allowFallback) break;
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error);
+          const headers = new Headers(requestOptions.headers || {});
+          if (options.token) headers.set("Authorization", "Bearer " + options.token);
+          if (!canTryNextApiBase(requestOptions, headers)) break;
         }
       }
       return { success: false, error: lastError };

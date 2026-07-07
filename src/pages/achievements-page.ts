@@ -1,7 +1,7 @@
 import {
   resolveHomeUserDisplayName
 } from "../bootstrap/home-user-display";
-import { achievementIconMarkupFor } from "../entries/achievement-icon-showcase";
+import { achievementIconMarkupFor } from "../services/achievement-icons";
 import { createAchievementsService } from "../services/achievements";
 
 type JsonRecord = Record<string, unknown>;
@@ -38,24 +38,8 @@ let currentFilter: FilterKey = "all";
 let selectedAchievementId = "";
 let showcaseEditMode = false;
 let selectedShowcaseIds: string[] = [];
-let achievementToastTimer = 0;
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
-const BETA_PIONEER_ACHIEVEMENT: AchievementDefinition = {
-  id: "beta_pioneer",
-  name: "内测先锋",
-  description: "感谢参与 2048next.cn 内测并帮助打磨早期体验的玩家。",
-  nameI18n: { "zh-CN": "内测先锋", en: "Beta Pioneer" },
-  descriptionI18n: {
-    "zh-CN": "感谢参与 2048next.cn 内测并帮助打磨早期体验的玩家。",
-    en: "For players who joined the 2048next.cn beta and helped shape the early experience."
-  },
-  iconUrl: "",
-  status: "active",
-  level: 1,
-  seriesId: "community-beta",
-  rules: [{ type: "manual_grant", params: {} }]
-};
 
 const ACHIEVEMENT_COPY: Record<
   AchievementPageLang,
@@ -358,7 +342,6 @@ function buildViewModels(
   showcasePayload: unknown
 ): AchievementViewModel[] {
   const catalog = extractRows(catalogPayload).map(normalizeAchievement).filter((item): item is AchievementDefinition => !!item);
-  if (!catalog.some((item) => item.id === BETA_PIONEER_ACHIEVEMENT.id)) catalog.push(BETA_PIONEER_ACHIEVEMENT);
   const earned = extractRows(earnedPayload).map(normalizeUserAchievement).filter((item): item is UserAchievementEntry => !!item);
   const earnedById = new Map(earned.map((item) => [item.achievement.id, item]));
   const showcaseIds = new Set(
@@ -405,45 +388,6 @@ function isMilestoneAchievement(achievement: AchievementDefinition): boolean {
 function isRewardAchievement(achievement: AchievementDefinition): boolean {
   if (achievement.seriesId.startsWith("community-")) return true;
   return achievement.rules.some((rule) => ["event_rank", "manual_grant"].includes(toText(rule.type)));
-}
-
-function achievementUnlockTitle(item: AchievementViewModel): string {
-  if (isMilestoneAchievement(item.achievement)) return "Milestone Progress";
-  if (isRewardAchievement(item.achievement)) return "Reward Claimed";
-  return "Achievement Unlocked";
-}
-
-function showAchievementUnlockToast(item: AchievementViewModel): void {
-  if (!item.earned) return;
-  let host = byId("achievements-unlock-toast-host");
-  if (!host) {
-    host = document.createElement("div");
-    host.id = "achievements-unlock-toast-host";
-    host.className = "achievements-unlock-toast-host unlock-toast-host";
-    document.body.append(host);
-  }
-  const variant = isMilestoneAchievement(item.achievement)
-    ? " unlock-toast--codepen-milestone"
-    : isRewardAchievement(item.achievement)
-      ? " unlock-toast--codepen-reward"
-      : "";
-  const progress = isMilestoneAchievement(item.achievement)
-    ? '<span class="unlock-codepen-progress"><span style="width:100%"></span></span>'
-    : "";
-  window.clearTimeout(achievementToastTimer);
-  host.innerHTML =
-    '<article class="unlock-toast unlock-toast--codepen' + variant + '" role="status" aria-live="polite">' +
-      '<div class="unlock-toast-card">' +
-        '<span class="unlock-badge achievements-unlock-badge">' + renderBadge(item.achievement, false) + "</span>" +
-        '<div class="unlock-toast-content">' +
-          '<p class="unlock-toast-title">' + achievementUnlockTitle(item) + "</p>" +
-          '<h2 class="unlock-toast-name">' + escapeHtml(achievementName(item.achievement)) + "</h2>" +
-          '<p class="unlock-toast-desc">' + escapeHtml(achievementDescription(item.achievement) || copy().noDescription) + "</p>" +
-          progress +
-        "</div>" +
-      "</div>" +
-    "</article>";
-  achievementToastTimer = window.setTimeout(() => host.replaceChildren(), 3600);
 }
 
 function syncAchievementUserChip(): void {
@@ -517,6 +461,30 @@ function setStatus(message: string, ok = true): void {
   node.classList.toggle("admin-state-err", !ok);
 }
 
+function isFailurePayload(payload: unknown): boolean {
+  return toRecord(payload).success === false;
+}
+
+function payloadErrorMessage(payload: unknown): string {
+  const record = toRecord(payload);
+  return toText(record.error || record.message || record.code || copy().loadFailed);
+}
+
+function isAuthFailurePayload(payload: unknown): boolean {
+  if (!isFailurePayload(payload)) return false;
+  const record = toRecord(payload);
+  const text = toText(record.code || record.error || record.message).toLowerCase();
+  return ["unauthorized", "auth_required", "login_required", "missing_token", "invalid_token"].some((needle) =>
+    text.includes(needle)
+  );
+}
+
+function normalizeOptionalUserPayload(payload: unknown): unknown {
+  if (!isFailurePayload(payload)) return payload;
+  if (isAuthFailurePayload(payload)) return { success: true, data: [] };
+  throw new Error(payloadErrorMessage(payload));
+}
+
 function renderStats(): void {
   const currentCopy = copy();
   const mount = byId("achievements-stats");
@@ -562,10 +530,7 @@ function matchFilter(item: AchievementViewModel): boolean {
   if (currentFilter === "earned") return !!item.earned;
   if (currentFilter === "locked") return !item.earned;
   if (currentFilter === "event") return isRewardAchievement(item.achievement);
-  if (currentFilter === "milestone") {
-    if (item.achievement.seriesId.startsWith("tile-")) return true;
-    return item.achievement.rules.some((rule) => ["max_tile_reached", "nth_max_tile_reached"].includes(toText(rule.type)));
-  }
+  if (currentFilter === "milestone") return isMilestoneAchievement(item.achievement);
   if (currentFilter === "speedrun") {
     if (item.achievement.seriesId.startsWith("speed-")) return true;
     return item.achievement.rules.some((rule) => toText(rule.type) === "max_tile_within_duration");
@@ -607,8 +572,6 @@ function renderList(): void {
         return;
       }
       selectAchievement(id);
-      const item = allAchievements.find((entry) => entry.achievement.id === id);
-      if (item?.earned) showAchievementUnlockToast(item);
     });
   });
 }
@@ -680,8 +643,12 @@ async function loadAchievements(): Promise<void> {
       service.listMyAchievements(),
       service.getMyShowcase()
     ]);
-    if (catalog.success === false) throw new Error(toText(catalog.error || catalog.message || copy().loadFailed));
-    allAchievements = buildViewModels(catalog, earned, showcase);
+    if (isFailurePayload(catalog)) throw new Error(payloadErrorMessage(catalog));
+    allAchievements = buildViewModels(
+      catalog,
+      normalizeOptionalUserPayload(earned),
+      normalizeOptionalUserPayload(showcase)
+    );
     selectedAchievementId = allAchievements[0]?.achievement.id || "";
     renderStats();
     renderShowcase();

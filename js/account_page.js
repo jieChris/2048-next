@@ -573,6 +573,7 @@
         requestInit.headers["Content-Type"] = "application/json";
         requestInit.body = JSON.stringify(opts.body);
       }
+      var allowFallback = method === "GET" && !requestInit.headers.Authorization;
 
       try {
         if (controller) {
@@ -608,7 +609,7 @@
             clearAuth();
             syncAuthState();
           }
-          if (!data && i < apiBases.length - 1) {
+          if (!data && allowFallback && i < apiBases.length - 1) {
             continue;
           }
           if (data && typeof data === "object") {
@@ -624,7 +625,7 @@
           if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
             return { error: t("apiNotConfigured") };
           }
-          if (i < apiBases.length - 1) {
+          if (allowFallback && i < apiBases.length - 1) {
             continue;
           }
           return { error: "Invalid response format" };
@@ -643,6 +644,7 @@
         } else {
           lastError = t("networkError") + ": " + toText(error && error.message);
         }
+        if (!allowFallback) break;
       }
     }
 

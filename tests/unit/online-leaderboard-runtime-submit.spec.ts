@@ -14,6 +14,7 @@ const PREFETCH_SESSION_KEY = `ranked_session_prefetch:v1:${MODE_KEY}`;
 const CHECKPOINT_MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
 const CHECKPOINT_CLEAR_KEY = `ranked_checkpoint_cleared_at:v1:user:7:${MODE_KEY}`;
 const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
+const PENDING_RECORD_QUEUE_KEY = "online_pending_record_submit_queue_v1";
 const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
 const LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
 const LAST_RECORD_RESULT_KEY = "online_last_record_submit_result_v1";
@@ -184,6 +185,7 @@ function loadOnlineLeaderboardRuntime(options: {
   manager: Record<string, unknown>;
   fetchImpl: (url: string, init: FetchCall["init"]) => Promise<Record<string, unknown>>;
   disableOnlineLeaderboard?: boolean;
+  apiBases?: string[];
   storage?: MemoryStorage;
 }) {
   const storage = options.storage || new MemoryStorage();
@@ -219,7 +221,7 @@ function loadOnlineLeaderboardRuntime(options: {
         storage.removeItem(key);
       },
       buildApiBaseCandidates() {
-        return ["https://2048next.cn/api"];
+        return options.apiBases || ["https://2048next.cn/api"];
       },
       resolveApiTimeoutMs() {
         return 1000;
@@ -1259,6 +1261,117 @@ describe("online leaderboard terminal submission", () => {
       code: "REPLAY_NOT_TERMINATED",
       error: "Replay is not terminal"
     });
+  });
+
+  it("keeps a terminal record pending after a transient server failure", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: false, code: "INTERNAL_ERROR" }, false, 500);
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    const pendingRaw = storage.getItem(PENDING_RECORD_KEY);
+    expect(pendingRaw).not.toBeNull();
+    expect(JSON.parse(pendingRaw || "{}")).toMatchObject({
+      payload: {
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "replay-v1"
+      }
+    });
+    expect(storage.getItem(LAST_RECORD_SUBMIT_KEY)).toBeNull();
+  });
+
+  it("does not fallback authenticated record writes to another API base", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      apiBases: ["https://local.example/api", "https://remote.example/api"],
+      fetchImpl: async (url) => {
+        if (url === "https://local.example/api/records") {
+          return {
+            ok: false,
+            status: 500,
+            headers: { get: vi.fn(() => "") },
+            json: vi.fn(async () => {
+              throw new Error("no-json");
+            })
+          };
+        }
+        return createJsonResponse({ success: true, data: { id: "should-not-fallback" } });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(1);
+    expect(runtime.fetchCalls[0]?.url).toBe("https://local.example/api/records");
+    expect(storage.getItem(PENDING_RECORD_KEY)).not.toBeNull();
+  });
+
+  it("queues later terminal records instead of overwriting an older pending record", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    let submitOk = false;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return submitOk
+            ? createJsonResponse({ success: true, data: { id: "record-ok" } })
+            : createJsonResponse({ success: false, code: "INTERNAL_ERROR" }, false, 500);
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    manager.clientRecordId = "rec_client_2";
+    manager.score = 8192;
+    manager.serialize = vi.fn(() => "replay-v2");
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_KEY) || "{}")).toMatchObject({
+      payload: { replay_string: "replay-v1" }
+    });
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_QUEUE_KEY) || "[]")).toMatchObject([
+      { payload: { replay_string: "replay-v2", score: 8192 } }
+    ]);
+
+    submitOk = true;
+    const retryRuntime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) return createJsonResponse({ success: true, data: { id: "record-ok" } });
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    await flushRuntimePromises();
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(1);
+    expect(retryRuntime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(2);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBeNull();
   });
 
   it("keeps a terminal record pending when auth was cleared before the game-over submit runs", async () => {

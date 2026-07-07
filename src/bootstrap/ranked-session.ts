@@ -531,12 +531,10 @@ export function createRankedSessionRuntime(
                 return null;
               }
               lastFailureReason = payload?.code || payload?.error || `http_${response.status}`;
-              if (!payload && index < apiBases.length - 1) continue;
               return null;
             }
             if (!payload || payload.success !== true) {
               lastFailureReason = payload?.code || payload?.error || "api_failure";
-              if (index < apiBases.length - 1) continue;
               return null;
             }
             const session = normalizeRankedSessionRecord(payload.data || null, modeKey);
@@ -550,9 +548,7 @@ export function createRankedSessionRuntime(
               : null;
           } catch (_requestErr) {
             lastFailureReason = "network";
-            if (index >= apiBases.length - 1) {
-              return null;
-            }
+            return null;
           }
         }
         return null;

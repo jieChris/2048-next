@@ -89,8 +89,7 @@ describe("services: api-client", () => {
     const fetchLike = vi.fn().mockRejectedValue(new Error("offline"));
     const client = createJsonApiClient({
       bases: ["https://api-a.test", "https://api-b.test"],
-      fetchLike,
-      token: "token-1"
+      fetchLike
     });
 
     await expect(client.request("/admin/me", { method: "GET" })).resolves.toEqual({
@@ -98,6 +97,43 @@ describe("services: api-client", () => {
       error: "offline"
     });
     expect(fetchLike).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not fallback authenticated requests to another API base", async () => {
+    const fetchLike = vi.fn().mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve({ success: false, error: "api_unavailable" })
+    });
+    const client = createJsonApiClient({
+      bases: ["http://127.0.0.1:5174/api", "https://2048next.cn/api"],
+      fetchLike,
+      token: "token-1"
+    });
+
+    await expect(client.request("/user/me/achievements", { method: "GET" })).resolves.toEqual({
+      success: false,
+      error: "api_unavailable"
+    });
+    expect(fetchLike).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fallback write requests to another API base", async () => {
+    const fetchLike = vi.fn().mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve({ success: false, error: "api_unavailable" })
+    });
+    const client = createJsonApiClient({
+      bases: ["http://127.0.0.1:5174/api", "https://2048next.cn/api"],
+      fetchLike
+    });
+
+    await expect(client.request("/records", { method: "POST", body: "{}" })).resolves.toEqual({
+      success: false,
+      error: "api_unavailable"
+    });
+    expect(fetchLike).toHaveBeenCalledTimes(1);
   });
 
   it("falls back when the local proxy reports api_unavailable", async () => {

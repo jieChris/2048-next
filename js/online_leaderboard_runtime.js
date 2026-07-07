@@ -10,6 +10,7 @@
   var STORAGE_PENDING_SCORE_SUBMIT_KEY = "online_pending_score_submit_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
+  var STORAGE_PENDING_RECORD_QUEUE_KEY = "online_pending_record_submit_queue_v1";
   var STORAGE_LAST_RECORD_SUBMIT_RESULT_KEY = "online_last_record_submit_result_v1";
   var STORAGE_LAST_STONE_2K_SUBMIT_KEY = "online_last_stone_2k_submit_signature_v1";
   var STORAGE_PENDING_STONE_2K_SUBMIT_KEY = "online_pending_stone_2k_submit_v1";
@@ -19,6 +20,7 @@
   var SCORE_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var SCORE_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var RECORD_SUBMIT_PENDING_TTL_MS = 0;
+  var RECORD_SUBMIT_PENDING_QUEUE_LIMIT = 20;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
   var STONE_2K_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
@@ -880,6 +882,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     safeRemoveStorage(STORAGE_NICKNAME_KEY);
     safeRemoveStorage(STORAGE_PENDING_SCORE_SUBMIT_KEY);
     safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
+    safeRemoveStorage(STORAGE_PENDING_RECORD_QUEUE_KEY);
     safeRemoveStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY);
   }
 
@@ -895,6 +898,10 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function clearPendingRecordSubmitSignature() {
     safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
+  }
+
+  function clearPendingRecordSubmitQueue() {
+    safeRemoveStorage(STORAGE_PENDING_RECORD_QUEUE_KEY);
   }
 
   function markRecordSubmitSignatureHandled(signature) {
@@ -983,6 +990,88 @@ function shouldAutoLoadOnlineLeaderboard() {
     return null;
   }
 
+  function normalizePendingRecordSubmitStateObject(value) {
+    try {
+      return buildPendingSubmitState(
+        JSON.stringify(value || {}),
+        RECORD_SUBMIT_PENDING_TTL_MS,
+        normalizePendingRecordSubmitPayload
+      );
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readPendingRecordSubmitQueue() {
+    var raw = toText(safeGetStorage(STORAGE_PENDING_RECORD_QUEUE_KEY)).trim();
+    if (!raw) return [];
+    try {
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map(normalizePendingRecordSubmitStateObject)
+        .filter(function (state) { return !!(state && state.signature && state.payload); });
+    } catch (_err) {
+      clearPendingRecordSubmitQueue();
+      return [];
+    }
+  }
+
+  function writePendingRecordSubmitQueue(queue) {
+    var list = Array.isArray(queue) ? queue.filter(function (state) {
+      return !!(state && state.signature && state.payload);
+    }).slice(0, RECORD_SUBMIT_PENDING_QUEUE_LIMIT) : [];
+    if (!list.length) {
+      clearPendingRecordSubmitQueue();
+      return;
+    }
+    safeSetStorage(STORAGE_PENDING_RECORD_QUEUE_KEY, JSON.stringify(list));
+  }
+
+  function enqueuePendingRecordSubmitState(state) {
+    var normalized = normalizePendingRecordSubmitStateObject(state);
+    if (!normalized || !normalized.payload) return;
+    var queue = readPendingRecordSubmitQueue().filter(function (item) {
+      return item.signature !== normalized.signature;
+    });
+    queue.push(normalized);
+    writePendingRecordSubmitQueue(queue);
+  }
+
+  function enqueuePendingRecordSubmitPayload(signature, payload) {
+    var text = toText(signature).trim();
+    var normalizedPayload = normalizePendingRecordSubmitPayload(payload);
+    if (!text || !normalizedPayload) return;
+    enqueuePendingRecordSubmitState({
+      signature: text,
+      payload: normalizedPayload,
+      ownerUserId: toText(getUserId()).trim() || "",
+      createdAt: Date.now(),
+      lastAttemptAt: 0,
+      retryCount: 0
+    });
+  }
+
+  function promoteNextPendingRecordSubmitState() {
+    var queue = readPendingRecordSubmitQueue();
+    var next = queue.shift();
+    writePendingRecordSubmitQueue(queue);
+    if (!next) return null;
+    safeSetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY, JSON.stringify(next));
+    return next;
+  }
+
+  function promoteAndRetryNextPendingRecordSubmit(options) {
+    if (!promoteNextPendingRecordSubmitState()) return;
+    var opts = options && typeof options === "object" ? options : {};
+    runPromiseSafely(function () {
+      return retryPendingRecordSubmit({
+        keepalive: opts.keepalive === true,
+        forcePendingRetry: true
+      });
+    });
+  }
+
   function readPendingScoreSubmitState() {
     var state = buildPendingSubmitState(
       safeGetStorage(STORAGE_PENDING_SCORE_SUBMIT_KEY),
@@ -1002,11 +1091,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       RECORD_SUBMIT_PENDING_TTL_MS,
       normalizePendingRecordSubmitPayload
     );
-    if (!state) {
-      clearPendingRecordSubmitSignature();
-      return null;
-    }
-    return state;
+    if (state) return state;
+    clearPendingRecordSubmitSignature();
+    return promoteNextPendingRecordSubmitState();
   }
 
   function readPendingRecordSubmitSignature() {
@@ -1160,6 +1247,12 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function isTransientRecordSubmitErrorText(errorTextLike) {
     return isTransientOnlineSubmitErrorText(errorTextLike);
+  }
+
+  function isTransientSubmitResult(result, errorTextLike) {
+    if (isTransientOnlineSubmitErrorText(errorTextLike)) return true;
+    var status = Math.floor(Number(result && result.status) || 0);
+    return status === 408 || status === 429 || status >= 500;
   }
 
   function getLanguage() {
@@ -1798,6 +1891,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         requestInit.headers["Content-Type"] = "application/json";
         requestInit.body = JSON.stringify(opts.body);
       }
+      var allowFallback = method === "GET" && !requestInit.headers.Authorization;
 
       try {
         if (controller) {
@@ -1823,14 +1917,14 @@ function shouldAutoLoadOnlineLeaderboard() {
         }
 
         if (!response.ok) {
-          if (!data && i < apiBases.length - 1) {
+          if (!data && allowFallback && i < apiBases.length - 1) {
             continue;
           }
           if (data && typeof data === "object") {
             if (typeof data.status === "undefined") data.status = response.status;
             return data;
           }
-          return { error: "HTTP " + response.status };
+          return { error: "HTTP " + response.status, status: response.status };
         }
 
         if (!data || typeof data !== "object") {
@@ -1840,7 +1934,7 @@ function shouldAutoLoadOnlineLeaderboard() {
           if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
             return { error: "API not configured" };
           }
-          if (i < apiBases.length - 1) {
+          if (allowFallback && i < apiBases.length - 1) {
             continue;
           }
           return { error: "Invalid response format" };
@@ -1859,6 +1953,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         } else {
           lastError = "Network error: " + toText(error && error.message);
         }
+        if (!allowFallback) break;
       }
     }
 
@@ -3601,7 +3696,7 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return;
     }
-    if (!isTransientOnlineSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       clearPendingScoreSubmitState();
     }
   }
@@ -3642,7 +3737,11 @@ async function refreshLeaderboard(modeLike) {
     var pendingSignature = pendingState ? pendingState.signature : "";
     if (signature && signature === lastSignature) return;
     if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
-    if (signature && signature !== pendingSignature) {
+    if (signature && pendingSignature && signature !== pendingSignature) {
+      enqueuePendingRecordSubmitPayload(signature, payload);
+      return;
+    }
+    if (signature && !pendingSignature) {
       writePendingRecordSubmitSignature(signature, pendingState, payload);
     }
     if (!getAuthToken()) return;
@@ -3662,6 +3761,7 @@ async function refreshLeaderboard(modeLike) {
       writeLastRecordSubmitResult(payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
       clearPendingRecordSubmitSignature();
+      promoteAndRetryNextPendingRecordSubmit(opts);
       cleanupRankedStateAfterRecordSubmit(manager, payload);
       refreshLeaderboardsAfterRecordSubmit(payload && payload.mode_key);
       return;
@@ -3676,9 +3776,10 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return;
     }
-    if (!isTransientRecordSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       markRecordSubmitSignatureHandled(signature);
       clearPendingRecordSubmitSignature();
+      promoteAndRetryNextPendingRecordSubmit(opts);
     }
   }
 
@@ -3731,7 +3832,7 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return result;
     }
-    if (!isTransientOnlineSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       clearPendingScoreSubmitState();
     }
     return result;
@@ -3771,6 +3872,7 @@ async function refreshLeaderboard(modeLike) {
       writeLastRecordSubmitResult(pendingState.payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, pendingState.signature);
       clearPendingRecordSubmitSignature();
+      promoteAndRetryNextPendingRecordSubmit(opts);
       var currentManager = global.game_manager;
       cleanupRankedStateAfterRecordSubmit(currentManager, pendingState.payload);
       refreshLeaderboardsAfterRecordSubmit(pendingState.payload && pendingState.payload.mode_key);
@@ -3786,9 +3888,10 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return result;
     }
-    if (!isTransientRecordSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       markRecordSubmitSignatureHandled(pendingState.signature);
       clearPendingRecordSubmitSignature();
+      promoteAndRetryNextPendingRecordSubmit(opts);
     }
     return result;
   }
@@ -3846,7 +3949,7 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return result;
     }
-    if (!isTransientOnlineSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       clearPendingStone2kSubmitState();
     }
     return result;
@@ -3919,7 +4022,7 @@ async function refreshLeaderboard(modeLike) {
       clearAuthSessionOnly();
       return;
     }
-    if (!isTransientOnlineSubmitErrorText(errorText)) {
+    if (!isTransientSubmitResult(result, errorText)) {
       clearPendingStone2kSubmitState();
     }
   }

@@ -1374,6 +1374,7 @@
         headers["Content-Type"] = "application/json";
         requestInit.body = JSON.stringify(body);
       }
+      var allowFallback = method === "GET" && !headers.Authorization;
 
       try {
         var response = await fetchWithTimeout(url, requestInit, timeoutMs);
@@ -1393,7 +1394,8 @@
         if (response.status === 404 || response.status === 405 || response.status === 501) {
           fallbackUnavailableCount += 1;
           lastErr = new Error("relay_api_unavailable");
-          continue;
+          if (allowFallback) continue;
+          throw lastErr;
         }
         var code = parseErrorCode(payload);
         if (
@@ -1413,6 +1415,7 @@
       } catch (err) {
         lastErr = err;
         if (err && (err.status === 401 || err.status === 403)) throw err;
+        if (!allowFallback) throw err;
       }
     }
 
