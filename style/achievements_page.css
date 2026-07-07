@@ -1,16 +1,55 @@
+/* ═══════════════════════════════════════════════════════════════
+   achievements_page.css — 成就 / 勋章墙页面
+   完整视觉重设计 · 2026-07-07
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── keyframes ─────────────────────────────────────────────── */
+
+@keyframes ach-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ach-empty-pulse {
+  0%, 100% { border-color: rgba(180, 160, 130, 0.28); }
+  50%      { border-color: rgba(206, 178, 120, 0.56); }
+}
+
+@keyframes ach-float-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ach-badge-glow {
+  0%, 100% { box-shadow: 0 0 14px rgba(218, 180, 100, 0.18); }
+  50%      { box-shadow: 0 0 28px rgba(218, 180, 100, 0.38); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   1.  BODY / PAGE SHELL
+   ═══════════════════════════════════════════════════════════════ */
+
 body[data-page="achievements"] {
   margin: 0;
   min-height: 100vh;
   color: var(--pp-ink, #3c342c);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+
+  /* 三层渐变叠加：顶部金色辉光 + 右下暖色 + 全局对角 */
   background:
-    linear-gradient(135deg, rgba(250, 248, 239, 0.96), rgba(239, 229, 216, 0.94)),
-    #faf8ef;
+    radial-gradient(ellipse 140% 55% at 50% -6%, rgba(243, 199, 107, 0.12), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 88% 100%, rgba(169, 120, 93, 0.07), transparent 44%),
+    linear-gradient(168deg, #fdfaf3 0%, #f5edd8 38%, #efe3ca 70%, #eadbc3 100%);
+  background-attachment: fixed;
 }
 
 .achievements-page-shell {
   width: min(1180px, calc(100vw - 28px));
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   2.  HEADER
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-header {
   position: relative;
@@ -33,41 +72,75 @@ body[data-page="achievements"] {
   text-align: center;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   3.  GRID LAYOUTS
+   ───────────────────────────────────────────────────────────
+   overview : 收集进度(窄)  |  展示成就(宽)
+   workspace: 勋章墙(主)    |  详情面板(侧)
+   ═══════════════════════════════════════════════════════════════ */
+
 .achievements-overview,
 .achievements-workspace {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
+/* 展示区比进度区宽 ≈ 5:3 */
 .achievements-overview {
-  grid-template-columns: minmax(0, 0.85fr) minmax(320px, 1.15fr);
-  margin-top: 14px;
+  grid-template-columns: minmax(0, 0.75fr) minmax(340px, 1.25fr);
+  margin-top: 18px;
 }
 
+/* 详情面板 320–400px，给描述和属性行更多余裕 */
 .achievements-workspace {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  margin-top: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  margin-top: 18px;
   align-items: start;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   4.  CARD SURFACE — 毛玻璃面板
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-summary-card,
 .achievements-showcase-card,
 .achievements-list-card,
 .achievement-detail {
-  padding: 14px;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(200, 180, 150, 0.42);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(250, 244, 230, 0.56));
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow:
+    0 8px 32px rgba(120, 90, 50, 0.06),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.82);
+  transition: box-shadow 0.25s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   5.  PANEL HEAD  (共用)
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-panel-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .achievements-panel-head h2,
-.achievements-panel-head p {
-  margin: 0;
+.achievements-panel-head p { margin: 0; }
+
+.achievements-panel-head h2 {
+  font-size: 22px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #5a4a3a, #8a6e52);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .achievements-panel-head p {
@@ -77,74 +150,129 @@ body[data-page="achievements"] {
   line-height: 1.4;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   6.  STATS — 收集进度
+   ═══════════════════════════════════════════════════════════════ */
+
 .achievements-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .achievements-stat {
-  min-height: 76px;
-  padding: 12px;
-  border: 1px solid rgba(216, 201, 184, 0.76);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.52);
+  min-height: 82px;
+  padding: 14px;
+  border: 1px solid rgba(210, 190, 160, 0.48);
+  border-radius: 14px;
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.82), rgba(250, 242, 225, 0.58));
+  box-shadow:
+    0 4px 16px rgba(140, 110, 70, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.achievements-stat:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(140, 110, 70, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .achievements-stat strong {
   display: block;
-  color: #3c342c;
-  font-size: 26px;
+  font-size: 30px;
+  font-weight: 900;
   line-height: 1.1;
+  background: linear-gradient(135deg, #b8860b, #d4a340, #c49535);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .achievements-stat span {
+  display: block;
+  margin-top: 4px;
   color: #7a6754;
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.04em;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   7.  SHOWCASE — 展示成就槽位
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-showcase {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.achievement-showcase-slot,
-.achievement-card {
-  position: relative;
-  border: 1px solid rgba(216, 201, 184, 0.86);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  gap: 12px;
 }
 
 .achievement-showcase-slot {
-  min-height: 132px;
-  padding: 12px;
+  position: relative;
+  min-height: 136px;
+  padding: 14px;
+  border: 1px solid rgba(210, 185, 145, 0.52);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 8%, rgba(243, 220, 160, 0.14), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 244, 230, 0.55));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 6px 20px rgba(140, 110, 60, 0.05);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.achievement-showcase-slot:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 10px 28px rgba(140, 110, 60, 0.11);
 }
 
 .achievement-showcase-slot.is-empty {
   display: grid;
   place-items: center;
-  color: #9a8773;
+  color: #a89578;
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.35);
+  border-width: 2px;
+  border-color: rgba(180, 160, 130, 0.36);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(248, 240, 225, 0.28));
   font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  animation: ach-empty-pulse 2.8s ease-in-out infinite;
 }
+
+.achievements-showcase-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   8.  BADGE — 成就徽章图标
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievement-badge {
   width: 54px;
   height: 54px;
   display: inline-grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 10px;
   color: #f9f6f2;
-  background: linear-gradient(145deg, #8f7a66, #5f5144);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.22), 0 8px 18px rgba(80, 64, 48, 0.16);
+  background: linear-gradient(145deg, #c9a050, #8f7a66, #6b5a4a);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    0 6px 16px rgba(80, 64, 48, 0.16);
   font-size: 22px;
   font-weight: 900;
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .achievement-badge img {
@@ -153,12 +281,22 @@ body[data-page="achievements"] {
   object-fit: cover;
 }
 
-.achievement-badge.is-locked {
-  color: #9d8d7f;
-  background: #e2d8cc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  filter: grayscale(1);
+.achievement-badge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
+
+.achievement-badge.is-locked {
+  color: #a99c90;
+  background: linear-gradient(145deg, #e0d8cd, #ccc3b5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  filter: grayscale(0.85) brightness(0.95);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   9.  NAME / META / DESC — 文本样式
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievement-name {
   display: block;
@@ -178,39 +316,36 @@ body[data-page="achievements"] {
   line-height: 1.4;
 }
 
-.achievement-desc {
-  flex: 1;
-}
+.achievement-desc { flex: 1; }
 
 .achievement-card.is-locked .achievement-name,
 .achievement-card.is-locked .achievement-desc,
 .achievement-card.is-locked .achievement-meta {
-  color: #8f8276;
+  color: #9a9088;
 }
 
-.achievements-showcase-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
+/* ═══════════════════════════════════════════════════════════════
+   10. WALL HEAD — 成就勋章墙标题
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-wall-head {
   display: flex;
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .achievements-wall-head h2,
-.achievements-wall-head p {
-  margin: 0;
-}
+.achievements-wall-head p { margin: 0; }
 
 .achievements-wall-head h2 {
-  color: #3c342c;
   font-size: 24px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #5a4a3a, #8a6e52);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .achievements-wall-head p {
@@ -220,74 +355,136 @@ body[data-page="achievements"] {
   line-height: 1.45;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   11. FILTER ROW — 筛选胶囊按钮
+   ═══════════════════════════════════════════════════════════════ */
+
 .achievements-filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .achievement-filter {
-  min-height: 34px;
-  border: 1px solid #d8c9b8;
+  min-height: 36px;
+  border: 1px solid rgba(200, 180, 155, 0.52);
   border-radius: 999px;
-  padding: 0 13px;
+  padding: 0 16px;
   color: #6f5f4f;
-  background: rgba(255, 255, 255, 0.62);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(248, 240, 225, 0.58));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   font: inherit;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(140, 110, 70, 0.04);
+  transition: all 0.2s ease;
+}
+
+.achievement-filter:hover {
+  transform: scale(1.04);
+  border-color: rgba(180, 150, 110, 0.7);
+  box-shadow: 0 4px 14px rgba(140, 110, 70, 0.09);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 240, 225, 0.74));
 }
 
 .achievement-filter.is-active {
-  color: #f9f6f2;
-  background: #776e65;
-  border-color: #776e65;
+  color: #fff8e8;
+  background: linear-gradient(145deg, #8b7355, #6d5a44, #7a6550);
+  border-color: rgba(100, 80, 55, 0.45);
+  box-shadow:
+    0 4px 14px rgba(100, 75, 40, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   12. ACHIEVEMENT LIST — 成就卡片网格
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 16px;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   13. ACHIEVEMENT CARD — 成就卡片
+   ═══════════════════════════════════════════════════════════════ */
+
 .achievement-card {
+  position: relative;
   display: flex;
-  min-height: 190px;
+  min-height: 200px;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 13px 12px 12px;
+  padding: 14px 12px 12px;
   text-align: center;
   cursor: pointer;
+
+  border: 1px solid rgba(210, 185, 145, 0.48);
+  border-radius: 16px;
   background:
-    radial-gradient(circle at 50% 18%, rgba(243, 199, 107, 0.18), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 241, 232, 0.62));
-  transition: transform 0.14s ease, border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
+    radial-gradient(ellipse 100% 55% at 50% 6%, rgba(243, 210, 130, 0.18), transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(250, 244, 230, 0.62));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 4px 16px rgba(120, 90, 50, 0.05);
+  transition:
+    transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.22s ease,
+    box-shadow 0.28s ease;
+  animation: ach-float-in 0.35s ease both;
 }
 
 .achievement-card:hover {
-  transform: translateY(-2px);
-  border-color: #b49a7b;
-  box-shadow: 0 8px 18px rgba(80, 64, 48, 0.12);
+  transform: translateY(-4px) scale(1.015);
+  border-color: rgba(196, 165, 110, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 14px 36px rgba(160, 125, 60, 0.13),
+    0 0 0 1px rgba(218, 190, 140, 0.18);
 }
+
+/* ── locked 卡片 ── */
 
 .achievement-card.is-locked {
   color: #8f8276;
   background:
-    radial-gradient(circle at 50% 18%, rgba(119, 110, 101, 0.08), transparent 44%),
-    linear-gradient(180deg, rgba(248, 246, 241, 0.68), rgba(235, 229, 221, 0.56));
+    radial-gradient(ellipse 90% 50% at 50% 10%, rgba(160, 150, 140, 0.07), transparent 48%),
+    linear-gradient(180deg, rgba(248, 246, 241, 0.72), rgba(238, 232, 222, 0.52));
+  border-color: rgba(190, 178, 165, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 3px 10px rgba(120, 100, 80, 0.03);
 }
 
+.achievement-card.is-locked:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 8px 22px rgba(120, 100, 80, 0.08);
+}
+
+/* ── selected 卡片 ── */
+
 .achievement-card.is-selected {
-  border-color: #776e65;
-  box-shadow: 0 0 0 3px rgba(119, 110, 101, 0.15);
+  border-color: rgba(160, 130, 80, 0.58);
+  box-shadow:
+    0 0 0 3px rgba(196, 165, 110, 0.18),
+    0 8px 24px rgba(160, 125, 60, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .achievement-card:disabled {
   cursor: not-allowed;
 }
+
+/* ── 展示标记 ── */
 
 .achievement-card.is-showcase-picked::after {
   content: "展示";
@@ -295,121 +492,262 @@ body[data-page="achievements"] {
   top: 10px;
   right: 10px;
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 3px 10px;
   color: #3f7a49;
-  background: rgba(78, 139, 88, 0.12);
-  font-size: 12px;
+  background: rgba(78, 139, 88, 0.13);
+  border: 1px solid rgba(78, 139, 88, 0.18);
+  font-size: 11px;
   font-weight: 900;
+  letter-spacing: 0.04em;
 }
+
+/* ── 点亮状态标签 ── */
 
 .achievement-light-state {
   align-self: flex-start;
   border-radius: 999px;
-  padding: 3px 8px;
-  color: #7b5427;
-  background: rgba(236, 180, 82, 0.16);
-  font-size: 12px;
+  padding: 3px 10px;
+  color: #8a6520;
+  background: linear-gradient(135deg, rgba(236, 195, 90, 0.16), rgba(220, 170, 70, 0.1));
+  border: 1px solid rgba(220, 180, 90, 0.18);
+  font-size: 11px;
   font-weight: 900;
+  letter-spacing: 0.03em;
 }
 
 .achievement-card.is-locked .achievement-light-state {
   color: #8c7a67;
-  background: rgba(140, 122, 103, 0.11);
+  background: rgba(140, 122, 103, 0.08);
+  border-color: rgba(140, 122, 103, 0.14);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   14. MEDAL FACE — 勋章圆面（金属光泽）
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievement-medal-face {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 80px;
+  height: 80px;
   margin-top: 12px;
-  border: 1px solid rgba(196, 151, 75, 0.36);
+  border: 2px solid rgba(200, 165, 90, 0.38);
   border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+
+  /* conic-gradient 模拟金属质感 */
   background:
-    radial-gradient(circle at 35% 24%, rgba(255, 255, 255, 0.86), transparent 24%),
-    linear-gradient(145deg, rgba(241, 206, 124, 0.58), rgba(147, 116, 75, 0.24));
-  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.48), 0 10px 18px rgba(80, 64, 48, 0.12);
+    conic-gradient(
+      from 30deg,
+      rgba(245, 215, 140, 0.62),
+      rgba(190, 155, 90, 0.32) 25%,
+      rgba(255, 240, 190, 0.68) 37%,
+      rgba(200, 165, 100, 0.38) 50%,
+      rgba(245, 215, 140, 0.62) 62%,
+      rgba(190, 155, 90, 0.32) 75%,
+      rgba(255, 240, 190, 0.68) 87%,
+      rgba(245, 215, 140, 0.62) 100%
+    );
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.52),
+    inset 0 -2px 6px rgba(120, 90, 40, 0.1),
+    0 8px 22px rgba(160, 125, 60, 0.13),
+    0 0 0 1px rgba(200, 170, 100, 0.18);
+  transition: box-shadow 0.3s ease;
 }
 
+/* shimmer 扫光效果 — 仅已解锁 */
+.achievement-card:not(.is-locked) .achievement-medal-face::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.38) 45%,
+    rgba(255, 255, 255, 0.58) 50%,
+    rgba(255, 255, 255, 0.38) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: ach-shimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.achievement-card:hover .achievement-medal-face {
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.52),
+    inset 0 -2px 6px rgba(120, 90, 40, 0.1),
+    0 12px 30px rgba(200, 160, 60, 0.2),
+    0 0 0 1px rgba(200, 170, 100, 0.28);
+}
+
+/* locked 勋章 — 去色 */
 .achievement-card.is-locked .achievement-medal-face {
-  border-color: rgba(140, 122, 103, 0.22);
+  border-color: rgba(170, 158, 142, 0.28);
   background:
-    radial-gradient(circle at 35% 24%, rgba(255, 255, 255, 0.52), transparent 24%),
-    linear-gradient(145deg, rgba(218, 211, 202, 0.68), rgba(154, 141, 127, 0.22));
-  box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.36);
+    conic-gradient(
+      from 0deg,
+      rgba(215, 210, 202, 0.48),
+      rgba(195, 188, 178, 0.3) 25%,
+      rgba(225, 220, 212, 0.52) 50%,
+      rgba(205, 198, 188, 0.36) 75%,
+      rgba(215, 210, 202, 0.48) 100%
+    );
+  box-shadow:
+    inset 0 1px 4px rgba(255, 255, 255, 0.38),
+    0 4px 12px rgba(120, 110, 90, 0.05);
 }
 
-.achievement-card button {
-  all: unset;
+.achievement-card button { all: unset; }
+
+/* ═══════════════════════════════════════════════════════════════
+   15. UNLOCK TOAST HOST
+   ═══════════════════════════════════════════════════════════════ */
+
+.achievements-unlock-toast-host.unlock-toast-host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
 }
+
+.achievements-unlock-badge .achievement-badge {
+  width: 82px;
+  height: 82px;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.achievements-unlock-badge .achievement-badge img {
+  object-fit: contain;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   16. DETAIL PANEL — 详情侧栏（毛玻璃）
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievement-detail {
   position: sticky;
-  top: 14px;
+  top: 16px;
   min-height: 260px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(252, 246, 232, 0.58));
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow:
+    0 10px 40px rgba(120, 90, 50, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .achievement-detail-empty {
   min-height: 220px;
   display: grid;
   place-items: center;
-  color: #9a8773;
+  color: #a89578;
   text-align: center;
   font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
 }
 
 .achievement-detail h2 {
-  margin: 12px 0 8px;
+  margin: 14px 0 8px;
   color: #3c342c;
   font-size: 22px;
+  font-weight: 900;
 }
 
 .achievement-detail p {
   margin: 8px 0;
   color: #6f5f4f;
-  line-height: 1.55;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
 .achievement-detail-list {
   display: grid;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 0;
+  margin-top: 16px;
 }
 
 .achievement-detail-line {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid rgba(216, 201, 184, 0.72);
-  padding-top: 8px;
+  border-top: 1px solid rgba(210, 195, 175, 0.42);
+  padding: 10px 4px;
   color: #7a6754;
   font-size: 13px;
+  transition: background 0.15s ease;
+  border-radius: 4px;
 }
+
+.achievement-detail-line:hover {
+  background: rgba(243, 235, 220, 0.38);
+}
+
+.achievement-detail-line:last-child {
+  border-bottom: 1px solid rgba(210, 195, 175, 0.42);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   17. TIP BANNER — 底部提示条
+   ═══════════════════════════════════════════════════════════════ */
 
 .achievements-tip {
   min-height: 20px;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   color: #8c7a67;
   font-size: 13px;
 }
 
 .achievements-tip:not(:empty) {
   border: 1px solid transparent;
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: 12px;
+  padding: 10px 14px 10px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 左侧色条 */
+.achievements-tip:not(:empty)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 12px 0 0 12px;
 }
 
 .achievements-tip[data-state="ok"] {
-  border-color: rgba(78, 139, 88, 0.25);
-  color: #3f7a49;
-  background: rgba(78, 139, 88, 0.08);
+  border-color: rgba(78, 139, 88, 0.2);
+  color: #3a7a46;
+  background: linear-gradient(90deg, rgba(78, 139, 88, 0.07), rgba(78, 139, 88, 0.02));
+}
+
+.achievements-tip[data-state="ok"]::before {
+  background: linear-gradient(180deg, #4e8b58, #3a7a46);
 }
 
 .achievements-tip[data-state="err"] {
-  border-color: rgba(194, 71, 59, 0.25);
+  border-color: rgba(194, 71, 59, 0.2);
   color: #a83b32;
-  background: rgba(194, 71, 59, 0.08);
+  background: linear-gradient(90deg, rgba(194, 71, 59, 0.07), rgba(194, 71, 59, 0.02));
 }
+
+.achievements-tip[data-state="err"]::before {
+  background: linear-gradient(180deg, #c4473b, #a83b32);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   18. RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
 
 @media (max-width: 920px) {
   .achievements-overview,
@@ -422,18 +760,31 @@ body[data-page="achievements"] {
   }
 }
 
-@media (max-width: 620px) {
-  .achievements-stats,
-  .achievements-showcase {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 760px) {
   .achievements-header-user {
     position: static;
     max-width: 100%;
     margin: 4px auto 0;
     transform: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .achievements-stats,
+  .achievements-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .achievements-stat strong {
+    font-size: 26px;
+  }
+
+  .achievement-card {
+    min-height: 180px;
+  }
+
+  .achievement-medal-face {
+    width: 68px;
+    height: 68px;
   }
 }

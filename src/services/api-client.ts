@@ -49,6 +49,10 @@ function shouldUseJsonContentType(body: unknown): boolean {
   return true;
 }
 
+function isUnavailableProxyPayload(data: JsonRecord): boolean {
+  return data.success === false && toText(data.error || data.code) === "api_unavailable";
+}
+
 export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = {}): string[] {
   const remoteApiBase = normalizeBase(options.remoteApiBase || DEFAULT_REMOTE_API_BASE);
   const origin = toText(
@@ -83,7 +87,13 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
           }
           const response = await fetchLike(base + path, { ...requestOptions, headers });
           const data = (await response.json().catch(() => null)) as JsonRecord | null;
-          if (data) return data;
+          if (data) {
+            if (isUnavailableProxyPayload(data)) {
+              lastError = "api_unavailable";
+              continue;
+            }
+            return data;
+          }
           lastError = toText(response.statusText || response.status);
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error);

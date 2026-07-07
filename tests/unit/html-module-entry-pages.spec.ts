@@ -26,7 +26,9 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "undo_2048.html", entryPath: "./src/entries/undo.ts" },
   { htmlPath: "capped_2048.html", entryPath: "./src/entries/capped.ts" },
   { htmlPath: "Practice_board.html", entryPath: "./src/entries/practice-board.ts" },
-  { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" }
+  { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" },
+  { htmlPath: "achievement-icon-showcase.html", entryPath: "./src/entries/achievement-icon-showcase.ts" },
+  { htmlPath: "achievement-unlock-showcase.html", entryPath: "./src/entries/achievement-unlock-showcase.ts" }
 ];
 
 const TIMER_LEADERBOARD_SHELL_PAGES = ["2048.html", "play.html", "undo_2048.html", "capped_2048.html"];
@@ -49,7 +51,8 @@ describe("module entry html pages", () => {
   for (const entry of ENTRY_PAGES) {
     it(`${entry.htmlPath} uses a single module entry`, () => {
       const html = readHtml(entry.htmlPath);
-      const moduleScripts = html.match(/<script\b[^>]*type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g) || [];
+      const moduleScripts = (html.match(/<script\b[^>]*type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g) || [])
+        .filter((script) => script.includes("/src/entries/") || script.includes("./src/entries/"));
       const legacyJsScripts = html.match(/<script\b[^>]*src="js\/[^"]+"[^>]*><\/script>/g) || [];
 
       expect(moduleScripts).toHaveLength(1);

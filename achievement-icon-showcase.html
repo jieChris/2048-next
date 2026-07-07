@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>成就图标预览</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link href="style/main.css?v=20260608-toolkit-align" rel="stylesheet" type="text/css">
+  <link href="style/achievement_unlock_showcase.css?v=20260706-tigerdx-states" rel="stylesheet" type="text/css">
+  <link href="style/achievement_icon_showcase.css?v=20260706-toast" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <script type="module" src="./js/dev_file_redirect.js"></script>
+</head>
+<body data-page="achievement-icon-showcase">
+  <main class="achievement-icon-shell">
+    <header class="achievement-icon-header">
+      <div>
+        <p class="achievement-icon-kicker">2048 Next</p>
+        <h1>成就图标预览</h1>
+        <p>当前默认里程碑、速通挑战与纪念成就的图标方案，用于后续同步到成就墙和解锁动画。</p>
+      </div>
+      <nav class="achievement-icon-nav" aria-label="预览导航">
+        <a href="achievement-unlock-showcase.html">解锁动画</a>
+        <a href="medal-wall.html">勋章墙</a>
+      </nav>
+    </header>
+
+    <section class="achievement-icon-summary" aria-label="图标统计">
+      <div><strong id="achievement-icon-total">44</strong><span>全部图标</span></div>
+      <div><strong>18</strong><span>方块里程碑</span></div>
+      <div><strong>25</strong><span>速通挑战</span></div>
+      <div><strong>1</strong><span>纪念成就</span></div>
+    </section>
+
+    <section class="achievement-icon-section">
+      <div class="achievement-icon-section-head">
+        <h2>方块里程碑</h2>
+        <p>每个方块保留 1 / 10 / 100 三个等级，颜色和边框随等级加强。</p>
+      </div>
+      <div id="milestone-icon-grid" class="achievement-icon-grid"></div>
+    </section>
+
+    <section class="achievement-icon-section">
+      <div class="achievement-icon-section-head">
+        <h2>速通挑战</h2>
+        <p>保留目标方块数字，加入计时盘和等级标识，和普通里程碑区分开。</p>
+      </div>
+      <div id="speedrun-icon-grid" class="achievement-icon-grid"></div>
+    </section>
+
+    <section class="achievement-icon-section">
+      <div class="achievement-icon-section-head">
+        <h2>纪念成就</h2>
+        <p>用于活动、内测、社区贡献等人工确认场景，默认通过后台手动发放。</p>
+      </div>
+      <div id="community-icon-grid" class="achievement-icon-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/achievement-icon-showcase.ts"></script>
+</body>
+</html>

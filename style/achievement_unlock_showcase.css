@@ -1,0 +1,1376 @@
+body[data-page="achievement-unlock-showcase"] {
+  margin: 0;
+  min-height: 100vh;
+  color: #3c342c;
+  background:
+    linear-gradient(135deg, rgba(250, 248, 239, 0.98), rgba(239, 229, 216, 0.92)),
+    #faf8ef;
+  font-family: var(--app-font-sans);
+}
+
+.unlock-showcase-shell {
+  width: min(1160px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 28px 0 44px;
+}
+
+@media (min-width: 821px) {
+  body[data-page="achievement-unlock-showcase"] {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .unlock-showcase-shell {
+    box-sizing: border-box;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+.unlock-showcase-header,
+.unlock-showcase-controls,
+.unlock-showcase-stage {
+  border: 1px solid rgba(216, 201, 184, 0.88);
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.88);
+  box-shadow: 0 12px 30px rgba(90, 74, 58, 0.08);
+}
+
+.unlock-showcase-header {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.unlock-showcase-kicker,
+.unlock-showcase-header h1,
+.unlock-showcase-header p,
+.unlock-showcase-controls h2 {
+  margin: 0;
+}
+
+.unlock-showcase-kicker {
+  color: #8f7a66;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.unlock-showcase-header h1 {
+  margin-top: 6px;
+  color: #3c342c;
+  font-size: 34px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.unlock-showcase-header p {
+  max-width: 620px;
+  margin-top: 10px;
+  color: #776e65;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.unlock-showcase-back,
+.unlock-source-button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.unlock-showcase-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #f9f6f2;
+  background: #8f7a66;
+}
+
+.unlock-showcase-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 821px) {
+  .unlock-showcase-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+.unlock-showcase-controls {
+  padding: 18px;
+}
+
+@media (min-width: 821px) {
+  .unlock-showcase-controls {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+.unlock-showcase-controls h2 {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.unlock-showcase-buttons {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.unlock-source-button {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  color: #3c342c;
+  text-align: left;
+  background: #f1e7db;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.unlock-source-button:hover,
+.unlock-source-button:focus-visible {
+  outline: 0;
+  background: #eadbc8;
+  box-shadow: 0 0 0 3px rgba(143, 122, 102, 0.18);
+}
+
+.unlock-source-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #f9f6f2;
+  background: #8f7a66;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.unlock-source-copy strong,
+.unlock-source-copy span {
+  display: block;
+}
+
+.unlock-source-copy strong {
+  overflow: hidden;
+  color: #3c342c;
+  font-size: 15px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unlock-source-copy span {
+  margin-top: 3px;
+  color: #776e65;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.unlock-showcase-stage {
+  position: relative;
+  min-height: 900px;
+  overflow: hidden;
+  padding: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(244, 236, 226, 0.9)),
+    #fffaf2;
+}
+
+@media (min-width: 821px) {
+  .unlock-showcase-stage {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .unlock-stage-board {
+    margin-top: clamp(320px, 38vh, 470px);
+  }
+}
+
+.unlock-stage-board {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  width: min(520px, 88%);
+  margin: 470px auto 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #bbada0;
+}
+
+.unlock-stage-tile {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #776e65;
+  background: #eee4da;
+  font-size: clamp(20px, 5vw, 42px);
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+}
+
+.unlock-stage-tile.tile-4 { background: #ede0c8; }
+.unlock-stage-tile.tile-8 { color: #f9f6f2; background: #f2b179; }
+.unlock-stage-tile.tile-16 { color: #f9f6f2; background: #f59563; }
+.unlock-stage-tile.tile-32 { color: #f9f6f2; background: #f67c5f; }
+.unlock-stage-tile.tile-64 { color: #f9f6f2; background: #f65e3b; }
+.unlock-stage-tile.tile-128 { color: #f9f6f2; background: #edcf72; }
+.unlock-stage-tile.tile-2048 { color: #f9f6f2; background: #edc22e; font-size: clamp(14px, 3.8vw, 30px); }
+
+.unlock-toast-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.unlock-toast {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  width: min(470px, calc(100% - 34px));
+  translate: -50% 0;
+  pointer-events: none;
+  z-index: 5;
+  color: #f9f6f2;
+  transform-origin: center top;
+}
+
+.unlock-toast * {
+  box-sizing: border-box;
+}
+
+.unlock-toast-title,
+.unlock-toast-name,
+.unlock-toast-desc,
+.unlock-toast-meta {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.unlock-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.unlock-toast--codepen {
+  width: min(650px, calc(100% - 34px));
+  min-height: 126px;
+  animation: unlock-codepen-in 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--codepen .unlock-toast-card {
+  position: relative;
+  min-height: 126px;
+  filter: drop-shadow(0 24px 34px rgba(52, 40, 28, 0.28));
+}
+
+.unlock-toast--codepen .unlock-toast-content {
+  position: absolute;
+  left: 50px;
+  right: 0;
+  top: 34px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #3e3e3c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: unlock-codepen-content 3.6s ease both;
+}
+
+.unlock-toast--codepen .unlock-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  color: #fff;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9) 0 10%, transparent 11%),
+    radial-gradient(circle, #f26b3f 0 48%, #a53d25 49% 70%, #5b2921 71% 100%);
+  box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.22), 0 0 0 5px rgba(242, 107, 63, 0.24);
+  font-size: 27px;
+  animation: unlock-badge-pop 3.6s ease both;
+}
+
+.unlock-toast--codepen .unlock-toast-title {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 100%;
+  color: #d7d7d3;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  text-transform: uppercase;
+  animation: unlock-codepen-text 3.6s ease both;
+}
+
+.unlock-toast--codepen .unlock-toast-name {
+  position: absolute;
+  left: 0;
+  top: 17px;
+  width: 100%;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.1;
+  text-align: center;
+  animation: unlock-codepen-text 3.6s ease both;
+}
+
+.unlock-toast--codepen .unlock-toast-name::before {
+  content: open-quote;
+}
+
+.unlock-toast--codepen .unlock-toast-name::after {
+  content: close-quote;
+}
+
+.unlock-toast--codepen .unlock-toast-desc {
+  display: none;
+}
+
+.unlock-toast--codepen-milestone .unlock-toast-content,
+.unlock-toast--codepen-reward .unlock-toast-content {
+  top: 25px;
+  height: 78px;
+}
+
+.unlock-toast--codepen-milestone .unlock-badge {
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9) 0 10%, transparent 11%),
+    radial-gradient(circle, #38bdf8 0 48%, #1d4ed8 49% 70%, #172554 71% 100%);
+  box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.22), 0 0 0 5px rgba(56, 189, 248, 0.24);
+  font-size: 23px;
+}
+
+.unlock-toast--codepen-reward .unlock-badge {
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95) 0 10%, transparent 11%),
+    radial-gradient(circle, #facc15 0 48%, #ca8a04 49% 70%, #713f12 71% 100%);
+  box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.24), 0 0 0 5px rgba(250, 204, 21, 0.28), 0 0 28px rgba(250, 204, 21, 0.5);
+}
+
+.unlock-toast--codepen-milestone .unlock-toast-name,
+.unlock-toast--codepen-reward .unlock-toast-name {
+  top: 16px;
+  font-size: 25px;
+}
+
+.unlock-toast--codepen-milestone .unlock-toast-desc,
+.unlock-toast--codepen-reward .unlock-toast-desc {
+  position: absolute;
+  left: 0;
+  top: 48px;
+  display: block;
+  width: 100%;
+  color: #d7d7d3;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  animation: unlock-codepen-text 3.6s ease both;
+}
+
+.unlock-toast--codepen-reward .unlock-toast-content {
+  background: linear-gradient(180deg, #4a3715, #312814);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 26px rgba(250, 204, 21, 0.28);
+}
+
+.unlock-codepen-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  width: min(240px, 62%);
+  height: 5px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  animation: unlock-codepen-progress-in 3.6s ease both;
+}
+
+.unlock-codepen-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #facc15);
+}
+
+.unlock-toast--codepen .unlock-spark {
+  width: 24px;
+  height: 24px;
+  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+}
+
+.unlock-toast--jesse-glacken {
+  width: min(640px, calc(100% - 34px));
+  min-height: 84px;
+  font-size: clamp(12px, 1.8vw, 16px);
+  animation: unlock-jesse-toast 5s linear both;
+}
+
+.unlock-jesse-banner {
+  position: relative;
+  width: 5em;
+  max-width: 100%;
+  height: 5em;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 10em;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 46%),
+    #2c2d2d;
+  box-shadow:
+    0 0.32em 0 rgba(0, 0, 0, 0.38),
+    inset 0 0.08em 0 rgba(255, 255, 255, 0.08);
+  animation: unlock-jesse-banner 5s cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+
+.unlock-jesse-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 5em;
+  height: 5em;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.18), transparent 35%),
+    #2c2d2d;
+  animation: unlock-jesse-icon 5s cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+
+.unlock-jesse-icon-inner {
+  position: relative;
+  width: 3.75em;
+  height: 3.75em;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #fff;
+  background:
+    radial-gradient(circle at 38% 26%, rgba(255, 255, 255, 0.32), transparent 28%),
+    #37a000;
+  box-shadow:
+    inset 0 0 0 0.16em rgba(195, 237, 129, 0.45),
+    0 0 0 0.08em rgba(0, 0, 0, 0.28);
+  animation: unlock-jesse-border-pulse 5s linear both;
+}
+
+.unlock-jesse-icon-inner::before,
+.unlock-jesse-icon-inner::after {
+  content: "";
+  position: absolute;
+  left: 0.64em;
+  top: 1.75em;
+  width: 2.45em;
+  height: 0.32em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  transform-origin: center;
+}
+
+.unlock-jesse-icon-inner::before {
+  transform: rotate(45deg);
+}
+
+.unlock-jesse-icon-inner::after {
+  transform: rotate(-45deg);
+}
+
+.unlock-jesse-trophy-mark {
+  position: relative;
+  z-index: 2;
+  font-size: 1.22em;
+  filter: drop-shadow(0 0.1em 0 rgba(0, 0, 0, 0.28));
+}
+
+.unlock-jesse-text {
+  position: absolute;
+  inset: 0 0 0 5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 1.2em 0 0.5em;
+  min-width: 0;
+  opacity: 0;
+  animation: unlock-jesse-text 5s linear both;
+}
+
+.unlock-jesse-notification,
+.unlock-jesse-name {
+  margin: 0;
+  overflow: hidden;
+  color: #f5f5f5;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unlock-jesse-notification {
+  font-size: 1.1em;
+  font-weight: 400;
+  opacity: 0.92;
+}
+
+.unlock-jesse-name {
+  margin-top: 0.14em;
+  font-size: 1.55em;
+  font-weight: 800;
+}
+
+.unlock-toast--trophy {
+  width: min(430px, calc(100% - 34px));
+  animation: unlock-slide-down 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--trophy .unlock-toast-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  border: 1px solid rgba(216, 201, 184, 0.8);
+  border-radius: 12px;
+  color: #18181b;
+  text-align: center;
+  background: #fffdf9;
+  box-shadow: 0 24px 54px rgba(82, 72, 63, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.unlock-toast--trophy .unlock-badge {
+  width: 112px;
+  height: 112px;
+  margin: 8px 0 28px;
+  border-radius: 999px;
+  color: #71717a;
+  background: #f4f4f5;
+  font-size: 58px;
+}
+
+.unlock-toast--trophy .unlock-toast-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  margin: 0 auto 14px;
+  padding: 4px 11px;
+  border: 1px solid #e4e4e7;
+  border-radius: 999px;
+  color: #71717a;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.unlock-toast--trophy .unlock-toast-title::before {
+  content: "▣";
+  font-size: 11px;
+}
+
+.unlock-toast--trophy .unlock-toast-name {
+  color: #18181b;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.unlock-toast--trophy .unlock-toast-desc {
+  margin-top: 8px;
+  color: #71717a;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.unlock-toast-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.unlock-toast-action {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  color: #18181b;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.unlock-toast-action-primary {
+  color: #fff;
+  border-color: #18181b;
+  background: #18181b;
+}
+
+.unlock-progress {
+  height: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7eee9;
+}
+
+.unlock-progress span {
+  display: block;
+  width: 78%;
+  height: 100%;
+  border-radius: inherit;
+  background: #3c8167;
+  animation: unlock-progress-fill 3.6s ease both;
+}
+
+.unlock-toast--react-trophies { animation: unlock-hop-in 3.6s ease both; }
+
+.unlock-toast--react-trophies .unlock-toast-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(216, 201, 184, 0.72);
+  border-radius: 8px;
+  color: #27272a;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(24, 24, 27, 0.16);
+}
+
+.unlock-toast--react-trophies .unlock-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  font-size: 32px;
+}
+
+.unlock-toast--react-trophies .unlock-toast-title {
+  color: #27272a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.unlock-toast--react-trophies .unlock-toast-name {
+  margin-top: 4px;
+  color: #3f3f46;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.unlock-toast--react-trophies .unlock-toast-desc {
+  margin-top: 4px;
+  color: #3f3f46;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.unlock-toast--engine {
+  width: min(520px, calc(100% - 34px));
+  animation: unlock-terminal-in 3.6s steps(1, end) both;
+}
+
+.unlock-toast--engine .unlock-toast-card {
+  padding: 16px;
+  border: 1px solid #51514a;
+  border-radius: 6px;
+  color: #d8ffd0;
+  background: #171a15;
+  box-shadow: 0 18px 34px rgba(23, 26, 21, 0.32);
+  font-family: Menlo, Consolas, monospace;
+}
+
+.unlock-toast--engine .unlock-toast-name {
+  color: #f4f0b8;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.unlock-toast--engine .unlock-toast-desc,
+.unlock-toast--engine .unlock-toast-title {
+  color: #91c989;
+  font-size: 12px;
+}
+
+.unlock-toast-code {
+  display: block;
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  color: #f4f0b8;
+  background: rgba(255, 255, 255, 0.07);
+  font: 12px/1.35 Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.unlock-toast--notyf {
+  width: min(300px, calc(100% - 34px));
+  animation: unlock-notyf-in 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--notyf .unlock-toast-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  max-width: 300px;
+  min-height: 54px;
+  padding: 0 15px;
+  border-radius: 2px;
+  color: #fff;
+  background: #3dc763;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.25);
+}
+
+.unlock-toast--notyf .unlock-badge {
+  position: relative;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  margin-right: 13px;
+  border-radius: 50%;
+  color: #3dc763;
+  background: #fff;
+  font-size: 15px;
+}
+
+.unlock-toast--notyf .unlock-toast-name {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.unlock-toast--notyf .unlock-toast-desc {
+  display: none;
+}
+
+.unlock-notyf-ripple {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  transform-origin: bottom right;
+  animation: unlock-notyf-ripple 0.4s ease-out both;
+}
+
+.unlock-toast--playdate {
+  width: min(300px, calc(100% - 34px));
+  animation: unlock-playdate-in 3.6s steps(6, end) both;
+}
+
+.unlock-toast--playdate .unlock-toast-card {
+  position: relative;
+  min-height: 96px;
+  padding: 8px 48px 8px 8px;
+  border: 2px solid #111;
+  border-radius: 6px;
+  color: #111;
+  background: #fff;
+  box-shadow: 8px 8px 0 rgba(17, 17, 17, 0.24);
+}
+
+.unlock-toast--playdate .unlock-toast-card::before {
+  content: "✓";
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 15px;
+  height: 15px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #111;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.unlock-toast--playdate .unlock-toast-title,
+.unlock-toast--playdate .unlock-toast-desc {
+  color: #111;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.unlock-toast--playdate .unlock-toast-name {
+  max-width: 202px;
+  color: #111;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.unlock-toast--playdate .unlock-toast-desc {
+  margin-top: 4px;
+  line-height: 1.25;
+}
+
+.unlock-toast--playdate .unlock-toast-title {
+  position: absolute;
+  left: 32px;
+  bottom: 7px;
+}
+
+.unlock-toast--playdate .unlock-badge {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #111;
+  border-radius: 4px;
+  color: #111;
+  background: #fff;
+  font-size: 18px;
+}
+
+.unlock-toast--react-achievements {
+  width: min(500px, calc(100% - 34px));
+  animation: unlock-console-in 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--react-achievements .unlock-toast-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 24px;
+  gap: 16px;
+  align-items: center;
+  min-width: 320px;
+  max-width: 500px;
+  padding: 16px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(5, 8, 22, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+  box-shadow: 0 8px 32px rgba(34, 211, 238, 0.4), 0 0 20px rgba(249, 115, 22, 0.3);
+}
+
+.unlock-toast--react-achievements .unlock-toast-card::after {
+  content: "×";
+  color: #22d3ee;
+  font-size: 24px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.unlock-toast--react-achievements .unlock-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 0;
+  color: #22d3ee;
+  background: transparent;
+  font-size: 48px;
+}
+
+.unlock-toast--react-achievements .unlock-toast-title {
+  color: #f97316;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.unlock-toast--react-achievements .unlock-toast-name {
+  color: #22d3ee;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.unlock-toast--react-achievements .unlock-toast-desc {
+  color: #22d3ee;
+  font-size: 15px;
+  opacity: 0.9;
+}
+
+.unlock-toast--sonner,
+.unlock-toast--react-hot-toast,
+.unlock-toast--izitoast,
+.unlock-toast--toastify-js,
+.unlock-toast--noty,
+.unlock-toast--push-js,
+.unlock-toast--react-toastify,
+.unlock-toast--toastup {
+  --unlock-bg: #ffffff;
+  --unlock-fg: #1f2937;
+  --unlock-muted: #6b7280;
+  --unlock-accent: #22c55e;
+  width: min(390px, calc(100% - 34px));
+  animation: unlock-hop-in 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--sonner .unlock-toast-card,
+.unlock-toast--react-hot-toast .unlock-toast-card,
+.unlock-toast--izitoast .unlock-toast-card,
+.unlock-toast--toastify-js .unlock-toast-card,
+.unlock-toast--noty .unlock-toast-card,
+.unlock-toast--push-js .unlock-toast-card,
+.unlock-toast--react-toastify .unlock-toast-card,
+.unlock-toast--toastup .unlock-toast-card {
+  position: relative;
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  min-height: 72px;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 8px;
+  color: var(--unlock-fg);
+  background: var(--unlock-bg);
+  box-shadow: 0 18px 36px rgba(31, 41, 55, 0.18);
+}
+
+.unlock-toast--sonner .unlock-badge,
+.unlock-toast--react-hot-toast .unlock-badge,
+.unlock-toast--izitoast .unlock-badge,
+.unlock-toast--toastify-js .unlock-badge,
+.unlock-toast--noty .unlock-badge,
+.unlock-toast--push-js .unlock-badge,
+.unlock-toast--react-toastify .unlock-badge,
+.unlock-toast--toastup .unlock-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--unlock-accent);
+  font-size: 20px;
+}
+
+.unlock-toast--sonner .unlock-toast-title,
+.unlock-toast--react-hot-toast .unlock-toast-title,
+.unlock-toast--izitoast .unlock-toast-title,
+.unlock-toast--toastify-js .unlock-toast-title,
+.unlock-toast--noty .unlock-toast-title,
+.unlock-toast--push-js .unlock-toast-title,
+.unlock-toast--react-toastify .unlock-toast-title,
+.unlock-toast--toastup .unlock-toast-title {
+  color: var(--unlock-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.unlock-toast--sonner .unlock-toast-name,
+.unlock-toast--react-hot-toast .unlock-toast-name,
+.unlock-toast--izitoast .unlock-toast-name,
+.unlock-toast--toastify-js .unlock-toast-name,
+.unlock-toast--noty .unlock-toast-name,
+.unlock-toast--push-js .unlock-toast-name,
+.unlock-toast--react-toastify .unlock-toast-name,
+.unlock-toast--toastup .unlock-toast-name {
+  color: var(--unlock-fg);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.unlock-toast--sonner .unlock-toast-desc,
+.unlock-toast--react-hot-toast .unlock-toast-desc,
+.unlock-toast--izitoast .unlock-toast-desc,
+.unlock-toast--toastify-js .unlock-toast-desc,
+.unlock-toast--noty .unlock-toast-desc,
+.unlock-toast--push-js .unlock-toast-desc,
+.unlock-toast--react-toastify .unlock-toast-desc,
+.unlock-toast--toastup .unlock-toast-desc {
+  margin-top: 3px;
+  color: var(--unlock-muted);
+  font-size: 13px;
+  line-height: 1.28;
+}
+
+.unlock-toast--sonner { --unlock-accent: #18181b; }
+.unlock-toast--react-hot-toast { --unlock-accent: #f97316; }
+.unlock-toast--izitoast { --unlock-accent: #ef4444; }
+.unlock-toast--toastify-js {
+  --unlock-bg: linear-gradient(135deg, #0ea5e9, #22c55e);
+  --unlock-fg: #ffffff;
+  --unlock-muted: rgba(255, 255, 255, 0.78);
+  --unlock-accent: rgba(255, 255, 255, 0.22);
+}
+.unlock-toast--noty { --unlock-accent: #3b82f6; }
+.unlock-toast--react-toastify { --unlock-accent: #07bc0c; }
+
+.unlock-toast--izitoast .unlock-toast-card::after,
+.unlock-toast--react-toastify .unlock-toast-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72%;
+  height: 4px;
+  background: var(--unlock-accent);
+  animation: unlock-progress-fill 3.6s ease both;
+}
+
+.unlock-toast--push-js .unlock-toast-card {
+  border-radius: 12px;
+  background: rgba(246, 248, 250, 0.96);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.22);
+}
+
+.unlock-toast--push-js .unlock-toast-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent);
+}
+
+.unlock-toast--sweetalert2 {
+  width: min(430px, calc(100% - 34px));
+  animation: unlock-slide-down 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.unlock-toast--sweetalert2 .unlock-toast-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 26px;
+  border-radius: 8px;
+  color: #545454;
+  text-align: center;
+  background: #fff;
+  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.22);
+}
+
+.unlock-toast--sweetalert2 .unlock-badge {
+  width: 82px;
+  height: 82px;
+  margin-bottom: 14px;
+  border: 3px solid #f8bb86;
+  border-radius: 50%;
+  color: #f8bb86;
+  background: transparent;
+  font-size: 42px;
+}
+
+.unlock-toast--sweetalert2 .unlock-toast-title {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.unlock-toast--sweetalert2 .unlock-toast-name {
+  color: #333;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.unlock-toast--sweetalert2 .unlock-toast-desc {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.unlock-toast--toastup {
+  --unlock-bg: linear-gradient(135deg, #1f1635, #3d1766 55%, #621e5f);
+  --unlock-fg: #fff7ed;
+  --unlock-muted: #facc15;
+  --unlock-accent: #f59e0b;
+  width: min(430px, calc(100% - 34px));
+}
+
+.unlock-toast--toastup .unlock-toast-card {
+  border-color: rgba(250, 204, 21, 0.35);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22), 0 22px 46px rgba(98, 30, 95, 0.36);
+}
+
+.unlock-toast--toastup .unlock-badge {
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.72);
+  animation: unlock-badge-pop 3.6s ease both;
+}
+
+.unlock-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--spark-color, #edc22e);
+  transform: translate(-50%, -50%);
+  animation: unlock-spark 800ms ease-out both;
+}
+
+.unlock-spark--1 { --spark-angle: 0deg; --spark-distance: 48px; --spark-color: #edc22e; }
+.unlock-spark--2 { --spark-angle: 42deg; --spark-distance: 58px; --spark-color: #f2b179; }
+.unlock-spark--3 { --spark-angle: 84deg; --spark-distance: 42px; --spark-color: #f67c5f; }
+.unlock-spark--4 { --spark-angle: 128deg; --spark-distance: 54px; --spark-color: #edcf72; }
+.unlock-spark--5 { --spark-angle: 176deg; --spark-distance: 44px; --spark-color: #f65e3b; }
+.unlock-spark--6 { --spark-angle: 218deg; --spark-distance: 60px; --spark-color: #edc22e; }
+.unlock-spark--7 { --spark-angle: 264deg; --spark-distance: 50px; --spark-color: #f2b179; }
+.unlock-spark--8 { --spark-angle: 306deg; --spark-distance: 56px; --spark-color: #f67c5f; }
+.unlock-spark--9 { --spark-angle: 330deg; --spark-distance: 38px; --spark-color: #edcf72; }
+.unlock-spark--10 { --spark-angle: 24deg; --spark-distance: 66px; --spark-color: #f9f6f2; }
+.unlock-spark--11 { --spark-angle: 112deg; --spark-distance: 68px; --spark-color: #facc15; }
+.unlock-spark--12 { --spark-angle: 292deg; --spark-distance: 70px; --spark-color: #fde68a; }
+
+@keyframes unlock-codepen-in {
+  0% { opacity: 0; transform: translateY(-18px) scale(0.98); }
+  10%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-12px) scale(0.98); }
+}
+
+@keyframes unlock-codepen-content {
+  0%, 17% {
+    clip-path: inset(0 100% 0 0 round 10px);
+  }
+  34%, 82% {
+    clip-path: inset(0 0 0 0 round 10px);
+  }
+  100% {
+    clip-path: inset(0 100% 0 0 round 10px);
+  }
+}
+
+@keyframes unlock-codepen-text {
+  0%, 30% { opacity: 0; transform: translateX(-12px); }
+  42%, 82% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-8px); }
+}
+
+@keyframes unlock-codepen-progress-in {
+  0%, 30% { opacity: 0; }
+  42%, 82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes unlock-badge-pop {
+  0% { transform: scale(0.2) rotate(-18deg); }
+  14% { transform: scale(1.08) rotate(4deg); }
+  24%, 100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes unlock-jesse-toast {
+  0%, 4% { opacity: 0; }
+  6%, 94% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes unlock-jesse-banner {
+  0% {
+    width: 5em;
+    transform: translateY(-0.25em);
+  }
+  12% {
+    width: 5em;
+    transform: translateY(0);
+  }
+  24%, 76% {
+    width: 36em;
+    transform: translateY(0);
+  }
+  88% {
+    width: 5em;
+    transform: translateY(0);
+  }
+  100% {
+    width: 5em;
+    transform: translateY(-0.18em);
+  }
+}
+
+@keyframes unlock-jesse-icon {
+  0% { transform: rotate(-180deg) scale(0.92); }
+  12%, 88% { transform: rotate(0) scale(1); }
+  100% { transform: rotate(180deg) scale(0.92); }
+}
+
+@keyframes unlock-jesse-border-pulse {
+  0%, 18%, 86%, 100% {
+    box-shadow:
+      inset 0 0 0 0.16em rgba(195, 237, 129, 0.45),
+      0 0 0 0.08em rgba(0, 0, 0, 0.28);
+  }
+  26%, 72% {
+    box-shadow:
+      inset 0 0.34em 0 rgba(220, 255, 163, 0.72),
+      inset 0 0 0 0.16em rgba(195, 237, 129, 0.45),
+      0 0 0 0.08em rgba(0, 0, 0, 0.28);
+  }
+}
+
+@keyframes unlock-jesse-text {
+  0%, 24% { opacity: 0; transform: translateX(-0.4em); }
+  31%, 73% { opacity: 1; transform: translateX(0); }
+  82%, 100% { opacity: 0; transform: translateX(-0.28em); }
+}
+
+@keyframes unlock-slide-down {
+  0% { opacity: 0; transform: translateY(-28px); }
+  12%, 82% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+@keyframes unlock-progress-fill {
+  0% { width: 0; }
+  16%, 100% { width: 78%; }
+}
+
+@keyframes unlock-hop-in {
+  0% { opacity: 0; transform: translateY(26px) scale(0.92); }
+  10% { opacity: 1; transform: translateY(-8px) scale(1.02); }
+  18%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(14px) scale(0.98); }
+}
+
+@keyframes unlock-terminal-in {
+  0% { opacity: 0; transform: translateY(16px); }
+  8%, 86% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+@keyframes unlock-notyf-in {
+  0% { opacity: 0; transform: translateY(-18px); }
+  12%, 84% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes unlock-playdate-in {
+  0% { opacity: 0; transform: translateY(-16px); }
+  12%, 84% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes unlock-console-in {
+  0% { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  12%, 84% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-12px) scale(0.98); }
+}
+
+@keyframes unlock-spark {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle, 0deg)) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--spark-angle, 0deg)) translateX(var(--spark-distance, 46px)) scale(0.2);
+  }
+}
+
+@media (max-width: 820px) {
+  .unlock-showcase-header,
+  .unlock-showcase-layout {
+    display: block;
+  }
+
+  .unlock-showcase-back {
+    margin-top: 14px;
+  }
+
+  .unlock-showcase-stage {
+    min-height: 840px;
+    margin-top: 14px;
+  }
+
+  .unlock-stage-board {
+    width: 100%;
+    margin-top: 470px;
+  }
+}
+
+@media (max-width: 520px) {
+  .unlock-showcase-shell {
+    width: min(100vw - 20px, 520px);
+    padding-top: 10px;
+  }
+
+  .unlock-showcase-header,
+  .unlock-showcase-controls,
+  .unlock-showcase-stage {
+    padding: 14px;
+  }
+
+  .unlock-showcase-header h1 {
+    font-size: 28px;
+  }
+
+  .unlock-toast {
+    width: calc(100% - 28px);
+  }
+
+  .unlock-toast--codepen {
+    min-height: 108px;
+  }
+
+  .unlock-toast--codepen .unlock-toast-card {
+    min-height: 108px;
+  }
+
+  .unlock-toast--codepen .unlock-badge {
+    width: 96px;
+    height: 96px;
+    font-size: 21px;
+  }
+
+  .unlock-toast--codepen .unlock-toast-content {
+    left: 40px;
+    top: 26px;
+    height: 56px;
+  }
+
+  .unlock-toast--codepen .unlock-toast-name {
+    top: 16px;
+    font-size: 23px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unlock-toast,
+  .unlock-badge,
+  .unlock-progress span,
+  .unlock-spark {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

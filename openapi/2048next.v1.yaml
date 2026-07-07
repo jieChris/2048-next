@@ -302,6 +302,25 @@ paths:
                         items:
                           $ref: "#/components/schemas/GameRecord"
 
+  /user/{userId}/stats:
+    get:
+      tags: [Records, Users]
+      summary: Read aggregate user record statistics.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: User record statistics.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UserRecordStats"
+
   /leaderboard:
     get:
       tags: [Leaderboard]
@@ -1358,6 +1377,29 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    UserRecordStats:
+      type: object
+      additionalProperties: true
+      properties:
+        summary:
+          type: object
+          additionalProperties: true
+        by_mode:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        tile_milestones:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        speedruns:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
 
     ScoreSubmitRequest:
       type: object

@@ -520,6 +520,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/user/{userId}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read aggregate user record statistics. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: components["parameters"]["UserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description User record statistics. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["UserRecordStats"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leaderboard": {
         parameters: {
             query?: never;
@@ -2142,6 +2182,22 @@ export interface components {
             mode_key?: string;
             /** Format: date-time */
             updated_at?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        UserRecordStats: {
+            summary?: {
+                [key: string]: unknown;
+            };
+            by_mode?: {
+                [key: string]: unknown;
+            }[];
+            tile_milestones?: {
+                [key: string]: unknown;
+            }[];
+            speedruns?: {
+                [key: string]: unknown;
+            }[];
         } & {
             [key: string]: unknown;
         };

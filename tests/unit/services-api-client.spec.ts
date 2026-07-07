@@ -99,4 +99,28 @@ describe("services: api-client", () => {
     });
     expect(fetchLike).toHaveBeenCalledTimes(2);
   });
+
+  it("falls back when the local proxy reports api_unavailable", async () => {
+    const fetchLike = vi.fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        json: () => Promise.resolve({ success: false, error: "api_unavailable" })
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        json: () => Promise.resolve({ success: true, data: [{ id: "tile_2048_count_1" }] })
+      });
+    const client = createJsonApiClient({
+      bases: ["http://127.0.0.1:5174/api", "https://2048next.cn/api"],
+      fetchLike
+    });
+
+    await expect(client.request("/achievements")).resolves.toEqual({
+      success: true,
+      data: [{ id: "tile_2048_count_1" }]
+    });
+    expect(fetchLike).toHaveBeenCalledTimes(2);
+  });
 });
