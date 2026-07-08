@@ -56,7 +56,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => {
+      const runtime = (window as any).CoreAnnouncementRuntime;
+      return (
+        !!runtime &&
+        typeof runtime.resolveAnnouncementRecords === "function" &&
+        typeof runtime.hasUnreadAnnouncementFromContext === "function" &&
+        typeof runtime.markAnnouncementSeenFromContext === "function"
+      );
+    });
 
     const snapshot = await page.evaluate(async () => {
       const runtime = (window as any).CoreAnnouncementRuntime;
