@@ -117,7 +117,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
   });
 
-  test("user info card keeps intrinsic height beside taller record card", async ({ page }) => {
+  test("user profile summary keeps intrinsic height beside taller record card", async ({ page }) => {
     await page.setViewportSize({ width: 1117, height: 837 });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-info-card");
@@ -161,11 +161,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/user.html?id=12&nickname=Hui", { waitUntil: "domcontentloaded" });
     expect(response, "User response should exist").not.toBeNull();
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
-    await expect(page.locator(".user-info-card")).toBeVisible();
+    await expect(page.locator(".user-profile-inline-info")).toBeVisible();
     await expect(page.locator(".user-record-card")).toBeVisible();
 
     const heights = await page.evaluate(() => {
-      const infoCard = document.querySelector(".user-info-card");
+      const infoCard = document.querySelector(".user-profile-inline-info");
       const recordCard = document.querySelector(".user-record-card");
       return {
         info: infoCard ? infoCard.getBoundingClientRect().height : 0,

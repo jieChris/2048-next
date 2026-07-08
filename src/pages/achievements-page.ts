@@ -38,8 +38,10 @@ let currentFilter: FilterKey = "all";
 let selectedAchievementId = "";
 let showcaseEditMode = false;
 let selectedShowcaseIds: string[] = [];
+let achievementToastTimer = 0;
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
+const ACHIEVEMENT_TOAST_DURATION_MS = 3600;
 
 const ACHIEVEMENT_COPY: Record<
   AchievementPageLang,
@@ -390,6 +392,50 @@ function isRewardAchievement(achievement: AchievementDefinition): boolean {
   return achievement.rules.some((rule) => ["event_rank", "manual_grant"].includes(toText(rule.type)));
 }
 
+function isSpeedrunAchievement(achievement: AchievementDefinition): boolean {
+  if (achievement.seriesId.startsWith("speed-")) return true;
+  return achievement.rules.some((rule) => toText(rule.type) === "max_tile_within_duration");
+}
+
+function achievementToastTitle(achievement: AchievementDefinition): string {
+  if (isMilestoneAchievement(achievement)) return "Milestone Progress";
+  if (isSpeedrunAchievement(achievement)) return "Achievement Unlocked";
+  return "Reward Claimed";
+}
+
+function showAchievementToast(item: AchievementViewModel): void {
+  if (!item.earned) return;
+  let host = byId("achievements-unlock-toast-host");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "achievements-unlock-toast-host";
+    host.className = "achievements-unlock-toast-host unlock-toast-host";
+    document.body.append(host);
+  }
+  window.clearTimeout(achievementToastTimer);
+  const milestone = isMilestoneAchievement(item.achievement);
+  const reward = isRewardAchievement(item.achievement);
+  const variantClass = milestone
+    ? "unlock-toast--codepen-milestone"
+    : reward
+      ? "unlock-toast--codepen-reward"
+      : "";
+  const progress = milestone ? '<span class="unlock-codepen-progress"><span style="width:100%"></span></span>' : "";
+  host.innerHTML =
+    '<article class="unlock-toast unlock-toast--codepen ' + variantClass + '" role="status" aria-live="polite">' +
+      '<div class="unlock-toast-card">' +
+        '<span class="unlock-badge achievements-unlock-badge">' + renderBadge(item.achievement, false) + "</span>" +
+        '<div class="unlock-toast-content">' +
+          '<p class="unlock-toast-title">' + escapeHtml(achievementToastTitle(item.achievement)) + "</p>" +
+          '<h2 class="unlock-toast-name">' + escapeHtml(achievementName(item.achievement)) + "</h2>" +
+          '<p class="unlock-toast-desc">' + escapeHtml(achievementDescription(item.achievement) || copy().noDescription) + "</p>" +
+          progress +
+        "</div>" +
+      "</div>" +
+    "</article>";
+  achievementToastTimer = window.setTimeout(() => host.replaceChildren(), ACHIEVEMENT_TOAST_DURATION_MS);
+}
+
 function syncAchievementUserChip(): void {
   const storageLike = typeof window !== "undefined" ? window.localStorage : null;
   const nameNode = byId("achievements-user-name");
@@ -531,10 +577,7 @@ function matchFilter(item: AchievementViewModel): boolean {
   if (currentFilter === "locked") return !item.earned;
   if (currentFilter === "event") return isRewardAchievement(item.achievement);
   if (currentFilter === "milestone") return isMilestoneAchievement(item.achievement);
-  if (currentFilter === "speedrun") {
-    if (item.achievement.seriesId.startsWith("speed-")) return true;
-    return item.achievement.rules.some((rule) => toText(rule.type) === "max_tile_within_duration");
-  }
+  if (currentFilter === "speedrun") return isSpeedrunAchievement(item.achievement);
   return true;
 }
 
@@ -571,6 +614,8 @@ function renderList(): void {
         toggleShowcaseSelection(id);
         return;
       }
+      const selectedItem = allAchievements.find((entry) => entry.achievement.id === id);
+      if (selectedItem) showAchievementToast(selectedItem);
       selectAchievement(id);
     });
   });

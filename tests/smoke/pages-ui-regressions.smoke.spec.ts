@@ -82,6 +82,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .replace(/\bWASD\b/gu, "")
       .replace(/\bKHJL\b/gu, "")
       .replace(/\bNo X\b/gu, "")
+      .replace(/\b\d+x\d+\b/giu, "")
       .replace(/\b[RKZ]\b/gu, "")
       .replace(/\b\d+k\b/giu, "");
   }

@@ -244,6 +244,7 @@
       summaryBestScoreLabel: "最高分",
       summaryBestTileLabel: "最大方块",
       summaryLastActiveLabel: "最近活跃",
+      summaryAriaLabel: "用户摘要",
       summaryPreviewEmpty: "暂无云端记录",
       navMedals: "勋章墙"
     },
@@ -325,6 +326,7 @@
       summaryBestScoreLabel: "Best Score",
       summaryBestTileLabel: "Best Tile",
       summaryLastActiveLabel: "Last Active",
+      summaryAriaLabel: "User summary",
       summaryPreviewEmpty: "No cloud records yet",
       navMedals: "Medals"
     }
@@ -2101,6 +2103,8 @@
       var node = byId(id);
       if (node) node.textContent = textMap[id];
     }
+    var summaryRow = document.querySelector(".user-summary-row");
+    if (summaryRow) summaryRow.setAttribute("aria-label", t("summaryAriaLabel"));
 
     var sortBySelect = byId("user-record-sort-by");
     if (sortBySelect && sortBySelect.options && sortBySelect.options.length >= 2) {
