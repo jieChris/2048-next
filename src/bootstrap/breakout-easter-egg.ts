@@ -74,6 +74,7 @@ export interface BreakoutEasterEggWindowLike {
     search?: string;
   } | null;
   removeEventListener?: (type: string, listener: (event?: unknown) => void, options?: unknown) => unknown;
+  setTimeout?: (handler: () => void, timeout?: number) => number;
 }
 
 export interface BreakoutEasterEggOptions {
@@ -97,6 +98,7 @@ export interface BreakoutEasterEggRuntime {
 }
 
 export interface BreakoutEasterEggRuntimeInstallOptions {
+  documentLike?: BreakoutEasterEggDocumentLike | null | undefined;
   windowLike?: BreakoutEasterEggWindowLike | null | undefined;
 }
 
@@ -128,6 +130,8 @@ const TRIGGER_PENDING_CLASS_NAME = "breakout-easter-egg-trigger-pending";
 const MINIMIZED_CLASS_NAME = "is-minimized";
 const MESSAGE_TYPE = "2048-next-breakout-easter-egg";
 const KEYDOWN_CAPTURE_OPTIONS = true;
+const TIMER_SELF_RANK_SELECTOR = ".timer-leaderboard-row.is-self .timer-leaderboard-rank-tile";
+const TIMER_SELF_RANK_BINDING_KEY = "__timerLeaderboardSelfRankBreakoutEasterEggBinding";
 
 function resolveDocumentLike(
   options: BreakoutEasterEggOptions
@@ -263,7 +267,6 @@ function submitBreakoutDiscovery(
   const storageLike = resolveLocalStorage(windowLike);
   const token = readAuthToken({ storageLike });
   if (!token) return;
-  const hasShownLocalToast = !!readLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY);
   const fetchLike = typeof windowLike?.fetch === "function"
     ? (windowLike.fetch.bind(windowLike) as FetchLike)
     : undefined;
@@ -281,7 +284,6 @@ function submitBreakoutDiscovery(
         if (!isSuccessPayload(payload)) return;
         const newlyGranted = (payload as { newly_granted?: unknown }).newly_granted;
         if (newlyGranted === false) return;
-        if (newlyGranted !== true && hasShownLocalToast) return;
         writeLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY, "1");
         showBreakoutDiscoveryToast(documentLike, windowLike);
       })
@@ -463,6 +465,47 @@ function restoreMinimizedBreakoutEasterEgg(
   if (!existing || !hasClass(existing, MINIMIZED_CLASS_NAME)) return false;
   restoreExistingOverlay(existing, documentLike);
   return true;
+}
+
+function bindExistingTimerSelfRankTile(
+  documentLike: BreakoutEasterEggDocumentLike | null,
+  windowLike: BreakoutEasterEggWindowLike | null
+): void {
+  if (!documentLike || typeof documentLike.querySelector !== "function") return;
+  let rankTile: BreakoutEasterEggElementLike | null = null;
+  try {
+    rankTile = documentLike.querySelector(TIMER_SELF_RANK_SELECTOR);
+  } catch (_err) {
+    rankTile = null;
+  }
+  if (!rankTile) return;
+  const bindingHost = rankTile as BreakoutEasterEggElementLike & Record<string, unknown>;
+  if (bindingHost[TIMER_SELF_RANK_BINDING_KEY]) return;
+  try {
+    bindingHost[TIMER_SELF_RANK_BINDING_KEY] =
+      bindBreakoutEasterEgg(rankTile, {
+        documentLike,
+        windowLike,
+        gameUrl: DEFAULT_GAME_URL,
+        enableClickEffect: true,
+        logoAlt: DEFAULT_LOGO_ALT,
+        triggerCount: DEFAULT_TRIGGER_COUNT
+      }) || true;
+  } catch (_err) {}
+}
+
+function scheduleExistingTimerSelfRankTileBinding(
+  documentLike: BreakoutEasterEggDocumentLike | null,
+  windowLike: BreakoutEasterEggWindowLike | null
+): void {
+  bindExistingTimerSelfRankTile(documentLike, windowLike);
+  const setTimer = windowLike?.setTimeout || (typeof setTimeout === "function" ? setTimeout : null);
+  if (!setTimer) return;
+  for (const delay of [0, 300, 1000]) {
+    try {
+      setTimer(() => bindExistingTimerSelfRankTile(documentLike, windowLike), delay);
+    } catch (_err) {}
+  }
 }
 
 export function openBreakoutEasterEgg(
@@ -698,5 +741,9 @@ export function installBreakoutEasterEggRuntime(
   if (!windowLike.CoreBreakoutEasterEggRuntime) {
     windowLike.CoreBreakoutEasterEggRuntime = createBreakoutEasterEggRuntime();
   }
+  const documentLike =
+    options.documentLike ||
+    (typeof document === "undefined" ? null : (document as unknown as BreakoutEasterEggDocumentLike));
+  scheduleExistingTimerSelfRankTileBinding(documentLike, windowLike);
   return windowLike.CoreBreakoutEasterEggRuntime || null;
 }

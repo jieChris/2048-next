@@ -450,6 +450,42 @@ describe("breakout easter egg", () => {
     expect(documentLike.body.querySelector("#breakout-achievement-toast-host")?.innerHTML).toContain("发现彩蛋");
   });
 
+  it("does not let a stale local toast marker suppress a successful legacy event response", async () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => {
+        if (key === "2048_auth_token_v1") return "auth-token";
+        if (key === "breakout_easter_egg_discovery_toast_seen_v1") return "1";
+        return null;
+      }),
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true })
+    }));
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(windowLike.fetch).toHaveBeenCalledTimes(1);
+    expect(documentLike.body.querySelector("#breakout-achievement-toast-host")?.innerHTML).toContain("发现彩蛋");
+  });
+
   it("does not show a duplicate discovery toast when the backend reports an existing achievement", async () => {
     const target = new FakeElement("button");
     const documentLike = createDocumentLike();
@@ -730,5 +766,24 @@ describe("breakout easter egg", () => {
 
     expect(installBreakoutEasterEggRuntime({ windowLike })).toBe(runtime);
     expect(windowLike.CoreBreakoutEasterEggRuntime).toBe(runtime);
+  });
+
+  it("binds an existing timer self rank tile when the runtime installs after leaderboard render", () => {
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    const rankTile = new FakeElement("div");
+    const originalQuerySelector = documentLike.querySelector;
+    documentLike.querySelector = (selector: string) => {
+      if (selector === ".timer-leaderboard-row.is-self .timer-leaderboard-rank-tile") return rankTile;
+      return originalQuerySelector(selector);
+    };
+
+    installBreakoutEasterEggRuntime({ documentLike, windowLike });
+    for (let index = 0; index < 19; index += 1) {
+      rankTile.dispatch("click");
+    }
+
+    expect(documentLike.body.querySelector("[data-breakout-easter-egg-overlay=\"1\"]")).not.toBeNull();
+    expect((rankTile as unknown as Record<string, unknown>).__timerLeaderboardSelfRankBreakoutEasterEggBinding).toBeTruthy();
   });
 });
