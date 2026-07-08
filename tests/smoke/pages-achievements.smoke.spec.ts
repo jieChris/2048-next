@@ -172,7 +172,7 @@ test.describe("Achievements pages", () => {
 
     await page.getByRole("button", { name: /首次 2048/ }).click();
     await expect(page.locator("#achievements-unlock-toast-host .unlock-toast--codepen-milestone")).toBeVisible();
-    await expect(page.locator("#achievements-unlock-toast-host")).toContainText("Milestone Progress");
+    await expect(page.locator("#achievements-unlock-toast-host")).toContainText("里程碑进度");
 
     await page.getByRole("button", { name: "里程碑" }).click();
     await expect(page.getByRole("button", { name: /首次 2048/ })).toBeVisible();
@@ -254,6 +254,10 @@ test.describe("Achievements pages", () => {
     await expect(page.getByRole("button", { name: /Beta Pioneer/ })).toBeVisible();
     await expect(page.locator("#achievements-list .achievement-card").first()).toContainText("Unlocked");
     await expect(page.locator("#achievements-list .achievement-card").last()).toContainText("Locked");
+
+    await page.getByRole("button", { name: /First 2048/ }).click();
+    await expect(page.locator("#achievements-unlock-toast-host .unlock-toast--codepen-milestone")).toBeVisible();
+    await expect(page.locator("#achievements-unlock-toast-host")).toContainText("Milestone Progress");
   });
 
   test("keeps super-admin achievement management on the admin page", async ({ page }) => {

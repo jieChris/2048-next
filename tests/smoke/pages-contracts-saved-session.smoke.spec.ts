@@ -377,6 +377,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.sessionStorage.clear();
       (window as any).GAME_CHALLENGE_CONTEXT = null;
     });
+    await page.route("**/api/ranked-session/start", async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, code: "SMOKE_SEED_DOWN" })
+      });
+    });
 
     const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", {
       waitUntil: "domcontentloaded"
