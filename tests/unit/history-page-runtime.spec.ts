@@ -1,5 +1,5 @@
 import { JSDOM } from "jsdom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { bootstrapHistoryPageRuntime } from "../../src/pages/history-page-runtime";
 
@@ -128,5 +128,57 @@ describe("history page runtime", () => {
 
     expect(listCalls).toBe(1);
     expect(dom.window.document.getElementById("history-status")?.textContent).toBe("");
+  });
+
+  it("removes a deleted local record without reloading the history list", async () => {
+    const dom = createHistoryDocument();
+    const windowLike = dom.window as unknown as Window & {
+      LocalHistoryStore?: unknown;
+    };
+    windowLike.confirm = () => true;
+    let listCalls = 0;
+    const deleteById = vi.fn(async () => true);
+
+    bootstrapHistoryPageRuntime({
+      windowLike,
+      documentLike: dom.window.document,
+      modeCatalog: {
+        listModes: () => [],
+        getMode: () => ({ label: "经典4x4", board_width: 4, board_height: 4 })
+      },
+      historyStore: {
+        getAll: () => [],
+        deleteById,
+        listRecords: () => {
+          listCalls += 1;
+          return {
+            items: [
+              {
+                id: "local-rec-1",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 128,
+                best_tile: 64,
+                duration_ms: 1000,
+                ended_at: "2026-07-08T12:00:00.000Z",
+                final_board: [[2, 0, 0, 0]]
+              }
+            ],
+            total: 1,
+            page: 1,
+            page_size: 30
+          };
+        }
+      }
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(dom.window.document.querySelectorAll(".history-item")).toHaveLength(1);
+
+    (dom.window.document.querySelector(".history-delete-btn") as HTMLButtonElement).click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(deleteById).toHaveBeenCalledWith("local-rec-1");
+    expect(listCalls).toBe(1);
+    expect(dom.window.document.getElementById("history-list")?.textContent).toContain("暂无历史记录");
   });
 });

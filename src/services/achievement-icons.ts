@@ -1,4 +1,4 @@
-type AchievementIconKind = "milestone" | "speedrun" | "community";
+type AchievementIconKind = "milestone" | "speedrun" | "community" | "easter-egg";
 
 type AchievementIconSource = {
   id?: unknown;
@@ -140,6 +140,37 @@ function communityIcon(item: AchievementIconItem): string {
     </svg>`;
 }
 
+function easterEggIcon(item: AchievementIconItem): string {
+  const id = svgId(item.id);
+  return `
+    <svg viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+      <defs>
+        <radialGradient id="egg-yolk-${id}" cx="36%" cy="24%" r="78%">
+          <stop offset="0" stop-color="#fff8df"/>
+          <stop offset=".38" stop-color="#edc22e"/>
+          <stop offset="1" stop-color="#f67c5f"/>
+        </radialGradient>
+        <linearGradient id="egg-shell-${id}" x1="24" y1="18" x2="72" y2="82" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#fff8df"/>
+          <stop offset="1" stop-color="#f3d58a"/>
+        </linearGradient>
+        <filter id="egg-shadow-${id}" x="0" y="0" width="96" height="96">
+          <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#5f5248" flood-opacity=".24"/>
+        </filter>
+      </defs>
+      <circle cx="48" cy="48" r="44" fill="#3db3d8" opacity=".16"/>
+      <path class="achievement-easter-egg-yolk" d="M19 50c0-20 13-34 29-34s29 14 29 34c0 21-12 31-29 31S19 71 19 50z" fill="url(#egg-yolk-${id})" filter="url(#egg-shadow-${id})"/>
+      <path class="achievement-easter-egg-full" d="M19 50c0-20 13-34 29-34s29 14 29 34c0 21-12 31-29 31S19 71 19 50z" fill="url(#egg-shell-${id})" stroke="#edc22e" stroke-width="2" opacity="0"/>
+      <path class="achievement-easter-egg-bottom" d="M20 49l12-9 9 9 8-8 9 8 9-8 9 6c1 22-11 34-28 34S20 70 20 49z" fill="url(#egg-shell-${id})" stroke="#edc22e" stroke-width="2" stroke-linejoin="round"/>
+      <g class="achievement-easter-egg-top" transform="rotate(-10 20 49)">
+        <path d="M20 49c.8-20 13-33 28-33 14 0 25 11 28 28l-9 9-9-8-9 8-8-8-9 9z" fill="url(#egg-shell-${id})" stroke="#edc22e" stroke-width="2" stroke-linejoin="round"/>
+        <path class="achievement-easter-egg-crack" d="M35 31l9 8-5 6 8 7" fill="none" stroke="#3db3d8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="48" y="70" text-anchor="middle" font-size="16" font-weight="900" fill="#f67c5f" font-family="Arial,Helvetica,sans-serif">?</text>
+      <path d="M75 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM19 64l1.8 4.4 4.4 1.8-4.4 1.8L19 76.4 17.2 72l-4.4-1.8 4.4-1.8L19 64z" fill="#3db3d8" stroke="#fff8df" stroke-width="1.2" stroke-linejoin="round"/>
+    </svg>`;
+}
+
 function imageIcon(item: AchievementIconItem): string {
   return `<img src="${svgText(item.imageUrl!)}" alt="${svgText(item.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
 }
@@ -148,6 +179,7 @@ function iconMarkup(item: AchievementIconItem): string {
   if (item.imageUrl) return imageIcon(item);
   if (item.kind === "milestone") return milestoneIcon(item);
   if (item.kind === "speedrun") return speedrunIcon(item);
+  if (item.kind === "easter-egg") return easterEggIcon(item);
   return communityIcon(item);
 }
 
@@ -223,6 +255,24 @@ function achievementIconItemFor(source: AchievementIconSource): AchievementIconI
       tile: 0,
       level: sourceLevel(source.level, 1),
       imageUrl: "/images/beta_pioneer_badge_transparent.png?v=subject-alpha"
+    };
+  }
+  if (id === "easter_egg_breakout_discovered") {
+    return {
+      id,
+      kind: "easter-egg",
+      name: name || "发现彩蛋",
+      tile: 0,
+      level: sourceLevel(source.level, 1)
+    };
+  }
+  if (sourceText(source.seriesId || source.series_id).startsWith("community-")) {
+    return {
+      id,
+      kind: "community",
+      name: name || "活动成就",
+      tile: 0,
+      level: sourceLevel(source.level, 1)
     };
   }
   return null;

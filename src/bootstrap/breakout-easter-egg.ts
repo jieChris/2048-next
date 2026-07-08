@@ -1,3 +1,16 @@
+import { achievementIconMarkupFor } from "../services/achievement-icons";
+import {
+  buildApiBaseCandidates,
+  createJsonApiClient,
+  readAuthToken,
+  type FetchLike
+} from "../services/api-client";
+import {
+  createBrowserStorageAccess,
+  readStorageValue,
+  writeStorageValue
+} from "../storage/browser-storage";
+
 export interface BreakoutEasterEggElementLike {
   className?: string;
   classList?: {
@@ -11,6 +24,7 @@ export interface BreakoutEasterEggElementLike {
   __breakoutEasterEggRestore?: (() => unknown) | null;
   parentNode?: BreakoutEasterEggElementLike | null;
   style?: Record<string, string> | null;
+  innerHTML?: string;
   textContent?: string | null;
   addEventListener?: (type: string, listener: (event?: unknown) => void) => unknown;
   removeEventListener?: (type: string, listener: (event?: unknown) => void) => unknown;
@@ -24,6 +38,7 @@ export interface BreakoutEasterEggElementLike {
 
 export interface BreakoutEasterEggDocumentLike {
   body?: BreakoutEasterEggElementLike | null;
+  head?: BreakoutEasterEggElementLike | null;
   documentElement?: BreakoutEasterEggElementLike | null;
   createElement?: (tagName: string) => BreakoutEasterEggElementLike;
   querySelector?: (selector: string) => BreakoutEasterEggElementLike | null;
@@ -45,7 +60,19 @@ export interface BreakoutEasterEggWindowLike {
   CoreFlyingClickEffectRuntime?: {
     triggerFlyingClickEffect?: (options?: unknown) => unknown;
   } | null;
+  UII18N?: { getLanguage?: () => string } | null;
   addEventListener?: (type: string, listener: (event?: unknown) => void, options?: unknown) => unknown;
+  fetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<unknown>;
+  localStorage?: {
+    getItem?: (key: string) => string | null;
+    setItem?: (key: string, value: string) => unknown;
+    removeItem?: (key: string) => unknown;
+  } | null;
+  location?: {
+    hostname?: string;
+    origin?: string;
+    search?: string;
+  } | null;
   removeEventListener?: (type: string, listener: (event?: unknown) => void, options?: unknown) => unknown;
 }
 
@@ -79,6 +106,22 @@ const DEFAULT_LOGO_SRC = "./favicon.ico";
 const DEFAULT_ENABLE_CLICK_EFFECT = false;
 const DEFAULT_TRIGGER_COUNT = 19;
 const DEFAULT_RESET_TIMEOUT_MS = 1500;
+const BREAKOUT_DISCOVERY_EVENT_ID = "breakout_easter_egg_discovered";
+const BREAKOUT_DISCOVERY_ACHIEVEMENT_ID = "easter_egg_breakout_discovered";
+const BREAKOUT_DISCOVERY_TOAST_SEEN_KEY = "breakout_easter_egg_discovery_toast_seen_v1";
+const UI_LANGUAGE_KEY = "ui_language_v1";
+const BREAKOUT_DISCOVERY_COPY = {
+  zh: {
+    title: "隐藏成就",
+    name: "发现彩蛋",
+    description: "打开排行榜里的弹球彩蛋。"
+  },
+  en: {
+    title: "Secret Found",
+    name: "Easter Egg Found",
+    description: "Opened the hidden Breakout in the leaderboard."
+  }
+} as const;
 const OVERLAY_SELECTOR = '[data-breakout-easter-egg-overlay="1"]';
 const OPEN_CLASS_NAME = "breakout-easter-egg-open";
 const TRIGGER_PENDING_CLASS_NAME = "breakout-easter-egg-trigger-pending";
@@ -119,6 +162,139 @@ function resolveLogoSrc(options: BreakoutEasterEggOptions): string {
   const explicitLogoSrc = resolveText(options.logoSrc, "");
   if (explicitLogoSrc) return explicitLogoSrc;
   return resolveCurrentFaviconHref(resolveDocumentLike(options)) || DEFAULT_LOGO_SRC;
+}
+
+function readLocalStorageValue(
+  windowLike: BreakoutEasterEggWindowLike | null,
+  key: string
+): string {
+  return readStorageValue(resolveLocalStorage(windowLike), key) || "";
+}
+
+function writeLocalStorageValue(
+  windowLike: BreakoutEasterEggWindowLike | null,
+  key: string,
+  value: string
+): void {
+  writeStorageValue(resolveLocalStorage(windowLike), key, value);
+}
+
+function resolveLocalStorage(windowLike: BreakoutEasterEggWindowLike | null): Storage | null {
+  return createBrowserStorageAccess({
+    windowLike: windowLike as unknown as Record<string, unknown>
+  }).local();
+}
+
+function normalizeUiLang(value: unknown): "zh" | "en" | "" {
+  const lang = String(value || "").trim().toLowerCase();
+  if (lang.startsWith("en")) return "en";
+  if (lang.startsWith("zh")) return "zh";
+  return "";
+}
+
+function resolveBreakoutDiscoveryLang(
+  windowLike: BreakoutEasterEggWindowLike | null,
+  documentLike: BreakoutEasterEggDocumentLike | null
+): "zh" | "en" {
+  try {
+    const lang = normalizeUiLang(windowLike?.UII18N?.getLanguage?.());
+    if (lang) return lang;
+  } catch (_err) {}
+  const stored = normalizeUiLang(readLocalStorageValue(windowLike, UI_LANGUAGE_KEY));
+  if (stored) return stored;
+  return normalizeUiLang(documentLike?.documentElement?.getAttribute?.("lang")) || "zh";
+}
+
+function ensureAchievementToastStyles(documentLike: BreakoutEasterEggDocumentLike | null): void {
+  if (!documentLike || typeof documentLike.createElement !== "function") return;
+  if (documentLike.querySelector?.('link[data-achievement-unlock-toast-style="1"]')) return;
+  const link = documentLike.createElement("link");
+  setAttribute(link, "data-achievement-unlock-toast-style", "1");
+  setAttribute(link, "rel", "stylesheet");
+  setAttribute(link, "href", "style/achievement_unlock_showcase.css?v=20260708-achievement-game-toast");
+  appendChild(documentLike.head || documentLike.body, link);
+}
+
+function breakoutDiscoveryToastIconMarkup(lang: "zh" | "en"): string {
+  const icon = achievementIconMarkupFor({
+    id: BREAKOUT_DISCOVERY_ACHIEVEMENT_ID,
+    name: BREAKOUT_DISCOVERY_COPY[lang].name,
+    series_id: "community-easter-egg"
+  });
+  return icon
+    ? icon.replace("<svg ", '<svg style="display:block;width:96px;height:96px;" ')
+    : "2048?";
+}
+
+function showBreakoutDiscoveryToast(
+  documentLike: BreakoutEasterEggDocumentLike | null,
+  windowLike: BreakoutEasterEggWindowLike | null
+): void {
+  if (!documentLike?.body || typeof documentLike.createElement !== "function") return;
+  const lang = resolveBreakoutDiscoveryLang(windowLike, documentLike);
+  const toastCopy = BREAKOUT_DISCOVERY_COPY[lang];
+  ensureAchievementToastStyles(documentLike);
+  let host = documentLike.querySelector?.("#breakout-achievement-toast-host") || null;
+  if (!host) {
+    host = documentLike.createElement("div");
+    setAttribute(host, "id", "breakout-achievement-toast-host");
+    host.className = "achievements-unlock-toast-host unlock-toast-host";
+    if (host.style) {
+      host.style.position = "fixed";
+      host.style.inset = "112px 0 auto 0";
+      host.style.zIndex = "10060";
+      host.style.pointerEvents = "none";
+    }
+    appendChild(documentLike.body, host);
+  }
+  host.innerHTML =
+    '<article class="unlock-toast unlock-toast--codepen unlock-toast--codepen-reward unlock-toast--easter-egg" role="status" aria-live="polite">' +
+      '<div class="unlock-toast-card">' +
+        '<span class="unlock-badge achievements-unlock-badge" style="background:transparent;box-shadow:none;">' + breakoutDiscoveryToastIconMarkup(lang) + "</span>" +
+        '<div class="unlock-toast-content">' +
+          '<p class="unlock-toast-title">' + toastCopy.title + "</p>" +
+          '<h2 class="unlock-toast-name">' + toastCopy.name + "</h2>" +
+          '<p class="unlock-toast-desc">' + toastCopy.description + "</p>" +
+        "</div>" +
+      "</div>" +
+    "</article>";
+  setTimeout(() => {
+    if (host) host.innerHTML = "";
+  }, 3600);
+}
+
+function isSuccessPayload(value: unknown): boolean {
+  return !!value && typeof value === "object" && (value as { success?: unknown }).success === true;
+}
+
+function submitBreakoutDiscovery(
+  windowLike: BreakoutEasterEggWindowLike | null,
+  documentLike: BreakoutEasterEggDocumentLike | null
+): void {
+  const storageLike = resolveLocalStorage(windowLike);
+  const token = readAuthToken({ storageLike });
+  if (!token) return;
+  if (readLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY)) return;
+  const fetchLike = typeof windowLike?.fetch === "function"
+    ? (windowLike.fetch.bind(windowLike) as FetchLike)
+    : undefined;
+  const client = createJsonApiClient({
+    bases: buildApiBaseCandidates({ locationLike: windowLike?.location }),
+    fetchLike,
+    token
+  });
+  try {
+    void client.request("/user/me/achievement-events", {
+      method: "POST",
+      body: JSON.stringify({ event_id: BREAKOUT_DISCOVERY_EVENT_ID })
+    })
+      .then((payload) => {
+        if (!isSuccessPayload(payload)) return;
+        writeLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY, "1");
+        showBreakoutDiscoveryToast(documentLike, windowLike);
+      })
+      .catch(() => undefined);
+  } catch (_err) {}
 }
 
 function resolvePositiveInteger(value: number | null | undefined, fallback: number): number {
@@ -312,6 +488,8 @@ export function openBreakoutEasterEgg(
   }
 
   const windowLike = resolveWindowLike(options);
+  const lang = resolveBreakoutDiscoveryLang(windowLike, documentLike);
+  const frameLabel = lang === "en" ? "Breakout Easter Egg" : "弹球彩蛋";
   const overlay = documentLike.createElement("div");
   const panel = documentLike.createElement("div");
   const closeButton = documentLike.createElement("button");
@@ -322,16 +500,16 @@ export function openBreakoutEasterEgg(
   setAttribute(overlay, "data-breakout-easter-egg-overlay", "1");
   setAttribute(overlay, "role", "dialog");
   setAttribute(overlay, "aria-modal", "true");
-  setAttribute(overlay, "aria-label", "Breakout Easter Egg");
+  setAttribute(overlay, "aria-label", frameLabel);
 
   addClass(panel, "breakout-easter-egg-panel");
   addClass(closeButton, "breakout-easter-egg-close");
   setAttribute(closeButton, "type", "button");
-  setAttribute(closeButton, "aria-label", "关闭小游戏");
+  setAttribute(closeButton, "aria-label", lang === "en" ? "Close game" : "关闭小游戏");
   closeButton.textContent = "×";
 
   addClass(frame, "breakout-easter-egg-frame");
-  setAttribute(frame, "title", "Breakout Easter Egg");
+  setAttribute(frame, "title", frameLabel);
   setAttribute(frame, "src", resolveText(options.gameUrl, DEFAULT_GAME_URL));
   setAttribute(frame, "sandbox", "allow-scripts allow-same-origin");
   setAttribute(frame, "allowtransparency", "true");
@@ -476,7 +654,8 @@ export function bindBreakoutEasterEgg(
       if (!opening) return;
       opening = false;
       removeClass(target, TRIGGER_PENDING_CLASS_NAME);
-      openBreakoutEasterEgg(options);
+      const overlay = openBreakoutEasterEgg(options);
+      if (overlay) submitBreakoutDiscovery(resolveWindowLike(options), resolveDocumentLike(options));
     };
     if (flyingRuntime && typeof flyingRuntime.triggerFlyingClickEffect === "function") {
       try {

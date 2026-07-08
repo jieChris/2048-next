@@ -61,7 +61,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(bestScoreRequests[0]).toContain(`mode_key=${encodeURIComponent(modeKey)}`);
   });
 
-  test("authenticated game page keeps a higher local best score", async ({ page }) => {
+  test("authenticated game page replaces a stale higher local best score with account records", async ({ page }) => {
     await installRankedSessionForMode(page, modeKey, {
       clearPrefetch: true,
       clearSavedState: true,
@@ -103,8 +103,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
     await page.waitForFunction(() => !!(window as any).game_manager && !!(window as any).OnlineLeaderboardRuntime);
 
-    await expect(page.locator(".best-container")).toHaveText("8192");
+    await expect(page.locator(".best-container")).toHaveText("4096");
     const syncedBest = await page.evaluate((key) => window.localStorage.getItem(key), bestScoreKey);
-    expect(syncedBest).toBe("8192");
+    expect(syncedBest).toBe("4096");
   });
 });

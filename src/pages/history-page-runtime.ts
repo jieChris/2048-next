@@ -370,19 +370,21 @@ function renderList(
   historyStore: Record<string, unknown> | null,
   items: unknown[],
   controller: ReturnType<typeof createHistoryPageController>,
-  lang: HistoryUiLang,
-  loadHistory: (resetPage: boolean) => Promise<void>
+  lang: HistoryUiLang
 ): void {
   const list = documentLike.getElementById("history-list");
   if (!list) return;
   list.innerHTML = "";
   const copy = getHistoryCopy(lang);
-
-  if (!items.length) {
+  const renderEmptyList = () => {
     list.innerHTML =
       "<div class='history-item'>" +
       escapeHtml(copy.noRecords) +
       "</div>";
+  };
+
+  if (!items.length) {
+    renderEmptyList();
     return;
   }
 
@@ -468,7 +470,8 @@ function renderList(
           return;
         }
         setStatus(documentLike, copy.deleteSuccess, false);
-        await loadHistory(false);
+        node.remove();
+        if (!list.querySelector(".history-item")) renderEmptyList();
       });
     }
 
@@ -711,8 +714,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
         historyStore,
         Array.isArray(result.items) ? result.items : [],
         controller,
-        lang,
-        loadHistory
+        lang
       );
       renderSummary(documentLike, result || {}, state, lang);
       await rebuildOwnerFilterOptions(historyStore, documentLike, controller, lang, state.ownerKey);

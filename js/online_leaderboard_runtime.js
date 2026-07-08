@@ -3140,8 +3140,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function getAccountBestScoreRecords(userId, modeKey, modeBucket) {
-    var safeUserId = Math.floor(Number(userId) || 0);
-    if (safeUserId <= 0 || !modeKey || !modeBucket) {
+    var safeUserId = Math.floor(Number(userId));
+    if (!Number.isFinite(safeUserId) || safeUserId < 0 || !modeKey || !modeBucket) {
       return Promise.resolve({ success: true, data: [] });
     }
     var safeLimit = ACCOUNT_BEST_SCORE_SYNC_FETCH_LIMIT;
@@ -3158,9 +3158,9 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function resolveAccountBestScoreFromRecords(result, modeKey) {
-    if (!result || !result.success || !Array.isArray(result.data)) return 0;
+    if (!result || !result.success || !Array.isArray(result.data)) return null;
     var normalizedModeKey = toText(modeKey).trim().toLowerCase();
-    if (!normalizedModeKey) return 0;
+    if (!normalizedModeKey) return null;
     var bestScore = 0;
     for (var i = 0; i < result.data.length; i += 1) {
       var item = result.data[i] || {};
@@ -3191,8 +3191,8 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function applyAccountBestScoreToCurrentManager(modeKey, serverBestScore) {
+    if (serverBestScore == null) return false;
     var score = normalizeAccountBestScore(serverBestScore);
-    if (!(score > 0)) return false;
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return false;
     var currentModeKey = toText(manager.modeKey || manager.mode).trim() || getCurrentModeKey();
@@ -3201,7 +3201,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       return false;
     }
     var localBestScore = normalizeAccountBestScore(manager.scoreManager.get());
-    if (score <= localBestScore) return false;
+    if (score === localBestScore) return false;
     manager.scoreManager.set(score);
     var storageKey = getAccountBestScoreStorageKey(modeKey);
     if (storageKey) safeSetStorage(storageKey, String(score));

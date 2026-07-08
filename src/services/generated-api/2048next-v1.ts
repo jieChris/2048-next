@@ -1857,6 +1857,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/user/me/achievement-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a known client achievement event for the authenticated user. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AchievementEventRequest"];
+                };
+            };
+            responses: {
+                /** @description Granted or existing achievement for the event. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["UserAchievement"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/achievements": {
         parameters: {
             query?: never;
@@ -2397,6 +2439,10 @@ export interface components {
         };
         AchievementShowcaseUpdateRequest: {
             achievement_ids: string[];
+        };
+        AchievementEventRequest: {
+            /** @enum {string} */
+            event_id: "breakout_easter_egg_discovered";
         };
         AchievementCreateRequest: {
             series_id?: string;

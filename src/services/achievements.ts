@@ -12,6 +12,7 @@ export type AchievementCreateRequest = components["schemas"]["AchievementCreateR
 export type AchievementUpdateRequest = components["schemas"]["AchievementUpdateRequest"];
 export type AchievementRule = components["schemas"]["AchievementRule"];
 export type AchievementGrantRequest = components["schemas"]["AchievementGrantRequest"];
+export type AchievementEventRequest = components["schemas"]["AchievementEventRequest"];
 
 export interface AchievementsServiceOptions {
   windowLike?: Window | null | undefined;
@@ -21,6 +22,7 @@ export interface AchievementsServiceOptions {
 export interface AchievementsService {
   listAchievements: () => Promise<JsonRecord>;
   listMyAchievements: () => Promise<JsonRecord>;
+  grantMyAchievementEvent: (eventId: AchievementEventRequest["event_id"]) => Promise<JsonRecord>;
   getMyShowcase: () => Promise<JsonRecord>;
   updateMyShowcase: (achievementIds: string[]) => Promise<JsonRecord>;
   listAdminAchievements: () => Promise<JsonRecord>;
@@ -62,6 +64,11 @@ export function createAchievementsService(
     },
     listMyAchievements() {
       return client.request("get", "/user/me/achievements");
+    },
+    grantMyAchievementEvent(eventId) {
+      return client.request("post", "/user/me/achievement-events", {
+        body: { event_id: eventId }
+      });
     },
     getMyShowcase() {
       return client.request("get", "/user/me/achievement-showcase");

@@ -1001,6 +1001,29 @@ paths:
                       data:
                         $ref: "#/components/schemas/AchievementShowcase"
 
+  /user/me/achievement-events:
+    post:
+      tags: [Achievements, Users]
+      summary: Submit a known client achievement event for the authenticated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AchievementEventRequest"
+      responses:
+        "200":
+          description: Granted or existing achievement for the event.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UserAchievement"
+
   /admin/achievements:
     get:
       tags: [Admin, Achievements]
@@ -1804,6 +1827,15 @@ components:
           maxItems: 3
           items:
             type: string
+
+    AchievementEventRequest:
+      type: object
+      additionalProperties: false
+      required: [event_id]
+      properties:
+        event_id:
+          type: string
+          enum: [breakout_easter_egg_discovered]
 
     AchievementCreateRequest:
       type: object

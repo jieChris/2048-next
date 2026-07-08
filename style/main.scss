@@ -58,19 +58,14 @@ h1.title {
   margin: 0;
   color: #776e65;
   font-size: 25px;
-  height: 34px;
-  line-height: 34px;
+  height: 50px;
+  line-height: 50px;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
   overflow: visible;
   text-decoration: none;
   cursor: pointer;
-}
-
-body[data-page="game"][data-top-button-style="icon"] .home-user-display {
-  height: 50px;
-  line-height: 50px;
 }
 
 .home-user-display--global {

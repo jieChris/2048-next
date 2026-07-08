@@ -43,6 +43,7 @@ describe("OpenAPI contract", () => {
       "/achievements:",
       "/user/me/achievements:",
       "/user/me/achievement-showcase:",
+      "/user/me/achievement-events:",
       "/admin/achievements:"
     ].forEach((path) => {
       expect(spec, `${path} should be documented`).toContain(path);
@@ -79,7 +80,9 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).toContain("export interface paths");
     expect(generatedTypes).toContain("export interface components");
     expect(generatedTypes).toContain("\"/admin/achievements\"");
+    expect(generatedTypes).toContain("\"/user/me/achievement-events\"");
     expect(generatedTypes).toContain("AchievementShowcase");
+    expect(generatedTypes).toContain("AchievementEventRequest");
   });
 
   it("keeps generated API types under an explicit drift check", () => {

@@ -80,6 +80,12 @@ class FakeElement {
 
   querySelector(selector: string): FakeElement | null {
     const matches = (node: FakeElement): boolean => {
+      if (selector === "#breakout-achievement-toast-host") {
+        return node.getAttribute("id") === "breakout-achievement-toast-host";
+      }
+      if (selector === 'link[data-achievement-unlock-toast-style="1"]') {
+        return node.tagName.toLowerCase() === "link" && node.getAttribute("data-achievement-unlock-toast-style") === "1";
+      }
       if (selector === "[data-breakout-easter-egg-overlay=\"1\"]") {
         return node.getAttribute("data-breakout-easter-egg-overlay") === "1";
       }
@@ -146,6 +152,14 @@ function createWindowLike() {
     CoreFlyingClickEffectRuntime: {
       triggerFlyingClickEffect: vi.fn()
     },
+    fetch: vi.fn(() => Promise.resolve({})),
+    localStorage: null as {
+      getItem?: (key: string) => string | null;
+      setItem?: (key: string, value: string) => unknown;
+      removeItem?: (key: string) => unknown;
+    } | null,
+    location: { origin: "http://127.0.0.1:5174" },
+    UII18N: null as { getLanguage?: () => string } | null,
     addEventListener: vi.fn((type: string, listener: Listener) => {
       const current = listeners.get(type) || [];
       current.push(listener);
@@ -318,6 +332,125 @@ describe("breakout easter egg", () => {
     const frame = overlay?.querySelector(".breakout-easter-egg-frame");
     expect(overlay?.classList.contains("breakout-easter-egg-overlay")).toBe(true);
     expect(frame?.getAttribute("src")).toBe("./easter-eggs/breakout/index.html");
+  });
+
+  it("submits the hidden discovery achievement event after the game opens", () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => key === "2048_auth_token_v1" ? "auth-token" : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true })
+    }));
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    expect(windowLike.fetch).not.toHaveBeenCalled();
+
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+
+    expect(windowLike.fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = windowLike.fetch.mock.calls[0] || [];
+    const headers = init?.headers as Headers;
+    expect(url).toBe("http://127.0.0.1:5174/api/user/me/achievement-events");
+    expect(init?.method).toBe("POST");
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("Authorization")).toBe("Bearer auth-token");
+    expect(init?.body).toBe(JSON.stringify({ event_id: "breakout_easter_egg_discovered" }));
+  });
+
+  it("shows the discovery achievement toast after a successful event response", async () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    const setItem = vi.fn();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => key === "2048_auth_token_v1" ? "auth-token" : null),
+      setItem,
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true })
+    }));
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const host = documentLike.body.querySelector("#breakout-achievement-toast-host");
+    expect(host?.innerHTML).toContain("发现彩蛋");
+    expect(host?.innerHTML).toContain("隐藏成就");
+    expect(host?.innerHTML).toContain("unlock-toast--easter-egg");
+    expect(host?.innerHTML).toContain("egg-yolk-easter_egg_breakout_discovered");
+    expect(host?.innerHTML).toContain("achievement-easter-egg-full");
+    expect(host?.innerHTML).toContain("打开排行榜里的弹球彩蛋。");
+    expect(host?.innerHTML).not.toContain("Reward Claimed");
+    expect(host?.style.zIndex).toBe("10060");
+    expect(documentLike.head.querySelector('link[data-achievement-unlock-toast-style="1"]')).not.toBeNull();
+    expect(setItem).toHaveBeenCalledWith("breakout_easter_egg_discovery_toast_seen_v1", "1");
+  });
+
+  it("uses English copy for the discovery toast on English pages", async () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => key === "2048_auth_token_v1" ? "auth-token" : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true })
+    }));
+    windowLike.UII18N = {
+      getLanguage: () => "en"
+    };
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const html = documentLike.body.querySelector("#breakout-achievement-toast-host")?.innerHTML || "";
+    expect(html).toContain("Secret Found");
+    expect(html).toContain("Easter Egg Found");
+    expect(html).toContain("Opened the hidden Breakout in the leaderboard.");
+    expect(html).not.toContain("发现彩蛋");
   });
 
   it("unlocks a fresh hidden sequence after the burst callback opens the game", () => {

@@ -30,6 +30,22 @@ describe("services: achievements", () => {
     });
   });
 
+  it("submits known current-user achievement events", async () => {
+    const client = {
+      request: vi.fn().mockResolvedValue({ success: true, data: { achievement: { id: "easter_egg_breakout_discovered" } } })
+    };
+    const service = createAchievementsService({ client });
+
+    await expect(service.grantMyAchievementEvent("breakout_easter_egg_discovered")).resolves.toEqual({
+      success: true,
+      data: { achievement: { id: "easter_egg_breakout_discovered" } }
+    });
+
+    expect(client.request).toHaveBeenCalledWith("post", "/user/me/achievement-events", {
+      body: { event_id: "breakout_easter_egg_discovered" }
+    });
+  });
+
   it("rejects showcase updates with more than three achievement ids before calling the API", async () => {
     const client = {
       request: vi.fn()

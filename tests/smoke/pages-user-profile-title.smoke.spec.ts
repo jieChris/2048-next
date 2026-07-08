@@ -725,6 +725,94 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-record-action-btn")).toHaveCount(1);
   });
 
+  test("own profile deletes a record without reloading the records list", async ({ page }) => {
+    const recordRequests: string[] = [];
+    let deleteRequests = 0;
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-delete-record");
+      window.localStorage.setItem("2048_auth_userId_v1", "9");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Owner");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9/records")) {
+        recordRequests.push(url);
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: "rec-delete-1",
+                user_id: 9,
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 2048,
+                best_tile: 256,
+                duration_ms: 12000,
+                ended_at: "2026-03-15T08:00:00.000Z",
+                created_at: "2026-03-15 08:00:00",
+                replay_string: "replay_(!盲fC"
+              }
+            ]
+          })
+        });
+        return;
+      }
+      if (url.includes("/records/rec-delete-1") && route.request().method() === "DELETE") {
+        deleteRequests += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true })
+        });
+        return;
+      }
+      if (url.includes("/user/9")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
+    await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector(".user-record-item");
+    await expect.poll(() => recordRequests.length).toBeGreaterThanOrEqual(2);
+    const recordsBeforeDelete = recordRequests.length;
+
+    await page.locator(".user-record-row").first().click();
+    await page.locator(".user-danger-btn").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-confirm").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
+
+    await expect.poll(() => deleteRequests).toBe(1);
+    await expect(page.locator(".user-record-item")).toHaveCount(0);
+    await expect(page.locator(".user-record-empty")).toBeVisible();
+    expect(recordRequests).toHaveLength(recordsBeforeDelete);
+  });
+
   test("own profile status filter requests deleted records and renders restore action", async ({ page }) => {
     const recordRequests: string[] = [];
 

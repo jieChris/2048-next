@@ -42,6 +42,7 @@ let achievementToastTimer = 0;
 
 const UI_LANGUAGE_KEY = "ui_language_v1";
 const ACHIEVEMENT_TOAST_DURATION_MS = 3600;
+const EASTER_EGG_DISCOVERY_ACHIEVEMENT_ID = "easter_egg_breakout_discovered";
 
 const ACHIEVEMENT_COPY: Record<
   AchievementPageLang,
@@ -309,6 +310,15 @@ function achievementDescription(achievement: AchievementDefinition): string {
   return pickLocalizedText(achievement.descriptionI18n, achievement.description);
 }
 
+function achievementDisplayDescription(achievement: AchievementDefinition): string {
+  if (isEasterEggDiscoveryAchievement(achievement)) {
+    return resolveAchievementPageLang() === "en"
+      ? "Find and open the hidden Breakout easter egg in the leaderboard."
+      : "发现并打开隐藏在排行榜里的弹球彩蛋。";
+  }
+  return achievementDescription(achievement);
+}
+
 function normalizeAchievement(value: unknown): AchievementDefinition | null {
   const record = toRecord(value);
   const id = toText(record.id || record.achievement_id).trim();
@@ -336,6 +346,51 @@ function normalizeUserAchievement(value: unknown): UserAchievementEntry | null {
     earnedAt: toText(record.earned_at || record.earnedAt),
     source: toText(record.source)
   };
+}
+
+function isHiddenAchievement(achievement: AchievementDefinition): boolean {
+  return achievement.rules.some((rule) => {
+    const params = toRecord(rule.params);
+    const hidden = params.hidden;
+    return hidden === true || toText(hidden).trim().toLowerCase() === "true";
+  });
+}
+
+function isEasterEggDiscoveryAchievement(achievement: AchievementDefinition): boolean {
+  return achievement.id === EASTER_EGG_DISCOVERY_ACHIEVEMENT_ID;
+}
+
+function isNoLevelAchievement(achievement: AchievementDefinition): boolean {
+  if (isEasterEggDiscoveryAchievement(achievement)) return true;
+  return achievement.rules.some((rule) => {
+    const params = toRecord(rule.params);
+    const noLevel = params.no_level || params.noLevel;
+    return noLevel === true || toText(noLevel).trim().toLowerCase() === "true";
+  });
+}
+
+function achievementSourceLabel(item: AchievementViewModel): string {
+  if (!item.earned) return "--";
+  const lang = resolveAchievementPageLang();
+  if (isEasterEggDiscoveryAchievement(item.achievement)) {
+    return lang === "en" ? "Leaderboard hidden easter egg" : "排行榜隐藏彩蛋";
+  }
+  const source = toText(item.earned.source).trim();
+  const zh: Record<string, string> = {
+    record: "Ranked 对局",
+    ranked: "Ranked 对局",
+    event: "活动触发",
+    manual: "官方发放",
+    backfill: "历史补发"
+  };
+  const en: Record<string, string> = {
+    record: "Ranked game",
+    ranked: "Ranked game",
+    event: "Event",
+    manual: "Official grant",
+    backfill: "Historical grant"
+  };
+  return (lang === "en" ? en[source] : zh[source]) || source || "--";
 }
 
 function buildViewModels(
@@ -366,6 +421,7 @@ function buildViewModels(
       earned: earnedById.get(achievement.id) || null,
       showcase: showcaseIds.has(achievement.id)
     }))
+    .filter((item) => !!item.earned || !isHiddenAchievement(item.achievement))
     .sort((a, b) => {
       if (!!a.earned !== !!b.earned) return a.earned ? -1 : 1;
       return a.achievement.level - b.achievement.level ||
@@ -398,9 +454,20 @@ function isSpeedrunAchievement(achievement: AchievementDefinition): boolean {
 }
 
 function achievementToastTitle(achievement: AchievementDefinition): string {
-  if (isMilestoneAchievement(achievement)) return "Milestone Progress";
-  if (isSpeedrunAchievement(achievement)) return "Achievement Unlocked";
-  return "Reward Claimed";
+  const lang = resolveAchievementPageLang();
+  if (isEasterEggDiscoveryAchievement(achievement)) return lang === "en" ? "Secret Found" : "隐藏成就";
+  if (isMilestoneAchievement(achievement)) return lang === "en" ? "Milestone Progress" : "里程碑进度";
+  if (isSpeedrunAchievement(achievement)) return lang === "en" ? "Achievement Unlocked" : "成就达成";
+  return lang === "en" ? "Reward Claimed" : "奖励领取";
+}
+
+function achievementToastDescription(achievement: AchievementDefinition): string {
+  if (isEasterEggDiscoveryAchievement(achievement)) {
+    return resolveAchievementPageLang() === "en"
+      ? "Opened the hidden Breakout in the leaderboard."
+      : "打开排行榜里的弹球彩蛋。";
+  }
+  return achievementDescription(achievement);
 }
 
 function showAchievementToast(item: AchievementViewModel): void {
@@ -415,11 +482,11 @@ function showAchievementToast(item: AchievementViewModel): void {
   window.clearTimeout(achievementToastTimer);
   const milestone = isMilestoneAchievement(item.achievement);
   const reward = isRewardAchievement(item.achievement);
-  const variantClass = milestone
+  const variantClass = (milestone
     ? "unlock-toast--codepen-milestone"
     : reward
       ? "unlock-toast--codepen-reward"
-      : "";
+      : "") + (isEasterEggDiscoveryAchievement(item.achievement) ? " unlock-toast--easter-egg" : "");
   const progress = milestone ? '<span class="unlock-codepen-progress"><span style="width:100%"></span></span>' : "";
   host.innerHTML =
     '<article class="unlock-toast unlock-toast--codepen ' + variantClass + '" role="status" aria-live="polite">' +
@@ -428,7 +495,7 @@ function showAchievementToast(item: AchievementViewModel): void {
         '<div class="unlock-toast-content">' +
           '<p class="unlock-toast-title">' + escapeHtml(achievementToastTitle(item.achievement)) + "</p>" +
           '<h2 class="unlock-toast-name">' + escapeHtml(achievementName(item.achievement)) + "</h2>" +
-          '<p class="unlock-toast-desc">' + escapeHtml(achievementDescription(item.achievement) || copy().noDescription) + "</p>" +
+          '<p class="unlock-toast-desc">' + escapeHtml(achievementToastDescription(item.achievement) || copy().noDescription) + "</p>" +
           progress +
         "</div>" +
       "</div>" +
@@ -602,7 +669,7 @@ function renderList(): void {
       '<span class="achievement-light-state">' + (item.earned ? currentCopy.unlocked : currentCopy.locked) + "</span>" +
       '<span class="achievement-medal-face">' + renderBadge(item.achievement, locked) + "</span>" +
       '<span class="achievement-name">' + escapeHtml(achievementName(item.achievement)) + "</span>" +
-      '<span class="achievement-desc">' + escapeHtml(achievementDescription(item.achievement) || currentCopy.noDescription) + "</span>" +
+      '<span class="achievement-desc">' + escapeHtml(achievementDisplayDescription(item.achievement) || currentCopy.noDescription) + "</span>" +
       '<span class="achievement-meta">' + (item.earned ? currentCopy.earnedAt + " " + escapeHtml(formatDateTime(item.earned.earnedAt)) : currentCopy.waiting) + "</span>" +
     "</button>";
   }).join("");
@@ -627,15 +694,22 @@ function selectAchievement(id: string): void {
   const item = allAchievements.find((entry) => entry.achievement.id === id);
   const detail = byId("achievement-detail");
   if (!detail || !item) return;
+  const detailLines = [
+    [currentCopy.detailStatus, item.earned ? currentCopy.detailEarned : currentCopy.detailNotEarned],
+    [currentCopy.detailEarnedAt, item.earned ? formatDateTime(item.earned.earnedAt) : "--"],
+    [currentCopy.detailSource, achievementSourceLabel(item)]
+  ];
+  if (!isNoLevelAchievement(item.achievement)) {
+    detailLines.push([currentCopy.detailLevel, String(item.achievement.level)]);
+  }
   detail.innerHTML =
     renderBadge(item.achievement, !item.earned) +
     "<h2>" + escapeHtml(achievementName(item.achievement)) + "</h2>" +
-    "<p>" + escapeHtml(achievementDescription(item.achievement) || currentCopy.noDescription) + "</p>" +
+    "<p>" + escapeHtml(achievementDisplayDescription(item.achievement) || currentCopy.noDescription) + "</p>" +
     '<div class="achievement-detail-list">' +
-      '<div class="achievement-detail-line"><span>' + currentCopy.detailStatus + "</span><strong>" + (item.earned ? currentCopy.detailEarned : currentCopy.detailNotEarned) + "</strong></div>" +
-      '<div class="achievement-detail-line"><span>' + currentCopy.detailEarnedAt + "</span><strong>" + escapeHtml(item.earned ? formatDateTime(item.earned.earnedAt) : "--") + "</strong></div>" +
-      '<div class="achievement-detail-line"><span>' + currentCopy.detailSource + "</span><strong>" + escapeHtml(item.earned?.source || "--") + "</strong></div>" +
-      '<div class="achievement-detail-line"><span>' + currentCopy.detailLevel + "</span><strong>" + escapeHtml(String(item.achievement.level)) + "</strong></div>" +
+      detailLines.map(([label, value]) =>
+        '<div class="achievement-detail-line"><span>' + label + "</span><strong>" + escapeHtml(value) + "</strong></div>"
+      ).join("") +
     "</div>";
   renderList();
 }

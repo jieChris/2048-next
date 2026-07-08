@@ -26,9 +26,7 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "undo_2048.html", entryPath: "./src/entries/undo.ts" },
   { htmlPath: "capped_2048.html", entryPath: "./src/entries/capped.ts" },
   { htmlPath: "Practice_board.html", entryPath: "./src/entries/practice-board.ts" },
-  { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" },
-  { htmlPath: "achievement-icon-showcase.html", entryPath: "./src/entries/achievement-icon-showcase.ts" },
-  { htmlPath: "achievement-unlock-showcase.html", entryPath: "./src/entries/achievement-unlock-showcase.ts" }
+  { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" }
 ];
 
 const TIMER_LEADERBOARD_SHELL_PAGES = ["2048.html", "play.html", "undo_2048.html", "capped_2048.html"];

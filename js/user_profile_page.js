@@ -1719,7 +1719,7 @@
           restoreUserRecord(record.id).then(function (result) {
             if (result && result.success) {
               setTip(t("restoreOk"), "ok");
-              refreshRecords(false);
+              updateCachedRecordAfterRestore(record.id);
               return;
             }
             setTip(toText(result && result.error) || t("restoreFail"), "err");
@@ -1741,7 +1741,7 @@
             deleteUserRecord(record.id).then(function (result) {
               if (result && result.success) {
                 setTip(t("deleteOk"), "ok");
-                refreshRecords(false);
+                updateCachedRecordAfterDelete(record.id);
                 return;
               }
               setTip(toText(result && result.error) || t("deleteFail"), "err");
@@ -1865,6 +1865,52 @@
     activeModeFilter = modeFilter;
     activeRecordVisibility = getRecordVisibilityValue();
     renderRecords(Array.isArray(cachedRecords) ? cachedRecords : []);
+  }
+
+  function findCachedRecordIndex(recordId) {
+    var id = toText(recordId).trim();
+    if (!id || !Array.isArray(cachedRecords)) return -1;
+    for (var i = 0; i < cachedRecords.length; i += 1) {
+      if (toText(cachedRecords[i] && cachedRecords[i].id).trim() === id) return i;
+    }
+    return -1;
+  }
+
+  function updateCachedRecordAfterDelete(recordId) {
+    var idx = findCachedRecordIndex(recordId);
+    if (idx < 0) return;
+    var id = toText(recordId).trim();
+    var visibility = getRecordVisibilityValue();
+    var record = cachedRecords[idx] || {};
+    if (!isDeletedRecord(record) && summaryTotalRecords > 0) {
+      summaryTotalRecords -= 1;
+      updateSummaryCards();
+    }
+    if (visibility === "all") {
+      record.deleted_at = new Date().toISOString();
+    } else {
+      cachedRecords.splice(idx, 1);
+      if (expandedRecordId === id) expandedRecordId = "";
+      delete recordDetailCache[id];
+    }
+    applyCurrentSortAndRender();
+  }
+
+  function updateCachedRecordAfterRestore(recordId) {
+    var idx = findCachedRecordIndex(recordId);
+    if (idx < 0) return;
+    var id = toText(recordId).trim();
+    var visibility = getRecordVisibilityValue();
+    summaryTotalRecords += 1;
+    updateSummaryCards();
+    if (visibility === "all") {
+      cachedRecords[idx].deleted_at = "";
+    } else {
+      cachedRecords.splice(idx, 1);
+      if (expandedRecordId === id) expandedRecordId = "";
+      delete recordDetailCache[id];
+    }
+    applyCurrentSortAndRender();
   }
 
   function normalizeUserRecordsFromApi(data) {
