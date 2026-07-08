@@ -498,6 +498,25 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("does not submit a standard win prompt when legacy config still carries max_tile", async () => {
+    const manager = createTerminatedManager({
+      over: false,
+      won: true,
+      keepPlaying: false,
+      modeConfig: { max_tile: 2048, special_rules: {} },
+      score: 4096
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
   it.each([
     ["fib_4x4_no_undo", "fib_4x4"],
     ["board_3x3_pow2_no_undo", "pow2_3x3"]

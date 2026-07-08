@@ -597,6 +597,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       won: true,
       keepPlaying: false,
       modeKey: "standard_4x4_pow2_no_undo",
+      modeConfig: { max_tile: 2048, special_rules: {} },
       score: 2048,
       grid: createGrid(),
       getDurationMs: vi.fn(() => 1200),

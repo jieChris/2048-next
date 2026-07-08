@@ -1039,8 +1039,10 @@ export function isSessionTerminated(manager: ManagerLike): boolean {
 function shouldAutoSubmitCompletedWinState(manager: ManagerLike): boolean {
   if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
   const modeConfig = toRecord(manager.modeConfig);
+  const modeKey = String(modeConfig.key || manager.modeKey || manager.mode || "").toLowerCase();
+  const isCappedMode = modeKey.includes("capped");
   const maxTile = Math.floor(Number(modeConfig.max_tile));
-  if (Number.isInteger(maxTile) && maxTile > 0) return true;
+  if (isCappedMode && Number.isInteger(maxTile) && maxTile > 0) return true;
   const specialRules = isRecord(modeConfig.special_rules)
     ? modeConfig.special_rules
     : toRecord(manager.specialRules);

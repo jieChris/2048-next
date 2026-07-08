@@ -1543,8 +1543,10 @@ function resolveAutoSubmitSkippedReason(manager) {
 function shouldAutoSubmitCompletedWinState(manager) {
   if (!manager || manager.over || !manager.won || manager.keepPlaying) return false;
   var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+  var modeKey = String((modeConfig && modeConfig.key) || manager.modeKey || manager.mode || "").toLowerCase();
+  var isCappedMode = modeKey.indexOf("capped") !== -1;
   var maxTile = Math.floor(Number(modeConfig && modeConfig.max_tile));
-  if (Number.isInteger(maxTile) && maxTile > 0) return true;
+  if (isCappedMode && Number.isInteger(maxTile) && maxTile > 0) return true;
   var specialRules = modeConfig && modeConfig.special_rules && typeof modeConfig.special_rules === "object"
     ? modeConfig.special_rules
     : (manager.specialRules && typeof manager.specialRules === "object" ? manager.specialRules : null);
