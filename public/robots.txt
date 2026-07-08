@@ -1,0 +1,54 @@
+# robots.txt — source of truth for www.2048next.cn (2048 NEXT)
+#
+# NOTE: If Cloudflare "Managed robots.txt" / "Block AI bots" is enabled it
+# overrides this file at the edge. To let this file take effect, disable the
+# Cloudflare managed robots.txt so the origin (this file) is served. See the
+# project assessment for the launch checklist.
+
+# --- General search engines (welcome) ---
+User-agent: *
+Allow: /
+
+# --- Generative / AI answer engines (explicitly welcomed for GEO) ---
+# We WANT these systems to read and cite 2048 NEXT.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: Sogou web spider
+Allow: /
+
+User-agent: 360Spider
+Allow: /
+
+# Discovery aids
+Sitemap: https://2048next.cn/sitemap.xml
