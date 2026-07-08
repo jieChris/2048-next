@@ -10,8 +10,13 @@ import {
 
 export const ACTIVE_BETA_NOTICE_VERSION = "beta_notice_2026_06_26_v1";
 export const BETA_ACCESS_SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
+// Mirrored by public/js/beta_access_preload.js (GATE_PAGE_VERSION) — keep in sync
+// so the preload's no-token redirect builds the exact same login URL.
 const BETA_GATE_PAGE_VERSION = "20260627-02";
 export const BETA_ACCESS_EXEMPT_PAGE_IDS = new Set(["beta-login", "beta-access", "admin", "cache-reset"]);
+// Upper bound for the /access/me check. A backend that accepts the connection
+// but never responds must not leave the page hidden forever.
+export const BETA_ACCESS_CHECK_TIMEOUT_MS = 6000;
 
 export interface BetaAccessGateResult {
   allowed: boolean;
@@ -104,10 +109,19 @@ function safeNavigate(windowLike: Window | null, href: string): void {
 function revealProtectedDocument(documentLike: Document | null): void {
   const root = documentLike?.documentElement || null;
   if (root?.getAttribute("data-beta-access-pending") === "1") {
+    // Current preloads no longer hide the document, but HTML/preload versions can
+    // be cached independently — keep clearing `hidden` for older cached preloads.
     root.removeAttribute("hidden");
   }
   root?.removeAttribute("data-beta-access-pending");
   documentLike?.body?.removeAttribute("data-beta-access-pending");
+}
+
+function maskProtectedDocument(documentLike: Document | null): void {
+  // A definitive "no access" answer arrived while the page was already painted
+  // (paint-first gate). Hide the content for the brief moment until the
+  // redirect below commits, so the denied visitor cannot keep interacting.
+  documentLike?.documentElement?.setAttribute("hidden", "");
 }
 
 export function normalizeAccessStatus(payload: JsonRecord): BetaAccessStatus {
@@ -133,29 +147,34 @@ export async function fetchBetaAccessStatus(options: BetaAccessGateOptions = {})
   payload: JsonRecord;
   status: BetaAccessStatus | null;
   unauthorized: boolean;
+  transient: boolean;
 }> {
   const windowLike = resolveWindow(options);
   const storageLike = options.storageLike === undefined ? windowLike?.localStorage || null : options.storageLike;
   const token = readAuthToken({ storageLike });
   if (!token) {
-    return { payload: { success: false, code: "NO_TOKEN" }, status: null, unauthorized: true };
+    return { payload: { success: false, code: "NO_TOKEN" }, status: null, unauthorized: true, transient: false };
   }
 
   const client = createJsonApiClient({
     bases: buildApiBaseCandidates({ locationLike: windowLike?.location }),
     fetchLike: options.fetchLike,
-    token
+    token,
+    timeoutMs: BETA_ACCESS_CHECK_TIMEOUT_MS
   });
   const payload = await client.request("/access/me", { method: "GET" });
   if (payload.success === false) {
     const code = toText(payload.code).toUpperCase();
-    return {
-      payload,
-      status: null,
-      unauthorized: code === "UNAUTHORIZED" || code === "INVALID_TOKEN"
-    };
+    if (code === "UNAUTHORIZED" || code === "INVALID_TOKEN") {
+      return { payload, status: null, unauthorized: true, transient: false };
+    }
+    // A failure without a recognized API code means the request could not be
+    // completed (network error / timeout / proxy unavailable) rather than an
+    // authoritative "you are blocked" answer. Treat it as transient so the gate
+    // degrades gracefully instead of wrongly bouncing a valid user.
+    return { payload, status: null, unauthorized: false, transient: true };
   }
-  return { payload, status: normalizeAccessStatus(payload), unauthorized: false };
+  return { payload, status: normalizeAccessStatus(payload), unauthorized: false, transient: false };
 }
 
 export async function acceptBetaNotice(options: BetaAccessGateOptions & { noticeVersion?: string } = {}): Promise<{
@@ -206,19 +225,34 @@ export async function runBetaAccessGate(
     return { allowed: true };
   }
 
+  // The preload no longer hides the page while this check runs: the static
+  // board is already painted. This gate decides asynchronously whether to let
+  // the runtime initialize (allowed) or to mask + redirect (definitive denial).
   const access = await fetchBetaAccessStatus({ ...options, windowLike: windowLike || undefined, storageLike });
   if (access.unauthorized) {
     removeStorageValue(storageLike, AUTH_TOKEN_KEY);
+    maskProtectedDocument(documentLike);
     safeNavigate(windowLike, buildGateHref("beta-login.html", windowLike, "login"));
     return { allowed: false };
+  }
+  if (access.transient) {
+    // Could not reach the access service. Keep the already painted client-side
+    // game in a degraded mode rather than white-screening or falsely
+    // redirecting a valid beta user. The backend-gated features
+    // (leaderboard/account) simply stay unavailable until connectivity
+    // returns. This keeps the token so a later navigation re-checks access.
+    revealProtectedDocument(documentLike);
+    return { allowed: true };
   }
 
   const status = access.status;
   if (!status || (!status.superAdmin && !status.allowlisted)) {
+    maskProtectedDocument(documentLike);
     safeNavigate(windowLike, buildGateHref("beta-access.html", windowLike, "blocked"));
     return { allowed: false };
   }
   if (!status.noticeAccepted || !status.canAccessProduct) {
+    maskProtectedDocument(documentLike);
     safeNavigate(windowLike, buildGateHref("beta-access.html", windowLike, "notice"));
     return { allowed: false };
   }

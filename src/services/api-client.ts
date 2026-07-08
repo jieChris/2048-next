@@ -24,6 +24,13 @@ export interface JsonApiClientOptions {
   bases: string[];
   fetchLike?: FetchLike;
   token?: string;
+  /**
+   * Per-request timeout in milliseconds. When set (and AbortController is
+   * available) a request that neither resolves nor rejects — e.g. a backend
+   * that accepts the TCP connection but never responds — is aborted so callers
+   * never hang forever. Off by default to preserve existing behavior.
+   */
+  timeoutMs?: number;
 }
 
 export interface JsonApiClient {
@@ -74,6 +81,24 @@ export function readAuthToken(options: { storageLike?: Storage | null | undefine
   return readStorageValue(options.storageLike || null, AUTH_TOKEN_KEY) || "";
 }
 
+async function fetchWithTimeout(
+  fetchLike: FetchLike,
+  url: string,
+  init: RequestInit,
+  timeoutMs?: number
+): Promise<Awaited<ReturnType<FetchLike>>> {
+  if (!timeoutMs || typeof AbortController === "undefined") {
+    return fetchLike(url, init);
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchLike(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClient {
   const bases = Array.from(new Set(options.bases.map(normalizeBase).filter(Boolean)));
   const fetchLike =
@@ -94,7 +119,7 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
             headers.set("Content-Type", "application/json");
           }
           const allowFallback = canTryNextApiBase(requestOptions, headers);
-          const response = await fetchLike(base + path, { ...requestOptions, headers });
+          const response = await fetchWithTimeout(fetchLike, base + path, { ...requestOptions, headers }, options.timeoutMs);
           const data = (await response.json().catch(() => null)) as JsonRecord | null;
           if (data) {
             if (isUnavailableProxyPayload(data)) {

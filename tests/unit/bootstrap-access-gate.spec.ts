@@ -62,6 +62,9 @@ describe("bootstrap: access-gate", () => {
     );
     expect(dom.window.document.querySelector("[data-beta-access-gate]")).toBeNull();
     expect(dom.window.document.documentElement.getAttribute("data-beta-access-pending")).toBe("1");
+    // Paint-first gate: a definitive denial masks the already painted page
+    // for the brief moment until the redirect commits.
+    expect(dom.window.document.documentElement.hasAttribute("hidden")).toBe(true);
   });
 
   it("redirects allowlisted users without notice acceptance to the standalone notice page", async () => {
@@ -101,6 +104,7 @@ describe("bootstrap: access-gate", () => {
     expect(windowLike.location.replace).toHaveBeenCalledWith(
       "beta-access.html?gate_v=20260627-02&next=%2Fmodes.html&state=notice"
     );
+    expect(dom.window.document.documentElement.hasAttribute("hidden")).toBe(true);
   });
 
   it("reveals the protected page when beta access is already accepted", async () => {
@@ -135,6 +139,31 @@ describe("bootstrap: access-gate", () => {
     expect(result.allowed).toBe(true);
     expect(windowLike.location.replace).not.toHaveBeenCalled();
     expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+    expect(dom.window.document.documentElement.hasAttribute("hidden")).toBe(false);
+  });
+
+  it("reveals the page in a degraded mode when the access check fails transiently (no white screen)", async () => {
+    const dom = createDom();
+    const windowLike = createWindowLike(dom);
+    dom.window.localStorage.setItem("2048_auth_token_v1", "token");
+    // Simulate an unreachable backend: fetch rejects (network error / timeout).
+    const fetchLike = vi.fn(async () => {
+      throw new Error("network down");
+    });
+
+    const result = await runBetaAccessGate("play", {
+      documentLike: dom.window.document,
+      windowLike,
+      storageLike: dom.window.localStorage,
+      fetchLike: fetchLike as never
+    });
+
+    // Must not hang or wrongly redirect a valid user to "blocked"; instead the
+    // static game is revealed and the token is preserved for a later re-check.
+    expect(result.allowed).toBe(true);
+    expect(windowLike.location.replace).not.toHaveBeenCalled();
+    expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+    expect(dom.window.localStorage.getItem("2048_auth_token_v1")).toBe("token");
   });
 
   it("allows the smoke bypass only on local development hosts", async () => {
