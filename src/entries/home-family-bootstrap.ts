@@ -5,6 +5,7 @@ import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-ses
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
+import { installAchievementUnlockToastRuntime } from "../bootstrap/achievement-unlock-toast";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
 import { installBreakoutEasterEggRuntime } from "../bootstrap/breakout-easter-egg";
 import { installFlyingClickEffectRuntime } from "../bootstrap/flying-click-effect";
@@ -119,6 +120,8 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
 ]);
 const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260625-ranked-cache";
 const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
+  "core_capped_timer_scroll_runtime",
+  "capped_timer_scroll",
   "core_bgm_runtime",
   "core_night_mode_runtime",
   "core_top_button_style_runtime",
@@ -346,6 +349,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
   installBreakoutEasterEggRuntime();
+  installAchievementUnlockToastRuntime();
   installFlyingClickEffectRuntime();
   installGameOverUndoHostRuntime();
   installGridScanRuntime();

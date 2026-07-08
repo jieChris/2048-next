@@ -323,7 +323,7 @@ describe("online leaderboard terminal submission", () => {
     expect(bestContainer.textContent).toBe("4096");
   });
 
-  it("does not lower the local best score when the account record is lower", async () => {
+  it("replaces a stale higher local best score with account records", async () => {
     const storage = new MemoryStorage();
     const scoreManager = createScoreManagerStub(storage, 8192);
     const updateBestScore = vi.fn();
@@ -352,9 +352,9 @@ describe("online leaderboard terminal submission", () => {
 
     await flushRuntimePromises();
 
-    expect(scoreManager.set).not.toHaveBeenCalled();
-    expect(storage.getItem(BEST_SCORE_KEY)).toBe("8192");
-    expect(updateBestScore).not.toHaveBeenCalled();
+    expect(scoreManager.set).toHaveBeenCalledWith(4096);
+    expect(storage.getItem(BEST_SCORE_KEY)).toBe("4096");
+    expect(updateBestScore).toHaveBeenCalledWith("4096");
   });
 
   it("retries pending record submit immediately on startup even during retry backoff", async () => {
@@ -406,6 +406,34 @@ describe("online leaderboard terminal submission", () => {
           call.url.includes("mode_key=standard_4x4_pow2_no_undo")
       )
     ).toBe(true);
+  });
+
+  it("queues achievement unlock toasts returned by record submit", async () => {
+    const manager = createTerminatedManager();
+    const showAchievementUnlockToasts = vi.fn();
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({
+            success: true,
+            achievements: [{ achievement: { id: "tile_2048_count_1", name: "首次 2048" } }]
+          });
+        }
+        if (url.endsWith("/score")) {
+          return createJsonResponse({ success: true, skipped: true });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    runtime.windowLike.AchievementUnlockToastRuntime = { showAchievementUnlockToasts };
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(showAchievementUnlockToasts).toHaveBeenCalledWith([
+      { achievement: { id: "tile_2048_count_1", name: "首次 2048" } }
+    ]);
   });
 
   it("keeps old ranked pending record payloads retryable beyond the normal offline retry window", async () => {
@@ -839,11 +867,84 @@ describe("online leaderboard terminal submission", () => {
     const renderedText = collectTextContent(list);
     expect(renderedText).toContain("CachedUser");
     expect(renderedText).toContain("8192");
-    expect(runtime.fetchCalls.find((call) => call.url.includes("/leaderboard?"))?.url).toContain("limit=10");
+    expect(runtime.fetchCalls.find((call) => call.url.includes("/leaderboard?"))?.url).toContain("limit=500");
 
     refreshDeferred.resolve(createJsonResponse({ success: true, data: [] }));
     await refreshPromise;
     await flushRuntimePromises();
+  });
+
+  it("fetches enough timer leaderboard rows to render the authenticated player's own rank below top 10", async () => {
+    const storage = new MemoryStorage();
+    const topRows = Array.from({ length: 10 }, (_, index) => ({
+      user_id: index + 1,
+      nickname: `Top${index + 1}`,
+      score: 10000 - index
+    }));
+    storage.setItem(
+      TIMER_LEADERBOARD_CACHE_KEY,
+      JSON.stringify({
+        key: `${MODE_KEY}|all`,
+        rows: topRows,
+        time: Date.now() - 60_000
+      })
+    );
+
+    const list = createElementStub("div");
+    list.id = "timer-leaderboard-list";
+    const summary = createElementStub("div");
+    summary.id = "timer-leaderboard-summary";
+    const panel = createElementStub("div");
+    panel.id = "timer-leaderboard-panel";
+    const timerBox = createElementStub("div");
+    timerBox.id = "timerbox";
+    const elements: Record<string, Record<string, unknown>> = {
+      "timerbox": timerBox,
+      "timer-leaderboard-panel": panel,
+      "timer-leaderboard-summary": summary,
+      "timer-leaderboard-list": list
+    };
+    const fullRows = [
+      ...topRows,
+      {
+        user_id: 42,
+        nickname: "Hui",
+        score: 3492
+      }
+    ];
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({
+        over: false,
+        score: 0,
+        getTimerModuleViewMode: vi.fn(() => "hidden")
+      }),
+      storage,
+      fetchImpl: async (url) => {
+        if (url.includes("/leaderboard?")) {
+          const parsedUrl = new URL(url);
+          const limit = Number(parsedUrl.searchParams.get("limit") || "10");
+          return createJsonResponse({ success: true, data: fullRows.slice(0, limit) });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    runtime.storage.setItem(AUTH_USER_ID_STORAGE_KEY, "42");
+    runtime.storage.setItem("2048_auth_nickname_v1", "Hui");
+    const documentLike = runtime.windowLike.document as Record<string, unknown>;
+    documentLike.getElementById = vi.fn((id: string) => elements[id] || null);
+
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      refreshTimerLeaderboardPanel: (force?: boolean, preferCached?: boolean) => Promise<boolean>;
+    };
+    await onlineRuntime.refreshTimerLeaderboardPanel(false, true);
+
+    const requestUrl = runtime.fetchCalls.find((call) => call.url.includes("/leaderboard?"))?.url || "";
+    expect(requestUrl).toContain("limit=500");
+    const selfRow = (list.children as Array<Record<string, unknown>>)[10];
+    const selfText = collectTextContent(selfRow);
+    expect(selfText).toContain("11");
+    expect(selfText).toContain("Hui");
+    expect(selfText).toContain("3492");
   });
 
   it("leaves flying click effects to the hidden easter egg binding", async () => {

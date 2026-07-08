@@ -205,16 +205,6 @@ function resolveBreakoutDiscoveryLang(
   return normalizeUiLang(documentLike?.documentElement?.getAttribute?.("lang")) || "zh";
 }
 
-function ensureAchievementToastStyles(documentLike: BreakoutEasterEggDocumentLike | null): void {
-  if (!documentLike || typeof documentLike.createElement !== "function") return;
-  if (documentLike.querySelector?.('link[data-achievement-unlock-toast-style="1"]')) return;
-  const link = documentLike.createElement("link");
-  setAttribute(link, "data-achievement-unlock-toast-style", "1");
-  setAttribute(link, "rel", "stylesheet");
-  setAttribute(link, "href", "style/achievement_unlock_showcase.css?v=20260708-achievement-game-toast");
-  appendChild(documentLike.head || documentLike.body, link);
-}
-
 function breakoutDiscoveryToastIconMarkup(lang: "zh" | "en"): string {
   const icon = achievementIconMarkupFor({
     id: BREAKOUT_DISCOVERY_ACHIEVEMENT_ID,
@@ -233,7 +223,6 @@ function showBreakoutDiscoveryToast(
   if (!documentLike?.body || typeof documentLike.createElement !== "function") return;
   const lang = resolveBreakoutDiscoveryLang(windowLike, documentLike);
   const toastCopy = BREAKOUT_DISCOVERY_COPY[lang];
-  ensureAchievementToastStyles(documentLike);
   let host = documentLike.querySelector?.("#breakout-achievement-toast-host") || null;
   if (!host) {
     host = documentLike.createElement("div");
@@ -274,7 +263,7 @@ function submitBreakoutDiscovery(
   const storageLike = resolveLocalStorage(windowLike);
   const token = readAuthToken({ storageLike });
   if (!token) return;
-  if (readLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY)) return;
+  const hasShownLocalToast = !!readLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY);
   const fetchLike = typeof windowLike?.fetch === "function"
     ? (windowLike.fetch.bind(windowLike) as FetchLike)
     : undefined;
@@ -290,6 +279,9 @@ function submitBreakoutDiscovery(
     })
       .then((payload) => {
         if (!isSuccessPayload(payload)) return;
+        const newlyGranted = (payload as { newly_granted?: unknown }).newly_granted;
+        if (newlyGranted === false) return;
+        if (newlyGranted !== true && hasShownLocalToast) return;
         writeLocalStorageValue(windowLike, BREAKOUT_DISCOVERY_TOAST_SEEN_KEY, "1");
         showBreakoutDiscoveryToast(documentLike, windowLike);
       })

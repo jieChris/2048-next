@@ -1023,6 +1023,9 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/UserAchievement"
+                      newly_granted:
+                        type: boolean
+                        description: True only when the event unlocked this achievement during this request.
 
   /admin/achievements:
     get:

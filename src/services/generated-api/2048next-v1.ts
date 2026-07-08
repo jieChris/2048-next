@@ -1888,6 +1888,8 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
                             data?: components["schemas"]["UserAchievement"];
+                            /** @description True only when the event unlocked this achievement during this request. */
+                            newly_granted?: boolean;
                         };
                     };
                 };

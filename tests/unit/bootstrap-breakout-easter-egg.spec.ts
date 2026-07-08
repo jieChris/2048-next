@@ -411,8 +411,77 @@ describe("breakout easter egg", () => {
     expect(host?.innerHTML).toContain("打开排行榜里的弹球彩蛋。");
     expect(host?.innerHTML).not.toContain("Reward Claimed");
     expect(host?.style.zIndex).toBe("10060");
-    expect(documentLike.head.querySelector('link[data-achievement-unlock-toast-style="1"]')).not.toBeNull();
     expect(setItem).toHaveBeenCalledWith("breakout_easter_egg_discovery_toast_seen_v1", "1");
+  });
+
+  it("still submits the discovery event when a previous local toast marker exists", async () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => {
+        if (key === "2048_auth_token_v1") return "auth-token";
+        if (key === "breakout_easter_egg_discovery_toast_seen_v1") return "1";
+        return null;
+      }),
+      setItem: vi.fn(),
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true, newly_granted: true })
+    }));
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(windowLike.fetch).toHaveBeenCalledTimes(1);
+    expect(documentLike.body.querySelector("#breakout-achievement-toast-host")?.innerHTML).toContain("发现彩蛋");
+  });
+
+  it("does not show a duplicate discovery toast when the backend reports an existing achievement", async () => {
+    const target = new FakeElement("button");
+    const documentLike = createDocumentLike();
+    const windowLike = createWindowLike();
+    const setItem = vi.fn();
+    windowLike.localStorage = {
+      getItem: vi.fn((key: string) => key === "2048_auth_token_v1" ? "auth-token" : null),
+      setItem,
+      removeItem: vi.fn()
+    };
+    windowLike.fetch = vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true, newly_granted: false })
+    }));
+    windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mockReturnValue(new FakeElement("div"));
+
+    bindBreakoutEasterEgg(target, {
+      documentLike,
+      windowLike,
+      triggerCount: 1,
+      enableClickEffect: true
+    });
+
+    target.dispatch("click");
+    const triggerArgs = windowLike.CoreFlyingClickEffectRuntime.triggerFlyingClickEffect.mock.calls[0]?.[0] as {
+      onComplete?: () => void;
+    };
+    triggerArgs.onComplete?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(windowLike.fetch).toHaveBeenCalledTimes(1);
+    expect(documentLike.body.querySelector("#breakout-achievement-toast-host")).toBeNull();
+    expect(setItem).not.toHaveBeenCalledWith("breakout_easter_egg_discovery_toast_seen_v1", "1");
   });
 
   it("uses English copy for the discovery toast on English pages", async () => {

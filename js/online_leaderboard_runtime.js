@@ -160,7 +160,7 @@
     fib_4x2_undo: "fib_4x2_undo"
   };
   var TIMER_LEADERBOARD_TOP_LIMIT = 10;
-  var TIMER_LEADERBOARD_FETCH_LIMIT = 10;
+  var TIMER_LEADERBOARD_FETCH_LIMIT = 500;
   var TIMER_LEADERBOARD_PERIODS = ["all", "day", "week", "month"];
   var POLL_BASE_INTERVAL_VISIBLE_MS = 5000;
   var POLL_BASE_INTERVAL_HIDDEN_MS = 12000;
@@ -1778,6 +1778,15 @@ function shouldAutoLoadOnlineLeaderboard() {
   function renderTimerLeaderboardCacheEntry(entry) {
     var rows = entry && Array.isArray(entry.rows) ? entry.rows : [];
     var key = entry && entry.key ? entry.key : "";
+    var selfEntry = resolveSelfRank(rows);
+    var selfSignature = selfEntry
+      ? [
+        toText(selfEntry.rank).trim(),
+        toText(selfEntry.user_id).trim(),
+        toText(selfEntry.nickname).trim(),
+        Math.floor(Number(selfEntry.score) || 0)
+      ].join(":")
+      : "";
     var signature = key + "|" + rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT).map(function (row, index) {
       return [
         index,
@@ -1785,13 +1794,13 @@ function shouldAutoLoadOnlineLeaderboard() {
         toText(row && row.nickname).trim(),
         Math.floor(Number(row && row.score) || 0)
       ].join(":");
-    }).join(",");
+    }).join(",") + "|self:" + selfSignature;
     timerLeaderboardCacheRows = rows;
     timerLeaderboardCacheMode = key;
     timerLeaderboardCacheTime = entry && Number(entry.time) ? Number(entry.time) : 0;
     setTimerLeaderboardPanelLoading(false);
     if (signature && signature === timerLeaderboardRenderedSignature) return;
-    renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), resolveSelfRank(rows));
+    renderTimerLeaderboardRows(rows.slice(0, TIMER_LEADERBOARD_TOP_LIMIT), selfEntry);
     timerLeaderboardRenderedSignature = signature;
     setTimerLeaderboardPanelLoading(false);
   }
@@ -2023,6 +2032,21 @@ function shouldAutoLoadOnlineLeaderboard() {
       body: payload,
       keepalive: opts.keepalive === true
     });
+  }
+
+  function notifyAchievementUnlocks(result) {
+    if (!result || result.success !== true) return;
+    var runtime = global.AchievementUnlockToastRuntime;
+    if (!runtime || typeof runtime.showAchievementUnlockToasts !== "function") return;
+    var data = result.data && typeof result.data === "object" ? result.data : null;
+    var achievements = [];
+    if (Array.isArray(result.achievements)) achievements = result.achievements;
+    else if (data && Array.isArray(data.achievements)) achievements = data.achievements;
+    else if (data && data.achievement) achievements = [data];
+    if (achievements.length <= 0) return;
+    try {
+      runtime.showAchievementUnlockToasts(achievements);
+    } catch (_err) {}
   }
 
   function isPlainRecord(value) {
@@ -3760,6 +3784,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
+      notifyAchievementUnlocks(result);
       writeLastRecordSubmitResult(payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
       clearPendingRecordSubmitSignature();
@@ -3871,6 +3896,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     if (result && result.success) {
+      notifyAchievementUnlocks(result);
       writeLastRecordSubmitResult(pendingState.payload, result, true);
       safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, pendingState.signature);
       clearPendingRecordSubmitSignature();

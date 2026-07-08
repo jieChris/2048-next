@@ -500,6 +500,49 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.atThresholdDisplay).toBe("flex");
   });
 
+  test("standard timer secondary rows use the timer scroll window", async ({ page }) => {
+    await installRankedSessionForMode(page, "standard_4x4_pow2_no_undo", {
+      clearPrefetch: true,
+      clearSavedState: true,
+      seed: 606,
+      token: "smoke-token-standard-timer-scroll"
+    });
+
+    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Index response should exist").not.toBeNull();
+    expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
+    await waitForWindowCondition(
+      page,
+      () => Boolean((window as any).game_manager) && typeof (window as any).updateTimerScroll === "function",
+      12_000
+    );
+
+    const snapshot = await page.evaluate(async () => {
+      const manager = (window as any).game_manager;
+      if (manager && typeof manager.setTimerModuleViewMode === "function") {
+        manager.setTimerModuleViewMode("timer");
+      }
+      document.getElementById("timer8192")?.click();
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)));
+
+      const controls = document.getElementById("timer-scroll-controls") as HTMLElement | null;
+      const rows = Array.from(document.querySelectorAll("#timerbox [id^='timer-row-']")) as HTMLElement[];
+      const visibleRows = rows.filter((row) => {
+        const style = window.getComputedStyle(row);
+        return style.display !== "none" && row.getAttribute("data-secondary-hidden") !== "1";
+      });
+      return {
+        controlsDisplay: controls ? window.getComputedStyle(controls).display : null,
+        hiddenRows: rows.filter((row) => row.getAttribute("data-scroll-hidden") === "1").map((row) => row.id),
+        visibleCount: visibleRows.length
+      };
+    });
+
+    expect(snapshot.controlsDisplay).toBe("flex");
+    expect(snapshot.hiddenRows.length).toBeGreaterThan(0);
+    expect(snapshot.visibleCount).toBeLessThanOrEqual(11);
+  });
+
   test("practice save restore self-heals legacy hidden fixed timer rows on PKU and practice pages", async ({
     page
   }) => {
