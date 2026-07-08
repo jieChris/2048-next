@@ -157,6 +157,64 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(decoded.records.some((record) => record.kind === "move")).toBe(true);
   });
 
+  it("prefers live session replay over stale rescue replay strings", () => {
+    const manager = {
+      width: 2,
+      height: 2,
+      modeKey: "board_2x2_pow2_no_undo",
+      score: 16,
+      rescueReplayString: "REPLAY_v1RPL_B64_stale_rescue",
+      sessionReplayV1: {
+        supported: true,
+        board_width: 2,
+        board_height: 2,
+        init_tiles: [
+          { cellIndex: 0, valueBit: 0 },
+          { cellIndex: 3, valueBit: 1 }
+        ],
+        records: [
+          {
+            kind: "move",
+            dir: 1,
+            spawnIndex: 1,
+            spawnValueBit: 0,
+            deltaMs: 12
+          }
+        ],
+        start_unix_ms: 123456,
+        mode_key: "board_2x2_pow2_no_undo",
+        ruleset: "pow2"
+      },
+      getWindowLike: () => ({
+        btoa(value: string) {
+          return Buffer.from(value, "binary").toString("base64");
+        },
+        GameManager: {
+          REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_"
+        }
+      })
+    };
+
+    expect(serializeReplay(manager)).not.toBe("REPLAY_v1RPL_B64_stale_rescue");
+  });
+
+  it("keeps rescue replay as a serialization failure fallback", () => {
+    const manager = {
+      width: 2,
+      height: 2,
+      modeKey: "board_2x2_pow2_no_undo",
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
+      grid: createGrid(),
+      getWindowLike: () => ({
+        btoa() {
+          throw new Error("codec unavailable");
+        }
+      })
+    };
+
+    expect(serializeReplay(manager)).toBe("REPLAY_v1RPL_B64_rescue");
+  });
+
   it("records compact replay v1 move deltas instead of zero-duration moves", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);
@@ -640,7 +698,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(cappedManager.sessionSubmitDone).toBe(true);
   });
 
-  it("auto-submits terminal local history records with replay fallback evidence", () => {
+  it("auto-submits terminal local history records with live replay evidence", () => {
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
     const manager = {
@@ -673,9 +731,10 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(savedRecords).toHaveLength(1);
     expect(savedRecords[0]).toMatchObject({
       mode_key: "standard_4x4_pow2_no_undo",
-      score: 4096,
-      replay_string: "REPLAY_v1RPL_B64_rescue"
+      score: 4096
     });
+    expect(savedRecords[0].replay_string).not.toBe("REPLAY_v1RPL_B64_rescue");
+    expect(String(savedRecords[0].replay_string)).toMatch(/^REPLAY_v1RPL_B64_/);
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });
     expect(manager.sessionSubmitDone).toBe(true);
   });

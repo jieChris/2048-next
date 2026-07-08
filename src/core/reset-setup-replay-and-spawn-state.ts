@@ -3,6 +3,8 @@ export interface ResetSetupReplayAndSpawnStateManagerLike {
   replayCompactLog?: unknown;
   initialBoardMatrix?: unknown;
   replayStartBoardMatrix?: unknown;
+  rescueReplayString?: unknown;
+  lastReplayStringSavedAt?: unknown;
   rankedSessionToken?: unknown;
   clientRecordId?: unknown;
   sessionSubmitDone?: unknown;
@@ -46,6 +48,8 @@ export function resetSetupReplayAndSpawnState(
   manager.replayCompactLog = "";
   manager.initialBoardMatrix = null;
   manager.replayStartBoardMatrix = null;
+  manager.rescueReplayString = "";
+  manager.lastReplayStringSavedAt = 0;
   manager.rankedSessionToken = "";
   if (typeof operations.assignManagerClientRecordId === "function") {
     operations.assignManagerClientRecordId(manager, "");

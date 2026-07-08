@@ -1079,24 +1079,28 @@ function resolveReplayV3Actions(source: Record<string, unknown>): unknown[] {
 
 export function serializeReplay(manager: ManagerLike): string {
   const rescueReplay = String(manager.rescueReplayString || "").trim();
-  if (rescueReplay) return rescueReplay;
-  const session = resolveReplayV1SessionForSerialize(manager);
-  if (shouldSerializeReplayAsV1(manager, session)) {
-    return serializeReplayAsV1RplBase64(manager);
+  try {
+    const session = resolveReplayV1SessionForSerialize(manager);
+    if (shouldSerializeReplayAsV1(manager, session)) {
+      return serializeReplayAsV1RplBase64(manager);
+    }
+    const windowLike = toRecord(manager.getWindowLike ? asFunction<() => unknown>(manager.getWindowLike)?.call(manager) : null);
+    const payload = {
+      v: 1,
+      mode_key: manager.modeKey || manager.mode,
+      board_width: manager.width,
+      board_height: manager.height,
+      score: manager.score,
+      seed: manager.seed || manager.initialSeed,
+      successful_move_count: manager.successfulMoveCount,
+      board: getFinalBoardMatrix(manager),
+      actions: cloneJsonSafe(toRecord(manager.sessionReplayV3).actions) || []
+    };
+    return `${REPLAY_V1_RPL_BASE64_PREFIX}${encodeBase64(JSON.stringify(payload), windowLike)}`;
+  } catch (error) {
+    if (rescueReplay) return rescueReplay;
+    throw error;
   }
-  const windowLike = toRecord(manager.getWindowLike ? asFunction<() => unknown>(manager.getWindowLike)?.call(manager) : null);
-  const payload = {
-    v: 1,
-    mode_key: manager.modeKey || manager.mode,
-    board_width: manager.width,
-    board_height: manager.height,
-    score: manager.score,
-    seed: manager.seed || manager.initialSeed,
-    successful_move_count: manager.successfulMoveCount,
-    board: getFinalBoardMatrix(manager),
-    actions: cloneJsonSafe(toRecord(manager.sessionReplayV3).actions) || []
-  };
-  return `${REPLAY_V1_RPL_BASE64_PREFIX}${encodeBase64(JSON.stringify(payload), windowLike)}`;
 }
 
 export function serializeReplayV3(manager: ManagerLike): Record<string, unknown> {
