@@ -4,6 +4,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("account leaderboard only exposes score metric and ignores removed min-step filters", async ({ page }) => {
     await page.addInitScript(() => {
       (window as any).__accountMetricCalls = [];
+      (window as any).__accountLeaderboardRequests = [];
 
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -12,6 +13,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
           const parsed = new URL(rawUrl, window.location.origin);
           const metric = parsed.searchParams.get("metric") || "score";
           ((window as any).__accountMetricCalls as string[]).push(metric);
+          ((window as any).__accountLeaderboardRequests as Array<{ page: string | null; limit: string | null }>).push({
+            page: parsed.searchParams.get("page"),
+            limit: parsed.searchParams.get("limit")
+          });
 
           return new Response(
             JSON.stringify({
@@ -45,7 +50,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         (option as HTMLOptionElement).value
       );
       const calls = ((window as any).__accountMetricCalls as string[]) || [];
-      return { value, date, options, calls };
+      const requests = ((window as any).__accountLeaderboardRequests as Array<{ page: string | null; limit: string | null }>) || [];
+      const title = (document.querySelector("#account-title") as HTMLElement | null)?.textContent || "";
+      const navIds = Array.from(document.querySelectorAll(".palette-nav a")).map((node) => (node as HTMLElement).id);
+      const summaryMode = (document.querySelector("#account-summary-mode") as HTMLElement | null)?.textContent || "";
+      const summaryRefresh = (document.querySelector("#account-summary-refresh") as HTMLElement | null)?.textContent || "";
+      return { value, date, options, calls, requests, title, navIds, summaryMode, summaryRefresh };
     });
 
     expect(initialSnapshot.value).toBe("4096");
@@ -55,6 +65,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(initialSnapshot.options).toEqual(["score"]);
     expect(initialSnapshot.calls.length).toBeGreaterThan(0);
     expect(initialSnapshot.calls[0]).toBe("score");
+    expect(initialSnapshot.requests[0]).toEqual({ page: "1", limit: "500" });
+    expect(initialSnapshot.title).toBe("排行榜");
+    expect(initialSnapshot.navIds.slice(0, 2)).toEqual(["account-nav-home", "account-nav-settings"]);
+    expect(initialSnapshot.summaryMode).toContain("4x4");
+    expect(initialSnapshot.summaryRefresh).not.toBe("--");
+    await expect(page.locator("#account-board-prev")).toHaveCount(0);
+    await expect(page.locator("#account-board-page")).toHaveCount(0);
+    await expect(page.locator("#account-board-next")).toHaveCount(0);
+    await expect(page.locator(".account-auth-card")).toHaveCount(0);
+    await expect(page.locator("#account-login-btn")).toHaveCount(0);
 
     await page.evaluate(() => {
       const metricSelect = document.querySelector("#account-board-metric") as HTMLSelectElement | null;

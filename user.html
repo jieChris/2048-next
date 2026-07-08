@@ -9,10 +9,10 @@
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
   <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
-  <script src="/js/beta_access_preload.js?v=20260627-01"></script>
+  <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260608-toolkit-align" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/user_profile_page.css?v=20260606-userinfo-height" rel="stylesheet" type="text/css">
+  <link href="style/user_profile_page.css?v=20260708-summary-chevron" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn https://*.myqcloud.com; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -23,27 +23,47 @@
         <p class="palette-kicker" id="user-kicker">2048 在线中心</p>
         <h1 class="palette-title" id="user-title">用户主页</h1>
         <p class="palette-subtitle" id="user-subtitle">查看用户历史记录，可按时间或分数排序。</p>
+        <p class="user-profile-inline-info" id="user-inline-info" aria-live="polite">
+          <span id="user-label-name">昵称：</span><strong id="user-value-name">--</strong>
+          <span class="user-info-sep" aria-hidden="true">&middot;</span>
+          <span id="user-label-created">注册时间：</span><strong id="user-value-created">--</strong>
+        </p>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="2048.html" id="user-nav-home">首页</a>
         <a class="replay-button palette-nav-btn" href="account.html" id="user-nav-account">账号中心</a>
         <a class="replay-button palette-nav-btn" href="history.html" id="user-nav-history">本地历史</a>
+        <a class="replay-button palette-nav-btn" href="medal-wall.html" id="user-nav-medals">勋章墙</a>
         <button class="replay-button palette-nav-btn" id="user-nav-logout" type="button">退出账号</button>
       </nav>
     </header>
 
-    <section class="user-grid">
-      <section class="card-surface user-info-card">
-        <div class="panel-head">
-          <h2 id="user-info-heading">基础信息</h2>
+    <details class="user-summary-details" id="user-summary-details">
+      <summary class="user-summary-summary">
+        <span class="user-summary-preview" id="user-summary-preview">--</span>
+        <span class="user-summary-chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="user-summary-row" role="group" aria-label="用户摘要">
+        <div class="user-summary-card">
+          <span id="user-summary-total-label">总记录数</span>
+          <strong id="user-summary-total-value">--</strong>
         </div>
-        <div class="user-info-lines">
-          <div><span id="user-label-name">昵称：</span><strong id="user-value-name">--</strong></div>
-          <div><span id="user-label-created">创建时间：</span><strong id="user-value-created">--</strong></div>
+        <div class="user-summary-card">
+          <span id="user-summary-best-score-label">最高分</span>
+          <strong id="user-summary-best-score-value">--</strong>
         </div>
-      </section>
+        <div class="user-summary-card">
+          <span id="user-summary-best-tile-label">最大方块</span>
+          <strong id="user-summary-best-tile-value">--</strong>
+        </div>
+        <div class="user-summary-card">
+          <span id="user-summary-last-active-label">最近活跃</span>
+          <strong id="user-summary-last-active-value">--</strong>
+        </div>
+      </div>
+    </details>
 
-      <section class="card-surface user-record-card">
+    <section class="card-surface user-record-card">
         <div class="panel-head">
           <h2 id="user-record-heading">历史记录</h2>
           <div class="user-record-tools">
@@ -90,7 +110,6 @@
         </div>
         <p id="user-record-tip" class="user-tip" aria-live="polite"></p>
       </section>
-    </section>
   </main>
 
   <script type="module" src="./src/entries/user-profile.ts"></script>

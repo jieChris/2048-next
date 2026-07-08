@@ -117,6 +117,10 @@
   var recordsLoading = false;
   var expandedRecordId = "";
   var recordDetailCache = Object.create(null);
+  var summaryTotalRecords = 0;
+  var summaryBestScore = 0;
+  var summaryBestTile = 0;
+  var summaryLastActive = "";
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
   var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
     ? global.CLOUD_REPLAY_CONTRACT
@@ -235,7 +239,13 @@
       invalidUserId: "无效的用户 ID",
       userInfoFail: "用户信息加载失败",
       recordsFail: "用户记录加载失败",
-      networkError: "网络异常"
+      networkError: "网络异常",
+      summaryTotalLabel: "总记录数",
+      summaryBestScoreLabel: "最高分",
+      summaryBestTileLabel: "最大方块",
+      summaryLastActiveLabel: "最近活跃",
+      summaryPreviewEmpty: "暂无云端记录",
+      navMedals: "勋章墙"
     },
     en: {
       pageTitle: "2048 User Profile",
@@ -310,7 +320,13 @@
       invalidUserId: "Invalid user id",
       userInfoFail: "Failed to load user info",
       recordsFail: "Failed to load records",
-      networkError: "Network error"
+      networkError: "Network error",
+      summaryTotalLabel: "Total Records",
+      summaryBestScoreLabel: "Best Score",
+      summaryBestTileLabel: "Best Tile",
+      summaryLastActiveLabel: "Last Active",
+      summaryPreviewEmpty: "No cloud records yet",
+      navMedals: "Medals"
     }
   };
 
@@ -825,6 +841,7 @@
     return {
       page: rawPage,
       totalPages: rawTotalPages,
+      totalCount: rawTotal,
       hasPrev: !!hasPrev,
       hasNext: !!hasNext
     };
@@ -1927,6 +1944,50 @@
     return isOwnProfile;
   }
 
+  function buildSummaryPreviewHtml() {
+    if (summaryTotalRecords <= 0) {
+      var emptyNode = global.document.createElement("span");
+      emptyNode.textContent = t("summaryPreviewEmpty");
+      return emptyNode.outerHTML;
+    }
+    var total = String(summaryTotalRecords);
+    var best = summaryBestScore > 0 ? String(summaryBestScore) : "--";
+    if (currentLang === "en") {
+      return "<strong>" + total + "</strong> records · Best <strong>" + best + "</strong>";
+    }
+    return "共 <strong>" + total + "</strong> 条记录 · 最高分 <strong>" + best + "</strong>";
+  }
+
+  function updateSummaryCards() {
+    var totalNode = byId("user-summary-total-value");
+    var bestScoreNode = byId("user-summary-best-score-value");
+    var bestTileNode = byId("user-summary-best-tile-value");
+    var lastActiveNode = byId("user-summary-last-active-value");
+    var previewNode = byId("user-summary-preview");
+
+    if (totalNode) totalNode.textContent = summaryTotalRecords > 0 ? String(summaryTotalRecords) : "--";
+    if (bestScoreNode) bestScoreNode.textContent = summaryBestScore > 0 ? String(summaryBestScore) : "--";
+    if (bestTileNode) bestTileNode.textContent = summaryBestTile > 0 ? String(summaryBestTile) : "--";
+    if (lastActiveNode) lastActiveNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
+    if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
+  }
+
+  async function fetchSummaryData() {
+    if (!targetUserId) return;
+    var result = await getUserRecords(targetUserId, {
+      limit: 1, page: 1, sort_by: "score", order: "desc", mode: "all", status: "active"
+    });
+    if (!result || !result.success) return;
+    var meta = resolvePagerMeta(result, 1, 1, (result.data || []).length);
+    summaryTotalRecords = meta.totalCount || 0;
+    var bestRecord = Array.isArray(result.data) && result.data[0];
+    if (bestRecord) {
+      summaryBestScore = Math.floor(Number(bestRecord.score) || 0);
+      summaryBestTile = Math.floor(Number(bestRecord.best_tile) || 0);
+    }
+    updateSummaryCards();
+  }
+
   async function refreshRecords(resetPage) {
     if (!targetUserId) {
       recordsLoading = false;
@@ -2013,10 +2074,14 @@
       "user-nav-home": t("navHome"),
       "user-nav-account": t("navAccount"),
       "user-nav-history": t("navHistory"),
+      "user-nav-medals": t("navMedals"),
       "user-nav-logout": t("navLogout"),
-      "user-info-heading": t("infoHeading"),
       "user-label-name": t("labelName"),
       "user-label-created": t("labelCreated"),
+      "user-summary-total-label": t("summaryTotalLabel"),
+      "user-summary-best-score-label": t("summaryBestScoreLabel"),
+      "user-summary-best-tile-label": t("summaryBestTileLabel"),
+      "user-summary-last-active-label": t("summaryLastActiveLabel"),
       "user-record-heading": resolveRecordHeadingText(),
       "user-mode-label": currentLang === "en" ? "Mode" : "\u6a21\u5f0f",
       "user-sort-by-label": t("sortByLabel"),
@@ -2069,6 +2134,7 @@
     syncRecordDateLabel();
     syncRecordPagerUi();
     applyCurrentSortAndRender();
+    updateSummaryCards();
     setI18nReady(true);
   }
 
@@ -2165,7 +2231,12 @@
     var ownershipPromise = resolveOwnership();
     var userInfoPromise = refreshUserInfo();
     var recordsPromise = refreshRecords(true);
-    await Promise.all([ownershipPromise, userInfoPromise, recordsPromise]);
+    var summaryPromise = fetchSummaryData();
+    await Promise.all([ownershipPromise, userInfoPromise, recordsPromise, summaryPromise]);
+    if (cachedRecords.length > 0) {
+      summaryLastActive = resolveRecordDateValue(cachedRecords[0]);
+      updateSummaryCards();
+    }
   }
 
   global.UserProfilePageRuntime = {

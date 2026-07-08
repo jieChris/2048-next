@@ -37,6 +37,10 @@ body[data-page="account-hub"][data-auth-state] .account-grid {
   padding: 14px;
 }
 
+.account-board-card {
+  padding: 18px;
+}
+
 body[data-page="account-hub"][data-auth-state="guest"] .account-auth-card {
   display: grid;
   grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) minmax(320px, 360px);
@@ -356,6 +360,42 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
   color: #8a7765;
 }
 
+.account-board-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.account-summary-card {
+  min-height: 74px;
+  padding: 12px 14px;
+  border: 1px solid #dfd2c2;
+  border-radius: 10px;
+  background: rgba(255, 250, 243, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 4px 12px rgba(110, 88, 68, 0.08);
+  box-sizing: border-box;
+}
+
+.account-summary-card span {
+  display: block;
+  color: #8a7765;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-summary-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #4d4035;
+  font-size: 20px;
+  line-height: 1.15;
+  font-weight: 900;
+  word-break: break-word;
+}
+
 .account-board-filter-row {
   margin-bottom: 12px;
   border: 1px solid #e2d7ca;
@@ -483,20 +523,6 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 
 .account-board-list[data-board-state="empty"] {
   background: #fffaf3;
-}
-
-.account-board-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(154, 133, 113, 0.24);
-}
-
-.account-board-pagination .replay-button {
-  min-width: 74px;
 }
 
 .account-board-empty,
@@ -629,6 +655,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-auth-subt
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-subtitle,
 html[data-night-background="1"] body[data-page="account-hub"] .account-tip,
 html[data-night-background="1"] body[data-page="account-hub"] .account-date,
+html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card span,
 html[data-night-background="1"] body[data-page="account-hub"] .account-page-indicator {
   color: #a6b3c6;
 }
@@ -637,6 +664,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .palette-title,
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-title-wrap h2,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-title-row h2,
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-card h3,
+html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card strong,
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-grid label,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools label {
   color: #ece2d3;
@@ -646,6 +674,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .card-surface,
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-form-surface,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-card,
+html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap {
   border-color: rgba(181, 198, 221, 0.16);
@@ -657,6 +686,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-tab
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-form-surface,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-card,
+html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-list {
@@ -729,8 +759,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-too
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-pagination .replay-button {
+html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button {
   background: linear-gradient(180deg, rgba(69, 98, 130, 0.98) 0%, rgba(47, 68, 92, 0.98) 100%);
   color: #f6efe3;
   border: 1px solid rgba(181, 198, 221, 0.16);
@@ -741,8 +770,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-pag
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-pagination .replay-button:hover {
+html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button:hover {
   background: linear-gradient(180deg, rgba(84, 117, 152, 1) 0%, rgba(56, 81, 109, 1) 100%);
   color: #fff4e1;
 }
@@ -759,10 +787,6 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-head-row {
   border-bottom-color: rgba(181, 198, 221, 0.12);
   background: linear-gradient(180deg, rgba(29, 43, 66, 0.98), rgba(19, 29, 45, 0.98));
-}
-
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-pagination {
-  border-top-color: rgba(181, 198, 221, 0.12);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row + .account-board-row {
@@ -867,6 +891,18 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
     padding: 10px;
   }
 
+  .account-board-summary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .account-summary-card {
+    min-height: 64px;
+  }
+
+  .account-summary-card strong {
+    font-size: 18px;
+  }
+
   .account-board-title-row h2 {
     font-size: clamp(31px, 8vw, 36px);
     line-height: 1;
@@ -908,11 +944,6 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
 
   .account-date {
     font-size: 11px;
-  }
-
-  .account-board-pagination {
-    justify-content: center;
-    gap: 10px;
   }
 
   .account-board-row .account-rank {

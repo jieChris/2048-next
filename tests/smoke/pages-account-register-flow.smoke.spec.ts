@@ -1,7 +1,7 @@
 ﻿import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("account page exposes register entry instead of inline register action", async ({ page }) => {
+  test("account page keeps login/register actions in account settings", async ({ page }) => {
     await page.route("**/api/**", async (route) => {
       const requestUrl = new URL(route.request().url());
       const pathname = requestUrl.pathname;
@@ -27,9 +27,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
 
-    await expect(page.locator("#account-open-register-btn")).toBeVisible();
-    await expect(page.locator("#account-open-reset-password-btn")).toBeVisible();
-    await expect(page.locator("#account-nav-settings")).toBeHidden();
+    await expect(page.locator("#account-open-register-btn")).toHaveCount(0);
+    await expect(page.locator("#account-open-reset-password-btn")).toHaveCount(0);
+    await expect(page.locator("#account-login-btn")).toHaveCount(0);
+    await expect(page.locator(".account-auth-card")).toHaveCount(0);
+    await expect(page.locator("#account-nav-settings")).toBeVisible();
     await expect(page.locator("#account-register-btn")).toHaveCount(0);
     await expect(page.locator("#account-open-change-password-btn")).toHaveCount(0);
     await expect(page.locator("#account-logout-btn")).toHaveCount(0);
@@ -133,7 +135,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#register-email-code", "246810");
     await page.click("#register-submit-btn");
 
-    await page.waitForURL(/account\.html\?registered=1/, { timeout: 4000 });
+    await page.waitForURL(/account_settings\.html\?registered=1/, { timeout: 4000 });
 
     expect(registerStartCalls).toBe(1);
     expect(registerStartPayload).not.toBeNull();

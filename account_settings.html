@@ -9,15 +9,15 @@
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
   <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
-  <script src="/js/beta_access_preload.js?v=20260627-01"></script>
+  <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260608-toolkit-align" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
-  <link href="style/account_settings_page.css?v=20260321-01" rel="stylesheet" type="text/css">
+  <link href="style/account_page.css?v=20260707-leaderboard-summary" rel="stylesheet" type="text/css">
+  <link href="style/account_settings_page.css?v=20260707-auth-settings" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
-<body data-page="account-settings-hub" data-i18n-ready="0">
+<body data-page="account-settings-hub" data-auth-state="guest" data-i18n-ready="0">
   <main class="palette-page-shell account-settings-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
@@ -32,7 +32,55 @@
     </header>
 
     <section class="card-surface settings-card">
-      <section class="settings-section">
+      <section class="settings-section settings-auth-section">
+        <div class="settings-section-title-row">
+          <h2 id="account-auth-heading">账号登录</h2>
+          <span id="account-auth-state-tag" class="panel-pill">--</span>
+        </div>
+        <p id="account-auth-subtitle" class="account-auth-subtitle">登录后可同步记录并参与排行比较。</p>
+
+        <div class="account-auth-form-surface">
+          <div id="account-auth-grid" class="account-auth-grid settings-grid">
+            <div class="account-form-field">
+              <label for="account-email" id="account-email-label">邮箱</label>
+              <input id="account-email" class="account-input" type="email" placeholder="请输入邮箱">
+            </div>
+
+            <div class="account-form-field">
+              <label for="account-password" id="account-password-label">密码</label>
+              <input id="account-password" class="account-input" type="password" placeholder="请输入密码">
+            </div>
+
+            <div id="account-login-captcha-wrap" class="account-login-captcha" style="display:none;">
+              <label for="account-login-captcha-answer" id="account-login-captcha-label">图形验证码</label>
+              <div class="account-login-captcha-row">
+                <img id="account-login-captcha-image" class="account-login-captcha-image" alt="登录验证码">
+                <button id="account-login-captcha-refresh" class="replay-button account-login-captcha-refresh" type="button">刷新</button>
+              </div>
+              <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="请输入验证码">
+            </div>
+          </div>
+        </div>
+
+        <div id="account-action-row" class="account-action-row settings-action-row">
+          <button id="account-login-btn" class="replay-button" type="button">登录</button>
+          <a id="account-open-register-btn" class="account-auth-link" href="register.html">注册账号</a>
+          <a id="account-open-reset-password-btn" class="account-auth-link" href="password.html?mode=reset">忘记密码</a>
+        </div>
+
+        <p id="account-auth-tip" class="account-tip" aria-live="polite"></p>
+
+        <section class="account-user-card">
+          <h3 id="account-user-title">当前账号</h3>
+          <div class="account-user-lines">
+            <div><span id="account-user-nickname-label">昵称：</span><strong id="account-user-nickname">--</strong></div>
+            <div><span id="account-user-email-label">邮箱：</span><strong id="account-user-email">--</strong></div>
+            <div><span id="account-user-created-label">创建时间：</span><strong id="account-user-created">--</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="settings-section" data-settings-account-only>
         <h2 id="settings-nickname-heading">修改昵称</h2>
         <div class="account-auth-grid settings-grid">
           <label id="settings-current-nickname-label" for="settings-new-nickname">当前昵称</label>
@@ -49,7 +97,7 @@
         </div>
       </section>
 
-      <section class="settings-section">
+      <section class="settings-section" data-settings-account-only>
         <h2 id="settings-password-heading">修改密码</h2>
         <div class="account-auth-grid settings-grid">
           <label id="settings-current-password-label" for="settings-current-password">当前密码</label>
@@ -63,7 +111,7 @@
         </div>
       </section>
 
-      <section class="settings-section">
+      <section class="settings-section" data-settings-account-only>
         <h2 id="settings-session-heading">登录会话</h2>
         <div class="account-action-row settings-action-row">
           <button id="settings-logout-btn" class="replay-button" type="button">退出登录</button>

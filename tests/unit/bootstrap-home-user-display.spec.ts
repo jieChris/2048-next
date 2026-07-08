@@ -179,6 +179,7 @@ describe("bootstrap home user display", () => {
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette-hub" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "modes" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "user-profile" })).toBe(false);
     expect(appended).toHaveLength(0);
   });
 });

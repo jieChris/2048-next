@@ -665,7 +665,7 @@
       if (result && result.success) {
         setTip(t("registerOk"), "ok");
         global.setTimeout(function () {
-          global.location.href = "account.html?registered=1";
+          global.location.href = "account_settings.html?registered=1";
         }, 900);
         return;
       }

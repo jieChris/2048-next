@@ -61,9 +61,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
 
-    const response = await page.goto("/account.html", { waitUntil: "domcontentloaded" });
-    expect(response, "Account response should exist").not.toBeNull();
-    expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
+    const response = await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Account settings response should exist").not.toBeNull();
+    expect(response?.ok(), "Account settings response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await expect(page.locator(".account-user-card")).toBeHidden();
 
@@ -145,9 +145,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
 
-    const response = await page.goto("/account.html", { waitUntil: "domcontentloaded" });
-    expect(response, "Account response should exist").not.toBeNull();
-    expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
+    const response = await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Account settings response should exist").not.toBeNull();
+    expect(response?.ok(), "Account settings response should be 2xx").toBeTruthy();
 
     await page.fill("#account-email", "pending@example.com");
     await page.fill("#account-password", "pending_password");
@@ -225,9 +225,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       });
     });
 
-    const response = await page.goto("/account.html", { waitUntil: "domcontentloaded" });
-    expect(response, "Account response should exist").not.toBeNull();
-    expect(response?.ok(), "Account response should be 2xx").toBeTruthy();
+    const response = await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Account settings response should exist").not.toBeNull();
+    expect(response?.ok(), "Account settings response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
 
     await page.fill("#account-email", "enter@example.com");

@@ -65,7 +65,7 @@
       }
     } catch (_err) { /* localStorage unavailable or quota exceeded */ }
   })();
-  var DEFAULT_LIMIT = 8;
+  var DEFAULT_LIMIT = 500;
   var DEFAULT_BOARD_MODE = "standard_no_undo";
   var DEFAULT_BOARD_METRIC = "score";
   var DEFAULT_API_TIMEOUT_MS = 12000;
@@ -105,18 +105,16 @@
   var loginCaptchaLoading = false;
   var loginSubmitting = false;
   var leaderboardPage = 1;
-  var leaderboardTotalPages = 0;
-  var leaderboardHasPrev = false;
-  var leaderboardHasNext = false;
+  var lastLeaderboardRefreshText = "--";
 
   var COPY = {
     zh: {
       pageTitle: "2048 账号中心",
       kicker: "2048 在线中心",
-      title: "账号中心",
-      subtitle: "登录后可查看在线排行榜。",
+      title: "排行榜",
+      subtitle: "",
       navSettings: "账号设置",
-      navHome: "回首页",
+      navHome: "首页",
       navHistory: "本地历史",
       navPalette: "主题设置",
       navPractice: "练习板",
@@ -150,8 +148,10 @@
       boardLimit: "条数",
       boardRefresh: "刷新",
       boardRefreshing: "刷新中...",
-      boardPrev: "上一页",
-      boardNext: "下一页",
+      summaryUser: "当前账号",
+      summaryMode: "当前模式",
+      summaryRefresh: "最近刷新",
+      summaryAria: "排行榜概览",
       boardMetricScore: "分数",
       boardMetricMinSteps2k: "合成2K最少步数",
       boardMetricMinSteps4k: "合成4K最少步数",
@@ -184,8 +184,8 @@
     en: {
       pageTitle: "2048 Account Center",
       kicker: "2048 Online Hub",
-      title: "Account Center",
-      subtitle: "Sign in to view online rankings.",
+      title: "Leaderboard",
+      subtitle: "",
       navSettings: "Account Settings",
       navHome: "Home",
       navHistory: "Local History",
@@ -221,8 +221,10 @@
       boardLimit: "Limit",
       boardRefresh: "Refresh",
       boardRefreshing: "Refreshing...",
-      boardPrev: "Prev",
-      boardNext: "Next",
+      summaryUser: "Current User",
+      summaryMode: "Current Mode",
+      summaryRefresh: "Last Refresh",
+      summaryAria: "Leaderboard Summary",
       boardMetricScore: "Score",
       boardMetricMinSteps2k: "Fewest Steps to 2K",
       boardMetricMinSteps4k: "Fewest Steps to 4K",
@@ -488,6 +490,31 @@
     var metricSelect = byId("account-board-metric");
     var metricValue = toText(metricSelect && metricSelect.value).trim();
     return resolveLeaderboardMetric(metricValue) || DEFAULT_BOARD_METRIC;
+  }
+
+  function getSelectedModeText() {
+    var modeSelect = byId("account-board-mode");
+    if (modeSelect && modeSelect.selectedOptions && modeSelect.selectedOptions[0]) {
+      return toText(modeSelect.selectedOptions[0].textContent).trim();
+    }
+    var selectedMode = getSelectedModeBucket();
+    var lang = currentLang === "en" ? "en" : "zh";
+    for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
+      if (LEADERBOARD_MODE_OPTIONS[i].value === selectedMode) return LEADERBOARD_MODE_OPTIONS[i][lang];
+    }
+    return selectedMode || "--";
+  }
+
+  function syncLeaderboardSummary() {
+    var userNode = byId("account-summary-user");
+    var modeNode = byId("account-summary-mode");
+    var refreshNode = byId("account-summary-refresh");
+    if (userNode) {
+      var nick = toText(getNickname()).trim() || toText(byId("account-user-nickname") && byId("account-user-nickname").textContent).trim();
+      userNode.textContent = nick && nick !== "--" ? nick : (getToken() ? t("stateAuthed") : t("stateGuest"));
+    }
+    if (modeNode) modeNode.textContent = getSelectedModeText();
+    if (refreshNode) refreshNode.textContent = lastLeaderboardRefreshText;
   }
 
   function getToken() {
@@ -888,66 +915,6 @@
     return formatTimestampInBeijing(ts) || text;
   }
 
-  function resolvePagerMeta(result, fallbackPage, pageSize, itemCount) {
-    var page = Math.floor(Number(fallbackPage) || 1);
-    if (page <= 0) page = 1;
-    var size = Math.floor(Number(pageSize) || DEFAULT_LIMIT);
-    if (size <= 0) size = DEFAULT_LIMIT;
-    var count = Math.max(0, Math.floor(Number(itemCount) || 0));
-
-    var pagination = (result && (result.pagination || result.page_info || result.meta)) || {};
-    var rawPage = Math.floor(
-      Number(
-        pagination.page != null ? pagination.page :
-        pagination.current_page != null ? pagination.current_page :
-        page
-      ) || page
-    );
-    if (rawPage <= 0) rawPage = page;
-
-    var rawTotalPages = Math.floor(
-      Number(
-        pagination.total_pages != null ? pagination.total_pages :
-        pagination.pages != null ? pagination.pages :
-        pagination.page_count != null ? pagination.page_count :
-        0
-      ) || 0
-    );
-    if (rawTotalPages < 0) rawTotalPages = 0;
-
-    var hasPrev = typeof pagination.has_prev === "boolean" ? pagination.has_prev : rawPage > 1;
-    var hasNext = typeof pagination.has_next === "boolean"
-      ? pagination.has_next
-      : (rawTotalPages > 0 ? rawPage < rawTotalPages : count >= size);
-
-    return {
-      page: rawPage,
-      totalPages: rawTotalPages,
-      hasPrev: !!hasPrev,
-      hasNext: !!hasNext
-    };
-  }
-
-  function resolveBoardPageText(page, totalPages) {
-    var safePage = Math.max(1, Math.floor(Number(page) || 1));
-    var safeTotal = Math.max(0, Math.floor(Number(totalPages) || 0));
-    if (currentLang === "en") {
-      return safeTotal > 0 ? "Page " + safePage + "/" + safeTotal : "Page " + safePage;
-    }
-    return safeTotal > 0 ? "第" + safePage + "/" + safeTotal + "页" : "第" + safePage + "页";
-  }
-
-  function syncLeaderboardPagerUi() {
-    var pageNode = byId("account-board-page");
-    if (pageNode) {
-      pageNode.textContent = resolveBoardPageText(leaderboardPage, leaderboardTotalPages);
-    }
-    var prevBtn = byId("account-board-prev");
-    var nextBtn = byId("account-board-next");
-    if (prevBtn) prevBtn.disabled = !leaderboardHasPrev;
-    if (nextBtn) nextBtn.disabled = !leaderboardHasNext;
-  }
-
   function resolveServerError(result, fallbackKey) {
     var lang = currentLang === "en" ? "en" : "zh";
     var code = toText(result && result.code).trim().toUpperCase();
@@ -1109,6 +1076,7 @@
 
     modeSelect.value = prevValue;
     if (!modeSelect.value) modeSelect.value = DEFAULT_BOARD_MODE;
+    syncLeaderboardSummary();
   }
 
   function refreshMetricSelectOptions() {
@@ -1137,6 +1105,7 @@
     if (nick) nick.textContent = "--";
     if (email) email.textContent = "--";
     if (created) created.textContent = "--";
+    syncLeaderboardSummary();
   }
 
   async function refreshUserInfo(options) {
@@ -1162,6 +1131,7 @@
     if (nick) nick.textContent = toText(data.nickname || getNickname() || "--");
     if (email) email.textContent = toText(data.email || "--");
     if (created) created.textContent = formatDate(data.created_at);
+    syncLeaderboardSummary();
     return true;
   }
 
@@ -1186,7 +1156,6 @@
     var loginBtn = byId("account-login-btn");
     var registerBtn = byId("account-open-register-btn");
     var resetPasswordBtn = byId("account-open-reset-password-btn");
-    var settingsNavBtn = byId("account-nav-settings");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
 
@@ -1198,7 +1167,6 @@
     if (loginBtn) loginBtn.style.display = isAuthed ? "none" : "";
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
-    if (settingsNavBtn) settingsNavBtn.style.display = isAuthed ? "" : "none";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
 
@@ -1206,6 +1174,7 @@
       if (passwordInput) passwordInput.value = "";
       setLoginCaptchaRequiredState(false);
     }
+    syncLeaderboardSummary();
   }
 
   function setDisabledLinkState(linkNode, disabled) {
@@ -1255,9 +1224,10 @@
     var modeBucket = getSelectedModeBucket();
     var metric = getSelectedLeaderboardMetric();
     var safeLimit = DEFAULT_LIMIT;
-    if (resetPage === true) leaderboardPage = 1;
+    leaderboardPage = 1;
 
     syncLeaderboardMetricColumnHeader(metric);
+    syncLeaderboardSummary();
     setTip(boardTip, t("boardLoading"), "");
     if (boardList) boardList.setAttribute("data-board-state", "loading");
     if (refreshBtn) {
@@ -1274,22 +1244,15 @@
       }
       if (!result || !result.success) {
         renderBoardList([], leaderboardPage, safeLimit, metric, "error");
-        leaderboardHasPrev = leaderboardPage > 1;
-        leaderboardHasNext = false;
-        leaderboardTotalPages = 0;
-        syncLeaderboardPagerUi();
         setTip(boardTip, errorText, "err");
         return;
       }
 
       var list = Array.isArray(result.data) ? result.data : [];
-      var meta = resolvePagerMeta(result, leaderboardPage, safeLimit, list.length);
-      leaderboardPage = meta.page;
-      leaderboardTotalPages = meta.totalPages;
-      leaderboardHasPrev = meta.hasPrev;
-      leaderboardHasNext = meta.hasNext;
       renderBoardList(list, leaderboardPage, safeLimit, metric, list.length ? "ready" : "empty");
-      syncLeaderboardPagerUi();
+      var refreshedAt = formatTimestampInBeijing(Date.now());
+      lastLeaderboardRefreshText = refreshedAt.split(" ")[1] || refreshedAt || "--";
+      syncLeaderboardSummary();
       setTip(boardTip, t("boardUpdated"), "ok");
     } finally {
       if (refreshBtn) {
@@ -1443,13 +1406,14 @@
       "account-user-nickname-label": t("userNickname"),
       "account-user-email-label": t("userEmail"),
       "account-user-created-label": t("userCreated"),
+      "account-summary-user-label": t("summaryUser"),
+      "account-summary-mode-label": t("summaryMode"),
+      "account-summary-refresh-label": t("summaryRefresh"),
       "account-board-heading": t("boardHeading"),
       "account-board-subtitle": t("boardSubtitle"),
       "account-board-mode-label": t("boardMode"),
       "account-board-metric-label": t("boardMetric"),
       "account-board-refresh": t("boardRefresh"),
-      "account-board-prev": t("boardPrev"),
-      "account-board-next": t("boardNext"),
       "account-col-rank": t("colRank"),
       "account-col-name": t("colName"),
       "account-col-date": t("colDate")
@@ -1472,10 +1436,11 @@
     if (loginCaptchaImage) loginCaptchaImage.setAttribute("alt", t("loginCaptchaLabel"));
     var boardFilterRow = global.document.querySelector(".account-board-filter-row");
     if (boardFilterRow) boardFilterRow.setAttribute("aria-label", t("boardFilterAria"));
+    var boardSummaryRow = global.document.querySelector(".account-board-summary-row");
+    if (boardSummaryRow) boardSummaryRow.setAttribute("aria-label", t("summaryAria"));
     refreshModeSelectOptions();
     refreshMetricSelectOptions();
     syncLeaderboardMetricColumnHeader(getSelectedLeaderboardMetric());
-    syncLeaderboardPagerUi();
 
     syncAuthState();
     refreshLeaderboard();
@@ -1490,8 +1455,6 @@
     var loginCaptchaRefreshBtn = byId("account-login-captcha-refresh");
     var modeSelect = byId("account-board-mode");
     var metricSelect = byId("account-board-metric");
-    var prevBtn = byId("account-board-prev");
-    var nextBtn = byId("account-board-next");
     var emailInput = byId("account-email");
     var passwordInput = byId("account-password");
     var loginCaptchaInput = byId("account-login-captcha-answer");
@@ -1524,20 +1487,6 @@
         refreshLeaderboard(true);
       });
     }
-    if (prevBtn) {
-      prevBtn.addEventListener("click", function () {
-        if (!leaderboardHasPrev) return;
-        leaderboardPage = Math.max(1, leaderboardPage - 1);
-        refreshLeaderboard(false);
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener("click", function () {
-        if (!leaderboardHasNext) return;
-        leaderboardPage += 1;
-        refreshLeaderboard(false);
-      });
-    }
     global.addEventListener("storage", function (eventLike) {
       if (!eventLike) return;
       if (eventLike.key === UI_LANG_STORAGE_KEY) {
@@ -1556,7 +1505,6 @@
 
   function init() {
     bindEvents();
-    syncLeaderboardPagerUi();
     applyLanguage();
     syncAuthState();
     try {
