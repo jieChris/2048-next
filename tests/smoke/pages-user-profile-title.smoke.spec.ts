@@ -291,6 +291,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-details");
     });
 
+    const recordRequests: string[] = [];
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
       if (url.includes("/user/me")) {
@@ -304,7 +305,44 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
         return;
       }
+      if (url.includes("/user/9/stats")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              summary: {
+                total_records: 9,
+                best_score: 8192,
+                best_tile: 2048,
+                latest_record_at: "2026-03-18T08:00:00.000Z"
+              },
+              by_mode: [
+                {
+                  mode_bucket: "standard_no_undo",
+                  mode_key: "standard_4x4_pow2_no_undo",
+                  record_count: 3,
+                  best_score: 8192,
+                  best_tile: 2048,
+                  latest_record_at: "2026-03-17T08:00:00.000Z"
+                },
+                {
+                  mode_bucket: "fib_4x2_undo",
+                  mode_key: "fib_4x2_undo",
+                  record_count: 6,
+                  best_score: 3777,
+                  best_tile: 987,
+                  latest_record_at: "2026-03-18T08:00:00.000Z"
+                }
+              ]
+            }
+          })
+        });
+        return;
+      }
       if (url.includes("/user/9/records")) {
+        recordRequests.push(url);
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -365,7 +403,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
 
     await page.waitForSelector(".user-record-item");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("9");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("斐波那契4x2可撤回");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("6局");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最近活跃");
+    const modeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(modeOptionValues).toContain("pow2_5x5_undo");
+    expect(modeOptionValues).toContain("capped_4096");
+    expect(modeOptionValues).toContain("fib_4x2_undo");
+
     await page.selectOption("#user-record-mode", "standard_no_undo");
+    await page.selectOption("#user-record-mode", "fib_4x2_undo");
+    await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
+    await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最高分");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("3777");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
+    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("987");
     await page.locator(".user-record-row").first().click();
 
     await expect(page.locator(".user-record-detail")).toBeVisible();

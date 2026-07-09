@@ -121,6 +121,7 @@
   var summaryBestScore = 0;
   var summaryBestTile = 0;
   var summaryLastActive = "";
+  var summaryModeStats = [];
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
   var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
     ? global.CLOUD_REPLAY_CONTRACT
@@ -243,6 +244,7 @@
       recordsFail: "用户记录加载失败",
       networkError: "网络异常",
       summaryTotalLabel: "总记录数",
+      summaryRecordCountLabel: "记录数",
       summaryBestScoreLabel: "最高分",
       summaryBestTileLabel: "最大方块",
       summaryLastActiveLabel: "最近活跃",
@@ -327,6 +329,7 @@
       recordsFail: "Failed to load records",
       networkError: "Network error",
       summaryTotalLabel: "Total Records",
+      summaryRecordCountLabel: "Records",
       summaryBestScoreLabel: "Best Score",
       summaryBestTileLabel: "Best Tile",
       summaryLastActiveLabel: "Last Active",
@@ -743,6 +746,15 @@
     return apiRequest(path, { method: "GET", timeoutMs: USER_RECORDS_API_TIMEOUT_MS });
   }
 
+  function getUserStats(userId) {
+    var safeUserId = parsePositiveInt(userId);
+    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    return apiRequest("/user/" + encodeURIComponent(String(safeUserId)) + "/stats", {
+      method: "GET",
+      timeoutMs: USER_RECORDS_API_TIMEOUT_MS
+    });
+  }
+
   function deleteUserRecord(recordId) {
     var id = toText(recordId).trim();
     if (!id) return Promise.resolve({ error: "invalid record id" });
@@ -1012,6 +1024,77 @@
     return resolveModeLabel(modeBucket || modeKey);
   }
 
+  function normalizeModeBucketFromKey(modeKey) {
+    var key = toText(modeKey).trim();
+    if (key === "standard_4x4_pow2_no_undo" || key === "classic_no_undo") return "standard_no_undo";
+    if (key === "classic_4x4_pow2_undo") return "standard_undo";
+    return key;
+  }
+
+  function normalizeSummaryModeStats(rawStats) {
+    if (!Array.isArray(rawStats)) return [];
+    var out = [];
+    for (var i = 0; i < rawStats.length; i += 1) {
+      var source = rawStats[i];
+      if (!source || typeof source !== "object") continue;
+      var modeBucket = toText(source.mode_bucket || source.mode).trim();
+      var modeKey = toText(source.mode_key).trim();
+      if (!modeBucket) modeBucket = normalizeModeBucketFromKey(modeKey);
+      var recordCount = parsePositiveInt(source.record_count || source.total_records || source.records || source.count);
+      out.push({
+        mode_bucket: modeBucket,
+        mode_key: modeKey,
+        record_count: recordCount,
+        best_score: parsePositiveInt(source.best_score || source.max_score),
+        best_tile: parsePositiveInt(source.best_tile || source.max_tile),
+        latest_record_at: toText(source.latest_record_at || source.last_record_at || source.updated_at).trim()
+      });
+    }
+    return out;
+  }
+
+  function findSummaryModeStats(modeFilter) {
+    var filter = toText(modeFilter).trim().toLowerCase();
+    if (!filter || filter === "all") return null;
+    for (var i = 0; i < summaryModeStats.length; i += 1) {
+      var item = summaryModeStats[i];
+      if (toText(item && item.mode_bucket).trim().toLowerCase() === filter) return item;
+    }
+    return null;
+  }
+
+  function findMostPlayedModeStats() {
+    var best = null;
+    for (var i = 0; i < summaryModeStats.length; i += 1) {
+      var item = summaryModeStats[i];
+      if (!item || !item.record_count) continue;
+      if (!best || item.record_count > best.record_count) {
+        best = item;
+        continue;
+      }
+      if (best && item.record_count === best.record_count) {
+        var itemTime = parseDateTimeToTimestamp(item.latest_record_at);
+        var bestTime = parseDateTimeToTimestamp(best.latest_record_at);
+        if (itemTime > bestTime) best = item;
+      }
+    }
+    return best;
+  }
+
+  function formatGameCount(count) {
+    var safeCount = parsePositiveInt(count);
+    if (currentLang === "en") return safeCount === 1 ? "1 game" : String(safeCount) + " games";
+    return String(safeCount) + "\u5c40";
+  }
+
+  function escapeHtml(text) {
+    return toText(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function getModeFilterValue() {
     var mode = toText(byId("user-record-mode") && byId("user-record-mode").value).trim().toLowerCase();
     return mode || "all";
@@ -1036,13 +1119,23 @@
     }
   }
 
-  function resolveModeLabelByValue(value) {
-    var key = toText(value).trim();
+  function refreshModeSelectOptions() {
+    var modeSelect = byId("user-record-mode");
+    if (!modeSelect) return;
+
+    var previousValue = getModeFilterValue();
+    modeSelect.innerHTML = "";
+
     for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
-      var option = LEADERBOARD_MODE_OPTIONS[i];
-      if (option && option.value === key) return currentLang === "en" ? option.en : option.zh;
+      var optionDef = LEADERBOARD_MODE_OPTIONS[i];
+      var optionEl = global.document.createElement("option");
+      optionEl.value = optionDef.value;
+      optionEl.textContent = currentLang === "en" ? optionDef.en : optionDef.zh;
+      modeSelect.appendChild(optionEl);
     }
-    return resolveModeLabel(key);
+
+    modeSelect.value = previousValue;
+    if (!modeSelect.value) modeSelect.value = "all";
   }
 
   function isModeMatched(record, modeFilter) {
@@ -1997,34 +2090,100 @@
       emptyNode.textContent = t("summaryPreviewEmpty");
       return emptyNode.outerHTML;
     }
-    var total = String(summaryTotalRecords);
-    var best = summaryBestScore > 0 ? String(summaryBestScore) : "--";
-    if (currentLang === "en") {
-      return "<strong>" + total + "</strong> records · Best <strong>" + best + "</strong>";
+    var modeFilter = getModeFilterValue();
+    if (modeFilter && modeFilter !== "all") {
+      var modeStats = findSummaryModeStats(modeFilter);
+      var modeTotal = modeStats ? modeStats.record_count : 0;
+      var modeBest = modeStats && modeStats.best_score > 0 ? String(modeStats.best_score) : "--";
+      var selectedModeLabel = resolveModeLabel(modeFilter);
+      if (currentLang === "en") {
+        return escapeHtml(selectedModeLabel) + " · <strong>" + String(modeTotal) + "</strong> records · Best <strong>" + modeBest + "</strong>";
+      }
+      return escapeHtml(selectedModeLabel) + " · <strong>" + String(modeTotal) + "</strong> \u6761\u8bb0\u5f55 · \u6700\u9ad8\u5206 <strong>" + modeBest + "</strong>";
     }
-    return "共 <strong>" + total + "</strong> 条记录 · 最高分 <strong>" + best + "</strong>";
+
+    var mostPlayed = findMostPlayedModeStats();
+    if (mostPlayed) {
+      var mostPlayedLabel = resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key);
+      var mostPlayedCount = formatGameCount(mostPlayed.record_count);
+      if (currentLang === "en") {
+        return "<strong>" + String(summaryTotalRecords) + "</strong> records · Most played <strong>" + escapeHtml(mostPlayedLabel) + "</strong> " + escapeHtml(mostPlayedCount);
+      }
+      return "\u5171 <strong>" + String(summaryTotalRecords) + "</strong> \u6761\u8bb0\u5f55 · \u6700\u5e38\u73a9 <strong>" + escapeHtml(mostPlayedLabel) + "</strong> " + escapeHtml(mostPlayedCount);
+    }
+
+    var total = String(summaryTotalRecords);
+    if (currentLang === "en") {
+      return "<strong>" + total + "</strong> records";
+    }
+    return "\u5171 <strong>" + total + "</strong> \u6761\u8bb0\u5f55";
   }
 
   function updateSummaryCards() {
+    var totalLabelNode = byId("user-summary-total-label");
+    var bestScoreLabelNode = byId("user-summary-best-score-label");
+    var bestTileLabelNode = byId("user-summary-best-tile-label");
+    var lastActiveLabelNode = byId("user-summary-last-active-label");
     var totalNode = byId("user-summary-total-value");
     var bestScoreNode = byId("user-summary-best-score-value");
     var bestTileNode = byId("user-summary-best-tile-value");
     var lastActiveNode = byId("user-summary-last-active-value");
     var previewNode = byId("user-summary-preview");
+    var lastActiveCard = lastActiveNode && lastActiveNode.closest ? lastActiveNode.closest(".user-summary-card") : null;
+    var summaryRow = global.document.querySelector(".user-summary-row");
+    var modeFilter = getModeFilterValue();
 
+    if (modeFilter && modeFilter !== "all") {
+      var modeStats = findSummaryModeStats(modeFilter);
+      if (totalLabelNode) totalLabelNode.textContent = t("summaryRecordCountLabel");
+      if (bestScoreLabelNode) bestScoreLabelNode.textContent = t("summaryBestScoreLabel");
+      if (bestTileLabelNode) bestTileLabelNode.textContent = t("summaryBestTileLabel");
+      if (lastActiveLabelNode) lastActiveLabelNode.textContent = t("summaryLastActiveLabel");
+      if (lastActiveCard) lastActiveCard.style.display = "";
+      if (summaryRow) summaryRow.classList.remove("is-summary-all");
+      if (totalNode) totalNode.textContent = modeStats && modeStats.record_count > 0 ? String(modeStats.record_count) : "--";
+      if (bestScoreNode) bestScoreNode.textContent = modeStats && modeStats.best_score > 0 ? String(modeStats.best_score) : "--";
+      if (bestTileNode) bestTileNode.textContent = modeStats && modeStats.best_tile > 0 ? String(modeStats.best_tile) : "--";
+      if (lastActiveNode) lastActiveNode.textContent = modeStats && modeStats.latest_record_at ? formatDate(modeStats.latest_record_at) : "--";
+      if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
+      return;
+    }
+
+    var mostPlayed = findMostPlayedModeStats();
+    if (totalLabelNode) totalLabelNode.textContent = t("summaryTotalLabel");
+    if (bestScoreLabelNode) bestScoreLabelNode.textContent = mostPlayed ? resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key) : "--";
+    if (bestTileLabelNode) bestTileLabelNode.textContent = t("summaryLastActiveLabel");
+    if (lastActiveLabelNode) lastActiveLabelNode.textContent = "";
+    if (lastActiveCard) lastActiveCard.style.display = "none";
+    if (summaryRow) summaryRow.classList.add("is-summary-all");
     if (totalNode) totalNode.textContent = summaryTotalRecords > 0 ? String(summaryTotalRecords) : "--";
-    if (bestScoreNode) bestScoreNode.textContent = summaryBestScore > 0 ? String(summaryBestScore) : "--";
-    if (bestTileNode) bestTileNode.textContent = summaryBestTile > 0 ? String(summaryBestTile) : "--";
-    if (lastActiveNode) lastActiveNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
+    if (bestScoreNode) bestScoreNode.textContent = mostPlayed ? formatGameCount(mostPlayed.record_count) : "--";
+    if (bestTileNode) bestTileNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
+    if (lastActiveNode) lastActiveNode.textContent = "";
     if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
   }
 
   async function fetchSummaryData() {
     if (!targetUserId) return;
+    var stats = await getUserStats(targetUserId);
+    var summary = stats && stats.success && stats.data && typeof stats.data === "object"
+      ? stats.data.summary
+      : null;
+    if (summary && typeof summary === "object") {
+      summaryModeStats = normalizeSummaryModeStats(stats.data.by_mode);
+      summaryTotalRecords = parsePositiveInt(summary.total_records);
+      summaryBestScore = parsePositiveInt(summary.best_score);
+      summaryBestTile = parsePositiveInt(summary.best_tile);
+      summaryLastActive = toText(summary.latest_record_at).trim();
+      updateSummaryCards();
+      return;
+    }
+
     var result = await getUserRecords(targetUserId, {
       limit: 1, page: 1, sort_by: "score", order: "desc", mode: "all", status: "active"
     });
     if (!result || !result.success) return;
+    summaryModeStats = [];
     var meta = resolvePagerMeta(result, 1, 1, (result.data || []).length);
     summaryTotalRecords = meta.totalCount || 0;
     var bestRecord = Array.isArray(result.data) && result.data[0];
@@ -2049,6 +2208,7 @@
     renderRecordsLoadingHint();
     var requestSeq = ++recordsRequestSeq;
     activeModeFilter = getModeFilterValue();
+    updateSummaryCards();
     activeRecordVisibility = isOwnProfile ? getRecordVisibilityValue() : "active";
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
@@ -2159,14 +2319,7 @@
       sortBySelect.options[1].textContent = t("sortByScore");
     }
 
-    var modeSelect = byId("user-record-mode");
-    if (modeSelect && modeSelect.options) {
-      for (var mi = 0; mi < modeSelect.options.length; mi += 1) {
-        var modeOptionNode = modeSelect.options[mi];
-        var modeValue = toText(modeOptionNode && modeOptionNode.value).trim();
-        modeOptionNode.textContent = resolveModeLabelByValue(modeValue);
-      }
-    }
+    refreshModeSelectOptions();
 
     var orderSelect = byId("user-record-order");
     if (orderSelect && orderSelect.options && orderSelect.options.length >= 2) {
