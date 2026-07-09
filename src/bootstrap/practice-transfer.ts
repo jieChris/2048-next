@@ -246,10 +246,12 @@ export function createPracticeTransferNavigationPlan(
     nowMs: opts.nowMs
   });
   const payloadString = JSON.stringify(payload);
-  const baseUrl = buildPracticeBoardUrl({
+  const urlWithPayload = buildPracticeBoardUrl({
     token,
     practiceRuleset,
     practiceModeKey,
+    includePayload: true,
+    payload: payloadString,
     basePath: opts.basePath
   });
   const persistResult = persistPracticeTransferPayload({
@@ -268,19 +270,10 @@ export function createPracticeTransferNavigationPlan(
       payloadString,
       persisted: true,
       persistedTarget: persistResult.target,
-      openUrl: baseUrl,
-      usedPayloadInUrl: false
+      openUrl: urlWithPayload,
+      usedPayloadInUrl: true
     };
   }
-
-  const urlWithPayload = buildPracticeBoardUrl({
-    token,
-    practiceRuleset,
-    practiceModeKey,
-    includePayload: true,
-    payload: payloadString,
-    basePath: opts.basePath
-  });
   return {
     token,
     practiceRuleset,
@@ -345,7 +338,7 @@ export function buildPracticeModeConfigFromCurrent(
         ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
         : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
   const modeConfig: PracticeTransferModeConfig = {
-      key: "practice",
+    key: "practice",
     label: "练习板（直通）",
     board_width: width,
     board_height: height,
@@ -366,6 +359,7 @@ export function buildPracticeModeConfigFromCurrent(
 
   if (Number.isInteger(cfg.max_tile) && Number(cfg.max_tile) > 0) {
     modeConfig.max_tile = Number(cfg.max_tile);
+    modeConfig.special_rules.enforce_max_tile = true;
   }
   return modeConfig;
 }

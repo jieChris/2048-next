@@ -844,6 +844,7 @@ function applySavedManagerCoreState(manager, saved) {
   applySavedManagerProgressState(manager, saved);
   applySavedManagerTimerState(manager, saved);
   applySavedManagerBoardSnapshotState(manager, saved);
+  applySavedNoXSelectionState(manager, saved);
 }
 function applySavedTimerPostRestoreState(manager, saved, cappedStateForRestore) {
   if (!manager || !saved) return;
@@ -1062,6 +1063,96 @@ function buildSavedGameStateCoreStatePayload(manager) {
   };
 }
 
+function resolveSavedNoXTarget(value) {
+  var numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  var target = Math.floor(numeric);
+  return target === numeric ? target : null;
+}
+
+function resolveNoXTargetFromSavedStateSource(source) {
+  var sourceRecord = normalizeSavedStateRecordObject(source, null);
+  if (!sourceRecord) return null;
+  var directTarget = resolveSavedNoXTarget(sourceRecord.no_x_target);
+  if (directTarget !== null) return directTarget;
+  var rules = normalizeSavedStateRecordObject(sourceRecord.special_rules_snapshot, null);
+  return rules ? resolveSavedNoXTarget(rules.no_x_target) : null;
+}
+
+function resolveManagerNoXTarget(manager) {
+  if (!manager) return null;
+  var specialRules = normalizeSavedStateRecordObject(manager.specialRules, null);
+  var fromRules = specialRules ? resolveSavedNoXTarget(specialRules.no_x_target) : null;
+  if (fromRules !== null) return fromRules;
+  var modeConfig = normalizeSavedStateRecordObject(manager.modeConfig, null);
+  var modeRules = modeConfig ? normalizeSavedStateRecordObject(modeConfig.special_rules, null) : null;
+  return modeRules ? resolveSavedNoXTarget(modeRules.no_x_target) : null;
+}
+
+function isNoXManagerState(manager) {
+  if (!manager) return false;
+  var modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
+  if (modeKey.indexOf("nox_") === 0 || modeKey.indexOf("no_x") >= 0) return true;
+  var specialRules = normalizeSavedStateRecordObject(manager.specialRules, null);
+  if (specialRules && specialRules.no_x_enabled === true) return true;
+  var modeConfig = normalizeSavedStateRecordObject(manager.modeConfig, null);
+  var modeRules = modeConfig ? normalizeSavedStateRecordObject(modeConfig.special_rules, null) : null;
+  return !!(modeRules && modeRules.no_x_enabled === true);
+}
+
+function buildSavedGameStateNoXSelectionPayload(manager) {
+  if (!isNoXManagerState(manager)) return {};
+  return {
+    no_x_target: resolveManagerNoXTarget(manager),
+    no_x_selection_pending: manager.noXSelectionPending === true
+  };
+}
+
+function ensureNoXRulesObject(target) {
+  var record = normalizeSavedStateRecordObject(target, null);
+  if (!record) return null;
+  if (!normalizeSavedStateRecordObject(record.special_rules, null)) {
+    record.special_rules = {};
+  }
+  return normalizeSavedStateRecordObject(record.special_rules, null);
+}
+
+function applyNoXTargetToModeConfig(modeConfig, target) {
+  var rules = ensureNoXRulesObject(modeConfig);
+  if (!rules) return;
+  rules.no_x_enabled = true;
+  rules.no_x_target = target;
+}
+
+function applySavedNoXSelectionState(manager, saved) {
+  if (!manager || !isNoXManagerState(manager)) return;
+  var target = resolveNoXTargetFromSavedStateSource(saved);
+  if (target === null) return;
+  var pending = !!(saved && saved.no_x_selection_pending === true);
+  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
+  if (!pending) {
+    var runtime = windowLike && windowLike.CoreNoXSelectionRuntime
+      ? windowLike.CoreNoXSelectionRuntime
+      : (typeof CoreNoXSelectionRuntime !== "undefined" ? CoreNoXSelectionRuntime : null);
+    if (runtime && typeof runtime.applyNoXSelectionToManager === "function") {
+      runtime.applyNoXSelectionToManager(manager, target);
+      manager.noXPendingDefaultTarget = target;
+      manager.noXSelectionPending = false;
+      return;
+    }
+  }
+  applyNoXTargetToModeConfig(manager.modeConfig, target);
+  if (normalizeSavedStateRecordObject(manager.specialRules, null)) {
+    manager.specialRules.no_x_enabled = true;
+    manager.specialRules.no_x_target = target;
+  }
+  if (windowLike && normalizeSavedStateRecordObject(windowLike.GAME_MODE_CONFIG, null)) {
+    applyNoXTargetToModeConfig(windowLike.GAME_MODE_CONFIG, target);
+  }
+  manager.noXPendingDefaultTarget = target;
+  manager.noXSelectionPending = pending;
+}
+
 function shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions) {
   if (!manager) return false;
   if (saveOptions && saveOptions.force) return true;
@@ -1134,6 +1225,7 @@ function buildSavedGameStateBasePayload(manager, now, saveOptions) {
     {},
     buildSavedGameStateMetaPayload(manager, now),
     buildSavedGameStateCoreStatePayload(manager),
+    buildSavedGameStateNoXSelectionPayload(manager),
     buildSavedGameStateReplayStatePayload(manager, now, saveOptions),
     buildSavedGameStateTimerCorePayload(manager)
   );
@@ -1339,6 +1431,7 @@ function buildLiteSavedGameStatePayloadFallback(manager, payload) {
     {},
     buildLiteSavedGameStateMetaPayload(manager, payload),
     buildLiteSavedGameStateCoreRestorePayload(manager, payload),
+    buildSavedGameStateNoXSelectionPayload(manager),
     buildLiteSavedGameStateProgressPayload(payload),
     buildLiteSavedGameStateBoardSnapshotPayload(manager, payload),
     buildLiteSavedGameStateReplayTrimPayload(manager, payload),

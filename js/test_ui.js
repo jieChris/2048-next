@@ -272,6 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (key.indexOf("capped_") === 0 && key.indexOf("_no_undo") !== -1) return true;
     if (key.indexOf("fib_") === 0 && key.indexOf("_no_undo") !== -1) return true;
     if (key.indexOf("diag_") === 0 && key.indexOf("_no_undo") !== -1) return true;
+    if (key.indexOf("nox_") === 0 && key.indexOf("_no_undo") !== -1) return true;
     return false;
   }
 
@@ -1205,12 +1206,18 @@ document.addEventListener("DOMContentLoaded", function () {
     var modeConfig = (payload.mode_config && typeof payload.mode_config === "object")
       ? (cloneJsonSafe(payload.mode_config) || payload.mode_config)
       : null;
+    var noXTarget = Number(modeConfig && modeConfig.special_rules && modeConfig.special_rules.no_x_target);
+    var restartOptions = {
+      setPracticeRestartBase: true,
+      asReplay: false
+    };
+    if (Number.isInteger(noXTarget) && noXTarget > 0) {
+      restartOptions.noXTarget = noXTarget;
+      restartOptions.skipNoXSelection = true;
+    }
 
     try {
-      window.game_manager.restartWithBoard(board, modeConfig, {
-        setPracticeRestartBase: true,
-        asReplay: false
-      });
+      window.game_manager.restartWithBoard(board, modeConfig, restartOptions);
       window.game_manager.isTestMode = true;
       syncSelectionGridByRuleset();
       syncPracticeSetupPhaseUi();

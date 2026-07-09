@@ -128,6 +128,166 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.storedRate).toBe("25");
   });
 
+  test("NO X direct practice transfer preserves board and selected target", async ({ page }) => {
+    const response = await page.goto("/play.html?mode_key=nox_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "NO X response should exist").not.toBeNull();
+    expect(response?.ok(), "NO X response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          typeof manager.restartWithBoard === "function" &&
+          typeof manager.getFinalBoardMatrix === "function" &&
+          typeof (window as any).openPracticeBoardFromCurrent === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await expect(page.locator("#no-x-selection-overlay")).toBeVisible();
+    await page.click('[data-no-x-value="8192"]');
+    await expect(page.locator("#no-x-selection-overlay")).toHaveCount(0);
+
+    const beforeTransfer = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      return {
+        board: manager.getFinalBoardMatrix(),
+        noXTarget: Number(manager.specialRules?.no_x_target || 0)
+      };
+    });
+    expect(beforeTransfer.noXTarget).toBe(8192);
+
+    await page.evaluate(() => {
+      const originalOpen = window.open;
+      (window as any).__openedPracticeUrl = "";
+      (window as any).__restorePracticeWindowOpen = () => {
+        window.open = originalOpen;
+      };
+      window.open = ((url: string) => {
+        (window as any).__openedPracticeUrl = String(url || "");
+        return null;
+      }) as typeof window.open;
+    });
+    await page.click("#top-practice-btn");
+    const transfer = await page.evaluate(() => {
+      if (typeof (window as any).__restorePracticeWindowOpen === "function") {
+        (window as any).__restorePracticeWindowOpen();
+      }
+      const openUrl = String((window as any).__openedPracticeUrl || "");
+      const stored = window.localStorage.getItem("practice_board_transfer_v1");
+      return {
+        openUrl,
+        storedLength: stored ? stored.length : 0,
+        storedHasBoard: stored ? stored.indexOf("8192") !== -1 : false
+      };
+    });
+    expect(transfer.openUrl).toContain("Practice_board.html?practice_token=");
+    expect(transfer.openUrl).toContain("practice_mode_key=nox_4x4_pow2_no_undo");
+    expect(transfer.openUrl).toContain("practice_payload=");
+    expect(transfer.storedLength).toBeGreaterThan(0);
+    expect(transfer.storedHasBoard).toBe(true);
+
+    await page.goto(transfer.openUrl, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(manager && typeof manager.getFinalBoardMatrix === "function");
+    }, null, { timeout: 15000 });
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          return {
+            board: manager.getFinalBoardMatrix(),
+            noXTarget: Number(manager.specialRules?.no_x_target || 0),
+            noXSelectionPending: Boolean(manager.noXSelectionPending),
+            overlayCount: document.querySelectorAll("#no-x-selection-overlay").length
+          };
+        })
+      )
+      .toEqual({
+        board: beforeTransfer.board,
+        noXTarget: 8192,
+        noXSelectionPending: false,
+        overlayCount: 0
+      });
+  });
+
+  test("NO X restore keeps selected target without prompting again", async ({ page }) => {
+    const response = await page.goto("/play.html?mode_key=nox_4x4_pow2_no_undo", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "NO X response should exist").not.toBeNull();
+    expect(response?.ok(), "NO X response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return Boolean(
+        manager &&
+          typeof manager.getFinalBoardMatrix === "function" &&
+          typeof (window as any).saveGameState === "function"
+      );
+    }, null, { timeout: 15000 });
+
+    await expect(page.locator("#no-x-selection-overlay")).toBeVisible();
+    await page.click('[data-no-x-value="256"]');
+    await expect(page.locator("#no-x-selection-overlay")).toHaveCount(0);
+
+    const saved = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      (window as any).saveGameState(manager, { force: true, forceFull: true });
+      const key = "savedGameStateByMode:v1:" + String(manager.modeKey || manager.mode || "");
+      const raw = window.localStorage.getItem(key);
+      let parsed: Record<string, unknown> | null = null;
+      try {
+        parsed = raw ? JSON.parse(raw) : null;
+      } catch (_err) {
+        parsed = null;
+      }
+      return {
+        managerTarget: Number(manager.specialRules?.no_x_target || 0),
+        pending: Boolean(manager.noXSelectionPending),
+        savedTarget: Number(parsed?.no_x_target || 0),
+        savedPending: parsed?.no_x_selection_pending
+      };
+    });
+    expect(saved).toEqual({
+      managerTarget: 256,
+      pending: false,
+      savedTarget: 256,
+      savedPending: false
+    });
+
+    await page.goto("/modes.html", { waitUntil: "domcontentloaded" });
+    await page.goBack({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => Boolean((window as any).game_manager), null, {
+      timeout: 15000
+    });
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          return {
+            title: document.title,
+            managerTarget: Number(manager.specialRules?.no_x_target || 0),
+            configTarget: Number((window as any).GAME_MODE_CONFIG?.special_rules?.no_x_target || 0),
+            pending: Boolean(manager.noXSelectionPending),
+            overlayCount: document.querySelectorAll("#no-x-selection-overlay").length
+          };
+        })
+      )
+      .toEqual({
+        title: "NO-256",
+        managerTarget: 256,
+        configTarget: 256,
+        pending: false,
+        overlayCount: 0
+      });
+  });
+
   test("capped timer scroll delegates mode context resolution to runtime helper", async ({
     page
   }) => {

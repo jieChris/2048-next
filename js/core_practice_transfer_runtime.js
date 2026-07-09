@@ -140,10 +140,12 @@
       nowMs: opts.nowMs
     });
     var payloadString = JSON.stringify(payload);
-    var baseUrl = buildPracticeBoardUrl({
+    var urlWithPayload = buildPracticeBoardUrl({
       token: token,
       practiceRuleset: practiceRuleset,
       practiceModeKey: practiceModeKey,
+      includePayload: true,
+      payload: payloadString,
       basePath: opts.basePath
     });
     var persistResult = persistPracticeTransferPayload({
@@ -162,19 +164,11 @@
         payloadString: payloadString,
         persisted: true,
         persistedTarget: persistResult.target,
-        openUrl: baseUrl,
-        usedPayloadInUrl: false
+        openUrl: urlWithPayload,
+        usedPayloadInUrl: true
       };
     }
 
-    var urlWithPayload = buildPracticeBoardUrl({
-      token: token,
-      practiceRuleset: practiceRuleset,
-      practiceModeKey: practiceModeKey,
-      includePayload: true,
-      payload: payloadString,
-      basePath: opts.basePath
-    });
     return {
       token: token,
       practiceRuleset: practiceRuleset,
@@ -255,6 +249,7 @@
 
     if (Number.isInteger(cfg.max_tile) && Number(cfg.max_tile) > 0) {
       modeConfig.max_tile = Number(cfg.max_tile);
+      modeConfig.special_rules.enforce_max_tile = true;
     }
     return modeConfig;
   }

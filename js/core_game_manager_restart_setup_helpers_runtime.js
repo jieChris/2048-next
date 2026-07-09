@@ -267,13 +267,16 @@ function restartWithSeed(manager, seed, modeConfig) {
 }
 
 function createRestartWithBoardSetupArgs(modeConfig, normalizedOptions) {
+  var setupOptions = {
+    skipStartTiles: true,
+    modeConfig: modeConfig,
+    disableStateRestore: true
+  };
+  if (normalizedOptions.skipNoXSelection === true) setupOptions.skipNoXSelection = true;
+  if (normalizedOptions.noXTarget !== undefined) setupOptions.noXTarget = normalizedOptions.noXTarget;
   return {
     setupSeed: normalizedOptions.asReplay ? 0 : undefined,
-    setupOptions: {
-      skipStartTiles: true,
-      modeConfig: modeConfig,
-      disableStateRestore: true
-    }
+    setupOptions: setupOptions
   };
 }
 

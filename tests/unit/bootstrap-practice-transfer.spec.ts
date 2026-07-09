@@ -60,19 +60,22 @@ describe("bootstrap practice transfer", () => {
   });
 
   it("adds max_tile only when valid positive integer", () => {
-    const withMax = buildPracticeModeConfigFromCurrent({
-      gameModeConfig: {
-        max_tile: 4096
-      }
-    });
+    const cappedValues = [64, 1024, 2048, 4096];
     const withoutMax = buildPracticeModeConfigFromCurrent({
       gameModeConfig: {
         max_tile: 0
       }
     });
 
-    expect(withMax.max_tile).toBe(4096);
+    for (const maxTile of cappedValues) {
+      const withMax = buildPracticeModeConfigFromCurrent({
+        gameModeConfig: { max_tile: maxTile }
+      });
+      expect(withMax.max_tile).toBe(maxTile);
+      expect(withMax.special_rules.enforce_max_tile).toBe(true);
+    }
     expect("max_tile" in withoutMax).toBe(false);
+    expect(withoutMax.special_rules.enforce_max_tile).not.toBe(true);
   });
 
   it("clones mutable payload fields", () => {
@@ -249,11 +252,12 @@ describe("bootstrap practice transfer", () => {
     expect(plan.token).toBe("p1700000000000_4fzzzx");
     expect(plan.persisted).toBe(true);
     expect(plan.persistedTarget).toBe("local");
-    expect(plan.usedPayloadInUrl).toBe(false);
+    expect(plan.usedPayloadInUrl).toBe(true);
     expect(plan.practiceRuleset).toBe("pow2");
     expect(plan.openUrl).toContain("Practice_board.html");
     expect(plan.openUrl).toContain("practice_token=p1700000000000_4fzzzx");
     expect(plan.openUrl).toContain("practice_ruleset=pow2");
+    expect(plan.openUrl).toContain("practice_payload=");
     expect(plan.openUrl).not.toContain("practice_guide_seen");
     expect(writes).toEqual(["local:practice_board_transfer_v1:" + plan.payloadString]);
   });

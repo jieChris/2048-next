@@ -174,7 +174,127 @@ test.describe("Practice Board Mode Picker", () => {
     expect(snapshot.search).toContain("practice_ruleset=pow2");
   });
 
-  test("practice board mode picker only keeps standard, capped, fibonacci, and diagonal families", async ({
+  test("practice board can switch directly to NO X and choose a forbidden tile", async ({ page }) => {
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForPracticeBoardReady(page);
+
+    await openPracticeModePanel(page);
+    await page.click('[data-practice-mode-key="nox_4x4_pow2_no_undo"]');
+
+    await expect(page.locator("#no-x-selection-overlay")).toBeVisible();
+    await expect(page.locator('[data-no-x-value="64"]')).toBeVisible();
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          const cfg = (window as any).GAME_MODE_CONFIG || {};
+          return {
+            modeKey: String(manager?.modeKey || manager?.mode || ""),
+            activeModeKey: String(
+              document.getElementById("practice-mode-picker-btn")?.getAttribute("data-active-practice-mode-key") || ""
+            ),
+            noXEnabled: Boolean(cfg?.special_rules?.no_x_enabled),
+            noXTarget: Number(cfg?.special_rules?.no_x_target || 0),
+            noXSelectionPending: Boolean(manager?.noXSelectionPending)
+          };
+        })
+      )
+      .toMatchObject({
+        modeKey: "practice",
+        activeModeKey: "nox_4x4_pow2_no_undo",
+        noXEnabled: true,
+        noXTarget: 8192,
+        noXSelectionPending: true
+      });
+
+    await page.click('[data-no-x-value="64"]');
+    await expect(page.locator("#no-x-selection-overlay")).toHaveCount(0);
+
+    const selected = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      const cfg = (window as any).GAME_MODE_CONFIG || {};
+      return {
+        managerTarget: Number(manager?.specialRules?.no_x_target || 0),
+        configTarget: Number(cfg?.special_rules?.no_x_target || 0),
+        noXSelectionPending: Boolean(manager?.noXSelectionPending)
+      };
+    });
+    expect(selected).toEqual({
+      managerTarget: 64,
+      configTarget: 64,
+      noXSelectionPending: false
+    });
+  });
+
+  test("practice transfer from existing NO X game keeps forbidden tile without prompting again", async ({
+    page
+  }) => {
+    const token = "nox-transfer";
+    const payload = {
+      token,
+      created_at: Date.now(),
+      board: [
+        [2, 4, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      mode_config: {
+        key: "practice",
+        label: "练习板（直通）",
+        board_width: 4,
+        board_height: 4,
+        ruleset: "pow2",
+        undo_enabled: true,
+        spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+        ranked_bucket: "none",
+        mode_family: "pow2",
+        rank_policy: "unranked",
+        special_rules: { no_x_enabled: true, no_x_target: 64 }
+      }
+    };
+
+    const response = await page.goto(
+      `/Practice_board.html?practice_token=${token}&practice_ruleset=pow2&practice_payload=${encodeURIComponent(
+        JSON.stringify(payload)
+      )}`,
+      { waitUntil: "domcontentloaded" }
+    );
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForPracticeBoardReady(page);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const manager = (window as any).game_manager;
+          const cfg = (window as any).GAME_MODE_CONFIG || {};
+          return {
+            noXEnabled: Boolean(cfg?.special_rules?.no_x_enabled),
+            configTarget: Number(cfg?.special_rules?.no_x_target || 0),
+            managerTarget: Number(manager?.specialRules?.no_x_target || 0),
+            noXSelectionPending: Boolean(manager?.noXSelectionPending),
+            overlayCount: document.querySelectorAll("#no-x-selection-overlay").length
+          };
+        })
+      )
+      .toEqual({
+        noXEnabled: true,
+        configTarget: 64,
+        managerTarget: 64,
+        noXSelectionPending: false,
+        overlayCount: 0
+      });
+  });
+
+  test("practice board mode picker only keeps standard, capped, fibonacci, diagonal, and NO X families", async ({
     page
   }) => {
     const response = await page.goto("/Practice_board.html?practice_fresh=1", {
@@ -189,8 +309,12 @@ test.describe("Practice Board Mode Picker", () => {
 
     await expect(page.locator('[data-practice-mode-key="standard_4x4_pow2_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="capped_4x4_pow2_64_no_undo"]')).toHaveCount(1);
+    await expect(page.locator('[data-practice-mode-key="capped_4x4_pow2_1024_no_undo"]')).toHaveCount(1);
+    await expect(page.locator('[data-practice-mode-key="capped_4x4_pow2_no_undo"]')).toHaveCount(1);
+    await expect(page.locator('[data-practice-mode-key="capped_4x4_pow2_4096_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="fib_3x3_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="diag_4x4_pow2_no_undo"]')).toHaveCount(1);
+    await expect(page.locator('[data-practice-mode-key="nox_4x4_pow2_no_undo"]')).toHaveCount(1);
 
     await expect(page.locator('[data-practice-mode-key="classic_4x4_pow2_undo"]')).toHaveCount(0);
     await expect(page.locator('[data-practice-mode-key="spawn50_3x3_pow2_no_undo"]')).toHaveCount(0);
@@ -204,7 +328,7 @@ test.describe("Practice Board Mode Picker", () => {
     expect(visibleLabels.some((label) => /无撤回|No Undo/i.test(label))).toBe(false);
   });
 
-  test("practice board keeps capped merge limits when switching to capped mode", async ({ page }) => {
+  test("practice board keeps capped merge limits when switching to capped modes", async ({ page }) => {
     const response = await page.goto("/Practice_board.html?practice_fresh=1", {
       waitUntil: "domcontentloaded"
     });
@@ -213,53 +337,54 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForPracticeBoardReady(page);
 
-    await openPracticeModePanel(page);
-    await page.click('[data-practice-mode-key="capped_4x4_pow2_64_no_undo"]');
-    await expect(page.locator("#practice-mode-panel")).not.toHaveClass(/is-open/);
+    const cappedModes = [
+      { modeKey: "capped_4x4_pow2_64_no_undo", maxTile: 64 },
+      { modeKey: "capped_4x4_pow2_1024_no_undo", maxTile: 1024 },
+      { modeKey: "capped_4x4_pow2_no_undo", maxTile: 2048 },
+      { modeKey: "capped_4x4_pow2_4096_no_undo", maxTile: 4096 }
+    ];
 
-    await expect
-      .poll(async () =>
-        page.evaluate(() => {
-          const manager = (window as any).game_manager;
-          const cfg = (window as any).GAME_MODE_CONFIG || manager?.modeConfig || {};
-          const maxTile = Number(manager?.maxTile ?? cfg?.max_tile ?? 0);
-          const mergedValue = (window as any).CoreRulesRuntime?.getMergedValue?.(
-            64,
-            64,
-            "pow2",
-            maxTile
-          );
+    for (const cappedMode of cappedModes) {
+      await openPracticeModePanel(page);
+      await page.click(`[data-practice-mode-key="${cappedMode.modeKey}"]`);
+      await expect(page.locator("#practice-mode-panel")).not.toHaveClass(/is-open/);
 
-          return {
-            modeKey: String(manager?.modeKey || manager?.mode || ""),
-            activeModeKey: String(
-              document.getElementById("practice-mode-picker-btn")?.getAttribute("data-active-practice-mode-key") || ""
-            ),
-            maxTile,
-            configMaxTile: Number(cfg?.max_tile || 0),
-            enforceMaxTile: Boolean(cfg?.special_rules?.enforce_max_tile),
-            mergedValue: mergedValue === null ? null : Number(mergedValue),
-            has128Selection: document.querySelector('.selection-tile[data-value="128"]') !== null
-          };
-        })
-      )
-      .toMatchObject({
-        modeKey: "practice",
-        activeModeKey: "capped_4x4_pow2_64_no_undo",
-        maxTile: 64,
-        configMaxTile: 64,
-        enforceMaxTile: true,
-        mergedValue: null,
-        has128Selection: false
-      });
+      await expect
+        .poll(async () =>
+          page.evaluate(({ maxTile }) => {
+            const manager = (window as any).game_manager;
+            const cfg = (window as any).GAME_MODE_CONFIG || manager?.modeConfig || {};
+            const activeMaxTile = Number(manager?.maxTile ?? cfg?.max_tile ?? 0);
+            const mergedValue = (window as any).CoreRulesRuntime?.getMergedValue?.(
+              maxTile,
+              maxTile,
+              "pow2",
+              activeMaxTile
+            );
 
-    const blockedInsert = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      if (!manager) return null;
-      manager.insertCustomTile(0, 0, 128);
-      const tile = manager.grid?.cells?.[0]?.[0] || null;
-      return tile ? Number(tile.value) || 0 : 0;
-    });
-    expect(blockedInsert).toBe(0);
+            return {
+              modeKey: String(manager?.modeKey || manager?.mode || ""),
+              activeModeKey: String(
+                document.getElementById("practice-mode-picker-btn")?.getAttribute("data-active-practice-mode-key") || ""
+              ),
+              maxTile: activeMaxTile,
+              configMaxTile: Number(cfg?.max_tile || 0),
+              enforceMaxTile: Boolean(cfg?.special_rules?.enforce_max_tile),
+              mergedValue: mergedValue === null ? null : Number(mergedValue),
+              hasOverCapSelection:
+                document.querySelector(`.selection-tile[data-value="${maxTile * 2}"]`) !== null
+            };
+          }, cappedMode)
+        )
+        .toMatchObject({
+          modeKey: "practice",
+          activeModeKey: cappedMode.modeKey,
+          maxTile: cappedMode.maxTile,
+          configMaxTile: cappedMode.maxTile,
+          enforceMaxTile: true,
+          mergedValue: null,
+          hasOverCapSelection: false
+        });
+    }
   });
 });

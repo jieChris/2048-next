@@ -107,6 +107,11 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
       cappedState: Record<string, unknown>
     ) => void;
     buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStateNoXSelectionPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    applySavedNoXSelectionState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>
+    ) => void;
     buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
     resolveReplayStringForSavedPayload: (
       manager: Record<string, unknown>,
@@ -409,6 +414,55 @@ describe("core game manager saved state runtime", () => {
 
     expect(runtime.resolveLegacySecondaryTimerSubStateFromRows(rows)).toBe(resolved);
     expect(resolveLegacySecondaryTimerSubStateFromRows).toHaveBeenCalledWith(rows);
+  });
+
+  it("persists and restores selected NO X target without reopening selection", () => {
+    const runtime = loadSavedStateRuntime([]);
+    const manager = {
+      modeKey: "nox_4x4_pow2_no_undo",
+      mode: "nox_4x4_pow2_no_undo",
+      specialRules: { no_x_enabled: true, no_x_target: 256 },
+      modeConfig: {
+        key: "nox_4x4_pow2_no_undo",
+        special_rules: { no_x_enabled: true, no_x_target: 256 }
+      },
+      noXSelectionPending: false
+    };
+
+    expect(runtime.buildSavedGameStateNoXSelectionPayload(manager)).toEqual({
+      no_x_target: 256,
+      no_x_selection_pending: false
+    });
+
+    const windowLike = {
+      GAME_MODE_CONFIG: {
+        key: "nox_4x4_pow2_no_undo",
+        special_rules: { no_x_enabled: true, no_x_target: 8192 }
+      }
+    };
+    const restoredManager = {
+      modeKey: "nox_4x4_pow2_no_undo",
+      mode: "nox_4x4_pow2_no_undo",
+      specialRules: { no_x_enabled: true, no_x_target: 8192 },
+      modeConfig: {
+        key: "nox_4x4_pow2_no_undo",
+        special_rules: { no_x_enabled: true, no_x_target: 8192 }
+      },
+      noXSelectionPending: true,
+      getWindowLike() {
+        return windowLike;
+      }
+    };
+
+    runtime.applySavedNoXSelectionState(restoredManager, {
+      no_x_target: 256,
+      no_x_selection_pending: false
+    });
+
+    expect(restoredManager.noXSelectionPending).toBe(false);
+    expect(restoredManager.specialRules.no_x_target).toBe(256);
+    expect(restoredManager.modeConfig.special_rules.no_x_target).toBe(256);
+    expect(windowLike.GAME_MODE_CONFIG.special_rules.no_x_target).toBe(256);
   });
 
   it("delegates saved timer sub-state composition to the TypeScript runtime", () => {
