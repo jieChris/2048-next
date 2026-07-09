@@ -13,6 +13,7 @@ describe("achievement icon markup", () => {
     expect(markup).toContain("egg-yolk-easter_egg_breakout_discovered");
     expect(markup).toContain("achievement-easter-egg-full");
     expect(markup).toContain("achievement-easter-egg-top");
+    expect(markup).toContain('width="96" height="96"');
     expect(markup).toContain("rotate(-10 20 49)");
     expect(markup).toContain("#edc22e");
     expect(markup).toContain("#3db3d8");

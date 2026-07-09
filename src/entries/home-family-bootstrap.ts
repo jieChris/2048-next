@@ -348,8 +348,8 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installGameManagerRuntimeAccessorHelpersRuntime();
   installAdminRescueClientServiceBoundary();
   installDirectionLockRuntime();
-  installBreakoutEasterEggRuntime();
   installAchievementUnlockToastRuntime();
+  installBreakoutEasterEggRuntime();
   installFlyingClickEffectRuntime();
   installGameOverUndoHostRuntime();
   installGridScanRuntime();

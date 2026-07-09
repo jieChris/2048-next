@@ -52,7 +52,7 @@ function milestoneIcon(item: AchievementIconItem): string {
   const id = svgId(item.id);
   const count = item.count === 1 ? "x1" : `x${item.count}`;
   return `
-    <svg viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+    <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
       <defs>
         <radialGradient id="badge-${id}" cx="35%" cy="28%" r="78%">
           <stop offset="0" stop-color="#ffffff"/>
@@ -78,7 +78,7 @@ function speedrunIcon(item: AchievementIconItem): string {
   const id = svgId(item.id);
   const marker = item.level >= 5 ? "S+" : item.level >= 4 ? "S" : item.level >= 3 ? "A" : item.level >= 2 ? "B" : "C";
   return `
-    <svg viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+    <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
       <defs>
         <radialGradient id="speed-${id}" cx="35%" cy="28%" r="78%">
           <stop offset="0" stop-color="#ffffff"/>
@@ -107,7 +107,7 @@ function speedrunIcon(item: AchievementIconItem): string {
 function communityIcon(item: AchievementIconItem): string {
   const id = svgId(item.id);
   return `
-    <svg viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+    <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
       <defs>
         <linearGradient id="community-${id}" x1="24" y1="30" x2="72" y2="64" gradientUnits="userSpaceOnUse">
           <stop offset="0" stop-color="#f8e58d"/>
@@ -143,7 +143,7 @@ function communityIcon(item: AchievementIconItem): string {
 function easterEggIcon(item: AchievementIconItem): string {
   const id = svgId(item.id);
   return `
-    <svg viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+    <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
       <defs>
         <radialGradient id="egg-yolk-${id}" cx="36%" cy="24%" r="78%">
           <stop offset="0" stop-color="#fff8df"/>

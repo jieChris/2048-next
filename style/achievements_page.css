@@ -191,6 +191,12 @@ body[data-page="achievements"] {
   background-clip: text;
 }
 
+.achievements-stat:nth-child(3) strong {
+  font-size: 15px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .achievements-stat span {
   display: block;
   margin-top: 4px;
@@ -212,6 +218,9 @@ body[data-page="achievements"] {
 
 .achievement-showcase-slot {
   position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
   min-height: 136px;
   padding: 14px;
   border: 1px solid rgba(210, 185, 145, 0.52);
@@ -223,6 +232,7 @@ body[data-page="achievements"] {
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
     0 6px 20px rgba(140, 110, 60, 0.05);
   transition: transform 0.22s ease, box-shadow 0.22s ease;
+  text-align: center;
 }
 
 .achievement-showcase-slot:hover {

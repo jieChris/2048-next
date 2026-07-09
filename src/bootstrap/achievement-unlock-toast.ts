@@ -6,6 +6,7 @@ interface AchievementToastWindowLike {
   UII18N?: { getLanguage?: () => string } | null;
   clearTimeout?: (id: number) => unknown;
   localStorage?: Storage | null;
+  requestAnimationFrame?: (handler: () => void) => number;
   setTimeout?: (handler: () => void, timeout?: number) => number;
 }
 
@@ -130,10 +131,12 @@ function toastTitle(achievement: Record<string, unknown>, lang: "zh" | "en"): st
 
 function renderIcon(achievement: Record<string, unknown>, lang: "zh" | "en"): string {
   const icon = achievementIconMarkupFor(achievement);
-  if (icon) return icon;
+  if (icon) return '<span class="achievement-toast-icon-box">' + icon + "</span>";
   const iconUrl = toText(achievement.icon_url || achievement.iconUrl);
-  if (iconUrl) return '<img src="' + escapeHtml(iconUrl) + '" alt="">';
-  return escapeHtml(achievementName(achievement, lang).slice(0, 1) || (lang === "en" ? "A" : "成"));
+  if (iconUrl) return '<span class="achievement-toast-icon-box"><img src="' + escapeHtml(iconUrl) + '" alt=""></span>';
+  return '<span class="achievement-toast-icon-box">' +
+    escapeHtml(achievementName(achievement, lang).slice(0, 1) || (lang === "en" ? "A" : "成")) +
+    "</span>";
 }
 
 function host(documentLike: AchievementToastDocumentLike | null): HTMLElement | null {
@@ -150,6 +153,46 @@ function host(documentLike: AchievementToastDocumentLike | null): HTMLElement | 
     documentLike.body.append(node);
   }
   return node;
+}
+
+function placeToastAboveGameBoard(
+  node: HTMLElement,
+  windowLike: AchievementToastWindowLike | null,
+  documentLike: AchievementToastDocumentLike | null
+): void {
+  const apply = () => {
+    const toast = node.querySelector<HTMLElement>(".unlock-toast");
+    const game = documentLike?.body?.querySelector<HTMLElement>(".game-container");
+    if (!toast || !game) return;
+    const toastRect = toast.getBoundingClientRect();
+    const toastHeight = Math.max(toast.offsetHeight || 0, toastRect.height);
+    const viewportWidth = documentLike?.documentElement?.clientWidth || documentLike?.body?.clientWidth || 0;
+    const toastWidth = Math.max(0, Math.min(650, viewportWidth - 34));
+    if (documentLike?.body?.querySelector('[data-breakout-easter-egg-overlay="1"]')) {
+      node.style.setProperty("--achievement-unlock-toast-left", (viewportWidth / 2).toFixed(2) + "px");
+      node.style.setProperty("--achievement-unlock-toast-top", "56px");
+      node.style.setProperty("--achievement-unlock-toast-width", toastWidth.toFixed(2) + "px");
+      return;
+    }
+    const gameRect = game.getBoundingClientRect();
+    if (toastHeight <= 0 || gameRect.width <= 0 || gameRect.top <= 0) return;
+    const toastLeft = gameRect.left + gameRect.width / 2;
+    const toastTop = Math.max(12, Math.floor(gameRect.top - toastHeight - 3));
+    node.style.setProperty("--achievement-unlock-toast-left", toastLeft.toFixed(2) + "px");
+    node.style.setProperty("--achievement-unlock-toast-top", toastTop + "px");
+    node.style.setProperty("--achievement-unlock-toast-width", toastWidth.toFixed(2) + "px");
+  };
+  apply();
+  if (typeof windowLike?.requestAnimationFrame === "function") {
+    windowLike.requestAnimationFrame(apply);
+  } else {
+    const setTimer = windowLike?.setTimeout || setTimeout;
+    setTimer(apply, 0);
+  }
+  const setTimer = windowLike?.setTimeout || setTimeout;
+  setTimer(apply, 80);
+  setTimer(apply, 240);
+  setTimer(apply, 600);
 }
 
 function render(
@@ -177,6 +220,7 @@ function render(
         "</div>" +
       "</div>" +
     "</article>";
+  placeToastAboveGameBoard(node, windowLike, documentLike);
 }
 
 function showNext(windowLike: AchievementToastWindowLike | null, documentLike: AchievementToastDocumentLike | null): void {
@@ -202,21 +246,19 @@ export function installAchievementUnlockToastRuntime(options: {
   const windowLike = options.windowLike || (typeof window === "undefined" ? null : window as AchievementToastWindowLike);
   const documentLike = options.documentLike || (typeof document === "undefined" ? null : document as AchievementToastDocumentLike);
   if (!windowLike) return null;
-  if (!windowLike.AchievementUnlockToastRuntime) {
-    windowLike.AchievementUnlockToastRuntime = {
-      showAchievementUnlockToast(item) {
-        this.showAchievementUnlockToasts([item]);
-      },
-      showAchievementUnlockToasts(items) {
-        const raw = Array.isArray(items) ? items : [items];
-        const achievements = raw.map(unwrapAchievement).filter((item): item is Record<string, unknown> => !!item);
-        if (achievements.length <= 0) return;
-        const clearTimer = windowLike.clearTimeout || clearTimeout;
-        if (!showing && timer) clearTimer(timer);
-        queue = queue.concat(achievements).slice(-10);
-        if (!showing) showNext(windowLike, documentLike);
-      }
-    };
-  }
+  windowLike.AchievementUnlockToastRuntime = {
+    showAchievementUnlockToast(item) {
+      this.showAchievementUnlockToasts([item]);
+    },
+    showAchievementUnlockToasts(items) {
+      const raw = Array.isArray(items) ? items : [items];
+      const achievements = raw.map(unwrapAchievement).filter((item): item is Record<string, unknown> => !!item);
+      if (achievements.length <= 0) return;
+      const clearTimer = windowLike.clearTimeout || clearTimeout;
+      if (!showing && timer) clearTimer(timer);
+      queue = queue.concat(achievements).slice(-10);
+      if (!showing) showNext(windowLike, documentLike);
+    }
+  };
   return windowLike.AchievementUnlockToastRuntime || null;
 }

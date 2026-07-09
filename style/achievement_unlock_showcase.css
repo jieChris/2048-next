@@ -16,6 +16,12 @@
   transform-origin: center top;
 }
 
+#global-achievement-unlock-toast-host .unlock-toast {
+  left: var(--achievement-unlock-toast-left, 50%);
+  top: var(--achievement-unlock-toast-top, 24px);
+  width: var(--achievement-unlock-toast-width, min(650px, calc(100% - 34px)));
+}
+
 .unlock-toast * {
   box-sizing: border-box;
 }
@@ -34,6 +40,43 @@
   flex: 0 0 auto;
   font-weight: 900;
   line-height: 1;
+  overflow: hidden;
+}
+
+.unlock-badge > svg,
+.unlock-badge > img,
+.unlock-badge .achievement-badge {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.unlock-badge > img {
+  object-fit: contain;
+}
+
+.achievement-toast-icon-box {
+  display: grid;
+  place-items: center;
+  width: min(96px, 100%);
+  height: min(96px, 100%);
+  overflow: hidden;
+}
+
+.achievement-toast-icon-box > svg,
+.achievement-toast-icon-box > img,
+.achievement-toast-icon-box .achievement-badge {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.achievement-toast-icon-box > img {
+  object-fit: contain;
 }
 
 .unlock-toast--codepen {
@@ -94,7 +137,7 @@
 .unlock-toast--codepen .unlock-toast-name {
   position: absolute;
   left: 0;
-  top: 17px;
+  top: 23px;
   width: 100%;
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
@@ -141,12 +184,12 @@
 
 .unlock-toast--codepen-milestone .unlock-toast-name,
 .unlock-toast--codepen-reward .unlock-toast-name {
-  top: 16px;
+  top: 22px;
   font-size: 25px;
 }
 
 .unlock-toast--codepen-milestone .unlock-toast-name {
-  top: 20px;
+  top: 26px;
 }
 
 .unlock-toast--codepen-milestone .unlock-toast-desc,
@@ -169,12 +212,19 @@
 }
 
 .unlock-toast--easter-egg .unlock-badge {
-  background: transparent;
-  box-shadow: none;
+  left: 0;
+  top: 0;
+  width: 128px;
+  height: 128px;
   animation: unlock-easter-egg-badge 3.6s ease both;
 }
 
 .unlock-toast--easter-egg .unlock-toast-content {
+  left: 50px;
+  right: 0;
+  top: 25px;
+  width: auto;
+  height: 78px;
   animation: unlock-easter-egg-content 3.6s ease both;
 }
 
@@ -356,9 +406,10 @@
   }
 
   .unlock-toast--codepen .unlock-toast-name {
-    top: 16px;
+    top: 22px;
     font-size: 23px;
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -56,6 +56,9 @@ export interface BreakoutEasterEggMessageEventLike {
 }
 
 export interface BreakoutEasterEggWindowLike {
+  AchievementUnlockToastRuntime?: {
+    showAchievementUnlockToast?: (item: unknown) => unknown;
+  } | null;
   CoreBreakoutEasterEggRuntime?: BreakoutEasterEggRuntime;
   CoreFlyingClickEffectRuntime?: {
     triggerFlyingClickEffect?: (options?: unknown) => unknown;
@@ -220,11 +223,34 @@ function breakoutDiscoveryToastIconMarkup(lang: "zh" | "en"): string {
     : "2048?";
 }
 
+function breakoutDiscoveryAchievementPayload(): Record<string, unknown> {
+  return {
+    id: BREAKOUT_DISCOVERY_ACHIEVEMENT_ID,
+    name: BREAKOUT_DISCOVERY_COPY.zh.name,
+    description: BREAKOUT_DISCOVERY_COPY.zh.description,
+    name_i18n: {
+      "zh-CN": BREAKOUT_DISCOVERY_COPY.zh.name,
+      en: BREAKOUT_DISCOVERY_COPY.en.name
+    },
+    description_i18n: {
+      "zh-CN": BREAKOUT_DISCOVERY_COPY.zh.description,
+      en: BREAKOUT_DISCOVERY_COPY.en.description
+    },
+    rules: [{ type: "achievement_event", params: { event_id: BREAKOUT_DISCOVERY_EVENT_ID } }],
+    series_id: "community-easter-egg"
+  };
+}
+
 function showBreakoutDiscoveryToast(
   documentLike: BreakoutEasterEggDocumentLike | null,
   windowLike: BreakoutEasterEggWindowLike | null
 ): void {
   if (!documentLike?.body || typeof documentLike.createElement !== "function") return;
+  const runtime = windowLike?.AchievementUnlockToastRuntime;
+  if (typeof runtime?.showAchievementUnlockToast === "function") {
+    runtime.showAchievementUnlockToast(breakoutDiscoveryAchievementPayload());
+    return;
+  }
   const lang = resolveBreakoutDiscoveryLang(windowLike, documentLike);
   const toastCopy = BREAKOUT_DISCOVERY_COPY[lang];
   let host = documentLike.querySelector?.("#breakout-achievement-toast-host") || null;
@@ -243,7 +269,9 @@ function showBreakoutDiscoveryToast(
   host.innerHTML =
     '<article class="unlock-toast unlock-toast--codepen unlock-toast--codepen-reward unlock-toast--easter-egg" role="status" aria-live="polite">' +
       '<div class="unlock-toast-card">' +
-        '<span class="unlock-badge achievements-unlock-badge" style="background:transparent;box-shadow:none;">' + breakoutDiscoveryToastIconMarkup(lang) + "</span>" +
+        '<span class="unlock-badge achievements-unlock-badge" style="background:transparent;box-shadow:none;">' +
+          '<span class="achievement-toast-icon-box">' + breakoutDiscoveryToastIconMarkup(lang) + "</span>" +
+        "</span>" +
         '<div class="unlock-toast-content">' +
           '<p class="unlock-toast-title">' + toastCopy.title + "</p>" +
           '<h2 class="unlock-toast-name">' + toastCopy.name + "</h2>" +
