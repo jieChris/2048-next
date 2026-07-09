@@ -344,7 +344,7 @@
   function getTopActionButtons(documentLike) {
     return querySelectorAll(
       documentLike,
-      'body[data-page="game"] .top-action-buttons .top-action-btn, body[data-page="game"] .top-action-buttons .restart-button, body[data-page="game"] .top-action-buttons #top-restart-btn, body[data-page="game"] .above-game .restart-button, body[data-page="game"] #timerbox-toggle-btn'
+      'body[data-page="game"] .top-action-buttons .top-action-btn:not(#top-user-profile-btn), body[data-page="game"] .top-action-buttons .restart-button, body[data-page="game"] .top-action-buttons #top-restart-btn, body[data-page="game"] .above-game .restart-button, body[data-page="game"] #timerbox-toggle-btn'
     );
   }
 

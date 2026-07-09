@@ -10,6 +10,8 @@ body[data-page="game"] .top-action-btn.mode-btn svg,
 body[data-page="practice"] .top-action-btn.mode-btn svg,
 body[data-page="game"] .top-action-btn.history-btn svg,
 body[data-page="practice"] .top-action-btn.history-btn svg,
+body[data-page="game"] .top-action-btn.profile-btn svg,
+body[data-page="practice"] .top-action-btn.profile-btn svg,
 body[data-page="game"] .top-action-btn.settings-btn svg,
 body[data-page="practice"] .top-action-btn.settings-btn svg,
 body[data-page="game"] .restart-button.reset-btn svg,
@@ -43,6 +45,10 @@ body[data-page="game"] .top-action-btn.history-btn:hover svg,
 body[data-page="practice"] .top-action-btn.history-btn:hover svg,
 body[data-page="game"] .top-action-btn.history-btn:focus-visible svg,
 body[data-page="practice"] .top-action-btn.history-btn:focus-visible svg,
+body[data-page="game"] .top-action-btn.profile-btn:hover svg,
+body[data-page="practice"] .top-action-btn.profile-btn:hover svg,
+body[data-page="game"] .top-action-btn.profile-btn:focus-visible svg,
+body[data-page="practice"] .top-action-btn.profile-btn:focus-visible svg,
 body[data-page="game"] .top-action-btn.settings-btn:hover svg,
 body[data-page="practice"] .top-action-btn.settings-btn:hover svg,
 body[data-page="game"] .top-action-btn.settings-btn:focus-visible svg,
@@ -56,4 +62,63 @@ body[data-page="practice"] .top-action-btn.reset-btn:hover svg,
 body[data-page="game"] .top-action-btn.reset-btn:focus-visible svg,
 body[data-page="practice"] .top-action-btn.reset-btn:focus-visible svg {
   transform: none;
+}
+
+body[data-page="game"] .top-action-btn.profile-btn svg,
+body[data-page="practice"] .top-action-btn.profile-btn svg {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+body[data-page="game"] .top-action-btn.profile-btn .profile-line,
+body[data-page="practice"] .top-action-btn.profile-btn .profile-line {
+  stroke-width: 1.65;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+body[data-page="game"] .top-action-btn.profile-btn .profile-origin,
+body[data-page="practice"] .top-action-btn.profile-btn .profile-origin {
+  opacity: 0;
+}
+
+body[data-page="game"] .top-action-btn.profile-btn:hover .profile-line,
+body[data-page="practice"] .top-action-btn.profile-btn:hover .profile-line,
+body[data-page="game"] .top-action-btn.profile-btn:focus-visible .profile-line,
+body[data-page="practice"] .top-action-btn.profile-btn:focus-visible .profile-line {
+  animation: profile-line-draw 0.44s linear both;
+}
+
+body[data-page="game"] .top-action-btn.profile-btn:hover .profile-origin,
+body[data-page="practice"] .top-action-btn.profile-btn:hover .profile-origin,
+body[data-page="game"] .top-action-btn.profile-btn:focus-visible .profile-origin,
+body[data-page="practice"] .top-action-btn.profile-btn:focus-visible .profile-origin {
+  animation: profile-origin-fade 0.44s linear both;
+}
+
+@keyframes profile-line-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  83.333% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes profile-origin-fade {
+  0% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+  }
+  83.333% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
 }

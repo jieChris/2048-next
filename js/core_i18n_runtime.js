@@ -131,6 +131,8 @@
   var FIXED_SELECTOR_ATTR = [
     { s: "#top-home-btn", a: "title", zh: "回首页", en: "Home" },
     { s: "#top-announcement-btn", a: "title", zh: "版本公告", en: "Announcements" },
+    { s: "#top-user-profile-btn", a: "title", zh: "用户主页", en: "Profile" },
+    { s: "#top-user-profile-btn", a: "aria-label", zh: "用户主页", en: "Profile" },
     { s: "#stats-panel-toggle", a: "title", zh: "统计", en: "Stats" },
     { s: "#top-export-replay-btn", a: "title", zh: "导出回放", en: "Export Replay" },
     { s: "#top-practice-btn", a: "title", zh: "直通练习板", en: "Practice Board" },

@@ -19,7 +19,7 @@ export function readCssEntry(path: string): string {
       if (/^(?:https?:)?\/\//.test(importedPath)) {
         return "";
       }
-      return readResolved(resolve(dirname(absolutePath), importedPath));
+      return readResolved(resolve(dirname(absolutePath), importedPath.replace(/[?#].*$/, "")));
     });
   }
 

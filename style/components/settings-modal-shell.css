@@ -1,6 +1,7 @@
 /* Settings modal */
 .settings-modal-content {
   max-width: 540px;
+  padding-bottom: 40px;
   text-align: left;
   display: flex;
   flex-wrap: wrap;
@@ -32,4 +33,3 @@
 .settings-modal-content > .settings-row:empty {
   display: none;
 }
-

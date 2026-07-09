@@ -307,7 +307,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }
   });
 
-  test("settings toolkit entry buttons align with their setting columns", async ({ page }) => {
+  test("settings modal omits duplicate palette and account shortcuts", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {
     });
@@ -325,45 +325,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).openSettingsModal();
     });
     await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
-
-    const alignment = await page.evaluate(() => {
-      const rectOf = (selector: string) => {
-        const element = document.querySelector(selector) as HTMLElement | null;
-        if (!element) return null;
-        const rect = element.getBoundingClientRect();
-        return {
-          center: Math.round(rect.left + rect.width / 2),
-          width: Math.round(rect.width)
-        };
-      };
-      const rows = Array.from(
-        document.querySelectorAll(".settings-modal-content > .settings-row.settings-toggle-row")
-      ).slice(0, 2) as HTMLElement[];
-      const rowRects = rows.map((row) => {
-        const rect = row.getBoundingClientRect();
-        return {
-          center: Math.round(rect.left + rect.width / 2),
-          width: Math.round(rect.width)
-        };
-      });
-      const palette = rectOf("#toolkit-palette-link");
-      const account = rectOf("#toolkit-account-link");
-      return {
-        leftColumnCenter: rowRects[0]?.center ?? null,
-        rightColumnCenter: rowRects[1]?.center ?? null,
-        leftColumnWidth: rowRects[0]?.width ?? null,
-        rightColumnWidth: rowRects[1]?.width ?? null,
-        paletteCenter: palette?.center ?? null,
-        accountCenter: account?.center ?? null,
-        paletteWidth: palette?.width ?? null,
-        accountWidth: account?.width ?? null
-      };
-    });
-
-    expect(Math.abs(Number(alignment.paletteCenter) - Number(alignment.leftColumnCenter))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(alignment.accountCenter) - Number(alignment.rightColumnCenter))).toBeLessThanOrEqual(1);
-    expect(Number(alignment.paletteWidth)).toBeLessThan(Number(alignment.leftColumnWidth));
-    expect(Number(alignment.accountWidth)).toBeLessThan(Number(alignment.rightColumnWidth));
+    await expect(page.locator("#toolkit-entry-row")).toHaveCount(0);
+    await expect(page.locator("#toolkit-palette-link")).toHaveCount(0);
+    await expect(page.locator("#toolkit-account-link")).toHaveCount(0);
   });
 
   async function seedBrokenPracticeTimerSave(page: import("@playwright/test").Page) {

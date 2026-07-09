@@ -33,10 +33,17 @@ function appendChild(node: unknown, child: unknown): void {
   (append as unknown as Function).call(node, child);
 }
 
-function insertBefore(node: unknown, child: unknown, anchor: unknown): void {
-  const insert = asFunction<(value: unknown, before: unknown) => unknown>(toRecord(node).insertBefore);
-  if (!insert) return;
-  (insert as unknown as Function).call(node, child, anchor);
+function removeNode(node: unknown): void {
+  const remove = asFunction<() => unknown>(toRecord(node).remove);
+  if (remove) {
+    remove.call(node);
+    return;
+  }
+  const parent = toRecord(node).parentNode;
+  const removeChild = asFunction<(value: unknown) => unknown>(toRecord(parent).removeChild);
+  if (removeChild) {
+    (removeChild as unknown as Function).call(parent, node);
+  }
 }
 
 function bindListener(
@@ -198,17 +205,6 @@ function buildSettingsToggleRowHtml(options: {
   );
 }
 
-function buildToolkitEntryRowHtml(lang: "zh" | "en"): string {
-  return (
-    `<div id="toolkit-entry-row" class="settings-row toolkit-entry-row">` +
-    `<div class="toolkit-entry-actions">` +
-    `<a id="toolkit-palette-link" class="replay-button" href="palette.html">${lang === "en" ? "Theme Settings" : "主题设置"}</a>` +
-    `<a id="toolkit-account-link" class="replay-button" href="account.html">${lang === "en" ? "Account Center" : "账号中心"}</a>` +
-    `</div>` +
-    `</div>`
-  );
-}
-
 function buildCanonicalSettingsModalInnerHtml(options: {
   lang: "zh" | "en";
   hasInlineStats: boolean;
@@ -263,7 +259,6 @@ function buildCanonicalSettingsModalInnerHtml(options: {
     );
   }
 
-  rows.push(buildToolkitEntryRowHtml(lang));
   return rows.join("");
 }
 
@@ -282,8 +277,7 @@ const CANONICAL_SETTINGS_ROW_IDS = [
   "pku2048-inline-stats-toggle",
   "timer-module-view-toggle",
   "top-button-style-settings-row",
-  "ui-language-settings-row",
-  "toolkit-entry-row"
+  "ui-language-settings-row"
 ] as const;
 
 const DYNAMIC_SETTINGS_ROW_IDS = [
@@ -295,7 +289,7 @@ const DYNAMIC_SETTINGS_ROW_IDS = [
 function reorderSettingsRows(content: unknown): void {
   for (const rowId of CANONICAL_SETTINGS_ROW_IDS) {
     const row =
-      rowId === "toolkit-entry-row" || rowId.endsWith("-row")
+      rowId.endsWith("-row")
         ? getElementById(toRecord(content).ownerDocument, rowId)
         : null;
     const targetRow =
@@ -334,6 +328,7 @@ export function normalizeSettingsModalContent(input: {
       hasInlineStats: false
     };
   }
+  removeNode(getElementById(documentLike, "toolkit-entry-row"));
 
   const existingRows: unknown[] = [];
   const children = toRecord(toRecord(content).children);
@@ -352,8 +347,7 @@ export function normalizeSettingsModalContent(input: {
   const hasCanonicalBase =
     !!getElementById(documentLike, "win-prompt-toggle") &&
     !!getElementById(documentLike, "bgm-toggle") &&
-    !!getElementById(documentLike, "night-bg-toggle") &&
-    !!getElementById(documentLike, "toolkit-entry-row");
+    !!getElementById(documentLike, "night-bg-toggle");
 
   if (!hasCanonicalBase) {
     toRecord(content).innerHTML = buildCanonicalSettingsModalInnerHtml({
@@ -361,12 +355,7 @@ export function normalizeSettingsModalContent(input: {
       hasInlineStats
     });
     for (const row of existingRows) {
-      const toolkitEntry = getElementById(documentLike, "toolkit-entry-row");
-      if (toolkitEntry && toRecord(toolkitEntry).parentNode === content) {
-        insertBefore(content, row, toolkitEntry);
-      } else {
-        appendChild(content, row);
-      }
+      appendChild(content, row);
     }
   }
 

@@ -37,6 +37,22 @@
     clip-path: inset(0 0 0 0);
   }
 
+  body[data-page="game"] .top-action-btn.profile-btn:hover .profile-line,
+  body[data-page="practice"] .top-action-btn.profile-btn:hover .profile-line,
+  body[data-page="game"] .top-action-btn.profile-btn:focus-visible .profile-line,
+  body[data-page="practice"] .top-action-btn.profile-btn:focus-visible .profile-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  body[data-page="game"] .top-action-btn.profile-btn:hover .profile-origin,
+  body[data-page="practice"] .top-action-btn.profile-btn:hover .profile-origin,
+  body[data-page="game"] .top-action-btn.profile-btn:focus-visible .profile-origin,
+  body[data-page="practice"] .top-action-btn.profile-btn:focus-visible .profile-origin {
+    animation: none;
+    opacity: 0;
+  }
+
   body[data-page="game"] .top-action-btn.settings-btn:hover svg,
   body[data-page="practice"] .top-action-btn.settings-btn:hover svg,
   body[data-page="game"] .top-action-btn.settings-btn:focus-visible svg,
@@ -90,4 +106,3 @@
     clip-path: inset(0 0 0 0);
   }
 }
-

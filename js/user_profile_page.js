@@ -168,12 +168,14 @@
     var COPY = {
     zh: {
       pageTitle: "2048 用户主页",
-      kicker: "2048 在线中心",
       title: "用户主页",
-      subtitle: "查看该用户历史记录，可按时间/分数排序。",
       navHome: "回首页",
       navAccount: "排行榜",
+      navMenu: "菜单",
+      navSettings: "账号设置",
       navHistory: "本地历史",
+      navPalette: "主题设置",
+      navPractice: "练习板",
       navLogout: "退出账号",
       infoHeading: "基础信息",
       labelName: "昵称：",
@@ -250,12 +252,14 @@
     },
     en: {
       pageTitle: "2048 User Profile",
-      kicker: "2048 Online Hub",
       title: "User Profile",
-      subtitle: "View user history records sorted by time or score.",
       navHome: "Home",
       navAccount: "Leaderboard",
+      navMenu: "Menu",
+      navSettings: "Account Settings",
       navHistory: "Local History",
+      navPalette: "Theme Settings",
+      navPractice: "Practice",
       navLogout: "Sign Out",
       infoHeading: "Basic Info",
       labelName: "Nickname:",
@@ -381,11 +385,6 @@
   function resolveRecordHeadingText() {
     if (currentLang === "en") return "History Records";
     return "\u5386\u53f2\u8bb0\u5f55";
-  }
-
-  function resolveProfileSubtitleText() {
-    if (currentLang === "en") return "View user history records sorted by time or score.";
-    return "\u67e5\u770b\u8be5\u7528\u6237\u5386\u53f2\u8bb0\u5f55\uff0c\u53ef\u6309\u65f6\u95f4/\u5206\u6570\u6392\u5e8f\u3002";
   }
 
   function resolveProfilePageTitle() {
@@ -2116,12 +2115,14 @@
     applyDocumentTitle();
 
     var textMap = {
-      "user-kicker": t("kicker"),
       "user-title": t("title"),
-      "user-subtitle": resolveProfileSubtitleText(),
       "user-nav-home": t("navHome"),
       "user-nav-account": t("navAccount"),
+      "user-nav-menu": t("navMenu"),
+      "user-nav-settings": t("navSettings"),
       "user-nav-history": t("navHistory"),
+      "user-nav-palette": t("navPalette"),
+      "user-nav-practice": t("navPractice"),
       "user-nav-medals": t("navMedals"),
       "user-nav-logout": t("navLogout"),
       "user-label-name": t("labelName"),

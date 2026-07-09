@@ -25,7 +25,8 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260626-breakout-window-controls");
+    expect(html).toContain("style/main.css?v=20260709-toast-name-offset-v3");
+    expect(html).not.toContain("style/main.css?v=20260626-breakout-window-controls");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-burst");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-favicon");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-fast");
@@ -39,6 +40,25 @@ describe("home user display style", () => {
     expect(html).not.toContain("style/main.css?v=20260623-leaderboard-rank");
     expect(html).not.toContain("style/main.css?v=20260608-toolkit-align");
     expect(html).not.toContain("style/main.css?v=20260607-userdisplay");
+  });
+
+  it("keeps the top profile button on the animated icon system", () => {
+    const html = readFileSync("2048.html", "utf8");
+    const css = readCssEntry("style/main.css");
+
+    expect(html).toContain('class="top-action-btn profile-btn" id="top-user-profile-btn"');
+    expect(html).toContain('class="profile-line profile-head-left"');
+    expect(html).toContain('class="profile-line profile-shoulder-right"');
+    expect(html).toContain('class="profile-origin"');
+    expect(css).toContain(".top-action-btn.profile-btn:hover .profile-line");
+    expect(css).toContain("animation: profile-line-draw 0.44s linear");
+    expect(css).toContain("83.333%");
+    expect(html).toContain('width="34" height="34"');
+    expect(css).toContain("width: 34px !important;");
+    expect(css).toContain("stroke-width: 1.65;");
+    expect(css).toContain('.top-action-buttons .top-action-btn:not(#top-user-profile-btn)');
+    expect(css).toContain("@keyframes profile-line-draw");
+    expect(css).toContain("@keyframes profile-origin-fade");
   });
 
   it("defines a fixed global variant without changing the home label base rule", () => {

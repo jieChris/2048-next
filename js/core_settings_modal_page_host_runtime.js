@@ -41,10 +41,15 @@
     append.call(node, child);
   }
 
-  function insertBefore(node, child, anchor) {
-    var insert = asFunction(toRecord(node).insertBefore);
-    if (!insert) return;
-    insert.call(node, child, anchor);
+  function removeNode(node) {
+    var remove = asFunction(toRecord(node).remove);
+    if (remove) {
+      remove.call(node);
+      return;
+    }
+    var parent = toRecord(node).parentNode;
+    var removeChild = asFunction(toRecord(parent).removeChild);
+    if (removeChild) removeChild.call(parent, node);
   }
 
   function bindListener(element, eventName, handler) {
@@ -191,21 +196,6 @@
     );
   }
 
-  function buildToolkitEntryRowHtml(lang) {
-    return (
-      '<div id="toolkit-entry-row" class="settings-row toolkit-entry-row">' +
-      '<div class="toolkit-entry-actions">' +
-      '<a id="toolkit-palette-link" class="replay-button" href="palette.html">' +
-      (lang === "en" ? "Theme Settings" : "主题设置") +
-      "</a>" +
-      '<a id="toolkit-account-link" class="replay-button" href="account.html">' +
-      (lang === "en" ? "Account Center" : "账号中心") +
-      "</a>" +
-      "</div>" +
-      "</div>"
-    );
-  }
-
   function buildCanonicalSettingsModalInnerHtml(options) {
     var lang = options.lang === "en" ? "en" : "zh";
     var isEn = lang === "en";
@@ -256,7 +246,6 @@
       );
     }
 
-    rows.push(buildToolkitEntryRowHtml(lang));
     return rows.join("");
   }
 
@@ -267,8 +256,7 @@
     "pku2048-inline-stats-toggle",
     "timer-module-view-toggle",
     "top-button-style-settings-row",
-    "ui-language-settings-row",
-    "toolkit-entry-row"
+    "ui-language-settings-row"
   ];
 
   var DYNAMIC_SETTINGS_ROW_IDS = [
@@ -292,7 +280,7 @@
     var ownerDocument = toRecord(content).ownerDocument;
     for (var i = 0; i < CANONICAL_SETTINGS_ROW_IDS.length; i++) {
       var rowId = CANONICAL_SETTINGS_ROW_IDS[i];
-      var row = rowId === "toolkit-entry-row" || rowId.indexOf("-row") === rowId.length - 4
+      var row = rowId.indexOf("-row") === rowId.length - 4
         ? getElementById(ownerDocument, rowId)
         : null;
       var targetRow = row;
@@ -327,6 +315,7 @@
         hasInlineStats: false
       };
     }
+    removeNode(getElementById(documentLike, "toolkit-entry-row"));
 
     var existingRows = [];
     var children = toRecord(toRecord(content).children);
@@ -347,8 +336,7 @@
     var hasCanonicalBase =
       !!getElementById(documentLike, "win-prompt-toggle") &&
       !!getElementById(documentLike, "bgm-toggle") &&
-      !!getElementById(documentLike, "night-bg-toggle") &&
-      !!getElementById(documentLike, "toolkit-entry-row");
+      !!getElementById(documentLike, "night-bg-toggle");
 
     if (!hasCanonicalBase) {
       toRecord(content).innerHTML = buildCanonicalSettingsModalInnerHtml({
@@ -356,12 +344,7 @@
         hasInlineStats: hasInlineStats
       });
       for (var j = 0; j < existingRows.length; j++) {
-        var toolkitEntry = getElementById(documentLike, "toolkit-entry-row");
-        if (toolkitEntry && toRecord(toolkitEntry).parentNode === content) {
-          insertBefore(content, existingRows[j], toolkitEntry);
-        } else {
-          appendChild(content, existingRows[j]);
-        }
+        appendChild(content, existingRows[j]);
       }
     }
 

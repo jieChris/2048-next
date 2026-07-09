@@ -79,8 +79,11 @@
     <div class="stats-right" id="stats-ips">IPS: 0</div>
     <div class="heading">
       <div class="top-action-buttons">
-        <a class="top-action-btn" id="top-announcement-btn" title="公告">
+        <a class="top-action-btn" id="top-announcement-btn" title="公告" style="display:none" hidden>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l4 4V5L7 9H5a2 2 0 0 0-2 2z"></path><path d="M14.5 8.5a5 5 0 0 1 0 7"></path><path d="M17.5 6a9 9 0 0 1 0 12"></path></svg>
+        </a>
+        <a class="top-action-btn profile-btn" id="top-user-profile-btn" href="account.html" title="用户主页" aria-label="用户主页">
+          <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="profile-line profile-head-left" pathLength="1" d="M12 12A4 4 0 0 1 12 4"></path><path class="profile-line profile-head-right" pathLength="1" d="M12 12A4 4 0 0 0 12 4"></path><path class="profile-line profile-shoulder-left" pathLength="1" d="M12 12A8 8 0 0 0 4 20"></path><path class="profile-line profile-shoulder-right" pathLength="1" d="M12 12A8 8 0 0 1 20 20"></path><circle class="profile-origin" cx="12" cy="12" r="1" fill="currentColor" stroke="none"></circle></svg>
         </a>
         <a class="top-action-btn stats-panel-toggle" id="stats-panel-toggle" title="统计信息">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
@@ -303,13 +306,6 @@
         </div>
         <div id="night-bg-note" class="settings-note">开启后会在所有带设置弹窗的页面同步生效。</div>
       </div>
-      <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
-        <div class="toolkit-entry-actions">
-          <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>
-          <a id="toolkit-account-link" class="replay-button" href="account.html">账号中心</a>
-        </div>
-      </div>
-
       
     </div>
   </div>

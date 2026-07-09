@@ -68,6 +68,29 @@ describe("bootstrap home user display", () => {
     expect(label.href).toBe("user.html?id=7&nickname=Alice");
   });
 
+  it("syncs the top profile button href with the same destination", () => {
+    const label = { textContent: "", href: "" };
+    const profileButton = { href: "" };
+    const documentLike = {
+      getElementById(id: string) {
+        if (id === "home-user-display") return label;
+        if (id === "top-user-profile-btn") return profileButton;
+        return null;
+      }
+    };
+    const storageLike = {
+      getItem(key: string) {
+        if (key === "2048_auth_userId_v1") return "12";
+        if (key === "2048_auth_nickname_v1") return "Codex 测试";
+        return null;
+      }
+    };
+
+    expect(syncHomeUserDisplay({ documentLike, storageLike })).toBe(true);
+    expect(label.href).toBe("user.html?id=12&nickname=Codex+%E6%B5%8B%E8%AF%95");
+    expect(profileButton.href).toBe(label.href);
+  });
+
   it("creates a global label for regular pages without an existing node", () => {
     const appended: Array<{ textContent?: string | null; href?: string; className?: string; id?: string }> = [];
     const documentLike = {

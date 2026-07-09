@@ -115,15 +115,23 @@ describe("module entry html pages", () => {
     }
 
     const accountHtml = readHtml("account.html");
-    expect(accountHtml).toContain('id="account-nav-history"');
-    expect(accountHtml).toContain('href="history.html"');
+    expect(accountHtml).not.toContain('id="account-nav-settings"');
+    expect(accountHtml).not.toContain('id="account-nav-history"');
+    expect(accountHtml).not.toContain('id="account-nav-palette"');
+    expect(accountHtml).not.toContain('id="account-nav-practice"');
     expect(accountHtml).not.toContain('id="account-nav-achievements"');
     expect(accountHtml).not.toContain('href="achievements.html"');
     expect(accountHtml).not.toContain('href="medal-wall.html"');
 
     const userHtml = readHtml("user.html");
+    expect(userHtml).toContain('id="user-nav-settings"');
+    expect(userHtml).toContain('href="account_settings.html"');
     expect(userHtml).toContain('id="user-nav-history"');
     expect(userHtml).toContain('href="history.html"');
+    expect(userHtml).toContain('id="user-nav-palette"');
+    expect(userHtml).toContain('href="palette.html"');
+    expect(userHtml).toContain('id="user-nav-practice"');
+    expect(userHtml).toContain('href="Practice_board.html"');
   });
 
   it("admin.html includes the achievement management mounts", () => {

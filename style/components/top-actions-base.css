@@ -23,6 +23,10 @@
   cursor: pointer;
 }
 
+.top-action-btn[hidden] {
+  display: none !important;
+}
+
 .top-action-btn.has-unread::after {
   content: "";
   position: absolute;

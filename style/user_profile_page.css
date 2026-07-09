@@ -44,6 +44,42 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
   color: #b6a99a;
 }
 
+.user-nav-menu {
+  position: relative;
+}
+
+.user-nav-menu-summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.user-nav-menu-summary::-webkit-details-marker,
+.user-nav-menu-summary::marker {
+  display: none;
+}
+
+.user-nav-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  min-width: 124px;
+  padding: 10px;
+  border: 1px solid #d9c8b6;
+  border-radius: 10px;
+  background: rgba(255, 250, 243, 0.98);
+  box-shadow: 0 16px 38px rgba(96, 76, 55, 0.16);
+}
+
+.user-nav-menu-panel .palette-nav-btn {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .user-summary-details {
   margin-bottom: 14px;
 }
@@ -449,6 +485,11 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
     justify-content: flex-end;
   }
 
+  .user-nav-menu-panel {
+    right: auto;
+    left: 0;
+  }
+
   .user-record-head-row,
   .user-record-empty,
   .user-record-row {
@@ -479,6 +520,12 @@ html[data-night-background="1"] body[data-page="user-profile"] .user-profile-inl
 
 html[data-night-background="1"] body[data-page="user-profile"] .user-info-sep {
   color: rgba(181, 198, 221, 0.3);
+}
+
+html[data-night-background="1"] body[data-page="user-profile"] .user-nav-menu-panel {
+  border-color: rgba(181, 198, 221, 0.16);
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.98), rgba(13, 21, 34, 0.98));
+  box-shadow: 0 16px 38px rgba(1, 5, 14, 0.36);
 }
 
 html[data-night-background="1"] body[data-page="user-profile"] .user-summary-card {

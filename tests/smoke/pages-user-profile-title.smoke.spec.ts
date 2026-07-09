@@ -99,8 +99,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#user-nav-account")).toHaveText("排行榜");
-    await expect(page.locator("#user-nav-logout")).toBeVisible();
+    await expect(page.locator("#user-nav-menu")).toBeVisible();
 
+    await page.click("#user-nav-menu");
+    await expect(page.locator("#user-nav-logout")).toBeVisible();
     await page.click("#user-nav-logout");
     await page.waitForURL(/account\.html/);
 

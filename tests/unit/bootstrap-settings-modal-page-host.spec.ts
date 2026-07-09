@@ -53,13 +53,13 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
-      "pku2048-inline-stats-toggle",
-      "toolkit-entry-row"
+      "pku2048-inline-stats-toggle"
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
-    expect(dom.window.document.querySelector("#toolkit-account-link")).not.toBeNull();
+    expect(dom.window.document.querySelector("#toolkit-entry-row")).toBeNull();
+    expect(dom.window.document.querySelector("#toolkit-account-link")).toBeNull();
   });
 
   it("preserves dynamic settings rows and reuses canonical nodes on repeated opens", () => {
@@ -100,8 +100,7 @@ describe("bootstrap settings modal page host", () => {
       "bgm-settings-row",
       "night-bg-settings-row",
       "top-button-style-settings-row",
-      "ui-language-settings-row",
-      "toolkit-entry-row"
+      "ui-language-settings-row"
     ]);
   });
 

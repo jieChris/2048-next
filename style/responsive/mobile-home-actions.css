@@ -90,7 +90,7 @@
   }
 }
 
-body[data-page="game"][data-top-button-style="text"] .top-action-buttons .top-action-btn,
+body[data-page="game"][data-top-button-style="text"] .top-action-buttons .top-action-btn:not(#top-user-profile-btn),
 body[data-page="game"][data-top-button-style="text"] .top-action-buttons .restart-button,
 body[data-page="game"][data-top-button-style="text"] #timerbox-toggle-btn,
 body[data-page="practice"][data-top-button-style="text"] #practice-stats-actions .top-action-btn,

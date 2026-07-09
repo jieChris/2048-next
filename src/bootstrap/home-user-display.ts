@@ -1,6 +1,7 @@
 const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
+const TOP_USER_PROFILE_BUTTON_ID = "top-user-profile-btn";
 const DEFAULT_GUEST_LABEL_ZH = "游客";
 const DEFAULT_GUEST_LABEL_EN = "Guest";
 
@@ -137,6 +138,11 @@ export function syncHomeUserDisplay(input: {
   if (input.pageId && !shouldShowHomeUserDisplayForPage(input.pageId)) return false;
   const documentLike = toRecord(input.documentLike) as DocumentLike;
   if (typeof documentLike.getElementById !== "function") return false;
+  const profileHref = resolveHomeUserDisplayHref({ storageLike: input.storageLike });
+  const profileButton = documentLike.getElementById(TOP_USER_PROFILE_BUTTON_ID);
+  if (profileButton && "href" in profileButton) {
+    profileButton.href = profileHref;
+  }
 
   const node =
     documentLike.getElementById("home-user-display") ||
@@ -145,7 +151,7 @@ export function syncHomeUserDisplay(input: {
 
   node.textContent = resolveHomeUserDisplayName({ storageLike: input.storageLike });
   if ("href" in node) {
-    node.href = resolveHomeUserDisplayHref({ storageLike: input.storageLike });
+    node.href = profileHref;
   }
   return true;
 }

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("Home user display", () => {
   test("shows guest text above the logo when logged out", async ({ page }) => {
     await page.addInitScript(() => {
+      window.localStorage.removeItem("2048_auth_userId_v1");
       window.localStorage.removeItem("2048_auth_nickname_v1");
     });
 
@@ -11,10 +12,41 @@ test.describe("Home user display", () => {
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#home-user-display")).toHaveText("游客");
+    await expect(page.locator("#top-announcement-btn")).toBeHidden();
+    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account.html");
+  });
+
+  test("keeps the profile button animated when text button mode is enabled", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("settings_top_button_style_v1", "text");
+    });
+
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).toHaveAttribute("data-top-button-style", "text");
+    await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(1);
+
+    await page.hover("#top-user-profile-btn");
+    const style = await page.locator("#top-user-profile-btn .profile-head-left").evaluate((node) => {
+      const computed = window.getComputedStyle(node);
+      const svg = document.querySelector("#top-user-profile-btn svg") as SVGElement | null;
+      const svgStyle = svg ? window.getComputedStyle(svg) : null;
+      return {
+        animationName: computed.animationName,
+        animationDuration: computed.animationDuration,
+        width: svgStyle?.width,
+        height: svgStyle?.height
+      };
+    });
+
+    expect(style.animationName).toBe("profile-line-draw");
+    expect(style.animationDuration).toBe("0.44s");
+    expect(style.width).toBe("34px");
+    expect(style.height).toBe("34px");
   });
 
   test("shows stored nickname on the action row and aligns the logo with scores", async ({ page }) => {
     await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
     });
 
@@ -23,6 +55,10 @@ test.describe("Home user display", () => {
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#home-user-display")).toHaveText("SmokeUser");
+    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
+      "href",
+      "user.html?id=19&nickname=SmokeUser"
+    );
     await page.waitForFunction(() => {
       const label = document.getElementById("home-user-display");
       const topActions = document.querySelector(".top-action-buttons");
@@ -235,71 +271,27 @@ test.describe("Home user display", () => {
     expect(Math.abs(Number(layout.combinedWidth) - Number(layout.rowWidth))).toBeLessThanOrEqual(1);
   });
 
-  test("settings toolkit links align with the setting columns", async ({ page }) => {
+  test("settings modal does not show duplicate navigation links", async ({ page }) => {
     await page.addInitScript(() => {
     });
 
-    const response = await page.goto("/2048.html?toolkit-align-smoke=1", {
+    const response = await page.goto("/2048.html?settings-nav-smoke=1", {
       waitUntil: "domcontentloaded"
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     const settingsBtn = page.locator("#top-settings-btn");
-    const paletteLink = page.locator("#toolkit-palette-link");
     await expect(settingsBtn).toBeVisible();
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (await paletteLink.isVisible().catch(() => false)) break;
-      await settingsBtn.click();
-      await paletteLink.waitFor({ state: "visible", timeout: 1_000 }).catch(() => {});
-    }
-    await expect(paletteLink).toBeVisible();
-
-    const layout = await page.evaluate(() => {
-      const visibleToggleRows = Array.from(document.querySelectorAll("#settings-modal .settings-toggle-row"))
-        .filter((element) => element.getClientRects().length > 0);
-      const leftRow = visibleToggleRows.find((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.left < window.innerWidth / 2;
-      });
-      const rightRow = visibleToggleRows.find((element) => {
-        const rect = element.getBoundingClientRect();
-        return rect.left > window.innerWidth / 2;
-      });
-      const readRect = (selectorOrElement: string | Element | undefined) => {
-        const element =
-          typeof selectorOrElement === "string"
-            ? document.querySelector(selectorOrElement)
-            : selectorOrElement;
-        const rect = element?.getBoundingClientRect();
-        if (!rect) return null;
-        return {
-          left: rect.left,
-          width: rect.width,
-          center: rect.left + rect.width / 2
-        };
-      };
-      return {
-        leftRow: readRect(leftRow),
-        rightRow: readRect(rightRow),
-        palette: readRect("#toolkit-palette-link"),
-        account: readRect("#toolkit-account-link"),
-        actionWrap: readRect(".toolkit-entry-actions")
-      };
+    await page.waitForFunction(() => typeof (window as any).openSettingsModal === "function");
+    await page.evaluate(() => {
+      (window as any).openSettingsModal();
     });
+    await expect(page.locator("#settings-modal")).toHaveCSS("display", "flex");
 
-    expect(layout.leftRow).not.toBeNull();
-    expect(layout.rightRow).not.toBeNull();
-    expect(layout.palette).not.toBeNull();
-    expect(layout.account).not.toBeNull();
-    expect(layout.actionWrap?.left).toBeCloseTo(Number(layout.leftRow?.left), 0);
-    expect(layout.actionWrap?.width).toBeCloseTo(
-      Number(layout.rightRow?.left) + Number(layout.rightRow?.width) - Number(layout.leftRow?.left),
-      0
-    );
-    expect(Math.abs(Number(layout.palette?.center) - Number(layout.leftRow?.center))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(layout.account?.center) - Number(layout.rightRow?.center))).toBeLessThanOrEqual(1);
+    await expect(page.locator("#toolkit-entry-row")).toHaveCount(0);
+    await expect(page.locator("#toolkit-palette-link")).toHaveCount(0);
+    await expect(page.locator("#toolkit-account-link")).toHaveCount(0);
   });
 
   test("mobile board starts after the ranked session request without layout regression", async ({ page }) => {
