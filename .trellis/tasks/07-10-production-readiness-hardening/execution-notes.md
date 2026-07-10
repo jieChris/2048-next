@@ -5,12 +5,15 @@
 - Expiry is a limit on starting/checkpointing a session, not on finalizing a game that already started. The final `/api/records` path intentionally parses and resolves the signed session with `allowExpired: true`.
 - Unranked normal submissions are retained as user history instead of rejected. They are excluded only from competitive leaderboard derivation; backend-authorized admin/migration imports remain eligible.
 - The active ranked session remains authoritative on reload even after expiration; a separately prefetched session is not promoted until explicit restart or terminal completion.
+- Nested local CSS imports stay free of query-string cache keys so Vite resolves them into the hashed production bundle.
+- A record-triggered achievement unlock must be caused by the submitted ranked record itself. Historical achievement grants remain an explicit backfill operation.
 
 ## Completed Checks
 
 - `2048-game-api`: typecheck, 137 Node tests, and production dependency audit passed.
 - `2048-next`: full release gate passed, including 290 unit files / 1790 tests, 41 critical browser smoke tests, audits, and build; production dependency audit passed.
 - `2048-ranked`: typecheck, 136 unit tests, lint, build, production dependency audit, and 6 live read-only Playwright tests passed.
+- Achievement follow-up: API typecheck, 138 Node tests, and production dependency audit passed; main release gate, production build, dependency audit, and 4 built-preview achievement-toast browser checks passed.
 
 ## Environment Follow-Up
 

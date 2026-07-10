@@ -71,6 +71,16 @@ describe("first-load performance assets", () => {
     expect(css.match(/font-display:\s*swap;/g)).toHaveLength(3);
   });
 
+  it("keeps local CSS imports build-resolvable instead of cache-keyed", () => {
+    const css = readFileSync("style/main.css", "utf8");
+    const localImports = Array.from(css.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gu))
+      .map((match) => match[1])
+      .filter((url) => !/^(?:https?:)?\/\//u.test(url));
+
+    expect(localImports).not.toEqual([]);
+    expect(localImports.filter((url) => /[?#]/u.test(url))).toEqual([]);
+  });
+
   it("keeps the source-heavy favicon preview page out of production inputs", () => {
     const viteConfig = readFileSync("vite.config.ts", "utf8");
 

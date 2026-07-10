@@ -42,6 +42,12 @@ Use these checks after boundary-sensitive changes:
 - `npm run verify:prepush`
 - Targeted smoke tests for account, records, leaderboard, ranked session, and admin rescue flows when touched.
 
+## Production CSS Build Rules
+
+- Local `@import` URLs under `style/` must not carry query strings or fragments. Vite preserves cache-keyed CSS imports in the emitted bundle instead of resolving them, which rebases the URL under `/assets/` and produces a production-only 404.
+- Put cache keys on the HTML stylesheet entry when needed. Keep nested local imports build-resolvable so their rules are inlined into the hashed production asset.
+- Any globally rendered UI, including the achievement unlock toast, needs a build-output assertion or production smoke check in addition to source-mode styling checks.
+
 ## Scenario: Pending Score Uploads After Expired Auth
 
 ### 1. Scope / Trigger
