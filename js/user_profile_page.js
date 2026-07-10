@@ -1073,8 +1073,8 @@
         continue;
       }
       if (best && item.record_count === best.record_count) {
-        var itemTime = parseDateTimeToTimestamp(item.latest_record_at);
-        var bestTime = parseDateTimeToTimestamp(best.latest_record_at);
+        var itemTime = parseDateTs(item.latest_record_at);
+        var bestTime = parseDateTs(best.latest_record_at);
         if (itemTime > bestTime) best = item;
       }
     }

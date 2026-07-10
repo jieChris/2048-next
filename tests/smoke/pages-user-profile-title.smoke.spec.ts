@@ -313,7 +313,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             success: true,
             data: {
               summary: {
-                total_records: 9,
+                total_records: 6,
                 best_score: 8192,
                 best_tile: 2048,
                 latest_record_at: "2026-03-18T08:00:00.000Z"
@@ -330,7 +330,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 {
                   mode_bucket: "fib_4x2_undo",
                   mode_key: "fib_4x2_undo",
-                  record_count: 6,
+                  record_count: 3,
                   best_score: 3777,
                   best_tile: 987,
                   latest_record_at: "2026-03-18T08:00:00.000Z"
@@ -403,9 +403,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
 
     await page.waitForSelector(".user-record-item");
-    await expect(page.locator("#user-summary-total-value")).toHaveText("9");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
     await expect(page.locator("#user-summary-best-score-label")).toHaveText("斐波那契4x2可撤回");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("6局");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("3局");
     await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最近活跃");
     const modeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
@@ -418,11 +418,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.selectOption("#user-record-mode", "fib_4x2_undo");
     await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
     await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
-    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("3");
     await expect(page.locator("#user-summary-best-score-label")).toHaveText("最高分");
     await expect(page.locator("#user-summary-best-score-value")).toHaveText("3777");
     await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
     await expect(page.locator("#user-summary-best-tile-value")).toHaveText("987");
+
+    const requestsBeforeAllModes = recordRequests.length;
+    await page.selectOption("#user-record-mode", "all");
+    await expect.poll(() => recordRequests.length).toBeGreaterThan(requestsBeforeAllModes);
+    await expect(page.locator(".user-record-item")).toHaveCount(1);
+
     await page.locator(".user-record-row").first().click();
 
     await expect(page.locator(".user-record-detail")).toBeVisible();

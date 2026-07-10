@@ -7,6 +7,7 @@
 - The active ranked session remains authoritative on reload even after expiration; a separately prefetched session is not promoted until explicit restart or terminal completion.
 - Nested local CSS imports stay free of query-string cache keys so Vite resolves them into the hashed production bundle.
 - A record-triggered achievement unlock must be caused by the submitted ranked record itself. Historical achievement grants remain an explicit backfill operation.
+- The user-profile "all modes" summary breaks equal-play-count ties with the existing `parseDateTs` helper so summary rendering cannot abort the parallel record request and leave the list loading indefinitely.
 
 ## Completed Checks
 
@@ -14,6 +15,7 @@
 - `2048-next`: full release gate passed, including 290 unit files / 1790 tests, 41 critical browser smoke tests, audits, and build; production dependency audit passed.
 - `2048-ranked`: typecheck, 136 unit tests, lint, build, production dependency audit, and 6 live read-only Playwright tests passed.
 - Achievement follow-up: API typecheck, 138 Node tests, and production dependency audit passed; main release gate, production build, dependency audit, and 4 built-preview achievement-toast browser checks passed.
+- User-profile all-modes follow-up: the equal-play-count regression smoke test and production build passed.
 
 ## Environment Follow-Up
 
