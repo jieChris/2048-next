@@ -189,7 +189,7 @@
 }
 
 .unlock-toast--codepen-milestone .unlock-toast-name {
-  top: 26px;
+  top: 23px;
 }
 
 .unlock-toast--codepen-milestone .unlock-toast-desc,
@@ -408,6 +408,10 @@
   .unlock-toast--codepen .unlock-toast-name {
     top: 22px;
     font-size: 23px;
+  }
+
+  .unlock-toast--codepen-milestone .unlock-toast-name {
+    top: 19px;
   }
 
 }
