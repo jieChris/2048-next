@@ -115,7 +115,8 @@ describe("module entry html pages", () => {
     }
 
     const accountHtml = readHtml("account.html");
-    expect(accountHtml).not.toContain('id="account-nav-settings"');
+    expect(accountHtml).toContain('id="account-nav-settings"');
+    expect(accountHtml).toContain('href="account_settings.html"');
     expect(accountHtml).not.toContain('id="account-nav-history"');
     expect(accountHtml).not.toContain('id="account-nav-palette"');
     expect(accountHtml).not.toContain('id="account-nav-practice"');
@@ -128,6 +129,8 @@ describe("module entry html pages", () => {
     expect(userHtml).toContain('href="account_settings.html"');
     expect(userHtml).toContain('id="user-nav-history"');
     expect(userHtml).toContain('href="history.html"');
+    expect(userHtml).toContain('id="user-nav-replay"');
+    expect(userHtml).toContain('href="replay.html"');
     expect(userHtml).toContain('id="user-nav-palette"');
     expect(userHtml).toContain('href="palette.html"');
     expect(userHtml).toContain('id="user-nav-practice"');

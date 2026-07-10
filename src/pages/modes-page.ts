@@ -39,7 +39,7 @@ const MODES_PAGE_COPY: Record<
       diagonal: "八方向",
       capped: "封顶",
       special: "特殊玩法",
-      tools: "工具"
+      tools: "记录与工具"
     },
     groups: [
       "经典 - 无撤回",
@@ -50,7 +50,7 @@ const MODES_PAGE_COPY: Record<
       "封顶模式",
       "禁止目标",
       "规则魔改",
-      "其他页面"
+      "记录与工具"
     ],
     links: {
       "2048.html": "4×4",
@@ -102,10 +102,11 @@ const MODES_PAGE_COPY: Record<
       "play.html?mode_key=capped_4x4_pow2_no_undo": "4×4 封顶2048",
       "play.html?mode_key=capped_4x4_pow2_4096_no_undo": "4×4 封顶4096",
       "Practice_board.html?practice_fresh=1": "练习板",
+      "PKU2048.html?practice_fresh=1": "PKU2048 练习板",
       "history.html": "历史",
       "replay.html": "回放",
       "palette.html": "主题色板",
-      "account.html": "账号中心"
+      "account.html": "排行榜"
     }
   },
   en: {
@@ -127,7 +128,7 @@ const MODES_PAGE_COPY: Record<
       diagonal: "8 Directions",
       capped: "Capped",
       special: "Special",
-      tools: "Tools"
+      tools: "Records & Tools"
     },
     groups: [
       "Classic - No Undo",
@@ -138,7 +139,7 @@ const MODES_PAGE_COPY: Record<
       "Capped Modes",
       "Target Ban",
       "Rule Variants",
-      "Other Pages"
+      "Records & Tools"
     ],
     links: {
       "2048.html": "4x4",
@@ -172,10 +173,11 @@ const MODES_PAGE_COPY: Record<
       "play.html?mode_key=capped_4x4_pow2_no_undo": "4x4 Capped 2048",
       "play.html?mode_key=capped_4x4_pow2_4096_no_undo": "4x4 Capped 4096",
       "Practice_board.html?practice_fresh=1": "Practice Board",
+      "PKU2048.html?practice_fresh=1": "PKU2048 Practice Board",
       "history.html": "History",
       "replay.html": "Replay",
       "palette.html": "Theme Palette",
-      "account.html": "Account Center"
+      "account.html": "Leaderboard"
     }
   }
 };

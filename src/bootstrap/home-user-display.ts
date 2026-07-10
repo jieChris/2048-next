@@ -95,7 +95,7 @@ export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): st
 export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
   const userId = readUserId(input.storageLike);
   const nickname = readNickname(input.storageLike);
-  if (!userId) return "account.html";
+  if (!userId) return "account_settings.html";
   const query = new URLSearchParams({ id: userId });
   if (nickname) query.set("nickname", nickname);
   return `user.html?${query.toString()}`;
@@ -147,7 +147,7 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
   const node = documentLike.createElement("a");
   node.id = TOP_USER_PROFILE_BUTTON_ID;
   node.className = "top-action-btn profile-btn";
-  node.href = "account.html";
+  node.href = "account_settings.html";
   node.innerHTML = PROFILE_BUTTON_SVG;
   if (typeof node.setAttribute === "function") {
     node.setAttribute("title", "用户主页");

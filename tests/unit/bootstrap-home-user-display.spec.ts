@@ -32,8 +32,8 @@ describe("bootstrap home user display", () => {
     expect(resolveHomeUserDisplayName({ storageLike })).toBe("SmokeUser");
   });
 
-  it("links guests to the account login page", () => {
-    expect(resolveHomeUserDisplayHref({ storageLike: null })).toBe("account.html");
+  it("links guests to the account settings login page", () => {
+    expect(resolveHomeUserDisplayHref({ storageLike: null })).toBe("account_settings.html");
   });
 
   it("links signed-in users to their profile page", () => {

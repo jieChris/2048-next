@@ -1141,6 +1141,10 @@
       refresh();
     });
 
+    global.addEventListener("uilanguagechange", function () {
+      refresh();
+    });
+
     global.setTimeout(syncTopPanelHeight, 0);
     global.setTimeout(syncPreviewLegendSize, 0);
 

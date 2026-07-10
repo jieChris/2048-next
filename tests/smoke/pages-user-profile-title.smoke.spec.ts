@@ -47,7 +47,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page).toHaveTitle("用户主页");
   });
 
-  test("user profile logout button clears current account and opens account center", async ({ page }) => {
+  test("user profile logout button clears current account and opens leaderboard", async ({ page }) => {
     await page.addInitScript(() => {
       if (!window.location.pathname.endsWith("/user.html")) return;
       window.localStorage.setItem("2048_auth_token_v1", "test-token-logout");

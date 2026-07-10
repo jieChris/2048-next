@@ -44,14 +44,6 @@ function bindClickWithPreventDefault(
   });
 }
 
-function enforceModesButtonOpenInNewPage(getElementById: (id: string) => unknown): void {
-  const element = toRecord(getElementById("top-modes-btn"));
-  const setAttribute = asFunction<(name: string, value: string) => unknown>(element.setAttribute);
-  if (!setAttribute) return;
-  setAttribute.call(element, "target", "_blank");
-  setAttribute.call(element, "rel", "noopener noreferrer");
-}
-
 export interface TopActionBindingsHostResult {
   didBind: boolean;
   boundControlCount: number;
@@ -73,8 +65,6 @@ export function applyTopActionBindings(input: {
       boundControlCount: 0
     };
   }
-  enforceModesButtonOpenInNewPage(getElementById);
-
   const tryUndo = asFunction<() => unknown>(source.tryUndo);
   const exportReplay = asFunction<() => unknown>(source.exportReplay);
   const openPracticeBoardFromCurrent = asFunction<() => unknown>(source.openPracticeBoardFromCurrent);

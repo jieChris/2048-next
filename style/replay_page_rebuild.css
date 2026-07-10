@@ -162,6 +162,18 @@ body[data-page="replay"] .import-replay-button:hover {
   background: #a69586;
 }
 
+body[data-page="replay"] .replay-page-nav {
+  width: 620px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+body[data-page="replay"] .replay-page-nav .replay-control-btn {
+  min-width: 96px;
+  padding: 0 16px;
+}
+
 body[data-page="replay"] .replay-action-buttons {
   width: 620px;
   display: grid;
@@ -429,6 +441,7 @@ html[data-night-background="1"] body[data-page="replay"] .replay-singleline-inpu
   }
 
   body[data-page="replay"] .replay-top-stats,
+  body[data-page="replay"] .replay-page-nav,
   body[data-page="replay"] .replay-compatibility-banner,
   body[data-page="replay"] .replay-action-buttons,
   body[data-page="replay"] .replay-diagnostics-panel {

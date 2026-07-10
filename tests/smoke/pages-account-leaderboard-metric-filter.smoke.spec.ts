@@ -67,7 +67,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(initialSnapshot.calls[0]).toBe("score");
     expect(initialSnapshot.requests[0]).toEqual({ page: "1", limit: "500" });
     expect(initialSnapshot.title).toBe("排行榜");
-    expect(initialSnapshot.navIds).toEqual(["account-nav-home"]);
+    expect(initialSnapshot.navIds).toEqual(["account-nav-settings", "account-nav-home"]);
     expect(initialSnapshot.summaryMode).toContain("4x4");
     expect(initialSnapshot.summaryRefresh).not.toBe("--");
     await expect(page.locator("#account-board-prev")).toHaveCount(0);

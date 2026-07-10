@@ -31,7 +31,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#account-open-reset-password-btn")).toHaveCount(0);
     await expect(page.locator("#account-login-btn")).toHaveCount(0);
     await expect(page.locator(".account-auth-card")).toHaveCount(0);
-    await expect(page.locator("#account-nav-settings")).toHaveCount(0);
+    await expect(page.locator("#account-nav-settings")).toHaveAttribute("href", "account_settings.html");
+    await expect(page.locator("#account-nav-settings")).toHaveText("登录");
     await expect(page.locator("#account-register-btn")).toHaveCount(0);
     await expect(page.locator("#account-open-change-password-btn")).toHaveCount(0);
     await expect(page.locator("#account-logout-btn")).toHaveCount(0);

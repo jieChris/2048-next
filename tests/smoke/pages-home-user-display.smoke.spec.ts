@@ -13,7 +13,7 @@ test.describe("Home user display", () => {
 
     await expect(page.locator("#home-user-display")).toHaveText("游客");
     await expect(page.locator("#top-announcement-btn")).toBeHidden();
-    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account.html");
+    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account_settings.html");
   });
 
   test("keeps the profile button animated when text button mode is enabled", async ({ page }) => {

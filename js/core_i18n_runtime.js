@@ -114,9 +114,11 @@
     { s: "#announcement-modal h3", zh: "版本公告", en: "Announcements" },
     { s: "#announcement-close-btn", zh: "关闭", en: "Close" },
     { s: "#replay-modal-title", zh: "回放", en: "Replay" },
+    { s: "#replay-nav-home", zh: "首页", en: "Home" },
+    { s: "#replay-nav-history", zh: "本地历史", en: "Local History" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
     { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
-    { s: "#toolkit-account-link", zh: "账号中心", en: "Account Center" },
+    { s: "#toolkit-account-link", zh: "排行榜", en: "Leaderboard" },
     { s: "label[for='timer-module-view-toggle'].settings-toggle-title", zh: "计时器模式", en: "Timer Mode" },
     { s: "label.settings-toggle-title[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },
     { s: "#pku2048-inline-stats-desc", zh: "直接显示在页面中", en: "Show inline on page." },
@@ -129,6 +131,7 @@
   ];
 
   var FIXED_SELECTOR_ATTR = [
+    { s: ".replay-page-nav", a: "aria-label", zh: "页面导航", en: "Page Navigation" },
     { s: "#top-home-btn", a: "title", zh: "回首页", en: "Home" },
     { s: "#top-announcement-btn", a: "title", zh: "版本公告", en: "Announcements" },
     { s: "#top-user-profile-btn", a: "title", zh: "用户主页", en: "Profile" },
@@ -562,7 +565,7 @@
           exportLabel: "导出",
           importLabel: "导入",
           navHome: "回首页",
-          navAccount: "账号中心",
+          navAccount: "排行榜",
           navPractice: "练习板",
           previewPanel: "颜色预览",
           standard: "标准",

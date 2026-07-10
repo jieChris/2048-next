@@ -109,7 +109,7 @@
 
   var COPY = {
     zh: {
-      pageTitle: "2048 账号中心",
+      pageTitle: "2048 排行榜",
       kicker: "2048 在线中心",
       title: "排行榜",
       subtitle: "",
@@ -182,7 +182,7 @@
       apiNotConfigured: "当前站点未配置排行榜 API（/api）"
     },
     en: {
-      pageTitle: "2048 Account Center",
+      pageTitle: "2048 Leaderboard",
       kicker: "2048 Online Hub",
       title: "Leaderboard",
       subtitle: "",
@@ -1158,6 +1158,7 @@
     var resetPasswordBtn = byId("account-open-reset-password-btn");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
+    var settingsLink = byId("account-nav-settings");
 
     if (authGrid) authGrid.style.display = isAuthed ? "none" : "";
     if (authFormSurface) authFormSurface.style.display = isAuthed ? "none" : "";
@@ -1169,6 +1170,7 @@
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
+    if (settingsLink) settingsLink.textContent = isAuthed ? t("navSettings") : t("loginBtn");
 
     if (isAuthed) {
       if (passwordInput) passwordInput.value = "";
