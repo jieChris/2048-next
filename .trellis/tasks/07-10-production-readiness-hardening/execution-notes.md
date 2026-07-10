@@ -25,4 +25,4 @@
 
 ## Route Deviation
 
-- None.
+- The frontend release switch could not use `systemctl reload nginx` because production serves this site from the `site-2048-next` Docker container. The container's bind mount had resolved the previous `current` symlink target at creation time, so the conservative fallback was to validate the new release in a temporary container and then recreate only `site-2048-next`, with the prior release retained for rollback.
