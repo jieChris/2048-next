@@ -8,15 +8,15 @@ The three repositories must be treated as separate modules:
 - `2048-next`: the game frontend. It keeps the complete account user experience but calls `2048-game-api` for all account and data authority.
 - `2048-ranked`: the leaderboard, ranking, management, and content frontend. It calls `2048-game-api` for identity, game data, leaderboard, records, replay, ranked session, and admin game-data actions.
 
-## Current Known Drift
+## Current State
 
-The current codebase does not yet match the target shape:
+The repositories now match the authority boundary:
 
-- `2048-next` local API development has been moved to `2048-game-api`; keep future local docs and scripts aligned with that backend.
-- `2048-ranked` currently contains backend code under `src/server/game/*`, API routes under `src/app/api/game/[[...path]]/route.ts`, auth API routes under `src/app/api/auth/*`, Drizzle schema and migrations, and direct database access under `src/lib/db/*`.
-- `2048-game-api` contains a self-hosted backend under `src/server/*`, but its self-hosted route set is not yet the complete account + data authority expected by the target boundary.
+- `2048-next` calls `2048-game-api` and keeps only browser state and UI behavior.
+- `2048-ranked` has removed local game/account persistence and authority. Its remaining `/api/game/*` and `/api/auth/*` handlers are compatibility proxies.
+- `2048-game-api/src/server/*` owns the complete production account, game-data, ranked-product, token, replay, and persistence route set.
 
-These drift points are not patterns to copy. They are migration targets.
+Keep compatibility proxies thin and remove them when callers no longer depend on their paths.
 
 ## Boundary Rules
 

@@ -34,8 +34,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify release readiness
-        run: npm run verify:release-ready
+      - name: Install smoke browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify release
+        run: npm run verify:release
 
       - name: Build dist
         run: npm run build
@@ -207,6 +210,8 @@ jobs:
 
             releases_dir="${deploy_root}/releases"
             release_dir="${releases_dir}/${release_id}"
+            previous_release="$(readlink -f "${deploy_root}/current" 2>/dev/null || true)"
+            previous_nginx_config="$(mktemp)"
 
             cleanup_release_dir() {
               local target_dir="$1"
@@ -223,15 +228,22 @@ jobs:
             mkdir -p "${release_dir}"
 
             tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
-            ln -sfn "${release_dir}" "${deploy_root}/current"
             rm -f "/tmp/${artifact_name}"
 
-            if [ -f "${nginx_config_path}" ]; then
-              cp "${nginx_config_path}" "${deploy_root}/nginx.conf"
-              rm -f "${nginx_config_path}"
+            command -v docker >/dev/null 2>&1
+            test -f "${nginx_config_path}"
+            if [ -f "${deploy_root}/nginx.conf" ]; then
+              cp "${deploy_root}/nginx.conf" "${previous_nginx_config}"
             fi
+            docker run --rm \
+              -v "${nginx_config_path}:/etc/nginx/conf.d/default.conf:ro" \
+              nginx:1.27-alpine nginx -t
 
-            if command -v docker >/dev/null 2>&1 && [ -f "${deploy_root}/nginx.conf" ]; then
+            cp "${nginx_config_path}" "${deploy_root}/nginx.conf"
+            rm -f "${nginx_config_path}"
+            ln -sfn "${release_dir}" "${deploy_root}/current"
+
+            start_site_container() {
               docker_network_args=()
               if docker network inspect edge-migrate-net >/dev/null 2>&1; then
                 docker_network_args=(--network edge-migrate-net)
@@ -249,7 +261,35 @@ jobs:
                 -v "${deploy_root}/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
                 -v "${deploy_root}/current:/usr/share/nginx/html:ro" \
                 nginx:1.27-alpine >/dev/null
+            }
+
+            wait_for_site() {
+              for health_attempt in $(seq 1 20); do
+                if docker exec site-2048-next wget -q --spider http://127.0.0.1/2048.html; then
+                  return 0
+                fi
+                sleep 1
+              done
+              return 1
+            }
+
+            start_site_container
+            if ! wait_for_site; then
+              docker logs --tail=80 site-2048-next || true
+              if [ -n "${previous_release}" ] && [ -d "${previous_release}" ]; then
+                ln -sfn "${previous_release}" "${deploy_root}/current"
+                if [ -s "${previous_nginx_config}" ]; then
+                  cp "${previous_nginx_config}" "${deploy_root}/nginx.conf"
+                fi
+                start_site_container
+                wait_for_site || true
+              fi
+              cleanup_release_dir "${release_dir}"
+              rm -f "${previous_nginx_config}"
+              echo "ERROR: release health check failed; previous release restored." >&2
+              exit 1
             fi
+            rm -f "${previous_nginx_config}"
 
             cd "${releases_dir}"
             (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do

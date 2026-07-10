@@ -53,6 +53,8 @@ export interface NoXSelectionWindowLike {
 
 export interface NoXSelectionManagerLike {
   document?: NoXSelectionDocumentLike | null;
+  mode?: unknown;
+  modeKey?: unknown;
   modeConfig?: unknown;
   specialRules?: unknown;
   noXSelectionPending?: boolean;
@@ -69,6 +71,8 @@ export interface NoXSelectionRuntime {
   ensureNoXSelectionOverlayForManager: typeof ensureNoXSelectionOverlayForManager;
   removeNoXSelectionOverlay: typeof removeNoXSelectionOverlay;
   applyNoXSelectionToManager: typeof applyNoXSelectionToManager;
+  applySavedNoXSelectionState: typeof applySavedNoXSelectionState;
+  buildSavedGameStateNoXSelectionPayload: typeof buildSavedGameStateNoXSelectionPayload;
   resolveSetupNoXModeConfig: typeof resolveSetupNoXModeConfig;
   resolveNoXSelectionOverlayId: typeof resolveNoXSelectionOverlayId;
 }
@@ -124,6 +128,70 @@ function applyNoXSelectionToModeConfig(modeConfig: unknown, forbiddenTile: numbe
   if (!rules) return;
   rules.no_x_enabled = true;
   rules.no_x_target = forbiddenTile;
+}
+
+function resolveSavedNoXTarget(value: unknown): number | null {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  const target = Math.floor(numeric);
+  return target === numeric ? target : null;
+}
+
+function resolveSavedNoXTargetFromSource(source: unknown): number | null {
+  if (!isRecord(source)) return null;
+  const direct = resolveSavedNoXTarget(source.no_x_target);
+  if (direct !== null) return direct;
+  return isRecord(source.special_rules_snapshot)
+    ? resolveSavedNoXTarget(source.special_rules_snapshot.no_x_target)
+    : null;
+}
+
+function isNoXManager(manager: NoXSelectionManagerLike | null | undefined): boolean {
+  if (!manager) return false;
+  const modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
+  if (modeKey.startsWith("nox_") || modeKey.includes("no_x")) return true;
+  if (isRecord(manager.specialRules) && manager.specialRules.no_x_enabled === true) return true;
+  return isNoXModeConfig(manager.modeConfig);
+}
+
+export function buildSavedGameStateNoXSelectionPayload(
+  manager: NoXSelectionManagerLike | null | undefined
+): Record<string, unknown> {
+  if (!isNoXManager(manager)) return {};
+  const fromRules = isRecord(manager?.specialRules)
+    ? resolveSavedNoXTarget(manager.specialRules.no_x_target)
+    : null;
+  return {
+    no_x_target: fromRules ?? resolveNoXForbiddenTileFromModeConfig(manager?.modeConfig),
+    no_x_selection_pending: manager?.noXSelectionPending === true
+  };
+}
+
+export function applySavedNoXSelectionState(
+  manager: NoXSelectionManagerLike | null | undefined,
+  saved: unknown
+): void {
+  if (!manager || !isNoXManager(manager)) return;
+  const target = resolveSavedNoXTargetFromSource(saved);
+  if (target === null) return;
+  const pending = isRecord(saved) && saved.no_x_selection_pending === true;
+  if (!pending && resolveNoXForbiddenTileOption(target) !== null) {
+    applyNoXSelectionToManager(manager, target);
+    manager.noXPendingDefaultTarget = target;
+    manager.noXSelectionPending = false;
+    return;
+  }
+  applyNoXSelectionToModeConfig(manager.modeConfig, target);
+  if (isRecord(manager.specialRules)) {
+    manager.specialRules.no_x_enabled = true;
+    manager.specialRules.no_x_target = target;
+  }
+  const windowLike = resolveWindowLike(manager);
+  if (isRecord(windowLike?.GAME_MODE_CONFIG)) {
+    applyNoXSelectionToModeConfig(windowLike.GAME_MODE_CONFIG, target);
+  }
+  manager.noXPendingDefaultTarget = target;
+  manager.noXSelectionPending = pending;
 }
 
 function resolveWindowLike(manager: NoXSelectionManagerLike | null | undefined): NoXSelectionWindowLike | null {
@@ -379,6 +447,8 @@ export function createNoXSelectionRuntime(): NoXSelectionRuntime {
     ensureNoXSelectionOverlayForManager,
     removeNoXSelectionOverlay,
     applyNoXSelectionToManager,
+    applySavedNoXSelectionState,
+    buildSavedGameStateNoXSelectionPayload,
     resolveSetupNoXModeConfig,
     resolveNoXSelectionOverlayId
   };

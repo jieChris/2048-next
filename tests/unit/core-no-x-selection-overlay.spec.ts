@@ -2,7 +2,9 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applySavedNoXSelectionState,
   applyNoXSelectionToManager,
+  buildSavedGameStateNoXSelectionPayload,
   createNoXSelectionRuntime,
   ensureNoXSelectionOverlayForManager,
   installNoXSelectionRuntime,
@@ -56,7 +58,30 @@ describe("core NO X selection runtime installer", () => {
     expect(runtime.ensureNoXSelectionOverlayForManager).toBe(ensureNoXSelectionOverlayForManager);
     expect(runtime.removeNoXSelectionOverlay).toBe(removeNoXSelectionOverlay);
     expect(runtime.applyNoXSelectionToManager).toBe(applyNoXSelectionToManager);
+    expect(runtime.applySavedNoXSelectionState).toBe(applySavedNoXSelectionState);
+    expect(runtime.buildSavedGameStateNoXSelectionPayload).toBe(buildSavedGameStateNoXSelectionPayload);
     expect(runtime.resolveSetupNoXModeConfig).toBe(resolveSetupNoXModeConfig);
+  });
+
+  it("persists and restores a selected target without reopening the chooser", () => {
+    const { manager, windowLike } = createManager({ defaultTarget: 256 });
+    manager.noXSelectionPending = false;
+
+    expect(buildSavedGameStateNoXSelectionPayload(manager)).toEqual({
+      no_x_target: 256,
+      no_x_selection_pending: false
+    });
+
+    manager.modeConfig.special_rules.no_x_target = 8192;
+    manager.noXSelectionPending = true;
+    applySavedNoXSelectionState(manager, {
+      no_x_target: 256,
+      no_x_selection_pending: false
+    });
+
+    expect(manager.noXSelectionPending).toBe(false);
+    expect(manager.modeConfig.special_rules.no_x_target).toBe(256);
+    expect(windowLike.GAME_MODE_CONFIG.special_rules.no_x_target).toBe(256);
   });
 
   it("installs the runtime on a supplied window-like object", () => {

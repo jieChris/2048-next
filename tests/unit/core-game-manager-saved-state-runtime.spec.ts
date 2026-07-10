@@ -417,7 +417,17 @@ describe("core game manager saved state runtime", () => {
   });
 
   it("persists and restores selected NO X target without reopening selection", () => {
-    const runtime = loadSavedStateRuntime([]);
+    const buildSavedGameStateNoXSelectionPayload = vi.fn(() => ({
+      no_x_target: 256,
+      no_x_selection_pending: false
+    }));
+    const applySavedNoXSelectionState = vi.fn();
+    const runtime = loadSavedStateRuntime([], {
+      CoreNoXSelectionRuntime: {
+        buildSavedGameStateNoXSelectionPayload,
+        applySavedNoXSelectionState
+      }
+    });
     const manager = {
       modeKey: "nox_4x4_pow2_no_undo",
       mode: "nox_4x4_pow2_no_undo",
@@ -433,13 +443,6 @@ describe("core game manager saved state runtime", () => {
       no_x_target: 256,
       no_x_selection_pending: false
     });
-
-    const windowLike = {
-      GAME_MODE_CONFIG: {
-        key: "nox_4x4_pow2_no_undo",
-        special_rules: { no_x_enabled: true, no_x_target: 8192 }
-      }
-    };
     const restoredManager = {
       modeKey: "nox_4x4_pow2_no_undo",
       mode: "nox_4x4_pow2_no_undo",
@@ -448,21 +451,17 @@ describe("core game manager saved state runtime", () => {
         key: "nox_4x4_pow2_no_undo",
         special_rules: { no_x_enabled: true, no_x_target: 8192 }
       },
-      noXSelectionPending: true,
-      getWindowLike() {
-        return windowLike;
-      }
+      noXSelectionPending: true
     };
-
-    runtime.applySavedNoXSelectionState(restoredManager, {
+    const saved = {
       no_x_target: 256,
       no_x_selection_pending: false
-    });
+    };
 
-    expect(restoredManager.noXSelectionPending).toBe(false);
-    expect(restoredManager.specialRules.no_x_target).toBe(256);
-    expect(restoredManager.modeConfig.special_rules.no_x_target).toBe(256);
-    expect(windowLike.GAME_MODE_CONFIG.special_rules.no_x_target).toBe(256);
+    runtime.applySavedNoXSelectionState(restoredManager, saved);
+
+    expect(buildSavedGameStateNoXSelectionPayload).toHaveBeenCalledWith(manager);
+    expect(applySavedNoXSelectionState).toHaveBeenCalledWith(restoredManager, saved);
   });
 
   it("delegates saved timer sub-state composition to the TypeScript runtime", () => {

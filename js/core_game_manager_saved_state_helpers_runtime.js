@@ -1046,112 +1046,16 @@ function buildSavedGameStateDiagnosticsPayload(manager) {
 }
 
 function buildSavedGameStateMetaPayload(manager, now) {
-  return {
-    v: GameManager.SAVED_GAME_STATE_VERSION, saved_at: now, terminated: false,
-    mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height, ruleset: manager.ruleset
-  };
+  return { v: GameManager.SAVED_GAME_STATE_VERSION, saved_at: now, terminated: false, mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height, ruleset: manager.ruleset };
 }
 
 function buildSavedGameStateCoreStatePayload(manager) {
-  return {
-    board: manager.getFinalBoardMatrix(), score: manager.score, over: manager.over, won: manager.won,
-    keep_playing: manager.keepPlaying, initial_seed: manager.initialSeed, seed: manager.seed,
-    client_record_id: resolveManagerClientRecordId(manager),
-    spawn_value_counts: manager.spawnValueCounts || {}, reached_32k: !!manager.reached32k,
-    capped_milestone_count: Number.isInteger(manager.cappedMilestoneCount) ? manager.cappedMilestoneCount : 0,
-    capped64_unlocked: manager.capped64Unlocked || null
-  };
+  return { board: manager.getFinalBoardMatrix(), score: manager.score, over: manager.over, won: manager.won, keep_playing: manager.keepPlaying, initial_seed: manager.initialSeed, seed: manager.seed, client_record_id: resolveManagerClientRecordId(manager), spawn_value_counts: manager.spawnValueCounts || {}, reached_32k: !!manager.reached32k, capped_milestone_count: Number.isInteger(manager.cappedMilestoneCount) ? manager.cappedMilestoneCount : 0, capped64_unlocked: manager.capped64Unlocked || null };
 }
 
-function resolveSavedNoXTarget(value) {
-  var numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return null;
-  var target = Math.floor(numeric);
-  return target === numeric ? target : null;
-}
-
-function resolveNoXTargetFromSavedStateSource(source) {
-  var sourceRecord = normalizeSavedStateRecordObject(source, null);
-  if (!sourceRecord) return null;
-  var directTarget = resolveSavedNoXTarget(sourceRecord.no_x_target);
-  if (directTarget !== null) return directTarget;
-  var rules = normalizeSavedStateRecordObject(sourceRecord.special_rules_snapshot, null);
-  return rules ? resolveSavedNoXTarget(rules.no_x_target) : null;
-}
-
-function resolveManagerNoXTarget(manager) {
-  if (!manager) return null;
-  var specialRules = normalizeSavedStateRecordObject(manager.specialRules, null);
-  var fromRules = specialRules ? resolveSavedNoXTarget(specialRules.no_x_target) : null;
-  if (fromRules !== null) return fromRules;
-  var modeConfig = normalizeSavedStateRecordObject(manager.modeConfig, null);
-  var modeRules = modeConfig ? normalizeSavedStateRecordObject(modeConfig.special_rules, null) : null;
-  return modeRules ? resolveSavedNoXTarget(modeRules.no_x_target) : null;
-}
-
-function isNoXManagerState(manager) {
-  if (!manager) return false;
-  var modeKey = String(manager.modeKey || manager.mode || "").toLowerCase();
-  if (modeKey.indexOf("nox_") === 0 || modeKey.indexOf("no_x") >= 0) return true;
-  var specialRules = normalizeSavedStateRecordObject(manager.specialRules, null);
-  if (specialRules && specialRules.no_x_enabled === true) return true;
-  var modeConfig = normalizeSavedStateRecordObject(manager.modeConfig, null);
-  var modeRules = modeConfig ? normalizeSavedStateRecordObject(modeConfig.special_rules, null) : null;
-  return !!(modeRules && modeRules.no_x_enabled === true);
-}
-
-function buildSavedGameStateNoXSelectionPayload(manager) {
-  if (!isNoXManagerState(manager)) return {};
-  return {
-    no_x_target: resolveManagerNoXTarget(manager),
-    no_x_selection_pending: manager.noXSelectionPending === true
-  };
-}
-
-function ensureNoXRulesObject(target) {
-  var record = normalizeSavedStateRecordObject(target, null);
-  if (!record) return null;
-  if (!normalizeSavedStateRecordObject(record.special_rules, null)) {
-    record.special_rules = {};
-  }
-  return normalizeSavedStateRecordObject(record.special_rules, null);
-}
-
-function applyNoXTargetToModeConfig(modeConfig, target) {
-  var rules = ensureNoXRulesObject(modeConfig);
-  if (!rules) return;
-  rules.no_x_enabled = true;
-  rules.no_x_target = target;
-}
-
-function applySavedNoXSelectionState(manager, saved) {
-  if (!manager || !isNoXManagerState(manager)) return;
-  var target = resolveNoXTargetFromSavedStateSource(saved);
-  if (target === null) return;
-  var pending = !!(saved && saved.no_x_selection_pending === true);
-  var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
-  if (!pending) {
-    var runtime = windowLike && windowLike.CoreNoXSelectionRuntime
-      ? windowLike.CoreNoXSelectionRuntime
-      : (typeof CoreNoXSelectionRuntime !== "undefined" ? CoreNoXSelectionRuntime : null);
-    if (runtime && typeof runtime.applyNoXSelectionToManager === "function") {
-      runtime.applyNoXSelectionToManager(manager, target);
-      manager.noXPendingDefaultTarget = target;
-      manager.noXSelectionPending = false;
-      return;
-    }
-  }
-  applyNoXTargetToModeConfig(manager.modeConfig, target);
-  if (normalizeSavedStateRecordObject(manager.specialRules, null)) {
-    manager.specialRules.no_x_enabled = true;
-    manager.specialRules.no_x_target = target;
-  }
-  if (windowLike && normalizeSavedStateRecordObject(windowLike.GAME_MODE_CONFIG, null)) {
-    applyNoXTargetToModeConfig(windowLike.GAME_MODE_CONFIG, target);
-  }
-  manager.noXPendingDefaultTarget = target;
-  manager.noXSelectionPending = pending;
-}
+function resolveCoreNoXSavedStateRuntime(manager) { var windowLike = manager && manager.getWindowLike ? manager.getWindowLike() : null; return windowLike && windowLike.CoreNoXSelectionRuntime ? windowLike.CoreNoXSelectionRuntime : (typeof CoreNoXSelectionRuntime !== "undefined" ? CoreNoXSelectionRuntime : null); }
+function buildSavedGameStateNoXSelectionPayload(manager) { var runtime = resolveCoreNoXSavedStateRuntime(manager); return runtime && typeof runtime.buildSavedGameStateNoXSelectionPayload === "function" ? runtime.buildSavedGameStateNoXSelectionPayload(manager) : {}; }
+function applySavedNoXSelectionState(manager, saved) { var runtime = resolveCoreNoXSavedStateRuntime(manager); if (runtime && typeof runtime.applySavedNoXSelectionState === "function") runtime.applySavedNoXSelectionState(manager, saved); }
 
 function shouldIncludeReplayStringInSavedPayload(manager, now, saveOptions) {
   if (!manager) return false;
