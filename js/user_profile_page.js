@@ -244,6 +244,7 @@
       recordsFail: "用户记录加载失败",
       networkError: "网络异常",
       summaryTotalLabel: "总记录数",
+      summaryMostPlayedLabel: "最常玩",
       summaryRecordCountLabel: "记录数",
       summaryBestScoreLabel: "最高分",
       summaryBestTileLabel: "最大方块",
@@ -329,6 +330,7 @@
       recordsFail: "Failed to load records",
       networkError: "Network error",
       summaryTotalLabel: "Total Records",
+      summaryMostPlayedLabel: "Most Played",
       summaryRecordCountLabel: "Records",
       summaryBestScoreLabel: "Best Score",
       summaryBestTileLabel: "Best Tile",
@@ -2151,13 +2153,13 @@
 
     var mostPlayed = findMostPlayedModeStats();
     if (totalLabelNode) totalLabelNode.textContent = t("summaryTotalLabel");
-    if (bestScoreLabelNode) bestScoreLabelNode.textContent = mostPlayed ? resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key) : "--";
+    if (bestScoreLabelNode) bestScoreLabelNode.textContent = t("summaryMostPlayedLabel");
     if (bestTileLabelNode) bestTileLabelNode.textContent = t("summaryLastActiveLabel");
     if (lastActiveLabelNode) lastActiveLabelNode.textContent = "";
     if (lastActiveCard) lastActiveCard.style.display = "none";
     if (summaryRow) summaryRow.classList.add("is-summary-all");
     if (totalNode) totalNode.textContent = summaryTotalRecords > 0 ? String(summaryTotalRecords) : "--";
-    if (bestScoreNode) bestScoreNode.textContent = mostPlayed ? formatGameCount(mostPlayed.record_count) : "--";
+    if (bestScoreNode) bestScoreNode.textContent = mostPlayed ? resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key) : "--";
     if (bestTileNode) bestTileNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
     if (lastActiveNode) lastActiveNode.textContent = "";
     if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();

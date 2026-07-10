@@ -404,8 +404,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.waitForSelector(".user-record-item");
     await expect(page.locator("#user-summary-total-value")).toHaveText("6");
-    await expect(page.locator("#user-summary-best-score-label")).toHaveText("斐波那契4x2可撤回");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("3局");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("斐波那契4x2可撤回");
     await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最近活跃");
     const modeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
