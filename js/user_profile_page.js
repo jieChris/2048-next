@@ -373,6 +373,10 @@
     return parsePositiveInt(safeGetStorage(STORAGE_USER_ID_KEY));
   }
 
+  function getStoredNickname() {
+    return toText(safeGetStorage(STORAGE_NICKNAME_KEY)).trim();
+  }
+
   function readLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
@@ -719,6 +723,35 @@
       }
       return fallback || result;
     })();
+  }
+
+  async function resolveTargetUserFromSession() {
+    if (targetUserId) return true;
+    if (!getAuthToken()) return false;
+
+    var storedUserId = getStoredUserId();
+    if (storedUserId) {
+      targetUserId = storedUserId;
+      targetNicknameHint = getStoredNickname();
+      resolvedProfileNickname = targetNicknameHint;
+      return true;
+    }
+
+    var result = await getMyUserInfo();
+    if (!result || !result.success || !result.data) return false;
+
+    var me = result.data || {};
+    var resolvedUserId = parsePositiveInt(me.id || me.user_id);
+    if (!resolvedUserId) return false;
+
+    targetUserId = resolvedUserId;
+    targetNicknameHint = toText(me.nickname).trim();
+    resolvedProfileNickname = targetNicknameHint;
+    writeLocalStorageItem(STORAGE_USER_ID_KEY, String(resolvedUserId));
+    if (targetNicknameHint) {
+      writeLocalStorageItem(STORAGE_NICKNAME_KEY, targetNicknameHint);
+    }
+    return true;
   }
 
   function getUserRecords(userId, options) {
@@ -2421,6 +2454,8 @@
     if (sortBySelect && !sortBySelect.value) sortBySelect.value = "time";
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
     if (visibilitySelect && !visibilitySelect.value) visibilitySelect.value = "active";
+
+    await resolveTargetUserFromSession();
 
     if (!targetUserId) {
       applyDocumentTitle();

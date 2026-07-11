@@ -167,11 +167,7 @@ test.describe("Home user display", () => {
     expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#home-user-display")).toHaveCount(0);
-    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
-      "href",
-      "user.html?id=19&nickname=Jay"
-    );
-    await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(1);
+    await expect(page.locator("#top-user-profile-btn")).toHaveCount(0);
   });
 
   test("keeps long score values fully visible", async ({ page }) => {

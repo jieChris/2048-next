@@ -14,13 +14,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#settings-subtitle")).toBeHidden();
     await expect(page.locator("#settings-kicker")).toBeHidden();
     await expect(page.locator("#home-user-display")).toBeHidden();
+    await expect(page.locator("#settings-nav-user")).toBeHidden();
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-top", "19px");
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-bottom", "19px");
     await expect(page.locator("#account-action-row")).toHaveCSS("padding-top", "12px");
     await expect(page.locator("#account-action-row")).toHaveCSS("padding-bottom", "12px");
     await expect(page.locator('link[href^="style/account_settings_page.css"]')).toHaveAttribute(
       "href",
-      "style/account_settings_page.css?v=20260711-login-layout-v2"
+      "style/account_settings_page.css?v=20260711-centered-account-panels"
     );
 
     const alignment = await page.locator(".settings-auth-section").evaluate((section) => {
@@ -131,6 +132,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
 
     await expect(page.locator("#settings-current-nickname")).toHaveText("SmokeUser");
+    await expect(page.locator("#settings-nav-user")).toBeVisible();
+    await expect(page.locator("#settings-nav-user")).toHaveAttribute("href", "user.html");
+
+    const centeredPanels = await page.locator(".settings-card").evaluate((card) => {
+      const cardRect = card.getBoundingClientRect();
+      const panels = [
+        card.querySelector<HTMLElement>(".account-user-card"),
+        ...Array.from(card.querySelectorAll<HTMLElement>("[data-settings-account-only]"))
+      ].filter((panel): panel is HTMLElement => Boolean(panel));
+
+      return panels.map((panel) => {
+        const rect = panel.getBoundingClientRect();
+        return {
+          centerDelta: Math.abs((cardRect.left + cardRect.width / 2) - (rect.left + rect.width / 2)),
+          width: rect.width
+        };
+      });
+    });
+
+    expect(centeredPanels).toHaveLength(4);
+    expect(centeredPanels.every((panel) => panel.centerDelta <= 1)).toBeTruthy();
+    expect(centeredPanels.every((panel) => panel.width <= 560)).toBeTruthy();
 
     await page.fill("#settings-new-nickname", "TakenUser");
     await page.locator("#settings-new-nickname").blur();

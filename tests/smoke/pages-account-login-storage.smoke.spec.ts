@@ -94,6 +94,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#account-action-row")).toBeHidden();
     await expect(page.locator("#account-auth-subtitle")).toBeHidden();
     await expect(page.locator(".account-user-card")).toBeVisible();
+    await expect(page.locator("#settings-nav-user")).toBeVisible();
+    await expect(page.locator("#settings-nav-user")).toHaveAttribute("href", "user.html");
   });
 
   test("account login disables auth actions and shows loading state while pending", async ({ page }) => {

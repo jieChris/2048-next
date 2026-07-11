@@ -36,6 +36,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
             }
           );
         }
+        if (rawUrl.includes("/user/me") || rawUrl.endsWith("/api/me")) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: { id: 19, nickname: "SmokeUser", email: "smoke@example.com" }
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" }
+            }
+          );
+        }
         return originalFetch(input, init);
       };
     });
@@ -67,7 +79,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(initialSnapshot.calls[0]).toBe("score");
     expect(initialSnapshot.requests[0]).toEqual({ page: "1", limit: "500" });
     expect(initialSnapshot.title).toBe("排行榜");
-    expect(initialSnapshot.navIds).toEqual(["account-nav-settings", "account-nav-home"]);
+    expect(initialSnapshot.navIds).toEqual(["account-nav-user", "account-nav-settings", "account-nav-home"]);
+    await expect(page.locator("#account-nav-user")).toBeHidden();
     expect(initialSnapshot.summaryMode).toContain("4x4");
     expect(initialSnapshot.summaryRefresh).not.toBe("--");
     await expect(page.locator("#account-board-prev")).toHaveCount(0);
@@ -75,6 +88,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#account-board-next")).toHaveCount(0);
     await expect(page.locator(".account-auth-card")).toHaveCount(0);
     await expect(page.locator("#account-login-btn")).toHaveCount(0);
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "account-nav-token");
+      window.dispatchEvent(new StorageEvent("storage", { key: "2048_auth_token_v1" }));
+    });
+    await expect(page.locator("#account-nav-user")).toBeVisible();
+    await expect(page.locator("#account-nav-user")).toHaveAttribute("href", "user.html");
+    await expect(page.locator("#account-nav-user")).toHaveText("用户中心");
 
     await page.evaluate(() => {
       const metricSelect = document.querySelector("#account-board-metric") as HTMLSelectElement | null;

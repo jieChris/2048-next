@@ -48,6 +48,16 @@ describe("bootstrap home user display", () => {
     expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html?id=42&nickname=Smoke+User");
   });
 
+  it("links authenticated sessions without a cached user id to the current user profile", () => {
+    const storageLike = {
+      getItem(key: string) {
+        return key === "2048_auth_token_v1" ? "session-token" : null;
+      }
+    };
+
+    expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html");
+  });
+
   it("syncs the label element text and href", () => {
     const label = { textContent: "", href: "" };
     const documentLike = {
@@ -91,7 +101,7 @@ describe("bootstrap home user display", () => {
     expect(profileButton.href).toBe(label.href);
   });
 
-  it("creates a missing top profile button in top action bars without creating a nickname badge", () => {
+  it("does not create a profile button on the practice board", () => {
     const appended: Array<{
       className?: string;
       href?: string;
@@ -133,18 +143,8 @@ describe("bootstrap home user display", () => {
       }
     };
 
-    expect(syncHomeUserDisplay({ documentLike, storageLike, pageId: "practice" })).toBe(true);
-    expect(appended).toHaveLength(1);
-    expect(appended[0]).toMatchObject({
-      id: "top-user-profile-btn",
-      className: "top-action-btn profile-btn",
-      href: "user.html?id=19&nickname=Jay"
-    });
-    expect(appended[0].innerHTML).toContain("profile-head-left");
-    expect(appended[0].attrs).toMatchObject({
-      title: "用户主页",
-      "aria-label": "用户主页"
-    });
+    expect(syncHomeUserDisplay({ documentLike, storageLike, pageId: "practice" })).toBe(false);
+    expect(appended).toHaveLength(0);
   });
 
   it("creates a global label for regular pages without an existing node", () => {

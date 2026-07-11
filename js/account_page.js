@@ -113,6 +113,7 @@
       kicker: "2048 在线中心",
       title: "排行榜",
       subtitle: "",
+      navUser: "用户中心",
       navSettings: "账号设置",
       navHome: "首页",
       navHistory: "本地历史",
@@ -186,6 +187,7 @@
       kicker: "2048 Online Hub",
       title: "Leaderboard",
       subtitle: "",
+      navUser: "User Center",
       navSettings: "Account Settings",
       navHome: "Home",
       navHistory: "Local History",
@@ -1158,6 +1160,7 @@
     var resetPasswordBtn = byId("account-open-reset-password-btn");
     var passwordInput = byId("account-password");
     var captchaWrap = byId("account-login-captcha-wrap");
+    var userLink = byId("account-nav-user");
     var settingsLink = byId("account-nav-settings");
 
     if (authGrid) authGrid.style.display = isAuthed ? "none" : "";
@@ -1170,6 +1173,7 @@
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
     if (authTip) authTip.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
+    if (userLink) userLink.hidden = !isAuthed;
     if (settingsLink) settingsLink.textContent = isAuthed ? t("navSettings") : t("loginBtn");
 
     if (isAuthed) {
@@ -1389,6 +1393,7 @@
     var textMap = {
       "account-title": t("title"),
       "account-subtitle": t("subtitle"),
+      "account-nav-user": t("navUser"),
       "account-nav-settings": t("navSettings"),
       "account-nav-home": t("navHome"),
       "account-nav-history": t("navHistory"),

@@ -47,6 +47,71 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page).toHaveTitle("用户主页");
   });
 
+  test("current user profile resolves from the authenticated session without query parameters", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-session-only");
+      window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("2048_auth_nickname_v1");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me") || url.endsWith("/api/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 27, nickname: "SessionOwner", created_at: "2026-07-11 08:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/27/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: [], page: 1, limit: 20, total: 0 })
+        });
+        return;
+      }
+      if (url.includes("/user/27/stats")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: { summary: { total_records: 0 }, by_mode: [] } })
+        });
+        return;
+      }
+      if (url.includes("/user/27")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 27, nickname: "SessionOwner", created_at: "2026-07-11 08:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    const response = await page.goto("/user.html", { waitUntil: "domcontentloaded" });
+    expect(response, "User response should exist").not.toBeNull();
+    expect(response?.ok(), "User response should be 2xx").toBeTruthy();
+
+    await expect(page.locator("#user-value-name")).toHaveText("SessionOwner");
+    await expect(page).toHaveTitle("用户主页");
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem("2048_auth_userId_v1")))
+      .toBe("27");
+  });
+
   test("user profile logout button clears current account and opens leaderboard", async ({ page }) => {
     await page.addInitScript(() => {
       if (!window.location.pathname.endsWith("/user.html")) return;

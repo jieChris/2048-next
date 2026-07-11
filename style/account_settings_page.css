@@ -99,6 +99,14 @@ body[data-page="account-settings-hub"][data-auth-state="authed"] #account-auth-t
   display: none;
 }
 
+body[data-page="account-settings-hub"][data-auth-state="authed"] .account-user-card,
+body[data-page="account-settings-hub"][data-auth-state="authed"] [data-settings-account-only] {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+}
+
 .settings-grid {
   max-width: 560px;
 }

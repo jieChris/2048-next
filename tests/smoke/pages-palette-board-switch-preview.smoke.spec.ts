@@ -1,6 +1,80 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("touch sensitivity entry is hidden on desktop and shown on narrow touch devices", async ({ browser, page }) => {
+    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".palette-touch-entry")).toBeHidden();
+
+    const touchContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true
+    });
+    const touchPage = await touchContext.newPage();
+    await touchPage.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await expect(touchPage.locator(".palette-touch-entry")).toBeVisible();
+    await touchContext.close();
+  });
+
+  test("palette internal controls use the enamel button palette", async ({ page }) => {
+    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    expect(response, "Palette response should exist").not.toBeNull();
+    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await expect(page.locator(".palette-item.is-active")).toBeVisible();
+    await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
+      "href",
+      "style/palette_page.css?v=20260711-enamel-controls"
+    );
+
+    await page.waitForSelector(".swatch-chip", { state: "attached" });
+
+    const styles = await page.evaluate(() => {
+      function snapshot(selector: string) {
+        const node = document.querySelector<HTMLElement>(selector);
+        if (!node) return null;
+        const style = window.getComputedStyle(node);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          borderRadius: style.borderRadius,
+          boxShadow: style.boxShadow
+        };
+      }
+
+      return {
+        board: snapshot(".palette-board-btn:not(.is-active)"),
+        activeBoard: snapshot(".palette-board-btn.is-active"),
+        activeDimension: snapshot(".palette-dimension-tab.is-active"),
+        activePalette: snapshot(".palette-item.is-active"),
+        selectTrigger: snapshot(".custom-select-trigger"),
+        activeTarget: snapshot(".color-target.is-active-target"),
+        swatch: snapshot(".swatch-chip"),
+        createButton: snapshot("#palette-create-btn")
+      };
+    });
+
+    expect(styles.board).toMatchObject({
+      backgroundColor: "rgb(255, 254, 249)",
+      borderRadius: "7px"
+    });
+    expect(styles.activeBoard?.backgroundColor).toBe("rgb(32, 56, 61)");
+    expect(styles.activeDimension?.backgroundColor).toBe("rgb(32, 56, 61)");
+    expect(styles.activePalette).toMatchObject({
+      borderColor: "rgb(47, 134, 160)",
+      borderRadius: "7px"
+    });
+    expect(styles.selectTrigger).toMatchObject({
+      backgroundColor: "rgb(255, 254, 249)",
+      borderRadius: "7px"
+    });
+    expect(styles.activeTarget).toMatchObject({
+      borderColor: "rgb(47, 134, 160)",
+      borderRadius: "7px"
+    });
+    expect(styles.swatch?.borderRadius).toBe("7px");
+    expect(styles.createButton?.backgroundColor).toBe("rgb(32, 56, 61)");
+  });
+
   test("classic follow-theme uses white text from 128 through 2K like 4K", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("theme_profile_v1", "classic");

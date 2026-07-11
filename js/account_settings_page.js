@@ -42,6 +42,7 @@
       kicker: "2048 在线中心",
       title: "账号设置",
       subtitle: "在这里统一管理昵称、密码和登录状态。",
+      navUser: "用户中心",
       navAccount: "返回排行榜",
       navHome: "回首页",
       authHeading: "账号登录",
@@ -104,6 +105,7 @@
       kicker: "2048 Online Hub",
       title: "Account Settings",
       subtitle: "Manage nickname, password and session in one place.",
+      navUser: "User Center",
       navAccount: "Back to Leaderboard",
       navHome: "Home",
       authHeading: "Account Login",
@@ -643,6 +645,7 @@
     var registerBtn = byId("account-open-register-btn");
     var resetPasswordBtn = byId("account-open-reset-password-btn");
     var captchaWrap = byId("account-login-captcha-wrap");
+    var userLink = byId("settings-nav-user");
     var accountOnlySections = global.document.querySelectorAll("[data-settings-account-only]");
 
     if (stateTag) stateTag.textContent = isAuthed ? t("stateAuthed") : t("stateGuest");
@@ -655,6 +658,7 @@
     if (registerBtn) registerBtn.style.display = isAuthed ? "none" : "";
     if (resetPasswordBtn) resetPasswordBtn.style.display = isAuthed ? "none" : "";
     if (captchaWrap) captchaWrap.style.display = isAuthed ? "none" : (loginCaptchaRequired ? "grid" : "none");
+    if (userLink) userLink.hidden = !isAuthed;
 
     for (var i = 0; i < accountOnlySections.length; i += 1) {
       accountOnlySections[i].style.display = isAuthed ? "" : "none";
@@ -934,6 +938,7 @@
       "settings-kicker": t("kicker"),
       "settings-title": t("title"),
       "settings-subtitle": t("subtitle"),
+      "settings-nav-user": t("navUser"),
       "settings-nav-account": t("navAccount"),
       "settings-nav-home": t("navHome"),
       "account-auth-heading": t("authHeading"),

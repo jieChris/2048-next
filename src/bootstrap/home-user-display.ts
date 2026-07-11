@@ -1,4 +1,5 @@
 const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
+const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
 const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 const TOP_USER_PROFILE_BUTTON_ID = "top-user-profile-btn";
@@ -74,6 +75,16 @@ function readUserId(storageLike: unknown): string {
   }
 }
 
+function readAuthToken(storageLike: unknown): string {
+  const storage = toRecord(storageLike) as StorageLike;
+  if (typeof storage.getItem !== "function") return "";
+  try {
+    return String(storage.getItem(AUTH_TOKEN_STORAGE_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
 function readUiLanguage(storageLike: unknown): "en" | "zh" {
   const storage = toRecord(storageLike) as StorageLike;
   if (typeof storage.getItem !== "function") return "zh";
@@ -94,7 +105,9 @@ export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): st
 export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
   const userId = readUserId(input.storageLike);
   const nickname = readNickname(input.storageLike);
-  if (!userId) return "account_settings.html";
+  if (!userId) {
+    return readAuthToken(input.storageLike) ? "user.html" : "account_settings.html";
+  }
   const query = new URLSearchParams({ id: userId });
   if (nickname) query.set("nickname", nickname);
   return `user.html?${query.toString()}`;
@@ -140,7 +153,7 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
     return null;
   }
 
-  const host = documentLike.querySelector(".top-action-buttons") || documentLike.querySelector("#practice-stats-actions");
+  const host = documentLike.querySelector(".top-action-buttons");
   if (!host) return null;
 
   const node = documentLike.createElement("a");
@@ -149,8 +162,8 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
   node.href = "account_settings.html";
   node.innerHTML = PROFILE_BUTTON_SVG;
   if (typeof node.setAttribute === "function") {
-    node.setAttribute("title", "用户主页");
-    node.setAttribute("aria-label", "用户主页");
+    node.setAttribute("title", "用户中心");
+    node.setAttribute("aria-label", "用户中心");
   }
 
   if (typeof host.insertBefore === "function") {
@@ -174,6 +187,7 @@ export function syncHomeUserDisplay(input: {
 }): boolean {
   const documentLike = toRecord(input.documentLike) as DocumentLike;
   if (typeof documentLike.getElementById !== "function") return false;
+  if (input.pageId === "practice") return false;
   const profileHref = resolveHomeUserDisplayHref({ storageLike: input.storageLike });
   const profileButton = ensureTopUserProfileButton(documentLike);
   let profileSynced = false;
@@ -218,7 +232,13 @@ export function bindHomeUserDisplay(input: {
 
   windowRecord.__homeUserDisplayBound = true;
   windowRecord.addEventListener("storage", (event) => {
-    if (!event || !event.key || event.key === AUTH_NICKNAME_STORAGE_KEY || event.key === AUTH_USER_ID_STORAGE_KEY) {
+    if (
+      !event ||
+      !event.key ||
+      event.key === AUTH_NICKNAME_STORAGE_KEY ||
+      event.key === AUTH_TOKEN_STORAGE_KEY ||
+      event.key === AUTH_USER_ID_STORAGE_KEY
+    ) {
       syncHomeUserDisplay({
         documentLike: input.documentLike,
         pageId: input.pageId,
