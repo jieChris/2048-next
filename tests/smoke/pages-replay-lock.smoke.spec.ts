@@ -1,6 +1,81 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Replay Lock Smoke", () => {
+  test("restored standard tab reclaims its own fresh lock", async ({ page }) => {
+    let duplicateDialogMessage = "";
+    page.on("dialog", async (dialog) => {
+      duplicateDialogMessage = dialog.message();
+      await dialog.dismiss();
+    });
+    await page.addInitScript(() => {
+      const tabId = "restored-mobile-tab";
+      window.sessionStorage.setItem("playModeSinglePageTabId:v1", tabId);
+      window.localStorage.setItem(
+        "playModeSinglePageLock:v1:standard_4x4_pow2_no_undo",
+        JSON.stringify({
+          tab_id: tabId,
+          token: "stale-token",
+          mode_key: "standard_4x4_pow2_no_undo",
+          instance_id: "closed-window",
+          updated_at: Date.now()
+        })
+      );
+    });
+
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => Boolean((window as any).game_manager));
+
+    const snapshot = await page.evaluate(() => {
+      const raw = window.localStorage.getItem(
+        "playModeSinglePageLock:v1:standard_4x4_pow2_no_undo"
+      );
+      return {
+        path: location.pathname,
+        lock: raw ? JSON.parse(raw) : null
+      };
+    });
+    expect(duplicateDialogMessage).toBe("");
+    expect(snapshot.path).toBe("/2048.html");
+    expect(snapshot.lock).toMatchObject({
+      tab_id: "restored-mobile-tab",
+      mode_key: "standard_4x4_pow2_no_undo"
+    });
+    expect(snapshot.lock.token).not.toBe("stale-token");
+    expect(snapshot.lock.instance_id).not.toBe("closed-window");
+  });
+
+  test("duplicate standard page cannot overwrite the active page saved board", async ({
+    page,
+    context
+  }) => {
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => {
+      return Boolean((window as any).game_manager && typeof (window as any).saveGameState === "function");
+    });
+
+    const before = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
+      (window as any).saveGameState(manager, { force: true, forceFull: true });
+      const key = "savedGameStateByMode:v1:standard_4x4_pow2_no_undo";
+      return window.localStorage.getItem(key);
+    });
+    expect(before).toBeTruthy();
+
+    const duplicatePage = await context.newPage();
+    duplicatePage.on("dialog", async (dialog) => {
+      await dialog.dismiss();
+    });
+    await duplicatePage.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await duplicatePage.waitForURL(/\/modes\.html$/);
+
+    const after = await duplicatePage.evaluate(() => {
+      return window.localStorage.getItem(
+        "savedGameStateByMode:v1:standard_4x4_pow2_no_undo"
+      );
+    });
+    expect(after).toBe(before);
+  });
+
   test("play page duplicate mode guard uses English message", async ({ page }) => {
     let duplicateDialogMessage = "";
     page.on("dialog", async (dialog) => {

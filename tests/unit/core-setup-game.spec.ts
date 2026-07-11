@@ -69,6 +69,7 @@ describe("core setup game runtime", () => {
     expect(manager.won).toBe(false);
     expect(manager.keepPlaying).toBe(false);
     expect(operations.runSetupStateInitialization).toHaveBeenCalledWith(manager, 123, setupOptions);
+    expect((manager as Record<string, unknown>).singleModePageLockRejected).toBe(false);
   });
 
   it("stops after handling a duplicate single-mode page lock", () => {
@@ -81,6 +82,7 @@ describe("core setup game runtime", () => {
 
     expect(operations.resolveSetupModeConfig).toHaveBeenCalledWith(manager, {}, "practice");
     expect(operations.handleSingleModePageDuplicate).toHaveBeenCalledWith(manager);
+    expect((manager as Record<string, unknown>).singleModePageLockRejected).toBe(true);
     expect(manager.setRuntimeGrid).not.toHaveBeenCalled();
     expect(operations.runSetupStateInitialization).not.toHaveBeenCalled();
   });

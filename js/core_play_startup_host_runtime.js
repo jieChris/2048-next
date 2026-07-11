@@ -302,6 +302,7 @@
     var currentRecord = readSinglePageLockRecord(storageLike, lockStorageKey);
     if (
       currentRecord &&
+      currentRecord.tabId !== tabId &&
       currentRecord.instanceId !== instanceId &&
       isSinglePageLockFresh(currentRecord, nowMs, ttlMs)
     ) {

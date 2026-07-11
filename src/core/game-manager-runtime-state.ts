@@ -58,6 +58,7 @@ export interface GameManagerRuntimeStateManagerLike {
   lastRankedCheckpointSavedAt?: number;
   lastRankedCheckpointSaveError?: string;
   singleModePageLockState?: unknown;
+  singleModePageLockRejected?: boolean;
 }
 
 export interface GameManagerRuntimeStateOperations {
@@ -135,6 +136,7 @@ export function initializeGameManagerRuntimeState(
   manager.lastRankedCheckpointSavedAt = 0;
   manager.lastRankedCheckpointSaveError = "";
   manager.singleModePageLockState = null;
+  manager.singleModePageLockRejected = false;
 }
 
 export function resetRoundStatsState(

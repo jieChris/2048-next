@@ -157,6 +157,7 @@ function bindGameManagerSavedStatePersistenceFallback(manager) {
   var windowLikeForPersistence = manager.getWindowLike();
   if (!(windowLikeForPersistence && !manager.savedGameStateBound)) return;
   var saveHandler = function () {
+    if (manager.singleModePageLockRejected) return;
     saveGameState(manager, { force: true });
     try {
       var rankedRuntime = windowLikeForPersistence && windowLikeForPersistence.OnlineLeaderboardRuntime;

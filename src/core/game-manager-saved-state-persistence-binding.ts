@@ -7,6 +7,7 @@ export interface GameManagerSavedStatePersistenceWindowLike {
 
 export interface GameManagerSavedStatePersistenceManagerLike {
   savedGameStateBound?: boolean;
+  singleModePageLockRejected?: boolean;
   getWindowLike?: () => GameManagerSavedStatePersistenceWindowLike | null | undefined;
 }
 
@@ -57,6 +58,7 @@ export function bindGameManagerSavedStatePersistence(
   if (!windowLike || typeof windowLike.addEventListener !== "function") return;
 
   const saveHandler = () => {
+    if (manager.singleModePageLockRejected) return;
     operations.saveGameState?.(manager, { force: true });
     persistRankedCheckpointOnPageHide(manager, windowLike);
   };

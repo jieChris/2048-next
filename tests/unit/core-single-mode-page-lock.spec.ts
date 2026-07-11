@@ -28,12 +28,13 @@ function createWindowLike(options: {
   path?: string;
   search?: string;
   localStorage?: ReturnType<typeof createStorage>;
+  sessionStorage?: ReturnType<typeof createStorage>;
 } = {}) {
   const listeners: Record<string, Array<(event?: unknown) => void>> = {};
   return {
     location: { pathname: options.path ?? "/play.html", search: options.search ?? "" },
     localStorage: options.localStorage ?? createStorage(),
-    sessionStorage: createStorage(),
+    sessionStorage: options.sessionStorage ?? createStorage(),
     addEventListener: vi.fn((name: string, listener: (event?: unknown) => void) => {
       listeners[name] = listeners[name] || [];
       listeners[name].push(listener);
@@ -111,6 +112,36 @@ describe("core single mode page lock", () => {
 
     expect(ensureSingleModePageLock(manager, { nowMs: 2000, createId: (prefix) => `${prefix}-id` })).toBe(false);
     expect(manager.singleModePageLockState).toBeUndefined();
+  });
+
+  it("reclaims a fresh lock left by the same restored browser tab", () => {
+    const lockKey = "playModeSinglePageLock:v1:standard_4x4_pow2_no_undo";
+    const localStorage = createStorage({
+      [lockKey]: JSON.stringify({
+        tab_id: "restored-tab",
+        token: "stale-token",
+        mode_key: "standard_4x4_pow2_no_undo",
+        instance_id: "crashed-window",
+        updated_at: 1000
+      })
+    });
+    const windowLike = createWindowLike({
+      localStorage,
+      sessionStorage: createStorage({
+        "playModeSinglePageTabId:v1": "restored-tab"
+      })
+    });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      getWindowLike: () => windowLike
+    };
+
+    expect(ensureSingleModePageLock(manager, { nowMs: 2000, createId: (prefix) => `${prefix}-new` })).toBe(true);
+    expect(JSON.parse(windowLike.localStorage.dump()[lockKey])).toMatchObject({
+      tab_id: "restored-tab",
+      token: "lock-new",
+      instance_id: "win-new"
+    });
   });
 
   it("skips the single-mode lock inside the read-only visual preview", () => {

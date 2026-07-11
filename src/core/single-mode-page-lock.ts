@@ -405,7 +405,12 @@ export function ensureSingleModePageLock(
   const instanceId = resolveWindowInstanceId(windowLike, options);
   const token = (options.createId || createDefaultId)("lock");
   const currentRecord = readLockRecord(storageLike, lockKey);
-  if (currentRecord && currentRecord.instanceId !== instanceId && isLockFresh(currentRecord, nowMs, resolveTtlMs(options))) {
+  if (
+    currentRecord &&
+    currentRecord.tabId !== tabId &&
+    currentRecord.instanceId !== instanceId &&
+    isLockFresh(currentRecord, nowMs, resolveTtlMs(options))
+  ) {
     return false;
   }
   const nextRecord = { tabId, token, modeKey, instanceId, updatedAt: nowMs };

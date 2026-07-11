@@ -96,6 +96,25 @@ describe("core game manager saved state persistence binding", () => {
     expect(operations.saveGameState).toHaveBeenCalledWith(manager, { force: true });
   });
 
+  it("does not overwrite saved state when setup was rejected by the single-mode lock", () => {
+    const windowLike = createWindowLike();
+    const manager = {
+      savedGameStateBound: false,
+      singleModePageLockRejected: true,
+      getWindowLike: vi.fn(() => windowLike)
+    };
+    const operations = {
+      saveGameState: vi.fn(),
+      bindSavedStateSyncStorageListener: vi.fn()
+    };
+
+    bindGameManagerSavedStatePersistence(manager, operations);
+    windowLike.emit("pagehide");
+
+    expect(operations.saveGameState).not.toHaveBeenCalled();
+    expect(windowLike.OnlineLeaderboardRuntime.persistRankedCheckpointOnPageHide).not.toHaveBeenCalled();
+  });
+
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createGameManagerSavedStatePersistenceBindingRuntime();
     expect(runtime.bindGameManagerSavedStatePersistence).toBe(bindGameManagerSavedStatePersistence);

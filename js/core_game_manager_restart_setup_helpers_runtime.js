@@ -1214,6 +1214,7 @@ function setupGameFallback(manager, inputSeed, options) {
   var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
+  manager.singleModePageLockRejected = false;
   if (
     manager.rankPolicy === "ranked" &&
     isRankedSeedRequiredForSetup(manager) &&
@@ -1228,7 +1229,11 @@ function setupGameFallback(manager, inputSeed, options) {
     return;
   }
   manager.rankedSetupBlockedUntilSessionReady = false;
-  if (!ensureSingleModePageLock(manager)) { handleSingleModePageDuplicate(manager); return; }
+  if (!ensureSingleModePageLock(manager)) {
+    manager.singleModePageLockRejected = true;
+    handleSingleModePageDuplicate(manager);
+    return;
+  }
   manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   manager.setRuntimeScore(0);
   manager.over = false; manager.won = false; manager.keepPlaying = false;

@@ -12,6 +12,7 @@ export interface SetupGameManagerLike {
   over?: boolean;
   won?: boolean;
   keepPlaying?: boolean;
+  singleModePageLockRejected?: boolean;
   normalizeModeConfig: (modeKey: unknown, modeConfig: unknown) => unknown;
   setRuntimeGrid: (grid: unknown) => void;
   setRuntimeScore: (score: number) => void;
@@ -79,6 +80,7 @@ export function setupGame(
     inputSeed
   );
   operations.applySetupModeConfig(manager, cfg);
+  manager.singleModePageLockRejected = false;
   const rankedSeedRequired = operations.isRankedSeedRequiredForSetup?.(manager) !== false;
   const shouldBlockUnseededRankedSetup = operations.shouldBlockRankedSetupWithoutSeed?.(manager) !== false;
   if (
@@ -96,6 +98,7 @@ export function setupGame(
   }
   manager.rankedSetupBlockedUntilSessionReady = false;
   if (!operations.ensureSingleModePageLock(manager)) {
+    manager.singleModePageLockRejected = true;
     operations.handleSingleModePageDuplicate(manager);
     return;
   }
