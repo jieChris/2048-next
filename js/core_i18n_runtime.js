@@ -48,7 +48,6 @@
     "undo_2048.html": { zh: "2048（可撤回）", en: "2048 (Undo)" },
     "capped_2048.html": { zh: "2048（封顶）", en: "2048 (Capped)" },
     "practice_board.html": { zh: "2048练习板", en: "2048 Practice Board" },
-    "pku2048.html": { zh: "PKU2048", en: "PKU2048" },
     "play.html": { zh: "2048 多玩法", en: "2048 Multi Modes" },
     "replay.html": { zh: "回放", en: "Replay" },
     "history.html": { zh: "2048 本地历史记录", en: "2048 Local History" },

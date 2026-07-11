@@ -5,7 +5,6 @@ independent_page,source_html,通用模式游戏页,/play.html,game_page,play.htm
 independent_page,source_html,撤回版 2048,/undo_2048.html,game_page,undo_2048.html,production_build,可撤回模式
 independent_page,source_html,封顶模式,/capped_2048.html,game_page,capped_2048.html,production_build,封顶玩法
 independent_page,source_html,练习板,/Practice_board.html,game_page,Practice_board.html,production_build,直通盘面和练习
-independent_page,source_html,PKU2048,/PKU2048.html,game_page,PKU2048.html,production_build,PKU 页面
 independent_page,source_html,回放页,/replay.html,replay_page,replay.html,production_build,回放查看和导入
 independent_page,source_html,模式选择,/modes.html,navigation_page,modes.html,production_build,模式大厅
 independent_page,source_html,本地历史,/history.html,data_page,history.html,production_build,本地记录
@@ -27,8 +26,8 @@ independent_page,source_html,Favicon Preview,/favicon-preview.html,preview_page,
 independent_page,source_html,UI 预览工作台,/ui-preview.html,preview_page,ui-preview.html,production_build,UI 预览
 independent_page,source_html,Breakout Easter Egg,/easter-eggs/breakout/index.html,easter_egg_page,public/easter-eggs/breakout/index.html,static_public_asset,彩蛋页
 independent_page,source_html,Ranked Seed Validator,/ranked_seed_validator.html,dev_tool_page,ranked_seed_validator.html,source_only_not_vite_build,源码存在但未纳入当前 Vite build
-overlay_or_dialog,runtime_ui,设置窗口,#settings-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,统一设置弹窗
-overlay_or_dialog,runtime_ui,统计信息窗口,#stats-panel-overlay,modal_or_inline_panel,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,游戏统计信息
+overlay_or_dialog,runtime_ui,设置窗口,#settings-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html",production_build,统一设置弹窗
+overlay_or_dialog,runtime_ui,统计信息窗口,#stats-panel-overlay,modal_or_inline_panel,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html",production_build,游戏统计信息
 overlay_or_dialog,runtime_ui,回放导出窗口,#replay-modal,modal,"2048.html; undo_2048.html; capped_2048.html; play.html",production_build,同一 replay-modal 容器的导出用途
 overlay_or_dialog,runtime_ui,回放导入文本窗口,#replay-modal,modal,replay.html,production_build,同一 replay-modal 容器的导入用途
 overlay_or_dialog,runtime_ui,回放统计窗口,#replay-modal,modal,replay.html,production_build,回放页统计内容
@@ -36,9 +35,9 @@ overlay_or_dialog,runtime_ui,回放速度设置窗口,#replay-modal,modal,replay
 overlay_or_dialog,runtime_ui,版本公告窗口,#announcement-modal,modal,2048.html,production_build,版本公告列表
 overlay_or_dialog,runtime_ui,模式说明/排行榜窗口,#mode-intro-modal,modal,play.html,production_build,模式说明和排行榜预览
 overlay_or_dialog,runtime_ui,练习板模式选择窗口,#practice-mode-panel,dialog,Practice_board.html,production_build,选择练习模式
-overlay_or_dialog,runtime_ui,盘面代码输入窗口,#practice-board-code-panel,dialog,"Practice_board.html; PKU2048.html",production_build,输入盘面代码
-overlay_or_dialog,runtime_ui,游戏胜利提示,.game-message.game-won,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,合成 2048 后显示
-overlay_or_dialog,runtime_ui,游戏结束提示,.game-message.game-over,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html; PKU2048.html",production_build,无可移动步数后显示
+overlay_or_dialog,runtime_ui,盘面代码输入窗口,#practice-board-code-panel,dialog,Practice_board.html,production_build,输入盘面代码
+overlay_or_dialog,runtime_ui,游戏胜利提示,.game-message.game-won,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html",production_build,合成 2048 后显示
+overlay_or_dialog,runtime_ui,游戏结束提示,.game-message.game-over,game_overlay,"2048.html; undo_2048.html; capped_2048.html; play.html; Practice_board.html",production_build,无可移动步数后显示
 overlay_or_dialog,runtime_ui,移动端玩法提示,#mobile-hint-overlay,modal,game_pages,production_build,移动端玩法帮助
 overlay_or_dialog,runtime_ui,新手引导浮层,#home-guide-overlay,overlay,home_family_pages,production_build,分步引导
 overlay_or_dialog,runtime_ui,新手引导完成提示,#home-guide-done-toast,toast,home_family_pages,production_build,引导完成瞬时提示

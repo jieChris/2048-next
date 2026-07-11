@@ -1,21 +1,21 @@
 (function () {
   "use strict";
 
-  var SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
+  var LOCAL_FORCE_GATE_KEY = "2048_beta_access_force_gate_local_v1";
   var AUTH_TOKEN_KEY = "2048_auth_token_v1";
   var GATE_PAGE_VERSION = "20260627-02";
 
-  function isLocalSmokeHost() {
+  function isLocalDevelopmentHost() {
     var hostname = String(window.location && window.location.hostname || "").toLowerCase();
     return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
   }
 
-  function shouldBypassForSmoke() {
-    if (!isLocalSmokeHost()) return false;
+  function shouldBypassForLocalDevelopment() {
+    if (!isLocalDevelopmentHost()) return false;
     try {
-      return window.localStorage && window.localStorage.getItem(SMOKE_BYPASS_KEY) === "1";
+      return !window.localStorage || window.localStorage.getItem(LOCAL_FORCE_GATE_KEY) !== "1";
     } catch (_err) {
-      return false;
+      return true;
     }
   }
 
@@ -26,7 +26,7 @@
     "admin.html": true,
     "cache-reset.html": true
   };
-  if (exempt[path] || shouldBypassForSmoke()) return;
+  if (exempt[path] || shouldBypassForLocalDevelopment()) return;
 
   // Mark the document so the async access gate knows this page is beta-gated.
   // Unlike earlier revisions, the page is NOT hidden while the /access/me check

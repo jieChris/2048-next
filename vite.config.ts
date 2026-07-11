@@ -207,7 +207,6 @@ export default defineConfig(({ mode }) => {
           undo: resolve(__dirname, "undo_2048.html"),
           capped: resolve(__dirname, "capped_2048.html"),
           practice: resolve(__dirname, "Practice_board.html"),
-          PKU2048: resolve(__dirname, "PKU2048.html"),
           palette: resolve(__dirname, "palette.html"),
           touch_sensitivity: resolve(__dirname, "touch_sensitivity.html"),
           achievements: resolve(__dirname, "medal-wall.html"),
@@ -225,6 +224,7 @@ export default defineConfig(({ mode }) => {
           stone_2k_monitor: resolve(__dirname, "stone_2k_monitor.html"),
           relay_5x5: resolve(__dirname, "relay_5x5.html"),
           ui_preview: resolve(__dirname, "ui-preview.html"),
+          visual_preview: resolve(__dirname, "visual-preview.html"),
           api_docs: resolve(__dirname, "api-docs.html"),
           cache_reset: resolve(__dirname, "cache-reset.html")
         }

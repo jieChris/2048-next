@@ -1,6 +1,45 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("guest login panel uses the approved compact centered layout", async ({ page }) => {
+    await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("body")).toHaveAttribute("data-auth-state", "guest");
+    await expect(page.locator("#account-auth-subtitle")).toBeHidden();
+    await expect(page.locator("#account-auth-heading")).toHaveCSS("font-size", "25px");
+    await expect(page.locator("#account-auth-state-tag")).toHaveCSS("padding-left", "12px");
+    await expect(page.locator("#account-auth-state-tag")).toHaveCSS("padding-right", "12px");
+    await expect(page.locator("#account-auth-state-tag")).toHaveCSS("margin-right", "15px");
+    await expect(page.locator("#account-auth-heading")).toHaveCSS("padding-top", "6px");
+    await expect(page.locator("#account-auth-heading")).toHaveCSS("margin-left", "14px");
+    await expect(page.locator("#settings-subtitle")).toBeHidden();
+    await expect(page.locator("#settings-kicker")).toBeHidden();
+    await expect(page.locator("#home-user-display")).toBeHidden();
+    await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-top", "19px");
+    await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-bottom", "19px");
+    await expect(page.locator("#account-action-row")).toHaveCSS("padding-top", "12px");
+    await expect(page.locator("#account-action-row")).toHaveCSS("padding-bottom", "12px");
+    await expect(page.locator('link[href^="style/account_settings_page.css"]')).toHaveAttribute(
+      "href",
+      "style/account_settings_page.css?v=20260711-login-layout-v2"
+    );
+
+    const alignment = await page.locator(".settings-auth-section").evaluate((section) => {
+      const form = section.querySelector<HTMLElement>(".account-auth-form-surface")!;
+      const actions = section.querySelector<HTMLElement>("#account-action-row")!;
+      const sectionRect = section.getBoundingClientRect();
+      const formRect = form.getBoundingClientRect();
+      const actionRect = actions.getBoundingClientRect();
+      return {
+        centerDelta: Math.abs(
+          (sectionRect.left + sectionRect.width / 2) - (formRect.left + formRect.width / 2)
+        ),
+        widthDelta: Math.abs(formRect.width - actionRect.width)
+      };
+    });
+    expect(alignment.centerDelta).toBeLessThanOrEqual(1);
+    expect(alignment.widthDelta).toBeLessThanOrEqual(1);
+  });
+
   test("account settings page supports nickname/password/logout flows", async ({ page }) => {
     let nicknameCheckCalls = 0;
     let nicknameUpdateCalls = 0;

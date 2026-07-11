@@ -72,15 +72,25 @@ describe("public/js/beta_access_preload", () => {
     expect(windowLike.location.replace).not.toHaveBeenCalled();
   });
 
-  it("honors the smoke bypass only on local hosts", () => {
+  it("bypasses the gate automatically on local development hosts", () => {
     const dom = createDom();
     const localWindow = createWindowLike(dom, "/play.html", "", "127.0.0.1");
-    dom.window.localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
 
     runPreload(localWindow, dom.window.document);
 
     expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
     expect(localWindow.location.replace).not.toHaveBeenCalled();
+  });
+
+  it("can force the gate on a local host for gate regression tests", () => {
+    const dom = createDom();
+    const localWindow = createWindowLike(dom, "/play.html", "", "127.0.0.1");
+    dom.window.localStorage.setItem("2048_beta_access_force_gate_local_v1", "1");
+
+    runPreload(localWindow, dom.window.document);
+
+    expect(dom.window.document.documentElement.getAttribute("data-beta-access-pending")).toBe("1");
+    expect(localWindow.location.replace).toHaveBeenCalled();
   });
 
   it("still bounces to login when localStorage is unavailable", () => {

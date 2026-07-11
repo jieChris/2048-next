@@ -11,7 +11,6 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "undo_2048.html", entryFile: "undo.ts", pageId: "undo", architecture: "manifest-bootstrap" },
   { htmlFile: "capped_2048.html", entryFile: "capped.ts", pageId: "capped", architecture: "manifest-bootstrap" },
   { htmlFile: "Practice_board.html", entryFile: "practice-board.ts", pageId: "practice", architecture: "manifest-bootstrap" },
-  { htmlFile: "PKU2048.html", entryFile: "pku2048.ts", pageId: "pku2048", architecture: "manifest-bootstrap" },
   { htmlFile: "play.html", entryFile: "play.ts", pageId: "play", architecture: "manifest-bootstrap" },
   { htmlFile: "replay.html", entryFile: "replay.ts", pageId: "replay", architecture: "manifest-bootstrap" },
   { htmlFile: "account.html", entryFile: "account.ts", pageId: "account", architecture: "manifest-bootstrap" },

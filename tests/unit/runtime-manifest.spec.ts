@@ -10,8 +10,8 @@ import {
 import { resolveHomeFamilyScriptsByCapabilities } from "../../src/entries/home-family-shared";
 
 describe("runtime-manifest: PAGE_MANIFESTS", () => {
-  it("has 20 page entries", () => {
-    expect(PAGE_MANIFESTS.length).toBe(20);
+  it("has 19 page entries", () => {
+    expect(PAGE_MANIFESTS.length).toBe(19);
   });
 
   it("all entries have unique pageId", () => {
@@ -66,7 +66,7 @@ describe("runtime-manifest: getProductionPages", () => {
   it("excludes devOnly pages", () => {
     const prod = getProductionPages();
     expect(prod.every((p) => !p.devOnly)).toBe(true);
-    expect(prod.length).toBe(20);
+    expect(prod.length).toBe(19);
   });
 });
 

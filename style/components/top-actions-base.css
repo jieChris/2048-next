@@ -23,7 +23,26 @@
   cursor: pointer;
 }
 
-.top-action-btn[hidden] {
+body:not([data-top-button-style="text"]) .top-action-btn,
+body[data-top-button-style="text"] .top-action-btn.profile-btn:not([hidden]) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 50px !important;
+  min-width: 50px !important;
+  height: 50px !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+body:not([data-top-button-style="text"]) .top-action-btn svg,
+body[data-top-button-style="text"] .top-action-btn.profile-btn:not([hidden]) svg {
+  width: 28px;
+  height: 28px;
+  vertical-align: middle;
+}
+
+body .top-action-btn[hidden] {
   display: none !important;
 }
 

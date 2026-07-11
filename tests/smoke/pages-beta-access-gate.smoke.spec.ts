@@ -5,7 +5,24 @@ import { mockAcceptedBetaAccess, seedBetaAccessToken } from "./support/beta-acce
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.removeItem("2048_beta_access_smoke_bypass_v1");
+    window.localStorage.setItem("2048_beta_access_force_gate_local_v1", "1");
   });
+});
+
+test("local development opens the game without a beta backend", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.removeItem("2048_beta_access_force_gate_local_v1");
+    window.localStorage.removeItem("2048_auth_token_v1");
+  });
+  await page.route("**/api/**", (route) => route.abort());
+
+  await page.goto("/2048.html");
+
+  await expect(page).toHaveURL(/\/2048\.html$/);
+  await page.waitForFunction(() => Boolean((window as any).game_manager), null, { timeout: 12_000 });
+
+  await page.goto("/beta-login.html?next=%2F2048.html");
+  await expect(page).toHaveURL(/\/2048\.html$/);
 });
 
 test("direct play URL without token shows login gate and does not initialize game", async ({ page }) => {

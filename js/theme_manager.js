@@ -1420,15 +1420,8 @@
     };
   }
 
-  function actionButtonChromeCss() {
-    var css = "";
-    css += ".top-action-btn svg, .restart-button svg { width: 28px; height: 28px; vertical-align: middle; }\n";
-    css += ".top-action-btn, .restart-button { display: inline-flex !important; justify-content: center; align-items: center; padding: 0 !important; width: 50px !important; height: 50px !important; min-width: 50px !important; border-radius: 12px !important; }\n";
-    return css;
-  }
-
   function pageCss(theme) {
-    var css = actionButtonChromeCss();
+    var css = "";
     if (theme && theme.tileOnlyTheme) return css;
     var uiTheme = resolveUiTheme(theme);
     var t = getUiTokens(theme);

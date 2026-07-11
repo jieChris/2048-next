@@ -28,7 +28,6 @@ describe("navigation entry consistency", () => {
       "capped_2048.html",
       "play.html",
       "Practice_board.html",
-      "PKU2048.html",
       "relay_5x5.html"
     ]) {
       const html = readHtml(path);
@@ -43,7 +42,7 @@ describe("navigation entry consistency", () => {
     );
   });
 
-  it("routes login links to account settings and exposes the supported PKU practice page", () => {
+  it("routes login links to account settings and exposes the supported tool pages", () => {
     for (const path of ["register.html", "password.html"]) {
       const html = readHtml(path);
       expect(html).not.toMatch(/href="account\.html"[^>]*>返回登录</);
@@ -55,7 +54,6 @@ describe("navigation entry consistency", () => {
       'href="history.html"',
       'href="replay.html"',
       'href="Practice_board.html?practice_fresh=1"',
-      'href="PKU2048.html?practice_fresh=1"',
       'href="palette.html"',
       'href="account.html"'
     ];

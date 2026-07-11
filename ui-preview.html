@@ -3,154 +3,367 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2048 NEXT UI Preview</title>
+  <title>2048 NEXT 按钮组件预览</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link href="style/main.css" rel="stylesheet" type="text/css">
+  <link href="style/account_page.css" rel="stylesheet" type="text/css">
+  <link href="style/achievements_page.css" rel="stylesheet" type="text/css">
+  <link href="style/stone_2k_monitor.css" rel="stylesheet" type="text/css">
   <link href="style/ui-preview.css" rel="stylesheet" type="text/css">
 </head>
-<body>
-  <main class="preview-shell">
-    <header class="preview-header">
-      <div>
-        <p class="preview-kicker">2048 NEXT</p>
-        <h1>UI 预览工作台</h1>
+<body data-page="game" data-preview-page="buttons">
+  <main class="button-preview-shell" data-preview-button-workbench>
+    <header class="button-preview-header">
+      <div class="button-preview-brand">
+        <img src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 NEXT">
+        <div>
+          <p class="button-preview-kicker">2048 NEXT</p>
+          <h1 data-i18n="title">按钮组件预览</h1>
+          <p class="button-preview-summary" data-i18n="summary">真实 DOM、SVG 与动画保持不变，只比较按钮外壳样式。</p>
+        </div>
       </div>
-      <img class="preview-logo" src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 NEXT">
+      <div class="button-preview-status" data-i18n-aria="statusAria" aria-label="预览约束">
+        <span data-i18n="statusReal">真实组件</span>
+        <span data-i18n="statusSafe">禁止跳转</span>
+        <span data-i18n="statusScoped">仅预览页</span>
+      </div>
     </header>
 
-    <section class="stage" aria-label="游戏页右侧排行榜预览">
-      <div class="game-context" aria-hidden="true">
-        <div class="top-tools">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
-        </div>
-        <div class="score-row">
-          <div><small>SCORE</small><strong>0</strong></div>
-          <div><small>BEST</small><strong>456268</strong></div>
-        </div>
-        <div class="board">
-          <span></span><span class="tile">2</span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-          <span></span><span class="tile">2</span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
-        </div>
-      </div>
+    <div class="button-preview-columns">
+      <article class="preview-variant preview-variant--current" data-preview-variant="current">
+        <header class="preview-variant-header">
+          <span class="preview-variant-index">01</span>
+          <div>
+            <h2 data-i18n="currentTitle">当前正式样式</h2>
+            <p data-i18n="currentCopy">直接使用项目现有按钮 CSS，作为真实基准。</p>
+          </div>
+        </header>
+        <div data-variant-content></div>
+      </article>
 
-      <div class="leaderboard-grid">
-        <article class="leaderboard-card palette-current" aria-label="当前排行榜配色">
-          <div class="palette-title">
-            <span>当前基准</span>
-            <small>线上色彩</small>
+      <article class="preview-variant preview-variant--enamel" data-preview-variant="enamel">
+        <header class="preview-variant-header">
+          <span class="preview-variant-index">02</span>
+          <div>
+            <h2 data-i18n="enamelTitle">釉彩方块</h2>
+            <p data-i18n="enamelCopy">青金色带、釉面边缘与明确的按压反馈。</p>
           </div>
-          <div class="leaderboard">
-            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
-            <div class="leaderboard-list">
-              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
-              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
-              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
-              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
-              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
-              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
-              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-            </div>
-          </div>
-        </article>
+        </header>
+        <div data-variant-content></div>
+      </article>
+    </div>
+  </main>
 
-        <article class="leaderboard-card palette-flat-warm" aria-label="暖金扁平排行榜配色">
-          <div class="palette-title">
-            <span>A. NEXT 标志色</span>
-            <small>推荐</small>
-          </div>
-          <div class="leaderboard">
-            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
-            <div class="leaderboard-list">
-              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
-              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
-              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
-              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
-              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
-              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
-              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-            </div>
-          </div>
-        </article>
+  <div id="top-action-source" hidden>
+    <a id="top-announcement-btn" class="top-action-btn" href="#announcement" data-preview-control data-preview-top-action="announcement" data-i18n-title="announcement">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l4 4V5L7 9H5a2 2 0 0 0-2 2z"></path><path d="M14.5 8.5a5 5 0 0 1 0 7"></path><path d="M17.5 6a9 9 0 0 1 0 12"></path></svg>
+    </a>
+    <a id="top-user-profile-btn" class="top-action-btn profile-btn" href="account_settings.html" data-preview-control data-preview-top-action="profile" data-i18n-title="profile">
+      <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="profile-line profile-head-left" pathLength="1" d="M12 12A4 4 0 0 1 12 4"></path><path class="profile-line profile-head-right" pathLength="1" d="M12 12A4 4 0 0 0 12 4"></path><path class="profile-line profile-shoulder-left" pathLength="1" d="M12 12A8 8 0 0 0 4 20"></path><path class="profile-line profile-shoulder-right" pathLength="1" d="M12 12A8 8 0 0 1 20 20"></path><circle class="profile-origin" cx="12" cy="12" r="1" fill="currentColor" stroke="none"></circle></svg>
+    </a>
+    <a id="stats-panel-toggle" class="top-action-btn stats-panel-toggle" href="#stats" data-preview-control data-preview-top-action="stats" data-i18n-title="stats">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+    </a>
+    <a id="top-restart-btn" class="restart-button top-action-btn reset-btn" href="#reset" data-preview-control data-preview-top-action="reset" data-i18n-title="reset">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+    </a>
+    <a id="top-export-replay-btn" class="top-action-btn" href="#export" data-preview-control data-preview-top-action="export" data-i18n-title="export">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    </a>
+    <a id="top-practice-btn" class="top-action-btn" href="Practice_board.html" data-preview-control data-preview-top-action="practice" data-i18n-title="practice">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3h3v3"></path><path d="M11 13L21 3"></path><path d="M21 14v7h-7"></path><path d="M3 10v11h11"></path></svg>
+    </a>
+    <a id="top-modes-btn" class="top-action-btn" href="modes.html" data-preview-control data-preview-top-action="mode" data-i18n-title="mode">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    </a>
+    <a id="top-history-btn" class="top-action-btn" href="history.html" data-preview-control data-preview-top-action="history" data-i18n-title="history">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    </a>
+    <a id="top-settings-btn" class="top-action-btn settings-btn" href="#settings" data-preview-control data-preview-top-action="settings" data-i18n-title="settings">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </a>
+  </div>
 
-        <article class="leaderboard-card palette-flat-muted" aria-label="低饱和扁平排行榜配色">
-          <div class="palette-title">
-            <span>B. 竞技克制</span>
-            <small>稳重</small>
-          </div>
-          <div class="leaderboard">
-            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
-            <div class="leaderboard-list">
-              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
-              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
-              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
-              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
-              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
-              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
-              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-            </div>
-          </div>
-        </article>
+  <template id="preview-groups-template">
+    <section class="preview-group preview-group--top-actions">
+      <header>
+        <h3 data-i18n="topActions">顶部图标按钮</h3>
+        <p data-i18n="topActionsCopy">悬停或使用键盘聚焦，查看每个图标原有的独立动画。</p>
+      </header>
+      <div class="preview-control-row preview-top-actions" data-top-actions-mount></div>
+    </section>
 
-        <article class="leaderboard-card palette-flat-crisp" aria-label="清爽扁平排行榜配色">
-          <div class="palette-title">
-            <span>C. 清爽活力</span>
-            <small>更年轻</small>
-          </div>
-          <div class="leaderboard">
-            <div class="leaderboard-summary" data-label="LEADERBOARD">TOP 10</div>
-            <div class="leaderboard-list">
-              <div class="leaderboard-row"><div class="rank top-1">1</div><div class="name">XLB-830820</div></div>
-              <div class="leaderboard-row"><div class="rank top-2">2</div><div class="name">8192摆烂-288852</div></div>
-              <div class="leaderboard-row"><div class="rank top-3">3</div><div class="name">skycat-175092</div></div>
-              <div class="leaderboard-row"><div class="rank">4</div><div class="name">huanhuan-36068</div></div>
-              <div class="leaderboard-row"><div class="rank">5</div><div class="name">Sslime1207-10616</div></div>
-              <div class="leaderboard-row"><div class="rank">6</div><div class="name">Hui-5012</div></div>
-              <div class="leaderboard-row"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-              <div class="leaderboard-row self"><div class="rank">7</div><div class="name">Jay-3312</div></div>
-            </div>
-          </div>
-        </article>
+    <section class="preview-group preview-group--top-actions">
+      <header>
+        <h3 data-i18n="mobileActions">移动端专用按钮</h3>
+        <p data-i18n="mobileActionsCopy">展示游戏页和练习盘只在窄屏出现的真实按钮及切换状态。</p>
+      </header>
+      <div class="preview-control-row preview-top-actions preview-mobile-actions">
+        <button class="top-action-btn mobile-hint-toggle-btn" type="button" data-preview-control data-preview-mobile-action="hint" data-i18n-title="mobileHint">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </button>
+        <button class="top-action-btn mobile-undo-top-btn" type="button" data-preview-control data-preview-mobile-action="game-undo" data-i18n-title="gameUndo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+        </button>
+        <button class="top-action-btn practice-mobile-undo-btn" type="button" data-preview-control data-preview-mobile-action="practice-undo" data-i18n-title="practiceUndo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+        </button>
+        <button class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="false" data-preview-control data-preview-mobile-action="timer-expand" data-i18n-title="expandTimers">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <button class="top-action-btn timerbox-toggle-btn" type="button" aria-expanded="true" data-preview-control data-preview-mobile-action="timer-collapse" data-i18n-title="collapseTimers">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>
+        </button>
+        <button class="top-action-btn mobile-actions-expand-toggle" type="button" aria-expanded="false" data-preview-control data-preview-mobile-action="actions-expand" data-i18n-title="expandActions">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+        </button>
+        <button class="top-action-btn mobile-actions-expand-toggle" type="button" aria-expanded="true" data-preview-control data-preview-mobile-action="actions-collapse" data-i18n-title="collapseActions">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8 12h8"></path></svg>
+        </button>
       </div>
     </section>
-  </main>
+
+    <section class="preview-group">
+      <header>
+        <h3 data-i18n="textActions">文字操作</h3>
+        <p data-i18n="textActionsCopy">覆盖账户、历史、回放、管理和色板页面的常用操作。</p>
+      </header>
+      <div class="preview-control-row">
+        <button class="replay-button preview-control" type="button" data-preview-control data-preview-tone="primary" data-i18n="save">保存修改</button>
+        <button class="replay-button preview-control" type="button" data-preview-control data-preview-tone="secondary" data-i18n="cancel">取消</button>
+        <a class="replay-button preview-control" href="2048.html" data-preview-control data-preview-tone="ghost" data-preview-action="back" data-i18n="back">返回游戏</a>
+        <button class="replay-button preview-control" type="button" data-preview-control data-preview-tone="ghost" data-i18n="exportRecords">导出记录</button>
+      </div>
+    </section>
+
+    <section class="preview-group">
+      <header>
+        <h3 data-i18n="compactActions">筛选与分页</h3>
+        <p data-i18n="compactActionsCopy">覆盖成就筛选、翻页和高频紧凑操作。</p>
+      </header>
+      <div class="preview-control-row">
+        <button class="achievement-filter preview-control is-active" type="button" data-preview-control data-preview-tone="primary" data-i18n="all">全部</button>
+        <button class="achievement-filter preview-control" type="button" data-preview-control data-preview-tone="secondary" data-i18n="earned">已获得</button>
+        <button class="replay-button preview-control preview-control--compact" type="button" data-preview-control data-preview-tone="ghost" data-i18n="previous">上一页</button>
+        <button class="replay-button preview-control preview-control--compact" type="button" data-preview-control data-preview-tone="ghost" data-i18n="next">下一页</button>
+      </div>
+    </section>
+
+    <section class="preview-group">
+      <header>
+        <h3 data-i18n="states">危险与状态</h3>
+        <p data-i18n="statesCopy">并排检查危险、加载和禁用状态是否清晰。</p>
+      </header>
+      <div class="preview-control-row">
+        <button class="replay-button preview-control preview-control--danger" type="button" data-preview-control data-preview-tone="danger" data-i18n="clearAll">清空全部</button>
+        <button class="replay-button preview-control preview-loading is-loading" type="button" data-preview-control data-preview-tone="secondary" aria-busy="true"><span class="preview-spinner" aria-hidden="true"></span><span data-i18n="loading">加载中</span></button>
+        <button class="replay-button preview-control" type="button" data-preview-control data-preview-tone="secondary" disabled data-i18n="disabled">不可用</button>
+      </div>
+    </section>
+
+    <section class="preview-group">
+      <header>
+        <h3 data-i18n="specialActions">专用页面按钮</h3>
+        <p data-i18n="specialActionsCopy">保留接力和监测页的真实基准，同时纳入候选外壳比较。</p>
+      </header>
+      <div class="preview-control-row">
+        <button class="relay-btn preview-control" type="button" data-preview-control data-preview-tone="primary" data-i18n="submitProgress">提交进度</button>
+        <button class="relay-btn relay-btn--ghost preview-control" type="button" data-preview-control data-preview-tone="ghost" data-i18n="readSave">读档</button>
+        <button class="stone-button preview-control" type="button" data-preview-control data-preview-tone="primary" data-i18n="refreshData">刷新数据</button>
+        <button class="stone-button ghost slim preview-control" type="button" data-preview-control data-preview-tone="ghost" data-i18n="exportJson">导出 JSON</button>
+      </div>
+    </section>
+  </template>
+
+  <script src="js/core_top_action_bindings_host_runtime.js"></script>
   <script>
     (function () {
-      var lang = "";
-      try { lang = String(localStorage.getItem("ui_language_v1") || "").toLowerCase(); } catch (_err) {}
-      if (lang.indexOf("en") !== 0) return;
-      document.documentElement.lang = "en";
-      var pairs = [
-        ["UI 预览工作台", "UI Preview Workbench"],
-        ["游戏页右侧排行榜预览", "Game-page right leaderboard preview"],
-        ["当前排行榜配色", "Current leaderboard palette"],
-        ["暖金扁平排行榜配色", "Warm flat leaderboard palette"],
-        ["低饱和扁平排行榜配色", "Muted flat leaderboard palette"],
-        ["清爽扁平排行榜配色", "Crisp flat leaderboard palette"],
-        ["当前基准", "Current baseline"],
-        ["线上色彩", "Production colors"],
-        ["A. NEXT 标志色", "A. NEXT brand colors"],
-        ["推荐", "Recommended"],
-        ["B. 竞技克制", "B. Competitive restraint"],
-        ["稳重", "Stable"],
-        ["C. 清爽活力", "C. Fresh energy"],
-        ["更年轻", "Younger"],
-        ["8192摆烂-288852", "8192-casual-288852"]
-      ];
-      function translate(text) {
-        var out = String(text || "");
-        for (var i = 0; i < pairs.length; i += 1) out = out.split(pairs[i][0]).join(pairs[i][1]);
-        return out;
+      "use strict";
+
+      var copy = {
+        zh: {
+          documentTitle: "2048 NEXT 按钮组件预览",
+          title: "按钮组件预览",
+          summary: "真实 DOM、SVG 与动画保持不变，只比较按钮外壳样式。",
+          statusAria: "预览约束",
+          statusReal: "真实组件",
+          statusSafe: "禁止跳转",
+          statusScoped: "仅预览页",
+          currentTitle: "当前正式样式",
+          currentCopy: "直接使用项目现有按钮 CSS，作为真实基准。",
+          enamelTitle: "釉彩方块",
+          enamelCopy: "青金色带、釉面边缘与明确的按压反馈。",
+          topActions: "顶部图标按钮",
+          topActionsCopy: "悬停或使用键盘聚焦，查看每个图标原有的独立动画。",
+          mobileActions: "移动端专用按钮",
+          mobileActionsCopy: "展示游戏页和练习盘只在窄屏出现的真实按钮及切换状态。",
+          textActions: "文字操作",
+          textActionsCopy: "覆盖账户、历史、回放、管理和色板页面的常用操作。",
+          compactActions: "筛选与分页",
+          compactActionsCopy: "覆盖成就筛选、翻页和高频紧凑操作。",
+          states: "危险与状态",
+          statesCopy: "并排检查危险、加载和禁用状态是否清晰。",
+          specialActions: "专用页面按钮",
+          specialActionsCopy: "保留接力和监测页的真实基准，同时纳入候选外壳比较。",
+          save: "保存修改",
+          cancel: "取消",
+          back: "返回游戏",
+          exportRecords: "导出记录",
+          all: "全部",
+          earned: "已获得",
+          previous: "上一页",
+          next: "下一页",
+          clearAll: "清空全部",
+          loading: "加载中",
+          disabled: "不可用",
+          submitProgress: "提交进度",
+          readSave: "读档",
+          refreshData: "刷新数据",
+          exportJson: "导出 JSON",
+          announcement: "公告",
+          profile: "用户主页",
+          stats: "统计信息",
+          reset: "新游戏",
+          export: "导出回放",
+          practice: "练习板",
+          mode: "模式",
+          history: "历史记录",
+          settings: "设置",
+          mobileHint: "移动端提示",
+          gameUndo: "游戏撤回",
+          practiceUndo: "练习盘撤回",
+          expandTimers: "展开计时器",
+          collapseTimers: "收起计时器",
+          expandActions: "展开操作",
+          collapseActions: "收起操作"
+        },
+        en: {
+          documentTitle: "2048 NEXT Button Component Preview",
+          title: "Button Component Preview",
+          summary: "Real DOM, SVG, and motion stay intact while only the button shell changes.",
+          statusAria: "Preview Constraints",
+          statusReal: "Real Components",
+          statusSafe: "Navigation Disabled",
+          statusScoped: "Preview Only",
+          currentTitle: "Current Production",
+          currentCopy: "Uses the project's existing button CSS as the real baseline.",
+          enamelTitle: "Enamel Tiles",
+          enamelCopy: "Cyan-gold bands, glazed edges, and tactile press feedback.",
+          topActions: "Top Icon Actions",
+          topActionsCopy: "Hover or use keyboard focus to inspect each icon's original animation.",
+          mobileActions: "Mobile-Only Actions",
+          mobileActionsCopy: "Real game and practice controls that appear only on narrow screens, including toggle states.",
+          textActions: "Text Actions",
+          textActionsCopy: "Common actions from account, history, replay, admin, and palette pages.",
+          compactActions: "Filters And Pagination",
+          compactActionsCopy: "Achievement filters, pagination, and compact high-frequency actions.",
+          states: "Danger And States",
+          statesCopy: "Compare danger, loading, and disabled states side by side.",
+          specialActions: "Specialized Page Actions",
+          specialActionsCopy: "Keeps the relay and monitor baselines while testing candidate shells.",
+          save: "Save Changes",
+          cancel: "Cancel",
+          back: "Back To Game",
+          exportRecords: "Export Records",
+          all: "All",
+          earned: "Earned",
+          previous: "Previous",
+          next: "Next",
+          clearAll: "Clear All",
+          loading: "Loading",
+          disabled: "Unavailable",
+          submitProgress: "Submit Progress",
+          readSave: "Load Save",
+          refreshData: "Refresh Data",
+          exportJson: "Export JSON",
+          announcement: "Announcements",
+          profile: "Profile",
+          stats: "Stats",
+          reset: "New Game",
+          export: "Export Replay",
+          practice: "Practice Board",
+          mode: "Modes",
+          history: "History",
+          settings: "Settings",
+          mobileHint: "Mobile Guide",
+          gameUndo: "Game Undo",
+          practiceUndo: "Practice Undo",
+          expandTimers: "Expand Timers",
+          collapseTimers: "Collapse Timers",
+          expandActions: "Expand Actions",
+          collapseActions: "Collapse Actions"
+        }
+      };
+
+      function currentLanguage() {
+        try {
+          return String(localStorage.getItem("ui_language_v1") || "").toLowerCase().indexOf("en") === 0 ? "en" : "zh";
+        } catch (_err) {
+          return "zh";
+        }
       }
-      document.querySelectorAll("h1,span,small,.name").forEach(function (node) {
-        node.textContent = translate(node.textContent);
+
+      function removeIds(root) {
+        if (root.removeAttribute) root.removeAttribute("id");
+        root.querySelectorAll("[id]").forEach(function (node) {
+          node.removeAttribute("id");
+        });
+      }
+
+      function applyCopy(language) {
+        var messages = copy[language] || copy.zh;
+        document.documentElement.lang = language === "en" ? "en" : "zh-CN";
+        document.title = messages.documentTitle;
+
+        document.querySelectorAll("[data-i18n]").forEach(function (node) {
+          var key = node.getAttribute("data-i18n");
+          if (key && messages[key]) node.textContent = messages[key];
+        });
+        document.querySelectorAll("[data-i18n-title]").forEach(function (node) {
+          var key = node.getAttribute("data-i18n-title");
+          if (!key || !messages[key]) return;
+          node.setAttribute("title", messages[key]);
+          node.setAttribute("aria-label", messages[key]);
+        });
+        document.querySelectorAll("[data-i18n-aria]").forEach(function (node) {
+          var key = node.getAttribute("data-i18n-aria");
+          if (key && messages[key]) node.setAttribute("aria-label", messages[key]);
+        });
+      }
+
+      var runtime = window.CoreTopActionBindingsHostRuntime;
+      var source = document.getElementById("top-action-source");
+      var groupTemplate = document.getElementById("preview-groups-template");
+      var variants = Array.from(document.querySelectorAll("[data-preview-variant]"));
+
+      if (runtime && source && groupTemplate) {
+        runtime.applyTopActionBindings({
+          getElementById: document.getElementById.bind(document)
+        });
+
+        variants.forEach(function (variant) {
+          var fragment = groupTemplate.content.cloneNode(true);
+          var topMount = fragment.querySelector("[data-top-actions-mount]");
+          Array.from(source.children).forEach(function (button) {
+            var clone = button.cloneNode(true);
+            removeIds(clone);
+            topMount.appendChild(clone);
+          });
+          variant.querySelector("[data-variant-content]").appendChild(fragment);
+        });
+
+        source.remove();
+        runtime.applyTopActionBindings({
+          getElementById: document.getElementById.bind(document)
+        });
+      }
+
+      document.querySelector("[data-preview-button-workbench]").addEventListener("click", function (event) {
+        var control = event.target.closest("[data-preview-control]");
+        if (control) event.preventDefault();
       });
-      document.querySelectorAll("[aria-label]").forEach(function (node) {
-        node.setAttribute("aria-label", translate(node.getAttribute("aria-label")));
-      });
+
+      applyCopy(currentLanguage());
     })();
   </script>
 </body>

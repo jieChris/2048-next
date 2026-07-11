@@ -123,7 +123,7 @@ sudo nginx -t && sudo systemctl reload nginx
   - `/play.html`
   - `/history.html`
   - `/replay.html`
-  - `/PKU2048.html`
+  - `/Practice_board.html`
 
 ## 8. 常见问题
 

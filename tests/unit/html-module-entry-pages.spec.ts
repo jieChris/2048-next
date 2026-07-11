@@ -25,8 +25,7 @@ const ENTRY_PAGES: HtmlEntryExpectation[] = [
   { htmlPath: "play.html", entryPath: "./src/entries/play.ts" },
   { htmlPath: "undo_2048.html", entryPath: "./src/entries/undo.ts" },
   { htmlPath: "capped_2048.html", entryPath: "./src/entries/capped.ts" },
-  { htmlPath: "Practice_board.html", entryPath: "./src/entries/practice-board.ts" },
-  { htmlPath: "PKU2048.html", entryPath: "./src/entries/pku2048.ts" }
+  { htmlPath: "Practice_board.html", entryPath: "./src/entries/practice-board.ts" }
 ];
 
 const TIMER_LEADERBOARD_SHELL_PAGES = ["2048.html", "play.html", "undo_2048.html", "capped_2048.html"];
@@ -167,5 +166,10 @@ describe("module entry html pages", () => {
 
   it("does not keep the old public achievements direct page", () => {
     expect(existsSync(path.resolve(process.cwd(), "achievements.html"))).toBe(false);
+  });
+
+  it("does not keep the duplicate PKU practice page", () => {
+    expect(existsSync(path.resolve(process.cwd(), "PKU2048.html"))).toBe(false);
+    expect(existsSync(path.resolve(process.cwd(), "src/entries/pku2048.ts"))).toBe(false);
   });
 });

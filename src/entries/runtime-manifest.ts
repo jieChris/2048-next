@@ -75,11 +75,6 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     capabilities: ["core", "test-ui", "standard-startup", "settings-and-panel", "index-tail", "pku-inline-stats", "i18n"]
   },
   {
-    pageId: "pku2048",
-    htmlFile: "PKU2048.html",
-    capabilities: ["core", "test-ui", "standard-startup", "settings-and-panel", "index-tail", "pku-inline-stats", "i18n"]
-  },
-  {
     pageId: "play",
     htmlFile: "play.html",
     capabilities: ["play", "i18n"]

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 NEXT 经典棋盘工坊预览</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link href="style/classic-workshop-preview.css" rel="stylesheet" type="text/css">
+</head>
+<body data-preview-page="classic-workshop">
+  <main class="workshop-preview" data-classic-workshop-preview>
+    <header class="workshop-preview-header">
+      <div class="workshop-preview-brand">
+        <img src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 NEXT">
+        <div>
+          <p>2048 NEXT</p>
+          <h1 data-i18n="title">经典棋盘工坊</h1>
+        </div>
+      </div>
+      <span class="workshop-preview-state" data-i18n="readonly">只读预览</span>
+    </header>
+
+    <section class="workshop-preview-toolbar" aria-label="预览控制" data-i18n-aria="previewControls">
+      <div class="workshop-control-group workshop-page-tabs" role="tablist" data-i18n-aria="pagePicker">
+        <button class="is-active" type="button" role="tab" aria-selected="true" data-preview-page-key="game" data-i18n="pageGame">标准游戏</button>
+        <button type="button" role="tab" aria-selected="false" data-preview-page-key="practice" data-i18n="pagePractice">练习板</button>
+        <button type="button" role="tab" aria-selected="false" data-preview-page-key="account" data-i18n="pageAccount">排行榜</button>
+        <button type="button" role="tab" aria-selected="false" data-preview-page-key="account-settings" data-i18n="pageSettings">账号设置</button>
+        <button type="button" role="tab" aria-selected="false" data-preview-page-key="achievements" data-i18n="pageAchievements">成就</button>
+        <button type="button" role="tab" aria-selected="false" data-preview-page-key="relay" data-i18n="pageRelay">接力工具</button>
+      </div>
+
+      <div class="workshop-toolbar-modes">
+        <div class="workshop-control-group" role="group" data-i18n-aria="devicePicker">
+          <button class="is-active" type="button" aria-pressed="true" data-preview-device="desktop" data-i18n="desktop">桌面</button>
+          <button type="button" aria-pressed="false" data-preview-device="mobile" data-i18n="mobile">移动</button>
+        </div>
+        <div class="workshop-control-group" role="group" data-i18n-aria="themePicker">
+          <button class="is-active" type="button" aria-pressed="true" data-preview-theme="light" data-i18n="light">浅色</button>
+          <button type="button" aria-pressed="false" data-preview-theme="night" data-i18n="night">夜间</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workshop-preview-stage" data-preview-stage data-active-device="desktop">
+      <article class="workshop-preview-pane workshop-preview-pane--candidate">
+        <header>
+          <span class="workshop-pane-index">01</span>
+          <div>
+            <strong data-i18n="candidate">经典棋盘工坊</strong>
+            <span data-preview-candidate-label>标准游戏</span>
+          </div>
+        </header>
+        <div class="workshop-viewport-shell">
+          <div class="workshop-viewport" data-preview-viewport>
+            <iframe name="candidate-preview" title="经典棋盘工坊候选样式" data-i18n-title="candidateFrameTitle" data-preview-frame="candidate" src="2048.html?visual_preview=1" sandbox="allow-scripts allow-same-origin"></iframe>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/visual-preview.ts"></script>
+</body>
+</html>

@@ -24,10 +24,14 @@ function createStorage(initial: Record<string, string> = {}) {
   };
 }
 
-function createWindowLike(options: { path?: string; localStorage?: ReturnType<typeof createStorage> } = {}) {
+function createWindowLike(options: {
+  path?: string;
+  search?: string;
+  localStorage?: ReturnType<typeof createStorage>;
+} = {}) {
   const listeners: Record<string, Array<(event?: unknown) => void>> = {};
   return {
-    location: { pathname: options.path ?? "/play.html" },
+    location: { pathname: options.path ?? "/play.html", search: options.search ?? "" },
     localStorage: options.localStorage ?? createStorage(),
     sessionStorage: createStorage(),
     addEventListener: vi.fn((name: string, listener: (event?: unknown) => void) => {
@@ -106,6 +110,18 @@ describe("core single mode page lock", () => {
     };
 
     expect(ensureSingleModePageLock(manager, { nowMs: 2000, createId: (prefix) => `${prefix}-id` })).toBe(false);
+    expect(manager.singleModePageLockState).toBeUndefined();
+  });
+
+  it("skips the single-mode lock inside the read-only visual preview", () => {
+    const windowLike = createWindowLike({ search: "?visual_preview=1" });
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      getWindowLike: () => windowLike
+    };
+
+    expect(ensureSingleModePageLock(manager, { nowMs: 1000, createId: (prefix) => `${prefix}-id` })).toBe(true);
+    expect(windowLike.localStorage.dump()).toEqual({});
     expect(manager.singleModePageLockState).toBeUndefined();
   });
 

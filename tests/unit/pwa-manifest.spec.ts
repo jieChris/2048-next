@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 const HTML_WITH_MANIFEST = [
   "2048.html",
   "Practice_board.html",
-  "PKU2048.html",
   "account.html",
   "account_settings.html",
   "capped_2048.html",

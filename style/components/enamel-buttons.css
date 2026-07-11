@@ -1,0 +1,385 @@
+:root {
+  --enamel-button-teal: #2f86a0;
+  --enamel-button-gold: #d79b32;
+  --enamel-button-surface: #fffef9;
+  --enamel-button-ink: #26383b;
+  --enamel-button-border: rgba(31, 54, 58, 0.2);
+  --enamel-button-primary: #20383d;
+  --enamel-button-primary-text: #fffdf6;
+}
+
+html[data-night-background="1"]
+  body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"]) {
+  --enamel-button-surface: #202b30;
+  --enamel-button-ink: #f4f0e8;
+  --enamel-button-border: rgba(111, 177, 187, 0.3);
+  --enamel-button-primary: #142a30;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ),
+.preview-variant--enamel [data-preview-control] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--enamel-button-border) !important;
+  border-radius: 7px !important;
+  color: var(--enamel-button-ink) !important;
+  background: var(--enamel-button-surface) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -2px 0 rgba(215, 164, 44, 0.2),
+    0 5px 12px rgba(31, 54, 58, 0.1) !important;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  )::before,
+.preview-variant--enamel [data-preview-control]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 3px;
+  background: var(--enamel-button-teal);
+  opacity: 1;
+  transition: width 180ms ease, opacity 180ms ease;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):is(:hover, :focus-visible),
+.preview-variant--enamel [data-preview-control]:is(:hover, :focus-visible) {
+  border-color: rgba(18, 102, 122, 0.48) !important;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -3px 0 rgba(215, 164, 44, 0.32),
+    0 8px 16px rgba(31, 54, 58, 0.14) !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):is(:hover, :focus-visible)::before,
+.preview-variant--enamel [data-preview-control]:is(:hover, :focus-visible)::before {
+  width: 100%;
+  opacity: 0.1;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):active,
+.preview-variant--enamel [data-preview-control]:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow:
+    inset 0 2px 5px rgba(31, 54, 58, 0.18),
+    inset 0 -1px 0 rgba(215, 164, 44, 0.24),
+    0 2px 4px rgba(31, 54, 58, 0.12) !important;
+  transition-duration: 60ms;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"]):not([data-top-button-style="text"])
+  .top-action-btn,
+body[data-page][data-top-button-style="text"]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  .top-action-btn.profile-btn,
+.preview-variant--enamel .preview-top-actions [data-preview-control] {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px;
+  padding: 0 !important;
+  border-radius: 7px !important;
+  line-height: 46px;
+}
+
+body[data-page="game"]:not([data-preview-page="buttons"]) .home-user-display {
+  height: 46px;
+  line-height: 46px;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"]):not([data-top-button-style="text"])
+  .top-action-btn
+  svg,
+body[data-page][data-top-button-style="text"]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  .top-action-btn.profile-btn
+  svg,
+.preview-variant--enamel .preview-top-actions [data-preview-control] svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .achievement-filter.is-active,
+    .relay-btn:not(.relay-btn--ghost),
+    .stone-button:not(.ghost),
+    #account-login-btn,
+    #settings-update-nickname-btn,
+    #settings-change-password-btn,
+    #achievements-save-showcase,
+    #admin-achievement-create,
+    #admin-achievement-save,
+    #replay-action-btn
+  ),
+.preview-variant--enamel [data-preview-tone="primary"] {
+  border-color: var(--enamel-button-primary) !important;
+  color: var(--enamel-button-primary-text) !important;
+  background: var(--enamel-button-primary) !important;
+  box-shadow:
+    inset 0 3px 0 var(--enamel-button-teal),
+    inset 0 -3px 0 var(--enamel-button-gold),
+    0 7px 16px rgba(24, 46, 51, 0.2) !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .achievement-filter.is-active,
+    .relay-btn:not(.relay-btn--ghost),
+    .stone-button:not(.ghost),
+    #account-login-btn,
+    #settings-update-nickname-btn,
+    #settings-change-password-btn,
+    #achievements-save-showcase,
+    #admin-achievement-create,
+    #admin-achievement-save,
+    #replay-action-btn
+  )::before,
+.preview-variant--enamel [data-preview-tone="primary"]::before {
+  display: none;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .achievement-filter.is-active,
+    .relay-btn:not(.relay-btn--ghost),
+    .stone-button:not(.ghost),
+    #account-login-btn,
+    #settings-update-nickname-btn,
+    #settings-change-password-btn,
+    #achievements-save-showcase,
+    #admin-achievement-create,
+    #admin-achievement-save,
+    #replay-action-btn
+  ):is(:hover, :focus-visible),
+.preview-variant--enamel [data-preview-tone="primary"]:is(:hover, :focus-visible) {
+  border-color: var(--enamel-button-primary) !important;
+  box-shadow:
+    inset 0 3px 0 var(--enamel-button-teal),
+    inset 0 -3px 0 var(--enamel-button-gold),
+    0 9px 18px rgba(24, 46, 51, 0.24) !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .achievement-filter.is-active,
+    .relay-btn:not(.relay-btn--ghost),
+    .stone-button:not(.ghost),
+    #account-login-btn,
+    #settings-update-nickname-btn,
+    #settings-change-password-btn,
+    #achievements-save-showcase,
+    #admin-achievement-create,
+    #admin-achievement-save,
+    #replay-action-btn
+  ):active,
+.preview-variant--enamel [data-preview-tone="primary"]:active {
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.28),
+    inset 0 -2px 0 var(--enamel-button-gold),
+    0 2px 4px rgba(24, 46, 51, 0.18) !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .relay-btn--ghost,
+    .stone-button.ghost,
+    .replay-button.palette-nav-btn,
+    .relay-nav-btn,
+    #replay-nav-home,
+    #replay-nav-history
+  ),
+.preview-variant--enamel [data-preview-tone="ghost"] {
+  background: transparent !important;
+  box-shadow: inset 0 -2px 0 rgba(39, 151, 175, 0.16) !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(#history-clear-all-btn, #palette-delete-btn, #settings-logout-btn, #relay-delete-btn),
+.preview-variant--enamel [data-preview-tone="danger"] {
+  border-color: rgba(189, 84, 71, 0.34) !important;
+  color: #a7463b !important;
+  background: #fff9f6 !important;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(#history-clear-all-btn, #palette-delete-btn, #settings-logout-btn, #relay-delete-btn)::before,
+.preview-variant--enamel [data-preview-tone="danger"]::before {
+  background: #bd5447;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  )[aria-busy="true"],
+.preview-variant--enamel [aria-busy="true"] {
+  cursor: wait;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):disabled,
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  )[aria-disabled="true"],
+.preview-variant--enamel [data-preview-control]:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(0.2);
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):is(:disabled, [aria-disabled="true"])::before,
+.preview-variant--enamel [data-preview-control]:disabled::before {
+  width: 3px;
+  opacity: 1;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+    .top-action-btn,
+    .replay-button,
+    .replay-control-btn,
+    .import-replay-button,
+    .achievement-filter,
+    .relay-btn,
+    .relay-nav-btn,
+    .stone-button
+  ):focus-visible,
+.preview-variant--enamel [data-preview-control]:focus-visible {
+  outline: 2px solid var(--enamel-button-teal);
+  outline-offset: 3px;
+}
+
+body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(.relay-btn--ghost, .stone-button.ghost, .replay-button.palette-nav-btn, .relay-nav-btn):active,
+.preview-variant--enamel [data-preview-tone="ghost"]:active {
+  background: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+    :is(
+      .top-action-btn,
+      .replay-button,
+      .replay-control-btn,
+      .import-replay-button,
+      .achievement-filter,
+      .relay-btn,
+      .relay-nav-btn,
+      .stone-button
+    ),
+  body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+    :is(
+      .top-action-btn,
+      .replay-button,
+      .replay-control-btn,
+      .import-replay-button,
+      .achievement-filter,
+      .relay-btn,
+      .relay-nav-btn,
+      .stone-button
+    )::before,
+  .preview-variant--enamel [data-preview-control],
+  .preview-variant--enamel [data-preview-control]::before {
+    transition: none;
+  }
+}

@@ -7,7 +7,6 @@ const HOME_FAMILY_ENTRIES = [
   "src/entries/undo.ts",
   "src/entries/capped.ts",
   "src/entries/practice-board.ts",
-  "src/entries/pku2048.ts",
   "src/entries/replay.ts"
 ] as const;
 

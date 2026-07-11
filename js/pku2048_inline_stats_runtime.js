@@ -521,9 +521,8 @@
   function start(documentLike) {
     var body = documentLike.body;
     if (!body) return;
-    var pageVariant = String(body.getAttribute("data-page-variant") || "");
     var pageId = String(body.getAttribute("data-page") || "");
-    if (pageVariant !== "PKU2048" && pageId !== "practice") return;
+    if (pageId !== "practice") return;
 
     var state = {
       retryCount: 0,

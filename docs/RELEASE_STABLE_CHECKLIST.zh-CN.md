@@ -26,4 +26,4 @@
 - [ ] 合并 PR 后，目标分支为最新 `main`
 - [ ] 已执行构建并生成 `dist/`
 - [ ] 自托管部署发布的是 `dist/`，不是仓库源码
-- [ ] 线上 `index / play / replay / history / PKU2048` 首屏可访问
+- [ ] 线上 `index / play / replay / history / Practice_board` 首屏可访问

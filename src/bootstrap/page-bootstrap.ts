@@ -44,7 +44,6 @@ const PAGE_DESCRIPTORS: Record<string, Partial<PageCapabilityDescriptor>> = {
   capped: { needsLeaderboard: true, needsReplay: true, needsSettings: true, needsI18n: true },
   play: { needsLeaderboard: true, needsReplay: true, needsSettings: true, needsI18n: true },
   practice: { needsSettings: true, needsI18n: true },
-  pku2048: { needsSettings: true, needsI18n: true },
   replay: { needsReplay: true },
   history: { needsHistory: true },
   account: { needsLeaderboard: true },

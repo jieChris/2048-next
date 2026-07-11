@@ -507,12 +507,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.visibleCount).toBeLessThanOrEqual(11);
   });
 
-  test("practice save restore self-heals legacy hidden fixed timer rows on PKU and practice pages", async ({
+  test("practice save restore self-heals legacy hidden fixed timer rows", async ({
     page
   }) => {
     await seedBrokenPracticeTimerSave(page);
 
-    const targets = ["/PKU2048.html", "/Practice_board.html"];
+    const targets = ["/Practice_board.html"];
 
     for (const target of targets) {
       const response = await page.goto(target, {
@@ -542,135 +542,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       expect(snapshot.row64kHidden, `65536 row should be hidden only by scroll for ${target}`).toBe("1");
       expect(snapshot.controlsDisplay, `scroll controls should be visible for ${target}`).toBe("flex");
     }
-  });
-
-  test("PKU practice board locks setup after first move and keeps 32k child timers unstarted", async ({
-    page
-  }) => {
-    await page.addInitScript(() => {
-    });
-
-    const response = await page.goto("/PKU2048.html?practice_fresh=1", {
-      waitUntil: "domcontentloaded"
-    });
-    expect(response, "PKU response should exist").not.toBeNull();
-    expect(response?.ok(), "PKU response should be 2xx").toBeTruthy();
-    await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(
-      page,
-      () =>
-        Boolean((window as any).game_manager) &&
-        Array.from(document.scripts).some((script) => script.src.includes("/js/test_ui.js")) &&
-        document.querySelector('.selection-tile[data-value="32768"]') !== null &&
-        document.querySelector('.grid-cell[data-x="0"][data-y="0"]') !== null,
-      12_000
-    );
-
-    await page.locator('.selection-tile[data-value="32768"]').click();
-    await expect(page.locator('.selection-tile[data-value="32768"]')).toHaveClass(/selected/);
-    await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();
-    await expect(page.locator("#timer32768")).toHaveText("---------");
-
-    const beforeMove = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      const timer32k = document.getElementById("timer32768") as HTMLElement | null;
-      const timer16384Sub = document.getElementById("timer-secondary-32768-16384") as HTMLElement | null;
-      const timer8192Sub = document.getElementById("timer-secondary-32768-8192") as HTMLElement | null;
-      return {
-        hasGameStarted: !!manager?.hasGameStarted,
-        timer32k: String(timer32k?.textContent || ""),
-        timer16384Sub: String(timer16384Sub?.textContent || ""),
-        timer8192Sub: String(timer8192Sub?.textContent || "")
-      };
-    });
-
-    expect(beforeMove.hasGameStarted).toBe(false);
-    expect(beforeMove.timer32k).toBe("---------");
-    expect(beforeMove.timer16384Sub).toBe("");
-    expect(beforeMove.timer8192Sub).toBe("");
-
-    await page.keyboard.press("ArrowRight");
-    await page.waitForTimeout(180);
-
-    await page.locator('.selection-tile[data-value="16384"]').click();
-    await page.locator('.grid-cell[data-x="1"][data-y="0"]').click();
-    await page.waitForTimeout(120);
-
-    const afterMove = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      const tileAt10 = manager?.grid?.cellContent({ x: 1, y: 0 });
-      const tileAt30 = manager?.grid?.cellContent({ x: 3, y: 0 });
-      const timer16384Sub = document.getElementById("timer-secondary-32768-16384") as HTMLElement | null;
-      return {
-        hasGameStarted: !!manager?.hasGameStarted,
-        tileAt10: tileAt10 ? tileAt10.value : 0,
-        tileAt30: tileAt30 ? tileAt30.value : 0,
-        timer16384Sub: String(timer16384Sub?.textContent || "")
-      };
-    });
-
-    expect(afterMove.hasGameStarted).toBe(true);
-    expect(afterMove.tileAt10).not.toBe(16384);
-    expect(afterMove.tileAt30).toBe(32768);
-    expect(afterMove.timer16384Sub).toBe("");
-
-    await page.click(".restart-button");
-    await confirmGameDialog(page);
-    await page.waitForTimeout(250);
-
-    const afterRestart = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      const tileAt00 = manager?.grid?.cellContent({ x: 0, y: 0 });
-      return {
-        hasGameStarted: !!manager?.hasGameStarted,
-        tileAt00: tileAt00 ? tileAt00.value : 0
-      };
-    });
-
-    expect(afterRestart.hasGameStarted).toBe(false);
-    expect(afterRestart.tileAt00).toBe(32768);
-
-    await page.locator('.selection-tile[data-value="16384"]').click();
-    await page.locator('.grid-cell[data-x="1"][data-y="0"]').click();
-    await page.waitForTimeout(120);
-
-    const afterSetupPlacement = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      const tileAt10 = manager?.grid?.cellContent({ x: 1, y: 0 });
-      const timer16384Sub = document.getElementById("timer-secondary-32768-16384") as HTMLElement | null;
-      return {
-        tileAt10: tileAt10 ? tileAt10.value : 0,
-        timer16384Sub: String(timer16384Sub?.textContent || "")
-      };
-    });
-
-    expect(afterSetupPlacement.tileAt10).toBe(16384);
-    expect(afterSetupPlacement.timer16384Sub).toBe("---------");
-
-    await page.click(".restart-button");
-    await confirmGameDialog(page);
-    await page.waitForTimeout(250);
-
-    const afterSecondRestart = await page.evaluate(() => {
-      const manager = (window as any).game_manager;
-      const board = typeof manager?.getFinalBoardMatrix === "function" ? manager.getFinalBoardMatrix() : [];
-      return {
-        hasGameStarted: !!manager?.hasGameStarted,
-        nonZeroCount: Array.isArray(board)
-          ? board.reduce(
-              (sum: number, row: unknown) =>
-                sum +
-                (Array.isArray(row)
-                  ? row.filter((value) => Number(value) > 0).length
-                  : 0),
-              0
-            )
-          : -1
-      };
-    });
-
-    expect(afterSecondRestart.hasGameStarted).toBe(false);
-    expect(afterSecondRestart.nonZeroCount).toBe(0);
   });
 
   test("practice board keeps setup editable after first move", async ({ page }) => {

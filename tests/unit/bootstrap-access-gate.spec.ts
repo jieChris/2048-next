@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BETA_ACCESS_EXEMPT_PAGE_IDS,
+  BETA_ACCESS_LOCAL_FORCE_GATE_KEY,
   BETA_ACCESS_SMOKE_BYPASS_KEY,
   runBetaAccessGate,
   shouldRunBetaAccessGate
@@ -166,13 +167,12 @@ describe("bootstrap: access-gate", () => {
     expect(dom.window.localStorage.getItem("2048_auth_token_v1")).toBe("token");
   });
 
-  it("allows the smoke bypass only on local development hosts", async () => {
+  it("bypasses the gate automatically only on local development hosts", async () => {
     const localDom = new JSDOM("<!doctype html><html data-beta-access-pending=\"1\"><body></body></html>", {
       url: "http://127.0.0.1:4173/play.html"
     });
     const localWindow = createWindowLike(localDom, "/play.html", "");
     localWindow.location.hostname = "127.0.0.1";
-    localDom.window.localStorage.setItem(BETA_ACCESS_SMOKE_BYPASS_KEY, "1");
 
     const localResult = await runBetaAccessGate("play", {
       documentLike: localDom.window.document,
@@ -184,6 +184,23 @@ describe("bootstrap: access-gate", () => {
     expect(localResult.allowed).toBe(true);
     expect(localWindow.location.replace).not.toHaveBeenCalled();
     expect(localDom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+
+    const forcedLocalDom = new JSDOM("<!doctype html><html data-beta-access-pending=\"1\"><body></body></html>", {
+      url: "http://127.0.0.1:4173/play.html"
+    });
+    const forcedLocalWindow = createWindowLike(forcedLocalDom, "/play.html", "");
+    forcedLocalWindow.location.hostname = "127.0.0.1";
+    forcedLocalDom.window.localStorage.setItem(BETA_ACCESS_LOCAL_FORCE_GATE_KEY, "1");
+
+    const forcedLocalResult = await runBetaAccessGate("play", {
+      documentLike: forcedLocalDom.window.document,
+      windowLike: forcedLocalWindow,
+      storageLike: forcedLocalDom.window.localStorage,
+      fetchLike: vi.fn()
+    });
+
+    expect(forcedLocalResult.allowed).toBe(false);
+    expect(forcedLocalWindow.location.replace).toHaveBeenCalled();
 
     const productionDom = createDom();
     const productionWindow = createWindowLike(productionDom);

@@ -46,12 +46,45 @@ body[data-page="account-settings-hub"][data-i18n-ready="0"] {
 }
 
 .settings-auth-section .account-auth-subtitle {
-  margin-bottom: 10px;
+  display: none;
 }
 
 .settings-auth-section .account-auth-form-surface,
 .settings-auth-section .account-user-card {
   max-width: 560px;
+}
+
+.settings-auth-section .account-auth-form-surface {
+  box-sizing: border-box;
+  width: 100%;
+  margin-inline: auto;
+  padding-top: 19px;
+  padding-bottom: 19px;
+}
+
+.settings-auth-section #account-auth-heading {
+  margin-left: 14px;
+  padding-top: 6px;
+  font-size: 25px;
+}
+
+.settings-auth-section #account-auth-state-tag {
+  margin-right: 15px;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.settings-auth-section .settings-action-row {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  margin: 12px auto 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+body[data-page="account-settings-hub"] :is(#settings-kicker, #settings-subtitle, #home-user-display) {
+  display: none !important;
 }
 
 body[data-page="account-settings-hub"][data-auth-state="guest"] .account-user-card,

@@ -10,6 +10,7 @@ import {
 
 export const ACTIVE_BETA_NOTICE_VERSION = "beta_notice_2026_06_26_v1";
 export const BETA_ACCESS_SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
+export const BETA_ACCESS_LOCAL_FORCE_GATE_KEY = "2048_beta_access_force_gate_local_v1";
 // Mirrored by public/js/beta_access_preload.js (GATE_PAGE_VERSION) — keep in sync
 // so the preload's no-token redirect builds the exact same login URL.
 const BETA_GATE_PAGE_VERSION = "20260627-02";
@@ -65,17 +66,20 @@ function normalizePathname(pathname: string): string {
   return pathname.replace(/\/+$/u, "").split("/").pop() || "";
 }
 
-function isLocalSmokeHost(windowLike: Window | null): boolean {
+function isLocalDevelopmentHost(windowLike: Window | null): boolean {
   const hostname = toText(windowLike?.location?.hostname).toLowerCase();
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
 }
 
-function shouldBypassBetaGateForSmoke(windowLike: Window | null, storageLike: Storage | null): boolean {
-  if (!isLocalSmokeHost(windowLike)) return false;
+export function shouldBypassBetaGateForLocalDevelopment(
+  windowLike: Window | null,
+  storageLike: Storage | null
+): boolean {
+  if (!isLocalDevelopmentHost(windowLike)) return false;
   try {
-    return storageLike?.getItem(BETA_ACCESS_SMOKE_BYPASS_KEY) === "1";
+    return storageLike?.getItem(BETA_ACCESS_LOCAL_FORCE_GATE_KEY) !== "1";
   } catch (_err) {
-    return false;
+    return true;
   }
 }
 
@@ -220,7 +224,7 @@ export async function runBetaAccessGate(
   }
 
   const storageLike = options.storageLike === undefined ? windowLike?.localStorage || null : options.storageLike;
-  if (shouldBypassBetaGateForSmoke(windowLike, storageLike)) {
+  if (shouldBypassBetaGateForLocalDevelopment(windowLike, storageLike)) {
     revealProtectedDocument(documentLike);
     return { allowed: true };
   }

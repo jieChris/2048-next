@@ -7,7 +7,6 @@ const PAGES = [
   "/undo_2048.html",
   "/capped_2048.html",
   "/Practice_board.html",
-  "/PKU2048.html",
   "/replay.html",
   "/modes.html",
   "/history.html",
@@ -28,6 +27,7 @@ const PAGES = [
   "/cache-reset.html",
   "/favicon-preview.html",
   "/ui-preview.html",
+  "/visual-preview.html",
   "/easter-eggs/breakout/index.html",
   "/ranked_seed_validator.html"
 ];

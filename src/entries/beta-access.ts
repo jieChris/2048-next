@@ -4,6 +4,7 @@ import {
   ACTIVE_BETA_NOTICE_VERSION,
   acceptBetaNotice,
   fetchBetaAccessStatus,
+  shouldBypassBetaGateForLocalDevelopment,
   type BetaAccessStatus
 } from "../bootstrap/access-gate";
 
@@ -254,9 +255,13 @@ function bind(): void {
   byId("beta-switch-account")?.addEventListener("click", redirectToLogin);
 }
 
-bind();
-applyStaticCopy();
-window.addEventListener("storage", (event) => {
-  if (event.key === UI_LANGUAGE_KEY) applyStaticCopy();
-});
-void loadState();
+if (shouldBypassBetaGateForLocalDevelopment(window, window.localStorage)) {
+  window.location.replace(currentNext());
+} else {
+  bind();
+  applyStaticCopy();
+  window.addEventListener("storage", (event) => {
+    if (event.key === UI_LANGUAGE_KEY) applyStaticCopy();
+  });
+  void loadState();
+}

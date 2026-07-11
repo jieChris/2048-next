@@ -5,7 +5,6 @@ import { readCssEntry } from "./css-test-utils";
 const WIDE_LOGO_HTML_FILES = [
   "2048.html",
   "Practice_board.html",
-  "PKU2048.html",
   "capped_2048.html",
   "history.html",
   "modes.html",

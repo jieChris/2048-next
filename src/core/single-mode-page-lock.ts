@@ -7,7 +7,7 @@ export interface StorageLike {
 }
 
 export interface WindowLike {
-  location?: { pathname?: string; href?: string };
+  location?: { pathname?: string; search?: string; href?: string };
   localStorage?: StorageLike | null;
   sessionStorage?: StorageLike | null;
   __playSinglePageTabId?: string;
@@ -253,16 +253,23 @@ function shouldSkipLock(manager: SingleModePageLockManagerLike | null | undefine
   if (!manager) return true;
   const windowLike = resolveWindowLike(manager);
   let pathname = "";
+  let search = "";
   try {
     pathname =
       windowLike && windowLike.location && typeof windowLike.location.pathname === "string"
         ? windowLike.location.pathname
         : "";
+    search =
+      windowLike && windowLike.location && typeof windowLike.location.search === "string"
+        ? windowLike.location.search
+        : "";
   } catch (_error) {
     pathname = "";
+    search = "";
   }
   const normalizedPath = String(pathname || "").toLowerCase();
-  return normalizedPath.indexOf("replay.html") !== -1 || normalizedPath.indexOf("practice_board.html") !== -1;
+  const isVisualPreview = new URLSearchParams(search).get("visual_preview") === "1";
+  return isVisualPreview || normalizedPath.indexOf("replay.html") !== -1 || normalizedPath.indexOf("practice_board.html") !== -1;
 }
 
 function createLockState(input: {

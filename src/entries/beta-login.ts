@@ -5,7 +5,10 @@ import {
   createJsonApiClient,
   type JsonRecord
 } from "../services/api-client";
-import { fetchBetaAccessStatus } from "../bootstrap/access-gate";
+import {
+  fetchBetaAccessStatus,
+  shouldBypassBetaGateForLocalDevelopment
+} from "../bootstrap/access-gate";
 
 const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
 const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
@@ -328,8 +331,12 @@ function bind(): void {
   });
 }
 
-bind();
-applyStaticCopy();
-window.addEventListener("storage", (event) => {
-  if (event.key === UI_LANGUAGE_KEY) applyStaticCopy();
-});
+if (shouldBypassBetaGateForLocalDevelopment(window, window.localStorage)) {
+  window.location.replace(currentNext());
+} else {
+  bind();
+  applyStaticCopy();
+  window.addEventListener("storage", (event) => {
+    if (event.key === UI_LANGUAGE_KEY) applyStaticCopy();
+  });
+}

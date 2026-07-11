@@ -2623,11 +2623,6 @@
 - 检测方式：`npm run audit:entry-manifest` + `tests/unit/html-module-entry-pages.spec.ts`。
 - 失败判定：根目录新增未纳管业务 html 入口，或页面没有进入统一入口映射。
 
-### R7. 禁止 PKU 逻辑分叉
-- 规则：PKU 功能必须与普通玩法共享同一 Engine/contracts 核心。
-- 检测方式：PKU 相关 smoke + 对比普通玩法的核心调用链，确认共用同一协议与引擎。
-- 失败判定：PKU 复制出一套独立规则实现，或出现双套核心逻辑并行维护。
-
 ## 2. 自动化门禁映射
 
 | 红线 | 对应门禁 | 当前命令 |
@@ -2638,7 +2633,6 @@
 | R4 | 静态扫描（localStorage） | `rg -n "localStorage\\." src js` |
 | R5 | service 边界审计 | `rg -n "fetch\\(|/api/" src/entries js` |
 | R6 | entry-manifest 审计 | `npm run audit:entry-manifest` |
-| R7 | replay/competition/pku 回归 | `npm run test:smoke:play-replay` + PKU 相关 smoke |
 
 ## 3. PR 阶段与主分支阶段的 CI 阻断策略
 

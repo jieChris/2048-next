@@ -1,0 +1,676 @@
+:root {
+  --workshop-bg: #faf8ef;
+  --workshop-surface: #fffaf2;
+  --workshop-surface-soft: #eee4da;
+  --workshop-board: #bbada0;
+  --workshop-ink: #514840;
+  --workshop-text: #776e65;
+  --workshop-muted: #8f8174;
+  --workshop-teal: #2f86a0;
+  --workshop-gold: #d79b32;
+  --workshop-graphite: #26383b;
+  --workshop-danger: #a7463b;
+  --workshop-border: rgba(119, 110, 101, 0.24);
+  --workshop-shadow: 0 5px 14px rgba(84, 70, 58, 0.09);
+}
+
+body[data-preview-page="classic-workshop"] * {
+  box-sizing: border-box;
+}
+
+body[data-preview-page="classic-workshop"] {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: #4f4942;
+  background: #eee9df;
+  font-family: "Clear Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.workshop-preview {
+  width: min(1880px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 18px 0 32px;
+}
+
+.workshop-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 74px;
+  padding: 0 4px 14px;
+  border-bottom: 1px solid rgba(90, 78, 66, 0.16);
+}
+
+.workshop-preview-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.workshop-preview-brand img {
+  width: 66px;
+  height: auto;
+}
+
+.workshop-preview-brand p,
+.workshop-preview-brand h1 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.workshop-preview-brand p {
+  color: var(--workshop-teal);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.workshop-preview-brand h1 {
+  margin-top: 3px;
+  color: var(--workshop-ink);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.workshop-preview-state {
+  padding: 6px 9px;
+  border: 1px solid rgba(47, 134, 160, 0.25);
+  border-radius: 5px;
+  color: #386f7b;
+  background: rgba(255, 250, 242, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workshop-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.workshop-toolbar-modes {
+  display: flex;
+  gap: 8px;
+}
+
+.workshop-control-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(119, 110, 101, 0.22);
+  border-radius: 7px;
+  background: rgba(255, 250, 242, 0.8);
+}
+
+.workshop-control-group button {
+  min-height: 34px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  color: #6f655c;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.workshop-control-group button:hover,
+.workshop-control-group button:focus-visible {
+  color: var(--workshop-ink);
+  background: rgba(238, 228, 218, 0.7);
+  outline: none;
+}
+
+.workshop-control-group button:focus-visible {
+  box-shadow: 0 0 0 2px var(--workshop-teal);
+}
+
+.workshop-control-group button.is-active {
+  color: #fffdf6;
+  background: var(--workshop-graphite);
+  box-shadow: inset 3px 0 0 var(--workshop-teal), inset 0 -2px 0 var(--workshop-gold);
+}
+
+.workshop-page-tabs {
+  flex-wrap: wrap;
+}
+
+.workshop-preview-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.workshop-preview-pane {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(99, 86, 74, 0.2);
+  border-radius: 8px;
+  background: #f8f4ec;
+  box-shadow: 0 10px 30px rgba(74, 62, 52, 0.08);
+}
+
+.workshop-preview-pane > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(99, 86, 74, 0.16);
+  background: #fffaf2;
+}
+
+.workshop-preview-pane--candidate > header {
+  box-shadow: inset 3px 0 0 var(--workshop-teal), inset 0 -2px 0 rgba(215, 155, 50, 0.35);
+}
+
+.workshop-pane-index {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 26px;
+  border: 1px solid rgba(47, 134, 160, 0.24);
+  border-radius: 4px;
+  color: #326b78;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.workshop-preview-pane header div {
+  display: grid;
+  gap: 2px;
+}
+
+.workshop-preview-pane header strong {
+  color: var(--workshop-ink);
+  font-size: 15px;
+}
+
+.workshop-preview-pane header div span {
+  color: var(--workshop-muted);
+  font-size: 12px;
+}
+
+.workshop-viewport-shell {
+  display: flex;
+  justify-content: center;
+  min-height: 420px;
+  padding: 12px;
+  overflow: auto;
+  background: #d8d0c4;
+}
+
+.workshop-viewport {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: #faf8ef;
+  box-shadow: 0 3px 12px rgba(49, 41, 34, 0.16);
+}
+
+.workshop-viewport iframe {
+  position: absolute;
+  inset: 0 auto auto 0;
+  border: 0;
+  background: #faf8ef;
+}
+
+@media (max-width: 1120px) {
+  .workshop-preview-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workshop-preview-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .workshop-preview {
+    width: min(100% - 16px, 520px);
+    padding-top: 10px;
+  }
+
+  .workshop-preview-header {
+    align-items: flex-start;
+  }
+
+  .workshop-preview-brand img {
+    width: 52px;
+  }
+
+  .workshop-preview-brand h1 {
+    font-size: 21px;
+  }
+
+  .workshop-preview-state {
+    font-size: 11px;
+  }
+
+  .workshop-toolbar-modes {
+    flex-wrap: wrap;
+  }
+
+  .workshop-control-group button {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .workshop-viewport-shell {
+    padding: 8px;
+  }
+}
+
+/* Candidate theme: loaded only inside the preview iframe. */
+body[data-page]:not([data-page="modes"]) {
+  --workshop-bg: #f4f1ea;
+  --workshop-panel: #fffcf6;
+  --workshop-panel-soft: #f0ebe4;
+  --workshop-board: #c7bdb2;
+  --workshop-score: #fbf8f1;
+  --workshop-grid-cell: #e2dbd2;
+  --workshop-timer-track: #f0ebe4;
+  --workshop-ink: #514a44;
+  --workshop-text: #655e57;
+  --workshop-muted: #81786f;
+  --workshop-line: rgba(81, 74, 68, 0.17);
+  --workshop-shadow: 0 6px 16px rgba(76, 65, 55, 0.1);
+  color: var(--workshop-text) !important;
+  background: var(--workshop-bg) !important;
+  background-image: none !important;
+}
+
+html:not([data-night-background="1"]):has(body[data-page]:not([data-page="modes"])) {
+  background: #f4f1ea !important;
+  background-image: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(h1, h2, h3, .palette-title) {
+  color: var(--workshop-ink) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  letter-spacing: 0 !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(.palette-kicker, .palette-subtitle, .account-tip, .relay-note) {
+  color: var(--workshop-muted) !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(
+  .card-surface,
+  .portal-card,
+  .account-summary-card,
+  .account-auth-form-surface,
+  .account-action-row,
+  .account-user-card,
+  .settings-section,
+  .relay-panel,
+  .relay-claim-card,
+  .stone-panel
+) {
+  border: 1px solid var(--workshop-line) !important;
+  border-radius: 8px !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--workshop-shadow) !important;
+  backdrop-filter: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(
+  input,
+  textarea,
+  select,
+  .settings-select,
+  .account-input,
+  .game-dialog-input,
+  .practice-board-code-input
+) {
+  border-color: var(--workshop-line) !important;
+  border-radius: 7px !important;
+  color: var(--workshop-ink) !important;
+  background: var(--workshop-panel) !important;
+  box-shadow: inset 3px 0 0 rgba(47, 134, 160, 0.15) !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus,
+body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus-visible {
+  border-color: var(--workshop-teal) !important;
+  outline: 2px solid rgba(47, 134, 160, 0.22) !important;
+  outline-offset: 1px;
+}
+
+body[data-page]:not([data-page="modes"]) select:not([multiple]) {
+  appearance: none !important;
+  min-height: 38px;
+  padding-right: 34px !important;
+  background-color: var(--workshop-panel) !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--workshop-ink) 50%),
+    linear-gradient(135deg, var(--workshop-ink) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 10px) 50% !important;
+  background-repeat: no-repeat !important;
+  background-size: 5px 5px !important;
+  cursor: pointer;
+}
+
+body[data-page]:not([data-page="modes"]) select:not([multiple]):hover {
+  border-color: rgba(47, 134, 160, 0.42) !important;
+}
+
+body[data-page]:not([data-page="modes"]) select option {
+  color: var(--workshop-ink);
+  background: var(--workshop-panel);
+}
+
+@supports (appearance: base-select) {
+  body[data-page]:not([data-page="modes"]) select:not([multiple]),
+  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
+    appearance: base-select !important;
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple]) {
+    align-items: center;
+    padding-right: 12px !important;
+    background-image: none !important;
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
+    max-height: min(360px, 60vh);
+    margin-top: 4px;
+    padding: 5px;
+    border: 1px solid var(--workshop-line);
+    border-radius: 8px;
+    color: var(--workshop-ink);
+    background: var(--workshop-panel);
+    box-shadow: 0 12px 28px rgba(76, 65, 55, 0.16);
+    overflow-y: auto;
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple]) option {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 5px;
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple]) option:is(:hover, :focus) {
+    background: var(--workshop-panel-soft);
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple]) option:checked {
+    color: #356b76;
+    background: rgba(47, 134, 160, 0.1);
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker-icon {
+    content: "";
+    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
+    margin-right: 2px;
+    margin-left: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    color: var(--workshop-ink);
+    transform: rotate(45deg);
+    transition: transform 140ms ease;
+  }
+
+  body[data-page]:not([data-page="modes"]) select:not([multiple]):open::picker-icon {
+    transform: rotate(225deg);
+  }
+}
+
+body[data-page="game"] :is(.score-container, .best-container),
+body[data-page="practice"] :is(.score-container, .best-container) {
+  border: 1px solid var(--workshop-line) !important;
+  border-radius: 6px !important;
+  background: var(--workshop-score) !important;
+  box-shadow: var(--workshop-shadow) !important;
+}
+
+body[data-page]:not([data-page="modes"]) #timer {
+  border-radius: 6px !important;
+  color: #91b45c !important;
+  background: var(--workshop-score) !important;
+  box-shadow: var(--workshop-shadow) !important;
+}
+
+body[data-page]:not([data-page="modes"]) .score-container {
+  color: #168c87 !important;
+}
+
+body[data-page]:not([data-page="modes"]) .best-container {
+  color: #e47e39 !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(.score-container, .best-container, #timer)::after {
+  color: var(--workshop-muted) !important;
+}
+
+:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="game"] .game-container,
+:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .game-container {
+  border-radius: 7px !important;
+  background: var(--workshop-board) !important;
+  box-shadow: 0 10px 24px rgba(76, 65, 55, 0.13) !important;
+}
+
+:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="game"] .grid-cell:not(.grid-cell-obstacle),
+:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .grid-cell:not(.grid-cell-obstacle) {
+  background: var(--workshop-grid-cell) !important;
+}
+
+:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .dashboard-box {
+  background: var(--workshop-board) !important;
+}
+
+body[data-page]:not([data-page="modes"]) #timerbox .timertile[id^="timer"] {
+  background: var(--workshop-timer-track) !important;
+  box-shadow: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) .timer-scroll-btn {
+  color: var(--workshop-ink) !important;
+  background: var(--enamel-button-surface) !important;
+}
+
+body[data-page]:not([data-page="modes"]) .timer-scroll-btn:hover {
+  background: var(--workshop-score) !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(
+  #timer-leaderboard-panel,
+  .timer-leaderboard-summary
+) {
+  border-radius: 7px !important;
+  background: var(--workshop-panel-soft) !important;
+  box-shadow: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) .replay-diagnostics-panel {
+  border: 1px solid var(--workshop-line) !important;
+  border-radius: 7px !important;
+  background: var(--workshop-panel-soft) !important;
+  box-shadow: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(
+  .replay-modal-overlay,
+  .game-dialog-overlay,
+  .practice-mode-panel,
+  .practice-board-code-panel,
+  .replay-file-drop-overlay
+) {
+  background: rgba(39, 55, 54, 0.52) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+body[data-page]:not([data-page="modes"]) :is(
+  .replay-modal-content,
+  .game-dialog-panel,
+  .practice-mode-dialog,
+  .practice-board-code-dialog,
+  .replay-file-drop-panel
+) {
+  border: 1px solid var(--workshop-line) !important;
+  border-radius: 8px !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: 0 18px 42px rgba(34, 51, 50, 0.24) !important;
+}
+
+body[data-page="account-hub"] .account-page-shell,
+body[data-page="achievements"] .achievements-page-shell {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+body[data-page]:not([data-page="modes"]) .palette-page-header {
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--workshop-line);
+}
+
+body[data-page="account-hub"] :is(.account-board-head-row, .account-board-row),
+body[data-page="relay-5x5"] :is(.relay-table th, .relay-table td) {
+  border-color: var(--workshop-line) !important;
+}
+
+body[data-page="account-hub"] .account-board-list,
+body[data-page="account-hub"] .account-board-table-wrap {
+  border-radius: 7px !important;
+  background: var(--workshop-panel) !important;
+}
+
+body[data-page="account-hub"] .account-board-row:hover {
+  background: #edf2ee !important;
+}
+
+body[data-page="achievements"] :is(
+  .achievements-summary-card,
+  .achievements-showcase-card,
+  .achievements-list-card,
+  .achievement-detail,
+  .achievements-stat,
+  .achievement-showcase-slot,
+  .achievement-card
+) {
+  border: 1px solid var(--workshop-line) !important;
+  border-radius: 8px !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--workshop-shadow) !important;
+  backdrop-filter: none !important;
+  transform: none !important;
+}
+
+body[data-page="achievements"] .achievement-card.is-selected {
+  border-color: var(--workshop-teal) !important;
+  box-shadow: inset 3px 0 0 var(--workshop-teal), inset 0 -2px 0 rgba(215, 155, 50, 0.3) !important;
+}
+
+body[data-page="achievements"] .achievement-light-state {
+  border-color: rgba(215, 155, 50, 0.25) !important;
+  color: #7d5d20 !important;
+  background: rgba(215, 155, 50, 0.1) !important;
+}
+
+body[data-page="relay-5x5"] .relay-page {
+  width: min(1080px, calc(100vw - 28px));
+}
+
+body[data-page="relay-5x5"] :is(.relay-table, .relay-table th) {
+  background: var(--workshop-panel) !important;
+}
+
+body[data-page="relay-5x5"] .relay-pill {
+  border: 1px solid rgba(47, 134, 160, 0.24) !important;
+  color: #356b76 !important;
+  background: rgba(47, 134, 160, 0.08) !important;
+}
+
+@media (max-width: 520px) {
+  body[data-page="account-settings-hub"] .account-settings-page-shell {
+    width: 100% !important;
+    margin: 56px auto 18px !important;
+  }
+
+  body[data-page="relay-5x5"] .relay-page {
+    margin-top: 56px !important;
+  }
+
+  body[data-page="practice"]
+    :is(.selection-tile.tile-16384, .selection-tile.tile-32768) .tile-inner {
+    font-size: 12px !important;
+  }
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) {
+  --workshop-bg: #18201f;
+  --workshop-panel: #232e2c;
+  --workshop-panel-soft: #2b3734;
+  --workshop-board: #435450;
+  --workshop-score: #354946;
+  --workshop-grid-cell: #5b6b67;
+  --workshop-timer-track: #273532;
+  --workshop-line: rgba(151, 185, 176, 0.2);
+  --workshop-ink: #edf2ed;
+  --workshop-text: #ccd7d1;
+  --workshop-muted: #9eada6;
+  --workshop-teal: #63aaa6;
+  --workshop-gold: #d5aa55;
+  --workshop-shadow: 0 7px 18px rgba(0, 0, 0, 0.22);
+  color: var(--workshop-text) !important;
+  background: var(--workshop-bg) !important;
+  background-image: none !important;
+}
+
+html[data-night-background="1"]:has(body[data-page]:not([data-page="modes"])) {
+  background: #18201f !important;
+  background-image: none !important;
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"])
+  :is(.score-container, .best-container, #timer) {
+  color: #edf2ed !important;
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+  input,
+  textarea,
+  select,
+  .settings-select,
+  .account-input,
+  .account-board-list,
+  .account-board-table-wrap
+) {
+  color: #edf2ed !important;
+  background: #1d2725 !important;
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+  .replay-modal-overlay,
+  .game-dialog-overlay,
+  .practice-mode-panel,
+  .practice-board-code-panel,
+  .replay-file-drop-overlay
+) {
+  background: rgba(7, 12, 11, 0.7) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-preview-page="classic-workshop"] *,
+  html:has(body[data-page]:not([data-page="modes"])) * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
