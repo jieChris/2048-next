@@ -10,9 +10,21 @@ export interface WindowLike {
   location?: { pathname?: string; search?: string; href?: string };
   localStorage?: StorageLike | null;
   sessionStorage?: StorageLike | null;
+  navigator?: {
+    locks?: {
+      request?: (
+        name: string,
+        options: { mode: "exclusive"; ifAvailable: true },
+        callback: (lock: unknown | null) => Promise<void> | void
+      ) => Promise<unknown>;
+    } | null;
+  } | null;
   __playSinglePageTabId?: string;
   __playSinglePageWindowInstanceId?: string;
   __playSinglePageModeLockState?: SingleModePageLockState | null;
+  __playSinglePageBrowserLockModeKey?: string;
+  __playSinglePageBrowserLockRelease?: (() => void) | null;
+  __playSinglePageBrowserLockPageHideHandler?: (() => void) | null;
   addEventListener?: (name: string, listener: (event?: unknown) => void) => void;
   removeEventListener?: (name: string, listener: (event?: unknown) => void) => void;
   setInterval?: (listener: () => void, timeout: number) => unknown;
@@ -60,6 +72,7 @@ export interface SingleModePageLockOptions {
 }
 
 export interface SingleModePageLockRuntime {
+  acquireSingleModeBrowserLock: typeof acquireSingleModeBrowserLock;
   ensureSingleModePageLock: typeof ensureSingleModePageLock;
   releaseSingleModePageLock: typeof releaseSingleModePageLock;
   releaseSingleModePageLockStateObject: typeof releaseSingleModePageLockStateObject;
@@ -249,9 +262,7 @@ function isLockFresh(record: SingleModePageLockRecord | null, nowMs: number, ttl
   return nowMs - record.updatedAt <= ttlMs;
 }
 
-function shouldSkipLock(manager: SingleModePageLockManagerLike | null | undefined): boolean {
-  if (!manager) return true;
-  const windowLike = resolveWindowLike(manager);
+function shouldSkipWindowLock(windowLike: WindowLike | null): boolean {
   let pathname = "";
   let search = "";
   try {
@@ -270,6 +281,75 @@ function shouldSkipLock(manager: SingleModePageLockManagerLike | null | undefine
   const normalizedPath = String(pathname || "").toLowerCase();
   const isVisualPreview = new URLSearchParams(search).get("visual_preview") === "1";
   return isVisualPreview || normalizedPath.indexOf("replay.html") !== -1 || normalizedPath.indexOf("practice_board.html") !== -1;
+}
+
+function shouldSkipLock(manager: SingleModePageLockManagerLike | null | undefined): boolean {
+  return !manager || shouldSkipWindowLock(resolveWindowLike(manager));
+}
+
+export function releaseSingleModeBrowserLock(windowLike: WindowLike | null | undefined): void {
+  if (!windowLike) return;
+  const pageHideHandler = windowLike.__playSinglePageBrowserLockPageHideHandler;
+  if (pageHideHandler && typeof windowLike.removeEventListener === "function") {
+    windowLike.removeEventListener("beforeunload", pageHideHandler);
+    windowLike.removeEventListener("pagehide", pageHideHandler);
+  }
+  const release = windowLike.__playSinglePageBrowserLockRelease;
+  windowLike.__playSinglePageBrowserLockModeKey = undefined;
+  windowLike.__playSinglePageBrowserLockRelease = null;
+  windowLike.__playSinglePageBrowserLockPageHideHandler = null;
+  if (typeof release === "function") release();
+}
+
+export async function acquireSingleModeBrowserLock(
+  windowLike: WindowLike | null | undefined,
+  modeKeyInput: unknown
+): Promise<boolean> {
+  const modeKey = String(modeKeyInput || "");
+  if (!windowLike || !modeKey || shouldSkipWindowLock(windowLike)) return true;
+  if (windowLike.__playSinglePageBrowserLockModeKey === modeKey) return true;
+  const locks = windowLike.navigator?.locks;
+  const request = locks?.request;
+  if (typeof request !== "function") return true;
+  releaseSingleModeBrowserLock(windowLike);
+
+  return new Promise<boolean>((resolve) => {
+    let resolved = false;
+    const finish = (value: boolean) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(value);
+    };
+    try {
+      Promise.resolve(
+        request.call(
+          locks,
+          `playModeBrowserLock:v1:${modeKey}`,
+          { mode: "exclusive", ifAvailable: true },
+          (lock) => {
+            if (!lock) {
+              finish(false);
+              return;
+            }
+            const hold = new Promise<void>((release) => {
+              windowLike.__playSinglePageBrowserLockRelease = release;
+            });
+            const releaseOnPageHide = () => releaseSingleModeBrowserLock(windowLike);
+            windowLike.__playSinglePageBrowserLockModeKey = modeKey;
+            windowLike.__playSinglePageBrowserLockPageHideHandler = releaseOnPageHide;
+            if (typeof windowLike.addEventListener === "function") {
+              windowLike.addEventListener("beforeunload", releaseOnPageHide);
+              windowLike.addEventListener("pagehide", releaseOnPageHide);
+            }
+            finish(true);
+            return hold;
+          }
+        )
+      ).catch(() => finish(true));
+    } catch (_error) {
+      finish(true);
+    }
+  });
 }
 
 function createLockState(input: {
@@ -407,6 +487,7 @@ export function ensureSingleModePageLock(
   const currentRecord = readLockRecord(storageLike, lockKey);
   if (
     currentRecord &&
+    windowLike?.__playSinglePageBrowserLockModeKey !== modeKey &&
     currentRecord.tabId !== tabId &&
     currentRecord.instanceId !== instanceId &&
     isLockFresh(currentRecord, nowMs, resolveTtlMs(options))
@@ -426,6 +507,7 @@ export function ensureSingleModePageLock(
 
 export function createSingleModePageLockRuntime(): SingleModePageLockRuntime {
   return {
+    acquireSingleModeBrowserLock,
     ensureSingleModePageLock,
     releaseSingleModePageLock,
     releaseSingleModePageLockStateObject,

@@ -277,6 +277,17 @@
     var modeKey = typeof opts.modeKey === "string" ? opts.modeKey : "";
     if (!(windowLike && modeKey)) return { ok: true };
 
+    var browserLockRuntime = windowLike.CoreSingleModePageLockRuntime;
+    if (
+      windowLike.navigator &&
+      windowLike.navigator.locks &&
+      typeof windowLike.navigator.locks.request === "function" &&
+      browserLockRuntime &&
+      typeof browserLockRuntime.acquireSingleModeBrowserLock === "function"
+    ) {
+      return { ok: true };
+    }
+
     var storageLike = resolveLocalStorage(windowLike);
     if (!storageLike) return { ok: true };
 

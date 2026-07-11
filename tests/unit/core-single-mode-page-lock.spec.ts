@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  acquireSingleModeBrowserLock,
   createSingleModePageLockRuntime,
   ensureSingleModePageLock,
   installSingleModePageLockRuntime,
@@ -49,11 +50,54 @@ function createWindowLike(options: {
 }
 
 describe("core single mode page lock", () => {
+  it("uses a browser-owned lock that releases with the page lifecycle", async () => {
+    let requestFinished = false;
+    const request = vi.fn((
+      _name: string,
+      _options: { mode: "exclusive"; ifAvailable: true },
+      callback: (lock: object | null) => Promise<void> | void
+    ) => Promise.resolve(callback({})).then(() => {
+      requestFinished = true;
+    }));
+    const windowLike = createWindowLike() as ReturnType<typeof createWindowLike> & {
+      navigator: { locks: { request: typeof request } };
+      __playSinglePageBrowserLockModeKey?: string;
+    };
+    windowLike.navigator = { locks: { request } };
+
+    const acquired = await acquireSingleModeBrowserLock(windowLike, "standard_4x4_pow2_no_undo");
+
+    expect(acquired).toBe(true);
+    expect(windowLike.__playSinglePageBrowserLockModeKey).toBe(
+      "standard_4x4_pow2_no_undo"
+    );
+    expect(windowLike.listeners.pagehide).toHaveLength(1);
+    windowLike.listeners.pagehide[0]();
+    expect(windowLike.__playSinglePageBrowserLockModeKey).toBeUndefined();
+    await vi.waitFor(() => expect(requestFinished).toBe(true));
+  });
+
+  it("reports a live duplicate when the browser lock is unavailable", async () => {
+    const windowLike = createWindowLike() as ReturnType<typeof createWindowLike> & {
+      navigator: { locks: { request: ReturnType<typeof vi.fn> } };
+    };
+    windowLike.navigator = {
+      locks: {
+        request: vi.fn(async (_name, _options, callback) => callback(null))
+      }
+    };
+
+    await expect(
+      acquireSingleModeBrowserLock(windowLike, "standard_4x4_pow2_no_undo")
+    ).resolves.toBe(false);
+  });
+
   it("installs the runtime namespace consumed by the legacy setup shell", () => {
     const windowLike = {};
     const runtime = installSingleModePageLockRuntime({ windowLike });
 
     expect(runtime).toBe((windowLike as any).CoreSingleModePageLockRuntime);
+    expect(runtime?.acquireSingleModeBrowserLock).toBe(acquireSingleModeBrowserLock);
     expect(runtime?.ensureSingleModePageLock).toBe(ensureSingleModePageLock);
     expect(runtime?.resolveSingleModePageTabId).toBe(resolveSingleModePageTabId);
     expect(createSingleModePageLockRuntime().releaseSingleModePageLock).toBe(releaseSingleModePageLock);

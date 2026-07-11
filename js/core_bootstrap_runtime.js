@@ -5,6 +5,8 @@
 
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
   var DEFAULT_BOARD_SIZE = 4;
+  var DUPLICATE_MODE_MESSAGE_ZH = "\u975e\u6cd5\u64cd\u4f5c\uff1a\u4e00\u4e2a\u6a21\u5f0f\u53ea\u80fd\u5f00\u4e00\u4e2a\u9875\u9762";
+  var DUPLICATE_MODE_MESSAGE_EN = "Illegal operation: each mode can only be open in one page.";
 
   function toPositiveInt(raw, fallback) {
     var num = Number(raw);
@@ -91,6 +93,48 @@
     callback();
   }
 
+  function resolveDuplicateModeMessage() {
+    var language = "";
+    try {
+      var i18n = global.UII18N;
+      if (i18n && typeof i18n.getLanguage === "function") {
+        language = String(i18n.getLanguage() || "").toLowerCase();
+      }
+    } catch (_errI18n) {}
+    if (!language) {
+      try {
+        var root = global.document.documentElement;
+        language = String(
+          root.getAttribute("data-ui-lang") || root.getAttribute("lang") || ""
+        ).toLowerCase();
+      } catch (_errDocument) {}
+    }
+    return language.indexOf("en") === 0 ? DUPLICATE_MODE_MESSAGE_EN : DUPLICATE_MODE_MESSAGE_ZH;
+  }
+
+  function handleDuplicateMode() {
+    if (typeof global.alert === "function") global.alert(resolveDuplicateModeMessage());
+    if (global.location) global.location.href = "modes.html";
+  }
+
+  function startGameAfterBrowserLock(options, onStarted) {
+    var runtime = global.CoreSingleModePageLockRuntime;
+    var acquire = runtime && runtime.acquireSingleModeBrowserLock;
+    if (typeof acquire !== "function") {
+      onStarted();
+      return;
+    }
+    Promise.resolve(acquire(global, options && options.modeKey)).then(function (acquired) {
+      if (!acquired) {
+        handleDuplicateMode();
+        return;
+      }
+      onStarted();
+    }).catch(function () {
+      onStarted();
+    });
+  }
+
   function startGameOnAnimationFrame(optionsOrFactory) {
     var result = null;
     scheduleNextFrame(function () {
@@ -101,7 +145,9 @@
         result = null;
         return;
       }
-      result = startGame(options);
+      startGameAfterBrowserLock(options, function () {
+        result = startGame(options);
+      });
     });
     return result;
   }
