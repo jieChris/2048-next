@@ -432,7 +432,7 @@ body[data-page]:not([data-page="modes"]) select option {
 
 body[data-page="game"] :is(.score-container, .best-container),
 body[data-page="practice"] :is(.score-container, .best-container) {
-  border: 1px solid var(--workshop-line) !important;
+  border: 0 !important;
   border-radius: 6px !important;
   background: var(--workshop-score) !important;
   box-shadow: var(--workshop-shadow) !important;
@@ -487,13 +487,46 @@ body[data-page]:not([data-page="modes"]) .timer-scroll-btn:hover {
   background: var(--workshop-score) !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(
-  #timer-leaderboard-panel,
-  .timer-leaderboard-summary
-) {
+body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary {
   border-radius: 7px !important;
-  background: var(--workshop-panel-soft) !important;
+  background: var(--workshop-score) !important;
+}
+
+body[data-page]:not([data-page="modes"]) #timer-leaderboard-panel {
+  background: transparent !important;
   box-shadow: none !important;
+}
+
+body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary {
+  color: var(--workshop-teal) !important;
+  box-shadow:
+    inset 0 0 0 1px var(--workshop-line),
+    var(--workshop-shadow) !important;
+}
+
+body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary::after {
+  color: var(--workshop-muted) !important;
+}
+
+body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary:focus-visible {
+  outline-color: var(--workshop-teal);
+}
+
+body[data-page]:not([data-page="modes"])
+  #timerbox
+  .timer-leaderboard-row
+  .timer-leaderboard-name-tile {
+  color: var(--workshop-ink) !important;
+  background: var(--workshop-panel) !important;
+  box-shadow: none !important;
+  letter-spacing: 0;
+}
+
+body[data-page]:not([data-page="modes"])
+  #timerbox
+  .timer-leaderboard-row.is-empty
+  .timer-leaderboard-name-tile {
+  color: var(--workshop-muted) !important;
 }
 
 body[data-page]:not([data-page="modes"]) .replay-diagnostics-panel {

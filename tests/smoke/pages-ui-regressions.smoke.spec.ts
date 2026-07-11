@@ -685,6 +685,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const timerBox = document.getElementById("timerbox") as HTMLElement | null;
       const panel = document.getElementById("timer-leaderboard-panel") as HTMLElement | null;
       const summary = document.getElementById("timer-leaderboard-summary") as HTMLElement | null;
+      const score = document.querySelector(".score-container") as HTMLElement | null;
+      const best = document.querySelector(".best-container") as HTMLElement | null;
       const firstRow = document.querySelector(
         "#timer-leaderboard-list .timer-leaderboard-row"
       ) as HTMLElement | null;
@@ -704,12 +706,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
         hasRuntime: true,
         timerBoxClassName: timerBox ? String(timerBox.className || "") : "",
         panelDisplay: panel ? String(window.getComputedStyle(panel).display || "") : "",
+        panelBackground: panel ? window.getComputedStyle(panel).backgroundColor : "",
+        panelBoxShadow: panel ? window.getComputedStyle(panel).boxShadow : "",
+        summaryBackground: summary ? window.getComputedStyle(summary).backgroundColor : "",
+        summaryBoxShadow: summary ? window.getComputedStyle(summary).boxShadow : "",
+        summaryColor: summary ? window.getComputedStyle(summary).color : "",
+        summaryLabelColor: summary ? window.getComputedStyle(summary, "::after").color : "",
+        scoreBorderStyle: score ? window.getComputedStyle(score).borderStyle : "",
+        scoreBorderWidth: score ? window.getComputedStyle(score).borderWidth : "",
+        bestBorderStyle: best ? window.getComputedStyle(best).borderStyle : "",
+        bestBorderWidth: best ? window.getComputedStyle(best).borderWidth : "",
         summaryText: summary ? String(summary.textContent || "").trim() : "",
         summaryLabel: summary ? String(summary.getAttribute("data-label") || "") : "",
         summaryRole: summary ? String(summary.getAttribute("role") || "") : "",
         summaryFontSize: summary ? String(window.getComputedStyle(summary).fontSize || "") : "",
         firstRankClassName: firstRank ? String(firstRank.className || "") : "",
         firstNameClassName: firstName ? String(firstName.className || "") : "",
+        firstNameBackground: firstName ? window.getComputedStyle(firstName).backgroundColor : "",
+        firstNameColor: firstName ? window.getComputedStyle(firstName).color : "",
+        selfNameBackground: selfName ? window.getComputedStyle(selfName).backgroundColor : "",
         firstRankText: firstRank ? String(firstRank.textContent || "").trim() : "",
         firstNameText: firstName ? String(firstName.textContent || "").trim() : "",
         selfRankText: selfRank ? String(selfRank.textContent || "").trim() : "",
@@ -728,12 +743,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.timerBoxClassName).toContain("timerbox-hidden-mode");
     expect(snapshot.timerBoxClassName).toContain("timerbox-leaderboard-mode");
     expect(snapshot.panelDisplay).toBe("block");
+    expect(snapshot.panelBackground).toBe("rgba(0, 0, 0, 0)");
+    expect(snapshot.panelBoxShadow).toBe("none");
+    expect(snapshot.summaryBackground).toBe("rgb(251, 248, 241)");
+    expect(snapshot.summaryBoxShadow).toBe(
+      "rgba(81, 74, 68, 0.17) 0px 0px 0px 1px inset, rgba(76, 65, 55, 0.1) 0px 6px 16px 0px"
+    );
+    expect(snapshot.summaryColor).toBe("rgb(47, 134, 160)");
+    expect(snapshot.summaryLabelColor).toBe("rgb(129, 120, 111)");
+    expect(snapshot.scoreBorderStyle).toBe("none");
+    expect(snapshot.scoreBorderWidth).toBe("0px");
+    expect(snapshot.bestBorderStyle).toBe("none");
+    expect(snapshot.bestBorderWidth).toBe("0px");
     expect(snapshot.summaryText).toBe("TOP 10");
     expect(snapshot.summaryLabel).toBe("排行榜");
     expect(snapshot.summaryRole).toBe("button");
     expect(snapshot.summaryFontSize).toBe("25px");
     expect(snapshot.firstRankClassName).toContain("timertile");
     expect(snapshot.firstNameClassName).toContain("timertile");
+    expect(snapshot.firstNameBackground).toBe("rgb(255, 252, 246)");
+    expect(snapshot.firstNameColor).toBe("rgb(81, 74, 68)");
+    expect(snapshot.selfNameBackground).toBe("rgb(255, 252, 246)");
     expect(snapshot.firstRankText).toBe("1");
     expect(snapshot.firstNameText).toBe("Alice-4096");
     expect(snapshot.firstNameText).toContain("4096");
