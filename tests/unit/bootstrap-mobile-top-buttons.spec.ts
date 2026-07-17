@@ -158,6 +158,16 @@ function setDesktopViewport(): void {
   (globalThis as any).innerWidth = 1280;
 }
 
+function setTabletTouchViewport(): void {
+  (globalThis as any).matchMedia = (query: string) => {
+    if (query === "(max-width: 980px)") return { matches: false };
+    if (query === "(pointer: coarse)") return { matches: true };
+    if (query === "(hover: none)") return { matches: true };
+    return { matches: false };
+  };
+  (globalThis as any).innerWidth = 1024;
+}
+
 afterEach(() => {
   (globalThis as any).matchMedia = originalMatchMedia;
   (globalThis as any).innerWidth = originalInnerWidth;
@@ -248,6 +258,27 @@ describe("bootstrap mobile top buttons", () => {
     expect(desktopResult).toBeNull();
     expect(btn?.style.display).toBe("none");
     expect(btn?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("keeps undo mode top actions available on wide touch tablets", () => {
+    setTabletTouchViewport();
+    const doc = createFakeDocument(true);
+    doc.body.setAttribute("data-mode-id", "classic_4x4_pow2_undo");
+
+    const timer = createElement("timerbox-toggle-btn");
+    doc.all.push(timer);
+    doc.host.insertBefore(timer, doc.settingsBtn);
+
+    const undo = ensureMobileUndoTopButtonDom({ isGamePageScope: true, documentLike: doc as any }) as FakeElement;
+    const expand = ensureMobileExpandToggleButtonDom({
+      isGamePageScope: true,
+      documentLike: doc as any
+    });
+
+    expect(expand).not.toBeNull();
+    expect(expand?.style.display).toBe("");
+    expect(hasClass(undo, "mobile-actions-primary")).toBe(true);
+    expect(hasClass(timer, "mobile-actions-collapse-target")).toBe(true);
   });
 
   it("uses undo button as primary and collapses timer in undo modes", () => {

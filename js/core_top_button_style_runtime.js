@@ -10,6 +10,7 @@
   var MODE_ATTR = "data-top-btn-mode";
   var ICON_HTML_ATTR = "data-top-btn-icon-html";
   var MOBILE_BREAKPOINT_QUERY = "(max-width: 980px)";
+  var MOBILE_TABLET_MAX_WIDTH = 1366;
   var RESTART_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
   var TIMER_TOGGLE_ICON_SVG =
@@ -164,11 +165,22 @@
     var matchMediaLike = asFunction(global.matchMedia);
     if (matchMediaLike) {
       try {
-        return !!toRecord(matchMediaLike.call(global, MOBILE_BREAKPOINT_QUERY)).matches;
+        if (toRecord(matchMediaLike.call(global, MOBILE_BREAKPOINT_QUERY)).matches) return true;
       } catch (_err) {}
     }
     var width = Number(global.innerWidth);
-    return Number.isFinite(width) ? width <= 980 : false;
+    if (!Number.isFinite(width)) return false;
+    if (width <= 980) return true;
+    if (width > MOBILE_TABLET_MAX_WIDTH) return false;
+    if (!matchMediaLike) return false;
+    try {
+      return !!(
+        toRecord(matchMediaLike.call(global, "(pointer: coarse)")).matches ||
+        toRecord(matchMediaLike.call(global, "(hover: none)")).matches
+      );
+    } catch (_err2) {
+      return false;
+    }
   }
 
   function compactLabel(labelLike, lang) {

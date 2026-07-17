@@ -55,6 +55,7 @@ const DEFAULT_SETTINGS_BUTTON_ID = "top-settings-btn";
 const DEFAULT_EXPAND_BUTTON_ID = "top-actions-expand-toggle";
 const DEFAULT_EXPAND_CLASS_NAME = "top-action-btn mobile-actions-expand-toggle";
 const MOBILE_BREAKPOINT_QUERY = "(max-width: 980px)";
+const MOBILE_TABLET_MAX_WIDTH = 1366;
 const MOBILE_EXPANDED_ATTR = "data-mobile-actions-expanded";
 const TOP_BUTTON_STYLE_ATTR = "data-top-button-style";
 const MODE_ID_ATTR = "data-mode-id";
@@ -120,11 +121,22 @@ function isCompactViewport(): boolean {
   const matchMedia = (globalThis as any)?.matchMedia;
   if (typeof matchMedia === "function") {
     try {
-      return !!matchMedia.call(globalThis, MOBILE_BREAKPOINT_QUERY)?.matches;
+      if (matchMedia.call(globalThis, MOBILE_BREAKPOINT_QUERY)?.matches) return true;
     } catch (_err) {}
   }
   const width = Number((globalThis as any)?.innerWidth);
-  return Number.isFinite(width) ? width <= 980 : false;
+  if (!Number.isFinite(width)) return false;
+  if (width <= 980) return true;
+  if (width > MOBILE_TABLET_MAX_WIDTH) return false;
+  if (typeof matchMedia !== "function") return false;
+  try {
+    return !!(
+      matchMedia.call(globalThis, "(pointer: coarse)")?.matches ||
+      matchMedia.call(globalThis, "(hover: none)")?.matches
+    );
+  } catch (_err) {
+    return false;
+  }
 }
 
 function getBody(doc: DocumentLike | null): ElementLike | null {
@@ -409,4 +421,3 @@ export function ensureMobileHintToggleButtonDom(
   syncMobileActionButtonClasses(host, doc);
   return btn;
 }
-

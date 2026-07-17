@@ -16,6 +16,7 @@
   var DEFAULT_EXPAND_BUTTON_ID = "top-actions-expand-toggle";
   var DEFAULT_EXPAND_CLASS_NAME = "top-action-btn mobile-actions-expand-toggle";
   var MOBILE_BREAKPOINT_QUERY = "(max-width: 980px)";
+  var MOBILE_TABLET_MAX_WIDTH = 1366;
   var MOBILE_EXPANDED_ATTR = "data-mobile-actions-expanded";
   var TOP_BUTTON_STYLE_ATTR = "data-top-button-style";
   var MODE_ID_ATTR = "data-mode-id";
@@ -80,11 +81,22 @@
     var matchMedia = global.matchMedia;
     if (typeof matchMedia === "function") {
       try {
-        return !!(matchMedia.call(global, MOBILE_BREAKPOINT_QUERY) || {}).matches;
+        if ((matchMedia.call(global, MOBILE_BREAKPOINT_QUERY) || {}).matches) return true;
       } catch (_err) {}
     }
     var width = Number(global.innerWidth);
-    return Number.isFinite(width) ? width <= 980 : false;
+    if (!Number.isFinite(width)) return false;
+    if (width <= 980) return true;
+    if (width > MOBILE_TABLET_MAX_WIDTH) return false;
+    if (typeof matchMedia !== "function") return false;
+    try {
+      return !!(
+        (matchMedia.call(global, "(pointer: coarse)") || {}).matches ||
+        (matchMedia.call(global, "(hover: none)") || {}).matches
+      );
+    } catch (_err2) {
+      return false;
+    }
   }
 
   function getBody(doc) {
@@ -364,4 +376,3 @@
   global.CoreMobileTopButtonsRuntime.ensureMobileExpandToggleButtonDom =
     ensureMobileExpandToggleButtonDom;
 })(typeof window !== "undefined" ? window : undefined);
-

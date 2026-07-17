@@ -1,4 +1,4 @@
-@media screen and (min-width: 981px) {
+@media screen and (min-width: 981px) and (hover: hover) and (pointer: fine) {
   body[data-page="game"] .mobile-undo-top-btn,
   body[data-page="game"] .mobile-hint-toggle-btn,
   body[data-page="game"] .timerbox-toggle-btn,
@@ -7,4 +7,3 @@
     display: none !important;
   }
 }
-
