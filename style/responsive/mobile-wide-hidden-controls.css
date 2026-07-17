@@ -1,9 +1,24 @@
-@media screen and (min-width: 981px) and (hover: hover) and (pointer: fine) {
+@media screen and (min-width: 981px) {
   body[data-page="game"] .mobile-undo-top-btn,
   body[data-page="game"] .mobile-hint-toggle-btn,
   body[data-page="game"] .timerbox-toggle-btn,
   body[data-page="practice"] .timerbox-toggle-btn,
   body[data-page="practice"] .practice-mobile-undo-btn {
+    display: none !important;
+  }
+}
+
+@media screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+  body[data-page="game"] .top-action-buttons .mobile-undo-top-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+  }
+
+  body[data-page="game"][data-mode-id*="no_undo"] .mobile-undo-top-btn,
+  body[data-page="game"][data-mode-id*="no-undo"] .mobile-undo-top-btn,
+  body[data-page="game"][data-mode-id*="capped"] .mobile-undo-top-btn {
     display: none !important;
   }
 }

@@ -3,8 +3,7 @@
   display: none !important;
 }
 
-@media screen and (max-width: 980px),
-  screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+@media screen and (max-width: 980px) {
   body[data-page="game"] .home-user-display {
     display: none !important;
   }
@@ -21,8 +20,7 @@
 }
 
 /* Mobile game top-actions: primary five + expandable overflow row */
-@media screen and (max-width: 980px),
-  screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+@media screen and (max-width: 980px) {
   body[data-page="game"] .top-action-buttons {
     display: flex;
     flex-wrap: wrap;

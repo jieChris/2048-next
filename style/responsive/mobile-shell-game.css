@@ -1,5 +1,4 @@
-@media screen and (max-width: 980px),
-  screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse)) {
+@media screen and (max-width: 980px) {
   body[data-page="game"] {
     margin: 18px 0;
     padding: 0 10px;

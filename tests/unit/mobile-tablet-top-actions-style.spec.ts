@@ -8,30 +8,32 @@ function readStyle(relativePath: string): string {
 }
 
 describe("mobile tablet top action styles", () => {
-  it("applies game top action layout on wide touch tablets", () => {
+  it("only exposes the undo control on wide touch tablets", () => {
     const homeActions = readStyle("style/responsive/mobile-home-actions.css");
     const shellGame = readStyle("style/responsive/mobile-shell-game.css");
     const sharedControls = readStyle("style/responsive/mobile-shell-shared-controls.css");
+    const wideHiddenControls = readStyle("style/responsive/mobile-wide-hidden-controls.css");
 
     const tabletQuery =
       "screen and (min-width: 981px) and (max-width: 1366px) and ((hover: none) or (pointer: coarse))";
 
-    expect(homeActions).toContain(tabletQuery);
-    expect(shellGame).toContain(tabletQuery);
-    expect(sharedControls).toContain(tabletQuery);
+    expect(wideHiddenControls).toContain(tabletQuery);
+    expect(wideHiddenControls).toContain(
+      'body[data-page="game"] .top-action-buttons .mobile-undo-top-btn'
+    );
+    expect(homeActions).not.toContain(tabletQuery);
+    expect(shellGame).not.toContain(tabletQuery);
+    expect(sharedControls).not.toContain(tabletQuery);
   });
 
-  it("keeps desktop-only hiding away from touch tablet controls", () => {
+  it("keeps wide viewport controls hidden outside the undo exception", () => {
     const wideHiddenControls = readStyle("style/responsive/mobile-wide-hidden-controls.css");
     const homeActions = readStyle("style/responsive/mobile-home-actions.css");
 
-    expect(wideHiddenControls).toContain(
-      "@media screen and (min-width: 981px) and (hover: hover) and (pointer: fine)"
-    );
+    expect(wideHiddenControls).toContain("@media screen and (min-width: 981px)");
     expect(homeActions).toContain(
       "@media screen and (min-width: 981px) and (hover: hover) and (pointer: fine)"
     );
-    expect(wideHiddenControls).not.toContain("@media screen and (min-width: 981px) {");
     expect(homeActions).not.toContain("@media screen and (min-width: 981px) {");
   });
 });
