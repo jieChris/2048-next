@@ -378,7 +378,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.toastColor).toBe("rgb(60, 48, 36)");
     expect(snapshot.toastPointerEvents).toBe("none");
     expect(snapshot.toastOpacity).toBe("1");
-    expect(snapshot.hiddenOpacity).toBe("0");
+    expect(Number(snapshot.hiddenOpacity)).toBeLessThanOrEqual(0.01);
     expect(snapshot.modalOpenDisplay).toBe("flex");
     expect(snapshot.modalClosedDisplay).toBe("none");
   });

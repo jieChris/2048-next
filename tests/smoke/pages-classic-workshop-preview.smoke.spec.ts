@@ -159,7 +159,7 @@ test("approved workshop theme applies to production pages without changing mode 
   await page.goto("/2048.html?visual_preview=1", { waitUntil: "domcontentloaded" });
   await expect(page.locator('link[href^="style/main.css"]')).toHaveAttribute(
     "href",
-    "style/main.css?v=20260711-warm-ivory-v8"
+    "style/main.css?v=20260713-night-pages-v1"
   );
   const productionPalette = await page.locator("body").evaluate(() => ({
     page: getComputedStyle(document.body).backgroundColor,

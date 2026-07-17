@@ -3,12 +3,14 @@ import { expect, type Page, test } from "@playwright/test";
 async function openPracticeBoardCodePanel(page: Page): Promise<void> {
   const panel = page.locator("#practice-board-code-panel");
   const input = page.locator("#practice-board-code-input");
+  const toggle = page.locator("#practice-board-code-btn");
+  await expect(toggle).toHaveAttribute("aria-expanded", /^(true|false)$/);
   const isOpen = await panel
     .evaluate((element) => element.classList.contains("is-open"))
     .catch(() => false);
 
   if (!isOpen) {
-    await page.locator("#practice-board-code-btn").click();
+    await toggle.click();
   }
 
   await expect(panel).toHaveClass(/is-open/);

@@ -324,10 +324,11 @@ function isSavedStateRankedSessionValidForRestore(manager, saved) {
     ? saved.challenge_id.trim()
     : "";
   var savedSeed = normalizeSavedStateRankedPayloadSeed(saved);
-  if (!savedToken || !savedChallengeId || savedSeed === null) return false;
-
   var currentToken = resolveSavedStateRankedSessionToken(manager);
   var currentChallengeId = resolveSavedStateRankedChallengeId(manager);
+  if (!savedToken || !savedChallengeId || savedSeed === null) {
+    return savedSeed !== null && !currentToken && !currentChallengeId;
+  }
   if (!currentToken && !currentChallengeId) return true;
   if (!currentToken || currentToken !== savedToken) return false;
   if (!currentChallengeId || currentChallengeId !== savedChallengeId) return false;
@@ -444,11 +445,13 @@ function saveGameState(manager, options) {
   options = normalizeSavedStateRecordObject(options, {});
   var now = Date.now();
   if (!shouldUseSavedGameState(manager)) return;
-  if (shouldClearSavedStateForTerminatedSession(manager)) {
+  var shouldClearTerminatedState = shouldClearSavedStateForTerminatedSession(manager);
+  if (!shouldClearTerminatedState && shouldSkipSaveGameStateByThrottle(manager, options, now)) return;
+  if (shouldSkipStaleSavedGameStateWrite(manager)) return;
+  if (shouldClearTerminatedState) {
     clearSavedGameState(manager);
     return;
   }
-  if (shouldSkipSaveGameStateByThrottle(manager, options, now)) return;
   try {
     var persistPlan = buildSavedGameStatePersistPlan(manager, now, options);
     if (!normalizeSavedStateRecordObject(persistPlan, null)) return;

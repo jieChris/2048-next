@@ -62,6 +62,7 @@ function loadPanelTimerRuntime(extraContext: Record<string, unknown> = {}) {
     publishSavedStateSyncSnapshot: (manager: Record<string, unknown>) => boolean;
     buildSavedStateSyncTrimPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
     parseSavedStateSyncEventPayload: (manager: Record<string, unknown>, raw: string) => Record<string, unknown> | null;
+    shouldSkipStaleSavedGameStateWrite: (manager: Record<string, unknown>) => boolean;
   };
 }
 
@@ -371,5 +372,64 @@ describe("core game manager panel timer runtime", () => {
       }),
       88_000
     );
+  });
+
+  it("rejects a stale manager write when storage already contains newer progress", () => {
+    const modeKey = "capped_4x4_pow2_1024_no_undo";
+    const publishSavedStateSyncSnapshot = vi.fn(() => true);
+    const values = new Map<string, string>([
+      [`savedGameStateByMode:v1:${modeKey}`, JSON.stringify({ saved_at: 2_000 })],
+      [`savedGameStateLiteByMode:v1:${modeKey}`, JSON.stringify({ saved_at: 1_900 })]
+    ]);
+    const storage = {
+      getItem: vi.fn((key: string) => values.get(key) || null),
+      removeItem: vi.fn()
+    };
+    const runtime = loadPanelTimerRuntime({
+      GameManager: {
+        DEFAULT_MODE_KEY: "standard_4x4_pow2_no_undo",
+        SAVED_GAME_STATE_KEY_PREFIX: "savedGameStateByMode:v1:",
+        SAVED_GAME_STATE_LITE_KEY_PREFIX: "savedGameStateLiteByMode:v1:"
+      },
+      CoreSavedStateSyncPublishRuntime: {
+        publishSavedStateSyncSnapshot
+      },
+      callCoreStorageRuntime: vi.fn(() => undefined)
+    });
+    const manager = createManager({
+      modeKey,
+      lastSavedGameStateAt: 1_000,
+      lastSyncedSavedStateAt: 1_500,
+      createCoreModeContextPayload(payload: Record<string, unknown>) {
+        return payload;
+      },
+      getWebStorageByName() {
+        return storage;
+      },
+      isNonArrayObject(value: unknown) {
+        return !!value && typeof value === "object" && !Array.isArray(value);
+      },
+      resolveNormalizedCoreValueOrFallback(
+        value: unknown,
+        _normalizer: (candidate: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      },
+      resolveNormalizedCoreValueOrFallbackAllowNull(
+        value: unknown,
+        _normalizer: (candidate: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      }
+    });
+
+    expect(runtime.shouldSkipStaleSavedGameStateWrite(manager)).toBe(true);
+    expect(runtime.publishSavedStateSyncSnapshot(manager)).toBe(false);
+    expect(publishSavedStateSyncSnapshot).not.toHaveBeenCalled();
+
+    manager.lastSyncedSavedStateAt = 2_000;
+    expect(runtime.shouldSkipStaleSavedGameStateWrite(manager)).toBe(false);
   });
 });

@@ -457,19 +457,44 @@ body[data-page]:not([data-page="modes"]) :is(.score-container, .best-container, 
   color: var(--workshop-muted) !important;
 }
 
-:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="game"] .game-container,
-:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .game-container {
+:is(
+  html:not([data-theme]),
+  html[data-theme="classic"],
+  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
+)
+  body[data-page="game"] .game-container,
+:is(
+  html:not([data-theme]),
+  html[data-theme="classic"],
+  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
+)
+  body[data-page="practice"] .game-container {
   border-radius: 7px !important;
   background: var(--workshop-board) !important;
   box-shadow: 0 10px 24px rgba(76, 65, 55, 0.13) !important;
 }
 
-:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="game"] .grid-cell:not(.grid-cell-obstacle),
-:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .grid-cell:not(.grid-cell-obstacle) {
+:is(
+  html:not([data-theme]),
+  html[data-theme="classic"],
+  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
+)
+  body[data-page="game"] .grid-cell:not(.grid-cell-obstacle),
+:is(
+  html:not([data-theme]),
+  html[data-theme="classic"],
+  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
+)
+  body[data-page="practice"] .grid-cell:not(.grid-cell-obstacle) {
   background: var(--workshop-grid-cell) !important;
 }
 
-:is(html:not([data-theme]), html[data-theme="classic"]) body[data-page="practice"] .dashboard-box {
+:is(
+  html:not([data-theme]),
+  html[data-theme="classic"],
+  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
+)
+  body[data-page="practice"] .dashboard-box {
   background: var(--workshop-board) !important;
 }
 

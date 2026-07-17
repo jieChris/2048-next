@@ -1653,6 +1653,57 @@ describe("core game manager saved state runtime", () => {
     });
   });
 
+  it("restores local-only ranked progress when no active ranked session identity exists", () => {
+    const runtime = loadSavedStateRuntime([32768]);
+    const modeKey = "capped_4x4_pow2_1024_no_undo";
+    const saved = {
+      v: 1,
+      mode_key: modeKey,
+      board_width: 4,
+      board_height: 4,
+      ruleset: "pow2",
+      board: [
+        [1024, 1024, 0, 0],
+        [512, 256, 128, 64],
+        [32, 16, 8, 4],
+        [2, 0, 0, 0]
+      ],
+      over: false,
+      won: false,
+      keep_playing: false,
+      initial_seed: 101,
+      challenge_id: null,
+      ranked_session_token: null
+    };
+    const manager = {
+      modeKey,
+      mode: modeKey,
+      rankPolicy: "ranked",
+      modeConfig: { rank_policy: "ranked" },
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      initialSeed: undefined,
+      challengeId: null,
+      rankedSessionToken: "",
+      getWindowLike() {
+        return {
+          RankedSessionRuntime: {
+            getCurrentContext() {
+              return null;
+            }
+          },
+          GAME_CHALLENGE_CONTEXT: null
+        };
+      }
+    };
+
+    expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
+      canRestore: true,
+      shouldClearSavedState: true
+    });
+  });
+
   it("saves terminal timer state as frozen and non-resumable", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const payload = runtime.buildSavedGameStateTimerCorePayload({

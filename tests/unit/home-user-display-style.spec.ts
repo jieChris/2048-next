@@ -25,7 +25,7 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260711-warm-ivory-v8");
+    expect(html).toContain("style/main.css?v=20260713-night-pages-v1");
     expect(html).not.toContain("style/main.css?v=20260626-breakout-window-controls");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-burst");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-favicon");

@@ -1,0 +1,243 @@
+/* Final night-mode ownership for page-specific styles loaded after main.css. */
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) {
+  --night-page-bg: var(--workshop-bg);
+  --night-surface: var(--workshop-panel);
+  --night-surface-alt: var(--workshop-panel-soft);
+  --night-line: var(--workshop-line);
+  --night-ink: var(--workshop-ink);
+  --night-ink-soft: var(--workshop-text);
+  --night-ink-dim: var(--workshop-muted);
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+  label,
+  .user-record-tools label,
+  .user-record-head-row,
+  .user-page-indicator,
+  .admin-card .panel-head p,
+  .admin-form-grid label,
+  .admin-sql-label
+) {
+  color: var(--workshop-text) !important;
+}
+
+html[data-night-background="1"] body[data-page="user-profile"] :is(
+  .user-record-list,
+  .user-record-detail-card
+),
+html[data-night-background="1"] body[data-page="history"] .history-item,
+html[data-night-background="1"] body[data-page="relay-5x5"] :is(
+  #relay-note,
+  #relay-note-secondary
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+html[data-night-background="1"] body[data-page="user-profile"] :is(
+  .user-record-empty,
+  .user-record-tip,
+  .user-record-date
+) {
+  color: var(--workshop-text) !important;
+}
+
+html[data-night-background="1"] body[data-page="user-profile"] .user-record-row:hover,
+html[data-night-background="1"] body[data-page="user-profile"] .user-record-item[data-open="1"] {
+  background: rgba(99, 170, 166, 0.08) !important;
+}
+
+html[data-night-background="1"] body[data-page="achievements"] #achievements-user-name {
+  color: var(--workshop-ink) !important;
+}
+
+html[data-night-background="1"] body[data-page="achievements"] :is(
+  p,
+  .achievements-stat span,
+  #achievements-summary-copy
+) {
+  color: var(--workshop-muted) !important;
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+  #account-auth-state-tag,
+  #achievements-status,
+  #touch-threshold-value
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+}
+
+html[data-night-background="1"] body[data-page="relay-5x5"] #relay-my-case-pill {
+  border-color: rgba(99, 170, 166, 0.32) !important;
+  color: var(--workshop-teal) !important;
+  background: rgba(99, 170, 166, 0.1) !important;
+}
+
+html[data-night-background="1"]
+  body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+  :is(
+  #history-clear-all-btn,
+  #palette-delete-btn,
+  #settings-logout-btn,
+  #relay-delete-btn
+) {
+  border-color: rgba(213, 110, 97, 0.38) !important;
+  color: #f1a79e !important;
+  background: #3a2927 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -2px 0 rgba(213, 110, 97, 0.18),
+    0 5px 12px rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-night-background="1"] body[data-page="touch-sensitivity"] .touch-card {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+}
+
+html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+  .announcement-item,
+  .settings-toggle-row,
+  .settings-modal-content > .settings-row.language-settings-row,
+  .settings-modal-content > .settings-row.settings-action-row,
+  .tile-palette-settings-row,
+  .custom-select-trigger,
+  .custom-options,
+  .mode-intro-leaderboard-row,
+  .mode-intro-leaderboard-empty,
+  .mode-intro-leaderboard-more,
+  .online-board-empty
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-ink) !important;
+  background: var(--workshop-panel-soft) !important;
+}
+
+html[data-night-background="1"] .game-dialog-button-secondary {
+  color: var(--enamel-button-ink) !important;
+  background: var(--enamel-button-surface) !important;
+}
+
+html[data-night-background="1"] .game-dialog-button-primary {
+  color: var(--enamel-button-primary-text) !important;
+  background: var(--enamel-button-primary) !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] {
+  --stone-bg: var(--workshop-bg);
+  --stone-bg-deep: var(--workshop-bg);
+  --stone-panel: var(--workshop-panel);
+  --stone-panel-strong: var(--workshop-panel-soft);
+  --stone-panel-soft: rgba(43, 55, 52, 0.86);
+  --stone-ink: var(--workshop-ink);
+  --stone-muted: var(--workshop-text);
+  --stone-line: var(--workshop-line);
+  --stone-line-strong: rgba(151, 185, 176, 0.3);
+  --stone-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
+  --stone-shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-access-gate {
+  background: rgba(7, 12, 11, 0.76) !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+  .stone-access-card,
+  .stone-hero,
+  .stone-control-card,
+  .stone-panel,
+  .stone-stat-card
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--stone-shadow-soft) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+  .stone-table-wrap,
+  .stone-detail-list > div
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-hero-badge {
+  border-color: rgba(99, 170, 166, 0.3) !important;
+  color: #8bd0cb !important;
+  background: rgba(99, 170, 166, 0.12) !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-board-preview {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-board) !important;
+}
+
+html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+  .stone-access-input,
+  .stone-field input,
+  .stone-field select,
+  .stone-field textarea
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-ink) !important;
+  background: #1d2725 !important;
+}
+
+html[data-night-background="1"] body[data-page="admin-console"] .admin-card {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--workshop-shadow) !important;
+}
+
+html[data-night-background="1"] body[data-page="admin-console"] :is(
+  .admin-upload-panel,
+  .admin-beta-access-console,
+  .admin-output,
+  .admin-result-wrap,
+  .admin-rescue-history,
+  .admin-empty-state
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+  box-shadow: none !important;
+}
+
+html[data-night-background="1"] body[data-page="admin-console"] :is(
+  .admin-input,
+  .admin-textarea,
+  .settings-select
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-ink) !important;
+  background-color: #1d2725 !important;
+}
+
+html[data-night-background="1"] body[data-page="admin-console"] :is(
+  .admin-card h3,
+  .admin-result-table th,
+  .admin-result-table td
+) {
+  color: var(--workshop-text) !important;
+  border-color: var(--workshop-line) !important;
+}
+
+html[data-night-background="1"] body[data-page="admin-console"] .panel-pill {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+}

@@ -806,6 +806,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           return (
             !!manager &&
             !!(window as any).OnlineLeaderboardRuntime &&
+            manager.__onlineImmediateSubmitHooksBound === true &&
             typeof manager.tryAutoSubmitOnGameOver === "function"
           );
         });

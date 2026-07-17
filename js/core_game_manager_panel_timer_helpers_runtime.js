@@ -1177,6 +1177,21 @@ function rememberSavedStateKnownSavedAt(manager, savedAt) {
   return normalized;
 }
 
+function resolvePersistedSavedStateAtForWrite(manager, keyPrefix) {
+  if (!manager) return 0;
+  var key = resolveSavedGameStateStorageKey(manager, keyPrefix);
+  return resolveSavedStateSavedAt(readSavedPayloadByKey(manager, key));
+}
+
+function shouldSkipStaleSavedGameStateWrite(manager) {
+  if (!manager) return false;
+  var gameManagerRuntime = typeof GameManager !== "undefined" && GameManager ? GameManager : null;
+  if (!gameManagerRuntime) return false;
+  var fullAt = resolvePersistedSavedStateAtForWrite(manager, gameManagerRuntime.SAVED_GAME_STATE_KEY_PREFIX);
+  var liteAt = resolvePersistedSavedStateAtForWrite(manager, gameManagerRuntime.SAVED_GAME_STATE_LITE_KEY_PREFIX);
+  return Math.max(fullAt, liteAt) > resolveManagerSavedStateKnownSavedAt(manager);
+}
+
 function ensureSavedStateSyncClientId(manager) {
   if (!manager) return "";
   if (typeof manager.savedStateSyncClientId === "string" && manager.savedStateSyncClientId) {
@@ -1370,6 +1385,7 @@ function publishSavedStateSyncSnapshotFallback(manager, now) {
 }
 
 function publishSavedStateSyncSnapshot(manager) {
+  if (shouldSkipStaleSavedGameStateWrite(manager)) return false;
   var now = Date.now(), runtime = resolveCoreSavedStateSyncPublishRuntime();
   if (runtime && typeof runtime.publishSavedStateSyncSnapshot === "function") {
     return runtime.publishSavedStateSyncSnapshot(manager, createSavedStateSyncPublishOperations(), now);
