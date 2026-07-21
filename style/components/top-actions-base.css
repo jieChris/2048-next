@@ -23,8 +23,7 @@
   cursor: pointer;
 }
 
-body:not([data-top-button-style="text"]) .top-action-btn,
-body[data-top-button-style="text"] .top-action-btn.profile-btn:not([hidden]) {
+body:not([data-top-button-style="text"]) .top-action-btn {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
@@ -35,8 +34,7 @@ body[data-top-button-style="text"] .top-action-btn.profile-btn:not([hidden]) {
   border-radius: 12px !important;
 }
 
-body:not([data-top-button-style="text"]) .top-action-btn svg,
-body[data-top-button-style="text"] .top-action-btn.profile-btn:not([hidden]) svg {
+body:not([data-top-button-style="text"]) .top-action-btn svg {
   width: 28px;
   height: 28px;
   vertical-align: middle;

@@ -20,7 +20,7 @@
 
 .portal-table th,
 .portal-table td {
-  border-bottom: 1px solid #e7e1d7;
+  border-bottom: 1px solid var(--app-border-muted);
   padding: 8px;
   text-align: left;
 }

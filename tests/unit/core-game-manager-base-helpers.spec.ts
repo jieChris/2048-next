@@ -37,6 +37,7 @@ import {
   resolveSecondaryTimerValueId,
   resolveSecondaryTimerWidthByLevel,
   safeClonePlain,
+  stampCustomSecondaryTimersForBoard,
   stampSecondaryTimersForMergedValue,
   tryHandleCoreRawValue
 } from "../../src/core/game-manager-base-helpers";
@@ -216,7 +217,13 @@ describe("core game manager base helpers", () => {
       expect(normalizeSecondaryTimerValue(0)).toBeNull();
       expect(isSecondaryTimerPowerOfTwo(8192)).toBe(true);
       expect(isSecondaryTimerPowerOfTwo(24576)).toBe(false);
-      expect(getSecondaryTimerParentValues()).toEqual([8192, 16384, 32768]);
+      expect(getSecondaryTimerParentValues()).toEqual([]);
+      expect(getSecondaryTimerParentValues({
+        customSecondaryTimerRules: [
+          { key: "32+2", expression: "32+2", parent: 32, values: [32, 2], line: 2 },
+          { key: "64+2", expression: "64+2", parent: 64, values: [64, 2], line: 4 }
+        ]
+      })).toEqual([32, 64]);
       expect(getSecondaryTimerChildValues(32768)).toEqual([16384, 8192, 4096, 2048]);
       expect(getSecondaryTimerChildValues(4096)).toEqual([]);
 
@@ -332,5 +339,60 @@ describe("core game manager base helpers", () => {
     expect(invalidateSecondaryTimersByLimit(manager, 8192, "DNF")).toBe(true);
     expect(timerEl.textContent).toBe("DNF");
     expect(manager.callWindowMethod).toHaveBeenCalledTimes(3);
+  });
+
+  it("stamps exact and covered custom rules once from a generated board snapshot", () => {
+    function createTimerElement() {
+      const attributes: Record<string, string> = {};
+      return {
+        textContent: "",
+        setAttribute(name: string, value: string) {
+          attributes[name] = value;
+        },
+        getAttribute(name: string) {
+          return attributes[name] || null;
+        },
+        removeAttribute(name: string) {
+          delete attributes[name];
+        }
+      };
+    }
+    const coveredTimer = createTimerElement();
+    const exactTimer = createTimerElement();
+    const descriptors = [
+      {
+        parent: 32,
+        ruleKey: "32+2",
+        rule: { key: "32+2", expression: "32+2", parent: 32, values: [32, 2], line: 2 },
+        row: { style: { display: "none" }, setAttribute: vi.fn(), removeAttribute: vi.fn() },
+        timerEl: coveredTimer
+      },
+      {
+        parent: 32,
+        ruleKey: "32+4",
+        rule: { key: "32+4", expression: "32+4", parent: 32, values: [32, 4], line: 3 },
+        row: { style: { display: "none" }, setAttribute: vi.fn(), removeAttribute: vi.fn() },
+        timerEl: exactTimer
+      }
+    ];
+    const manager = {
+      grid: {
+        eachCell(callback: (x: number, y: number, tile: { value: number }) => void) {
+          callback(0, 0, { value: 32 });
+          callback(1, 0, { value: 4 });
+        }
+      },
+      resolveSecondaryTimerDescriptors: vi.fn(() => descriptors),
+      secondaryTimerExpandedByParent: {},
+      callWindowMethod: vi.fn(() => true)
+    };
+
+    stampCustomSecondaryTimersForBoard(manager, "1.234");
+
+    expect(coveredTimer.textContent).toBe("1.234 ↑");
+    expect(coveredTimer.getAttribute("data-secondary-covered-by")).toBe("32+4");
+    expect(exactTimer.textContent).toBe("1.234");
+    stampCustomSecondaryTimersForBoard(manager, "9.999");
+    expect(coveredTimer.textContent).toBe("1.234 ↑");
   });
 });

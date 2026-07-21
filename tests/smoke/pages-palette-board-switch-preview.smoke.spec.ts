@@ -17,13 +17,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("palette internal controls use the enamel button palette", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_day_theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
+    });
     const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator(".palette-item.is-active")).toBeVisible();
     await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
       "href",
-      "style/palette_page.css?v=20260711-enamel-controls"
+      "style/palette_page.css?v=20260720-theme-controls-v1"
     );
 
     await page.waitForSelector(".swatch-chip", { state: "attached" });
@@ -42,6 +47,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       return {
+        themeSelection: snapshot(".theme-selection-col"),
+        boardSelection: snapshot(".theme-selection-col .board-selection-col"),
         board: snapshot(".palette-board-btn:not(.is-active)"),
         activeBoard: snapshot(".palette-board-btn.is-active"),
         activeDimension: snapshot(".palette-dimension-tab.is-active"),
@@ -53,6 +60,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
+    expect(styles.themeSelection).toMatchObject({
+      backgroundColor: "rgb(237, 243, 242)",
+      borderColor: "rgba(47, 92, 99, 0.26)"
+    });
+    expect(styles.boardSelection).toMatchObject({
+      backgroundColor: "rgb(237, 243, 242)",
+      borderColor: "rgba(47, 92, 99, 0.26)"
+    });
     expect(styles.board).toMatchObject({
       backgroundColor: "rgb(255, 254, 249)",
       borderRadius: "7px"
@@ -104,6 +119,199 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "2K": "rgb(249, 246, 242)",
       "4K": "rgb(249, 246, 242)"
     });
+  });
+
+  test("cold cyan stepped palette keeps adjacent values distinct", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "cold-cyan-steps");
+    });
+    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+
+    const paletteItem = page.locator('[data-palette-id="cold-cyan-steps"]');
+    await expect(paletteItem).toHaveCount(1);
+    await expect(paletteItem).toHaveClass(/is-active/);
+
+    const metrics = await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const palette = manager.getTilePalettes().find((item: any) => item.id === "cold-cyan-steps");
+      const rgb = (hex: string) => [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16));
+      const luminance = (hex: string) => {
+        const channels = rgb(hex).map((value) => {
+          const normalized = value / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4);
+        });
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+      };
+      const contrast = (background: string, foreground: string) => {
+        const a = luminance(background);
+        const b = luminance(foreground);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      };
+      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+        const current = rgb(color);
+        const previous = rgb(palette.pow2[index]);
+        return Math.hypot(...current.map((value, channel) => value - previous[channel]));
+      });
+      const textContrasts = palette.pow2.map((color: string, index: number) => (
+        contrast(color, palette.pow2Text[index])
+      ));
+      return {
+        pow2: palette.pow2,
+        fibonacci: palette.fibonacci,
+        pow2Text: palette.pow2Text,
+        minAdjacentDistance: Math.min(...adjacentDistances),
+        minTextContrast: Math.min(...textContrasts)
+      };
+    });
+
+    expect(metrics.pow2).toEqual([
+      "#e7f7f6", "#a9dad7", "#4abdb7", "#147f86",
+      "#8bcdd0", "#287d99", "#35b9b3", "#0c5c70",
+      "#73b9d2", "#1b6d98", "#55c4bb", "#08495f",
+      "#4ca5c3", "#096a74", "#4d9bd5", "#05384b"
+    ]);
+    expect(metrics.fibonacci).toEqual(metrics.pow2);
+    expect(metrics.pow2Text).toEqual([
+      "#082a30", "#082a30", "#082a30", "#f7fefd",
+      "#082a30", "#f7fefd", "#082a30", "#f7fefd",
+      "#082a30", "#f7fefd", "#082a30", "#f7fefd",
+      "#082a30", "#f7fefd", "#082a30", "#f7fefd"
+    ]);
+    expect(metrics.minAdjacentDistance).toBeGreaterThanOrEqual(64);
+    expect(metrics.minTextContrast).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("warm glaze stepped palette keeps 2, 4, and adjacent values distinct", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "warm-glaze-steps");
+    });
+    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+
+    const paletteItem = page.locator('[data-palette-id="warm-glaze-steps"]');
+    await expect(paletteItem).toHaveCount(1);
+    await expect(paletteItem).toHaveClass(/is-active/);
+
+    const metrics = await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const palette = manager.getTilePalettes().find((item: any) => item.id === "warm-glaze-steps");
+      const rgb = (hex: string) => [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16));
+      const luminance = (hex: string) => {
+        const channels = rgb(hex).map((value) => {
+          const normalized = value / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4);
+        });
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+      };
+      const contrast = (background: string, foreground: string) => {
+        const a = luminance(background);
+        const b = luminance(foreground);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      };
+      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+        const current = rgb(color);
+        const previous = rgb(palette.pow2[index]);
+        return Math.hypot(...current.map((value, channel) => value - previous[channel]));
+      });
+      const textContrasts = palette.pow2.map((color: string, index: number) => (
+        contrast(color, palette.pow2Text[index])
+      ));
+      return {
+        pow2: palette.pow2,
+        fibonacci: palette.fibonacci,
+        pow2Text: palette.pow2Text,
+        twoFourDistance: adjacentDistances[0],
+        minAdjacentDistance: Math.min(...adjacentDistances),
+        minTextContrast: Math.min(...textContrasts)
+      };
+    });
+
+    expect(metrics.pow2).toEqual([
+      "#f7e3c3", "#e9a85f", "#c95e4b", "#f28e3b",
+      "#b53a32", "#f2b33d", "#c96b35", "#f1c94a",
+      "#a9493f", "#e99138", "#8f3248", "#d86c55",
+      "#6e2948", "#b94062", "#7a3e24", "#4c1e45"
+    ]);
+    expect(metrics.fibonacci).toEqual(metrics.pow2);
+    expect(metrics.pow2Text).toEqual([
+      "#21100c", "#21100c", "#21100c", "#21100c",
+      "#fff9f2", "#21100c", "#21100c", "#21100c",
+      "#fff9f2", "#21100c", "#fff9f2", "#21100c",
+      "#fff9f2", "#fff9f2", "#fff9f2", "#fff9f2"
+    ]);
+    expect(metrics.twoFourDistance).toBeGreaterThanOrEqual(100);
+    expect(metrics.minAdjacentDistance).toBeGreaterThanOrEqual(64);
+    expect(metrics.minTextContrast).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("jade ochre palette uses cross-hue contrast for adjacent values", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "jade-ochre");
+    });
+    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+
+    const paletteItem = page.locator('[data-palette-id="jade-ochre"]');
+    await expect(paletteItem).toHaveCount(1);
+    await expect(paletteItem).toHaveClass(/is-active/);
+
+    const metrics = await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const palette = manager.getTilePalettes().find((item: any) => item.id === "jade-ochre");
+      const rgb = (hex: string) => [1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16));
+      const luminance = (hex: string) => {
+        const channels = rgb(hex).map((value) => {
+          const normalized = value / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4);
+        });
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
+      };
+      const contrast = (background: string, foreground: string) => {
+        const a = luminance(background);
+        const b = luminance(foreground);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      };
+      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+        const current = rgb(color);
+        const previous = rgb(palette.pow2[index]);
+        return Math.hypot(...current.map((value, channel) => value - previous[channel]));
+      });
+      const textContrasts = palette.pow2.map((color: string, index: number) => (
+        contrast(color, palette.pow2Text[index])
+      ));
+      return {
+        pow2: palette.pow2,
+        fibonacci: palette.fibonacci,
+        pow2Text: palette.pow2Text,
+        twoFourDistance: adjacentDistances[0],
+        minAdjacentDistance: Math.min(...adjacentDistances),
+        minTextContrast: Math.min(...textContrasts)
+      };
+    });
+
+    expect(metrics.pow2).toEqual([
+      "#f4ead8", "#b6a15f", "#315f54", "#c56f52",
+      "#806e2d", "#5d8a7a", "#7b3947", "#d3b975",
+      "#28463f", "#a7593f", "#493144", "#9d8248",
+      "#1f3935", "#b46858", "#4f2b36", "#102f28"
+    ]);
+    expect(metrics.fibonacci).toEqual(metrics.pow2);
+    expect(metrics.pow2Text).toEqual([
+      "#15110d", "#15110d", "#fffcf6", "#15110d",
+      "#fffcf6", "#15110d", "#fffcf6", "#15110d",
+      "#fffcf6", "#fffcf6", "#fffcf6", "#15110d",
+      "#fffcf6", "#15110d", "#fffcf6", "#fffcf6"
+    ]);
+    expect(metrics.twoFourDistance).toBeGreaterThanOrEqual(100);
+    expect(metrics.minAdjacentDistance).toBeGreaterThanOrEqual(64);
+    expect(metrics.minTextContrast).toBeGreaterThanOrEqual(4.5);
   });
 
   test("palette board switch updates preview board", async ({ page }) => {

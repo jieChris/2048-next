@@ -87,6 +87,58 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .replace(/\b\d+k\b/giu, "");
   }
 
+  test("secondary pages replace oversized headings with a plain icon-only back control", async ({ page }) => {
+    const pages = [
+      ["/account.html", "/2048.html"],
+      ["/account_settings.html", "/account.html"],
+      ["/history.html", "/2048.html"],
+      ["/medal-wall.html", "/2048.html"],
+      ["/modes.html", "/2048.html"],
+      ["/palette.html", "/2048.html"],
+      ["/touch_sensitivity.html", "/palette.html"],
+      ["/user.html", "/2048.html"]
+    ] as const;
+
+    await routeI18nAuditApi(page);
+    await page.addInitScript(() => window.localStorage.setItem("ui_language_v1", "zh"));
+
+    for (const [target, expectedBackPath] of pages) {
+      const response = await page.goto(target, { waitUntil: "domcontentloaded" });
+      expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
+
+      const back = page.locator(".page-back-button");
+      await expect(back, `${target} should have one back control`).toHaveCount(1);
+      await expect(back).toBeVisible();
+      const snapshot = await back.evaluate((node) => {
+        const element = node as HTMLElement;
+        const style = getComputedStyle(element);
+        return {
+          path: new URL((element as HTMLAnchorElement).href).pathname,
+          accessibleName: element.getAttribute("aria-label") || (element.textContent || "").trim(),
+          isLegacyButton: element.classList.contains("replay-button"),
+          background: style.backgroundColor,
+          border: style.borderTopWidth,
+          radius: style.borderRadius,
+          size: [element.getBoundingClientRect().width, element.getBoundingClientRect().height]
+        };
+      });
+      const hiddenHeading = await page.locator(".page-title-visually-hidden").first().evaluate((node) => {
+        const rect = node.getBoundingClientRect();
+        return [rect.width, rect.height];
+      });
+
+      expect(snapshot.path).toBe(expectedBackPath);
+      expect(snapshot.accessibleName.length).toBeGreaterThan(0);
+      expect(snapshot.isLegacyButton).toBe(false);
+      expect(snapshot.background).toBe("rgba(0, 0, 0, 0)");
+      expect(snapshot.border).toBe("0px");
+      expect(snapshot.radius).toBe("0px");
+      expect(snapshot.size).toEqual([44, 44]);
+      expect(hiddenHeading[0]).toBeLessThanOrEqual(1);
+      expect(hiddenHeading[1]).toBeLessThanOrEqual(1);
+    }
+  });
+
   test("key pages keep Chinese and English UI copy separated", async ({ page }) => {
     const pages = [
       "/2048.html",
@@ -215,6 +267,39 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.panelExists).toBe(true);
     expect(snapshot.rowCount).toBeGreaterThan(0);
     expect(snapshot.firstRowText).toContain("--");
+  });
+
+  test("timer module settings toggle returns from the preloaded leaderboard without a reload", async ({ page }) => {
+    await page.route("**/api/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "settings_timer_module_view_by_mode_v1",
+        JSON.stringify({ standard_4x4_pow2_no_undo: "hidden" })
+      );
+    });
+
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await waitForWindowCondition(
+      page,
+      () => Boolean((window as any).game_manager) && typeof (window as any).openSettingsModal === "function",
+      "timer settings ready"
+    );
+    await expect(page.locator("html")).toHaveAttribute("data-initial-timer-leaderboard", "1");
+
+    await page.evaluate(() => (window as any).openSettingsModal());
+    await page.click("label.settings-switch[for='timer-module-view-toggle']");
+
+    await expect(page.locator("#timer-module-view-toggle")).toBeChecked();
+    await expect(page.locator("html")).not.toHaveAttribute("data-initial-timer-leaderboard", "1");
+    await expect(page.locator("#timerbox")).not.toHaveClass(/timerbox-(hidden|leaderboard)-mode/);
+    await expect(page.locator("#timer")).toBeVisible();
+    await expect(page.locator("#timer-leaderboard-panel")).toBeHidden();
   });
 
   test("initial leaderboard view shows the embedded shell before ranked startup and leaderboard data finish", async ({
@@ -375,21 +460,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
+    await page.waitForFunction(() => !!document.getElementById("timer-row-131072"));
 
     const beforeClick = await page.evaluate(() => {
-      const row65536 = document.getElementById("timer-row-65536") as HTMLElement | null;
+      const row131072 = document.getElementById("timer-row-131072") as HTMLElement | null;
       return {
         hasGuideRuntime: !!(window as any).CoreHomeGuideRuntime,
         hasGuideOverlay: !!document.getElementById("home-guide-overlay"),
         bodyHasGuideClass: document.body.classList.contains("home-guide-active"),
-        row65536Exists: !!row65536
+        row131072Exists: !!row131072
       };
     });
 
     expect(beforeClick.hasGuideRuntime).toBe(false);
     expect(beforeClick.hasGuideOverlay).toBe(false);
     expect(beforeClick.bodyHasGuideClass).toBe(false);
-    expect(beforeClick.row65536Exists).toBe(true);
+    expect(beforeClick.row131072Exists).toBe(true);
   });
 
   test("export replay action works without retired guide runtime", async ({ page }) => {
@@ -411,6 +497,81 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.locator("#top-export-replay-btn").click();
     await expect(page.locator("#replay-modal")).toBeVisible();
+  });
+
+  test("mist cyan replay surfaces use the shared light and night palettes", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_day_theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_night_background_enabled_v1", "0");
+    });
+
+    await page.goto("/replay.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".replay-metric-card").first()).toBeVisible();
+    await page.locator("#replay-open-speed-btn").click();
+
+    const snapshot = () => page.evaluate(() => {
+      const color = (selector: string, property: "backgroundColor" | "borderColor" | "color" | "accentColor") => {
+        const node = document.querySelector(selector);
+        return node ? window.getComputedStyle(node)[property] : "";
+      };
+      return {
+        body: color("body", "backgroundColor"),
+        metric: color(".replay-metric-card", "backgroundColor"),
+        metricBorder: color(".replay-metric-card", "borderColor"),
+        metricLabel: color(".replay-metric-label", "color"),
+        metricValue: color(".replay-metric-value", "color"),
+        imported: color(".replay-imported-file-name", "backgroundColor"),
+        importedText: color(".replay-imported-file-name", "color"),
+        speedLabel: color(".replay-speed-mode-label", "color"),
+        speedUnit: color(".replay-singleline-unit", "color"),
+        speedInput: color(".replay-singleline-input", "backgroundColor"),
+        speedCheckbox: color("#replay-speed-mode-original", "accentColor"),
+        board: color(".game-container-replay", "backgroundColor"),
+        dynamicThemeCss: document.getElementById("theme-dynamic-style")?.textContent || ""
+      };
+    });
+
+    const light = await snapshot();
+    expect(light).toMatchObject({
+      body: "rgb(243, 246, 245)",
+      metric: "rgb(251, 253, 252)",
+      metricBorder: "rgba(47, 92, 99, 0.26)",
+      metricLabel: "rgb(99, 116, 118)",
+      metricValue: "rgb(61, 79, 82)",
+      imported: "rgb(237, 243, 242)",
+      importedText: "rgb(61, 79, 82)",
+      speedLabel: "rgb(86, 104, 106)",
+      speedUnit: "rgb(99, 116, 118)",
+      speedInput: "rgb(255, 254, 249)",
+      speedCheckbox: "rgb(47, 134, 160)",
+      board: "rgb(184, 201, 199)"
+    });
+    expect(light.dynamicThemeCss).toContain(
+      "input[type=range]::-webkit-slider-runnable-track{background:var(--app-border-control);}"
+    );
+    expect(light.dynamicThemeCss).toContain(
+      "input[type=range]::-webkit-slider-thumb{background:var(--app-accent);}"
+    );
+
+    await page.evaluate(() => document.documentElement.setAttribute("data-night-background", "1"));
+    expect(await snapshot()).toMatchObject({
+      body: "rgb(24, 32, 31)",
+      metric: "rgb(53, 73, 70)",
+      metricLabel: "rgb(168, 183, 176)",
+      metricValue: "rgb(237, 242, 237)",
+      imported: "rgb(43, 55, 52)",
+      importedText: "rgb(237, 242, 237)",
+      speedLabel: "rgb(204, 215, 209)",
+      speedUnit: "rgb(168, 183, 176)",
+      speedInput: "rgb(32, 43, 48)",
+      speedCheckbox: "rgb(99, 170, 166)"
+    });
+    await expect(page.locator('link[href^="style/replay_page_rebuild.css"]')).toHaveAttribute(
+      "href",
+      "style/replay_page_rebuild.css?v=20260721-theme-split-v1"
+    );
   });
 
   test("timer scroll controls stay hidden below 11 active rows and show at 11", async ({
@@ -685,6 +846,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const timerBox = document.getElementById("timerbox") as HTMLElement | null;
       const panel = document.getElementById("timer-leaderboard-panel") as HTMLElement | null;
       const summary = document.getElementById("timer-leaderboard-summary") as HTMLElement | null;
+      const timer = document.getElementById("timer") as HTMLElement | null;
       const score = document.querySelector(".score-container") as HTMLElement | null;
       const best = document.querySelector(".best-container") as HTMLElement | null;
       const firstRow = document.querySelector(
@@ -712,6 +874,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         summaryBoxShadow: summary ? window.getComputedStyle(summary).boxShadow : "",
         summaryColor: summary ? window.getComputedStyle(summary).color : "",
         summaryLabelColor: summary ? window.getComputedStyle(summary, "::after").color : "",
+        summaryBorderRadius: summary ? window.getComputedStyle(summary).borderRadius : "",
+        summaryLabelFontSize: summary ? window.getComputedStyle(summary, "::after").fontSize : "",
+        timerBackground: timer ? window.getComputedStyle(timer).backgroundColor : "",
+        timerBoxShadow: timer ? window.getComputedStyle(timer).boxShadow : "",
+        timerColor: timer ? window.getComputedStyle(timer).color : "",
+        timerLabelColor: timer ? window.getComputedStyle(timer, "::after").color : "",
+        timerBorderRadius: timer ? window.getComputedStyle(timer).borderRadius : "",
+        timerLabelFontSize: timer ? window.getComputedStyle(timer, "::after").fontSize : "",
         scoreBorderStyle: score ? window.getComputedStyle(score).borderStyle : "",
         scoreBorderWidth: score ? window.getComputedStyle(score).borderWidth : "",
         bestBorderStyle: best ? window.getComputedStyle(best).borderStyle : "",
@@ -745,12 +915,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.panelDisplay).toBe("block");
     expect(snapshot.panelBackground).toBe("rgba(0, 0, 0, 0)");
     expect(snapshot.panelBoxShadow).toBe("none");
-    expect(snapshot.summaryBackground).toBe("rgb(251, 248, 241)");
-    expect(snapshot.summaryBoxShadow).toBe(
-      "rgba(81, 74, 68, 0.17) 0px 0px 0px 1px inset, rgba(76, 65, 55, 0.1) 0px 6px 16px 0px"
-    );
-    expect(snapshot.summaryColor).toBe("rgb(47, 134, 160)");
-    expect(snapshot.summaryLabelColor).toBe("rgb(129, 120, 111)");
+    expect(snapshot.summaryBackground).toBe(snapshot.timerBackground);
+    expect(snapshot.summaryBoxShadow).toBe(snapshot.timerBoxShadow);
+    expect(snapshot.summaryColor).toBe(snapshot.timerColor);
+    expect(snapshot.summaryLabelColor).toBe(snapshot.timerLabelColor);
+    expect(snapshot.summaryBorderRadius).toBe(snapshot.timerBorderRadius);
+    expect(snapshot.summaryLabelFontSize).toBe(snapshot.timerLabelFontSize);
     expect(snapshot.scoreBorderStyle).toBe("none");
     expect(snapshot.scoreBorderWidth).toBe("0px");
     expect(snapshot.bestBorderStyle).toBe("none");
@@ -761,9 +931,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.summaryFontSize).toBe("25px");
     expect(snapshot.firstRankClassName).toContain("timertile");
     expect(snapshot.firstNameClassName).toContain("timertile");
-    expect(snapshot.firstNameBackground).toBe("rgb(255, 252, 246)");
-    expect(snapshot.firstNameColor).toBe("rgb(81, 74, 68)");
-    expect(snapshot.selfNameBackground).toBe("rgb(255, 252, 246)");
+    expect(snapshot.firstNameBackground).toBe("rgb(238, 228, 218)");
+    expect(snapshot.firstNameColor).toBe("rgb(119, 110, 101)");
+    expect(snapshot.selfNameBackground).toBe("rgb(244, 234, 223)");
     expect(snapshot.firstRankText).toBe("1");
     expect(snapshot.firstNameText).toBe("Alice-4096");
     expect(snapshot.firstNameText).toContain("4096");

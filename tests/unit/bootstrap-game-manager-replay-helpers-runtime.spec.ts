@@ -132,7 +132,8 @@ describe("bootstrap game-manager replay helpers runtime", () => {
         ],
         start_unix_ms: 123456,
         mode_key: "board_2x2_pow2_no_undo",
-        ruleset: "pow2"
+        ruleset: "pow2",
+        custom_secondary_timer_rule_text: "32\n32+2"
       },
       getWindowLike: () => ({
         btoa(value: string) {
@@ -155,6 +156,71 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(decoded.height).toBe(2);
     expect(decoded.initTiles).toHaveLength(2);
     expect(decoded.records.some((record) => record.kind === "move")).toBe(true);
+    const customRulesRecord = decoded.records.find(
+      (record) => record.kind === "ext" && record.extType === 5
+    );
+    expect(customRulesRecord?.kind).toBe("ext");
+    expect(
+      customRulesRecord?.kind === "ext"
+        ? new TextDecoder().decode(customRulesRecord.payload)
+        : ""
+    ).toBe("32\n32+2");
+  });
+
+  it("restores the opening custom timer rules through a replay v1 export/import round trip", () => {
+    const browserLike = {
+      btoa(value: string) {
+        return Buffer.from(value, "binary").toString("base64");
+      },
+      atob(value: string) {
+        return Buffer.from(value, "base64").toString("binary");
+      },
+      GameManager: {
+        REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_"
+      },
+      applyCustomSecondaryTimerRuleText: vi.fn()
+    };
+    const sourceManager = {
+      width: 2,
+      height: 2,
+      modeKey: "board_2x2_pow2_no_undo",
+      sessionReplayV1: {
+        supported: true,
+        board_width: 2,
+        board_height: 2,
+        init_tiles: [
+          { cellIndex: 0, valueBit: 0 },
+          { cellIndex: 3, valueBit: 1 }
+        ],
+        records: [],
+        mode_key: "board_2x2_pow2_no_undo",
+        ruleset: "pow2",
+        custom_secondary_timer_rule_text: "32\n32+2\n32+4"
+      },
+      getWindowLike: () => browserLike
+    };
+    const replayText = serializeReplay(sourceManager);
+    const targetManager = {
+      width: 2,
+      height: 2,
+      modeKey: "board_2x2_pow2_no_undo",
+      replayMoves: [] as unknown[],
+      replaySpawns: [] as unknown[],
+      replayIndex: 0,
+      replayMode: false,
+      resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
+      restartWithBoard: vi.fn(),
+      getWindowLike: () => browserLike
+    };
+
+    expect(importReplay(targetManager, replayText)).toBe(true);
+    expect(browserLike.applyCustomSecondaryTimerRuleText).toHaveBeenCalledWith(
+      targetManager,
+      "32\n32+2\n32+4"
+    );
+    expect(targetManager.restartWithBoard.mock.invocationCallOrder[0]).toBeLessThan(
+      browserLike.applyCustomSecondaryTimerRuleText.mock.invocationCallOrder[0]
+    );
   });
 
   it("prefers live session replay over stale rescue replay strings", () => {
@@ -256,6 +322,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
         v: 3,
         mode_key: "diag_4x4_pow2_no_undo",
         seed: 0.625,
+        custom_secondary_timer_rule_text: "32\n32+2",
         actions: [["m", 4], ["m", 7]]
       },
       clonePlain(value: unknown) {
@@ -267,16 +334,19 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       v: 3,
       mode_key: "diag_4x4_pow2_no_undo",
       seed: 0.625,
+      custom_secondary_timer_rule_text: "32\n32+2",
       actions: [["m", 4], ["m", 7]]
     });
   });
 
   it("imports structured replay JSON actions without replacing them with fallback moves", () => {
+    const applyCustomSecondaryTimerRuleText = vi.fn();
     const manager = {
       replayMoves: [],
       replaySpawns: [],
       replayIndex: 99,
       replayMode: false,
+      getWindowLike: () => ({ applyCustomSecondaryTimerRuleText }),
       resolveModeConfig: vi.fn((modeKey: string) => ({ key: modeKey })),
       restartWithSeed: vi.fn(),
       loadUndoSettingForMode: vi.fn(() => false),
@@ -291,6 +361,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
         v: 3,
         mode_key: "standard_4x4_pow2_no_undo",
         seed: 0.25,
+        custom_secondary_timer_rule_text: "32\n32+2",
         actions: [3]
       })
     );
@@ -300,6 +371,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayIndex).toBe(0);
     expect(manager.replayMode).toBe(true);
     expect(manager.restartWithSeed).toHaveBeenCalledWith(0.25, { key: "standard_4x4_pow2_no_undo" });
+    expect(applyCustomSecondaryTimerRuleText).toHaveBeenCalledWith(manager, "32\n32+2");
   });
 
   it("imports legacy VRS text replays", () => {
@@ -731,7 +803,8 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(savedRecords).toHaveLength(1);
     expect(savedRecords[0]).toMatchObject({
       mode_key: "standard_4x4_pow2_no_undo",
-      score: 4096
+      score: 4096,
+      board_sum: 6
     });
     expect(savedRecords[0].replay_string).not.toBe("REPLAY_v1RPL_B64_rescue");
     expect(String(savedRecords[0].replay_string)).toMatch(/^REPLAY_v1RPL_B64_/);

@@ -4,11 +4,45 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("guest login panel uses the approved compact centered layout", async ({ page }) => {
     await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toHaveAttribute("data-auth-state", "guest");
+    const outerStackStyle = await page.locator(".settings-stack").evaluate((stack) => {
+      const style = getComputedStyle(stack);
+      return {
+        backgroundColor: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        borderWidth: style.borderWidth,
+        boxShadow: style.boxShadow,
+        padding: style.padding
+      };
+    });
+    expect(outerStackStyle).toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      backgroundImage: "none",
+      borderWidth: "0px",
+      boxShadow: "none",
+      padding: "0px"
+    });
+    const authSectionStyle = await page.locator(".settings-auth-section").evaluate((section) => {
+      const style = getComputedStyle(section);
+      return {
+        backgroundColor: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        borderWidth: style.borderWidth,
+        boxShadow: style.boxShadow
+      };
+    });
+    expect(authSectionStyle).toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      backgroundImage: "none",
+      borderWidth: "0px",
+      boxShadow: "none"
+    });
     await expect(page.locator("#account-auth-subtitle")).toBeHidden();
     await expect(page.locator("#account-auth-heading")).toHaveCSS("font-size", "25px");
     await expect(page.locator("#account-auth-state-tag")).toHaveCSS("padding-left", "12px");
     await expect(page.locator("#account-auth-state-tag")).toHaveCSS("padding-right", "12px");
     await expect(page.locator("#account-auth-state-tag")).toHaveCSS("margin-right", "15px");
+    await expect(page.locator("#account-auth-state-tag")).toHaveCSS("background-color", "rgba(47, 134, 160, 0.1)");
+    await expect(page.locator("#account-auth-state-tag")).toHaveCSS("color", "rgb(37, 107, 125)");
     await expect(page.locator("#account-auth-heading")).toHaveCSS("padding-top", "6px");
     await expect(page.locator("#account-auth-heading")).toHaveCSS("margin-left", "14px");
     await expect(page.locator("#settings-subtitle")).toBeHidden();
@@ -17,11 +51,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#settings-nav-user")).toBeHidden();
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-top", "19px");
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-bottom", "19px");
-    await expect(page.locator("#account-action-row")).toHaveCSS("padding-top", "12px");
+    await expect(page.locator(".account-auth-form-surface > #account-action-row")).toHaveCount(1);
+    await expect(page.locator("#account-action-row")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(page.locator("#account-action-row")).toHaveCSS("border-width", "0px");
+    await expect(page.locator("#account-action-row")).toHaveCSS("box-shadow", "none");
     await expect(page.locator("#account-action-row")).toHaveCSS("padding-bottom", "12px");
     await expect(page.locator('link[href^="style/account_settings_page.css"]')).toHaveAttribute(
       "href",
-      "style/account_settings_page.css?v=20260711-centered-account-panels"
+      "style/account_settings_page.css?v=20260720-unified-auth-v3"
     );
 
     const alignment = await page.locator(".settings-auth-section").evaluate((section) => {
@@ -34,11 +71,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
         centerDelta: Math.abs(
           (sectionRect.left + sectionRect.width / 2) - (formRect.left + formRect.width / 2)
         ),
-        widthDelta: Math.abs(formRect.width - actionRect.width)
+        actionInset: Math.round(actionRect.left - formRect.left)
       };
     });
     expect(alignment.centerDelta).toBeLessThanOrEqual(1);
-    expect(alignment.widthDelta).toBeLessThanOrEqual(1);
+    expect(alignment.actionInset).toBeGreaterThan(0);
   });
 
   test("account settings page supports nickname/password/logout flows", async ({ page }) => {
@@ -135,7 +172,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#settings-nav-user")).toBeVisible();
     await expect(page.locator("#settings-nav-user")).toHaveAttribute("href", "user.html");
 
-    const centeredPanels = await page.locator(".settings-card").evaluate((card) => {
+    const centeredPanels = await page.locator(".settings-stack").evaluate((card) => {
       const cardRect = card.getBoundingClientRect();
       const panels = [
         card.querySelector<HTMLElement>(".account-user-card"),

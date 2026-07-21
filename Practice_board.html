@@ -9,9 +9,9 @@
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
 
-<script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+<script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-<link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
+<link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
   <meta name="HandheldFriendly" content="True">
@@ -37,15 +37,15 @@
       }
       .dashboard-stats {
           width: 25%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
       }
       .dashboard-controls {
-          width: 68%;
-          text-align: center;
-          display: flex;
           width: 71%;
           text-align: center;
-          /* Center content */
           display: flex;
+          flex-direction: column;
           justify-content: center;
           align-items: center;
       }
@@ -70,6 +70,50 @@
           margin-top: 5px;
           width: 100%;
       }
+      .selection-pager {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          margin-top: 8px;
+      }
+      .selection-page-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 30px;
+          padding: 0;
+          border: 1px solid var(--app-border-control, #c8b8aa);
+          border-radius: 3px;
+          color: var(--app-text-strong, #776e65);
+          background: var(--app-surface-control, #faf8ef);
+          cursor: pointer;
+      }
+      .selection-page-btn svg {
+          width: 18px;
+          height: 18px;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+      }
+      .selection-page-btn:disabled {
+          opacity: 0.42;
+          cursor: default;
+      }
+      .selection-page-btn:focus-visible {
+          outline: 2px solid var(--app-accent, #2f86a0);
+          outline-offset: 2px;
+      }
+      .selection-page-status {
+          min-width: 48px;
+          color: var(--app-text-strong, #776e65);
+          font-size: 13px;
+          font-weight: bold;
+      }
       .selection-tile {
           /* Simulate game tile but static */
           position: relative !important;
@@ -85,6 +129,9 @@
           line-height: 53px !important;
           font-size: 20px !important;
           border-radius: 3px;
+          overflow: hidden;
+          white-space: nowrap;
+          letter-spacing: 0;
       }
       /* Adjust fonts for larger numbers */
       .selection-tile.tile-128 .tile-inner,
@@ -98,6 +145,9 @@
       
       .selection-tile.tile-16384 .tile-inner,
       .selection-tile.tile-32768 .tile-inner { font-size: 12px !important; }
+
+      .selection-tile.selection-tile-long .tile-inner { font-size: 11px !important; }
+      .selection-tile.selection-tile-xlong .tile-inner { font-size: 9px !important; }
 
       .selection-tile:hover {
           transform: scale(1.1);
@@ -146,10 +196,10 @@
           position: static;
           display: grid;
           grid-template-columns: repeat(3, max-content);
-          justify-content: flex-start;
-          align-content: flex-start;
+          justify-content: center;
+          align-content: center;
           gap: 8px;
-          margin: -2px 0 8px;
+          margin: 0;
       }
       #practice-mode-picker-btn,
       #practice-board-code-btn {
@@ -409,6 +459,49 @@
           color: #ece2d3;
       }
       @media (max-width: 640px) {
+          body[data-page="practice"] .heading {
+              display: flex;
+              align-items: flex-start;
+              justify-content: space-between;
+              gap: 8px;
+              margin-bottom: 8px;
+          }
+          body[data-page="practice"] .heading h1.title {
+              float: none !important;
+              flex: 0 1 220px;
+              margin: 0;
+          }
+          body[data-page="practice"] .heading .site-logo {
+              width: 220px !important;
+              max-width: 100% !important;
+              height: auto;
+          }
+          body[data-page="practice"] .heading .scores-container {
+              float: none !important;
+              flex: 0 0 129.375px;
+              margin-left: auto;
+          }
+          body[data-page="practice"] .heading .score-container {
+              align-items: flex-end;
+              height: 60px;
+              margin-top: 0;
+              padding: 26px 10px 4px;
+              line-height: 1;
+          }
+          body[data-page="practice"] .heading .score-container::after {
+              top: 6px;
+              font-size: 12px;
+              line-height: 14px;
+          }
+          body[data-page="practice"] .game-container {
+              margin-top: 36px !important;
+          }
+          body[data-page="practice"] .selection-tile.selection-tile-long .tile-inner {
+              font-size: 8px !important;
+          }
+          body[data-page="practice"] .selection-tile.selection-tile-xlong .tile-inner {
+              font-size: 7px !important;
+          }
           .practice-mode-panel,
           .practice-board-code-panel {
               padding-top: 70px;
@@ -639,6 +732,15 @@
                 <div class="selection-tile tile tile-16384" data-value="16384"><div class="tile-inner">16384</div></div>
                 <div class="selection-tile tile tile-32768" data-value="32768"><div class="tile-inner">32768</div></div>
             </div>
+            <div class="selection-pager" id="selection-pager" hidden>
+                <button class="selection-page-btn" id="selection-page-prev" type="button" aria-label="上一页" title="上一页">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18L9 12L15 6"></path></svg>
+                </button>
+                <span class="selection-page-status" id="selection-page-status" aria-live="polite">1 / 1</span>
+                <button class="selection-page-btn" id="selection-page-next" type="button" aria-label="下一页" title="下一页">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18L15 12L9 6"></path></svg>
+                </button>
+            </div>
         </div>
     </div>
     <div class="heading">
@@ -762,11 +864,6 @@
       <div class="tile-container">
       </div>
     </div>
-    <hr>
-    <p class="game-explanation">
-      <strong class="important">练习板支持直通局面与基线重试。</strong>
-    </p>
-    
     </div>
   <div id="practice-mode-panel" class="practice-mode-panel" aria-hidden="true">
     <div class="practice-mode-dialog" role="dialog" aria-modal="true" aria-labelledby="practice-mode-title">
@@ -845,7 +942,7 @@
       </div>
       <div id="toolkit-entry-row" class="settings-row toolkit-entry-row">
         <div class="toolkit-entry-actions">
-          <a id="toolkit-palette-link" class="replay-button" href="palette.html">主题设置</a>
+          <a id="toolkit-palette-link" class="replay-button" href="palette.html">设置</a>
           <a id="toolkit-account-link" class="replay-button" href="account.html">排行榜</a>
         </div>
       </div>
@@ -856,9 +953,5 @@
   <script type="module" src="./src/entries/practice-board.ts"></script>
 </body>
 </html>
-
-
-
-
 
 

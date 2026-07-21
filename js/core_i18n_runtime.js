@@ -52,7 +52,7 @@
     "replay.html": { zh: "回放", en: "Replay" },
     "history.html": { zh: "2048 本地历史记录", en: "2048 Local History" },
     "modes.html": { zh: "2048 模式选择", en: "2048 Modes" },
-    "palette.html": { zh: "2048 色板中心", en: "2048 Palette Center" }
+    "palette.html": { zh: "2048 设置", en: "2048 Settings" }
   };
 
   var MODE_KEY_LABELS = {
@@ -99,7 +99,7 @@
   };
 
   var THEME_LABELS = {
-    classic: "Classic", ocean: "Ocean Breeze", vaporwave: "Vaporwave", matcha: "Matcha", dracula: "Dracula",
+    classic: "Classic", mist_cyan: "Mist Cyan", ocean: "Ocean Breeze", vaporwave: "Vaporwave", matcha: "Matcha", dracula: "Dracula",
     sunset: "Sunset", blueprint: "Blueprint", candy: "Candy", terminal: "Terminal", paper: "Paper",
     coffee: "Coffee", ink: "Ink", lava: "Lava", chalkboard: "Chalkboard", comic: "Comic",
     leather: "Leather", forest: "Forest", pop: "High Contrast", neon_flux: "Dynamic Neon", neon_black: "Neon Pulse",
@@ -116,7 +116,7 @@
     { s: "#replay-nav-home", zh: "首页", en: "Home" },
     { s: "#replay-nav-history", zh: "本地历史", en: "Local History" },
     { s: "#settings-modal h3", zh: "设置", en: "Settings" },
-    { s: "#toolkit-palette-link", zh: "主题设置", en: "Theme Settings" },
+    { s: "#toolkit-palette-link", zh: "设置", en: "Settings" },
     { s: "#toolkit-account-link", zh: "排行榜", en: "Leaderboard" },
     { s: "label[for='timer-module-view-toggle'].settings-toggle-title", zh: "计时器模式", en: "Timer Mode" },
     { s: "label.settings-toggle-title[for='pku2048-inline-stats-toggle']", zh: "统计面板", en: "Stats Panel" },
@@ -201,7 +201,7 @@
     ["请输入色板名称。", "Please input palette name."], ["当前环境不支持导入。", "Import is not supported in current environment."],
     ["当前环境不支持导出。", "Export is not supported in current environment."], ["读取所选文件失败。", "Failed to read selected file."],
     ["导入失败，请检查 JSON 格式。", "Import failed. Please check JSON format."], ["已加载色板中心。", "Palette center loaded."],
-    ["经典", "Classic"], ["海洋之风", "Ocean Breeze"], ["蒸汽波", "Vaporwave"], ["抹茶", "Matcha"], ["吸血鬼", "Dracula"],
+    ["经典", "Classic"], ["雾青灰", "Mist Cyan"], ["海洋之风", "Ocean Breeze"], ["蒸汽波", "Vaporwave"], ["抹茶", "Matcha"], ["吸血鬼", "Dracula"],
     ["日落", "Sunset"], ["蓝图", "Blueprint"], ["糖果", "Candy"], ["终端", "Terminal"], ["纸张", "Paper"],
     ["咖啡", "Coffee"], ["水墨", "Ink"], ["岩浆", "Lava"], ["黑板", "Chalkboard"], ["美漫", "Comic"],
     ["皮革", "Leather"], ["森林", "Forest"], ["高对比", "High Contrast"], ["动态霓虹", "Dynamic Neon"], ["炫彩闪烁", "Neon Pulse"],
@@ -239,6 +239,7 @@
     ["暂停", "Pause"],
     ["护眼·暖砂", "Eye Care · Warm Sand"],
     ["护眼·夜纸", "Eye Care · Night Paper"],
+    ["冷青·跃阶", "Cold Cyan · Steps"],
     ["跟随主题", "Follow Theme"],
     ["本地历史", "Local History"],
     ["4x4 自定义4率（可撤回）", "4x4 Custom 4-Rate (Undo)"],
@@ -533,8 +534,8 @@
     if (!global.document.body || global.document.body.getAttribute("data-page") !== "palette-hub") return;
     var copy = lang === "en"
       ? {
-          title: "Palette Center",
-          subtitle: "Manage tile and timer-legend colors with import/export and live preview.",
+          title: "Settings",
+          subtitle: "Manage timers, themes, and palettes in clearly grouped sections.",
           listTitle: "Palette List",
           currentName: "Current Palette",
           create: "New Copy",
@@ -554,8 +555,8 @@
           current: "Current"
         }
       : {
-          title: "色板中心",
-          subtitle: "独立管理砖块与计时图例配色，支持导入导出与实时预览。",
+          title: "设置",
+          subtitle: "集中管理计时器、主题与色板，相关选项按类别收纳。",
           listTitle: "色板列表",
           empty: "未选择色板",
           create: "新建副本",

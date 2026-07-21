@@ -112,6 +112,30 @@ function runNightModePreload(
 }
 
 describe("core night mode preload", () => {
+  it("sets the active day theme before page styles render", () => {
+    const result = runNightModePreload("0", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "0",
+        settings_day_theme_profile_v1: "mist_cyan",
+        theme_profile_v1: "classic"
+      }
+    });
+
+    expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
+  });
+
+  it("sets the active night theme when night mode is enabled", () => {
+    const result = runNightModePreload("1", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "1",
+        settings_night_theme_profile_v1: "mist_cyan",
+        theme_profile_v1: "classic"
+      }
+    });
+
+    expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
+  });
+
   it("injects the night-mode style sheet before runtime when the saved flag is enabled", () => {
     const result = runNightModePreload("1");
     const styleNode = result.getStyleNode();

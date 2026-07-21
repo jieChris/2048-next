@@ -88,16 +88,16 @@ html[data-night-background="1"] .custom-option:focus-visible {
 }
 
 html[data-night-background="1"] .custom-option:hover {
-  background: rgba(213, 168, 106, 0.16);
+  background: var(--app-accent-soft);
 }
 
 html[data-night-background="1"] .custom-option.selected {
-  background: rgba(213, 168, 106, 0.22);
-  color: #fff1d8;
+  background: var(--app-accent-soft);
+  color: var(--app-text-strong);
 }
 
 html[data-night-background="1"] .settings-switch .settings-switch-slider {
-  background: rgba(148, 163, 184, 0.28);
+  background: var(--app-border-control);
   box-shadow: inset 0 0 0 1px rgba(233, 241, 255, 0.06);
 }
 
@@ -108,11 +108,11 @@ html[data-night-background="1"] .language-switch-thumb {
 }
 
 html[data-night-background="1"] .settings-switch input[type=checkbox]:checked + .settings-switch-slider {
-  background: linear-gradient(180deg, rgba(213, 168, 106, 0.96) 0%, rgba(174, 123, 63, 0.96) 100%);
+  background: var(--app-accent);
 }
 
 html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled + .settings-switch-slider {
-  background: rgba(117, 128, 145, 0.28);
+  background: var(--app-border-muted);
 }
 
 html[data-night-background="1"] .settings-switch input[type=checkbox]:disabled + .settings-switch-slider::after {

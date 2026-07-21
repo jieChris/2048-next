@@ -1,5 +1,9 @@
 (function () {
   var STORAGE_KEY = "settings_night_background_enabled_v1";
+  var THEME_PROFILE_KEY = "theme_profile_v1";
+  var DAY_THEME_KEY = "settings_day_theme_profile_v1";
+  var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
+  var DEFAULT_THEME_ID = "classic";
   var TIMER_MODULE_VIEW_SETTINGS_KEY = "settings_timer_module_view_by_mode_v1";
   var STYLE_ID = "night-background-style";
   var doc = document;
@@ -88,6 +92,13 @@
     return "";
   }
 
+  function syncInitialThemeAttribute() {
+    var isNight = readStorageItem(STORAGE_KEY) === "1";
+    var modeThemeKey = isNight ? NIGHT_THEME_KEY : DAY_THEME_KEY;
+    var themeId = readStorageItem(modeThemeKey) || readStorageItem(THEME_PROFILE_KEY) || DEFAULT_THEME_ID;
+    documentElement.setAttribute("data-theme", themeId);
+  }
+
   function syncInitialTimerLeaderboardAttribute() {
     try {
       var modeKey = resolveInitialModeKey();
@@ -104,6 +115,8 @@
     } catch (_errTimerModule) {}
     documentElement.removeAttribute("data-initial-timer-leaderboard");
   }
+
+  syncInitialThemeAttribute();
 
   try {
     if (readStorageItem(STORAGE_KEY) === "1") {

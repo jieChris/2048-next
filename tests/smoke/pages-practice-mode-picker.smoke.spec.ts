@@ -215,6 +215,8 @@ test.describe("Practice Board Mode Picker", () => {
 
     await page.click('[data-no-x-value="64"]');
     await expect(page.locator("#no-x-selection-overlay")).toHaveCount(0);
+    await expect(page.locator('.selection-tile[data-value="32"]')).toBeVisible();
+    await expect(page.locator('.selection-tile[data-value="64"]')).toHaveCount(0);
 
     const selected = await page.evaluate(() => {
       const manager = (window as any).game_manager;

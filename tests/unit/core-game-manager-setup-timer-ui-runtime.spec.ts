@@ -85,4 +85,49 @@ describe("core game manager setup timer ui runtime", () => {
     expect(runtime.appendSetupTimerTrailingNodes(row, nextAfterTimer)).toBe(7);
     expect(appendSetupTimerTrailingNodes).toHaveBeenCalledWith(row, nextAfterTimer);
   });
+
+  it("creates missing main timer rows for dynamic board-size timer slots", () => {
+    const children: Array<Record<string, unknown>> = [];
+    const timerBox = {
+      children,
+      childNodes: children,
+      appendChild(node: Record<string, unknown>) {
+        children.push(node);
+        node.parentNode = timerBox;
+      },
+      insertBefore(node: Record<string, unknown>) {
+        children.push(node);
+        node.parentNode = timerBox;
+      }
+    };
+    const documentLike = {
+      createElement(tagName: string) {
+        return {
+          tagName,
+          style: {},
+          children: [],
+          appendChild(child: Record<string, unknown>) {
+            (this.children as Array<Record<string, unknown>>).push(child);
+            child.parentNode = this;
+          }
+        };
+      }
+    };
+    const runtime = loadSetupTimerUiRuntime({
+      GameManager: { TIMER_SLOT_IDS: [131072] },
+      resolveManagerElementById: vi.fn((_manager, id: string) => id === "timerbox" ? timerBox : null),
+      resolveManagerDocumentLike: vi.fn(() => documentLike)
+    });
+
+    runtime.normalizeLegacyTimerRowsForSetup({ timerMilestones: [4181] });
+
+    expect(children).toHaveLength(1);
+    expect(children[0].id).toBe("timer-row-131072");
+    expect((children[0].children as Array<Record<string, unknown>>).map((child) => child.id || child.textContent)).toEqual([
+      "4181",
+      "timer131072",
+      undefined,
+      undefined
+    ]);
+  });
 });

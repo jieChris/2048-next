@@ -543,6 +543,7 @@ describe("core game settings storage", () => {
       special_rules_snapshot: {},
       challenge_id: null,
       score: 1024,
+      board_sum: 0,
       best_tile: 256,
       duration_ms: 0,
       final_board: [],
@@ -558,6 +559,19 @@ describe("core game settings storage", () => {
       owner_key: "guest",
       diagnostics_index_entries: []
     });
+  });
+
+  it("derives board sum while normalizing legacy history records", () => {
+    const normalized = normalizeHistoryRecordFromContext({
+      record: {
+        board_sum: 999,
+        final_board: [[2, 4], [8, 16]]
+      },
+      nowIso: () => "2026-03-21T12:34:56Z",
+      idFactory: () => "history-board-sum"
+    });
+
+    expect(normalized?.board_sum).toBe(30);
   });
 
   it("returns null when history record input is not an object", () => {

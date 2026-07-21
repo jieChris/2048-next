@@ -1,4 +1,5 @@
 import { randomBase36 } from "../utils/crypto-random";
+import { calculateHistoryBoardSum } from "../contracts";
 
 interface StorageLike {
   getItem?(key: string): string | null;
@@ -853,6 +854,8 @@ export function normalizeHistoryRecordFromContext(options: {
     maxArrayItems: opts.maxDiagnosticArrayItems,
     keyMaxLength: opts.maxDiagnosticKeyLength
   });
+  const finalBoard = normalizeHistoryBoardMatrix(source.final_board);
+  const hasBoardCells = finalBoard.some((row) => row.length > 0);
 
   return {
     id,
@@ -871,9 +874,12 @@ export function normalizeHistoryRecordFromContext(options: {
     challenge_id:
       typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
     score: normalizeInteger(source.score, 0),
+    board_sum: hasBoardCells
+      ? calculateHistoryBoardSum(finalBoard)
+      : normalizeNonNegativeInteger(source.board_sum, 0),
     best_tile: normalizeInteger(source.best_tile, 0),
     duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
-    final_board: normalizeHistoryBoardMatrix(source.final_board),
+    final_board: finalBoard,
     ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
     saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
     end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",

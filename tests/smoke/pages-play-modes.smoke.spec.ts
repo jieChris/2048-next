@@ -8,6 +8,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await mockAcceptedBetaAccess(page);
   });
 
+  test("generic play modes do not render the legacy footer mode title", async ({ page }) => {
+    for (const modeKey of ["board_3x3_pow2_no_undo", "board_5x5_pow2_no_undo"]) {
+      await page.goto(`/play.html?mode_key=${modeKey}`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction((key) => document.body.getAttribute("data-mode-id") === key, modeKey);
+
+      await expect(page.locator("#play-mode-title")).toHaveCount(0);
+      await expect(page.locator(".game-explanation")).toHaveCount(0);
+    }
+  });
+
   test("play custom spawn mode applies query four-rate via runtime helper", async ({ page }) => {
     const response = await page.goto("/play.html?mode_key=spawn_custom_4x4_pow2_no_undo&four_rate=25", {
       waitUntil: "domcontentloaded"

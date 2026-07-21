@@ -3,6 +3,10 @@
   margin: 0 auto;
 }
 
+body[data-page="game"] > .container {
+  display: flow-root;
+}
+
 @-webkit-keyframes fade-in {
   0% {
     opacity: 0;

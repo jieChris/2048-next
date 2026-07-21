@@ -1,4 +1,5 @@
 import {
+  calculateHistoryBoardSum,
   normalizeHistoryDiagnosticsIndexEntriesLike,
   type HistoryDiagnosticsIndexEntry
 } from "../../contracts";
@@ -10,6 +11,7 @@ export interface HistoryRecordViewModel {
   mode: string;
   mode_key: string;
   score: number;
+  board_sum: number;
   best_tile: number;
   duration_ms: number;
   ended_at: string;
@@ -43,12 +45,14 @@ export interface HistoryModeCatalog {
     label?: string;
     board_width?: unknown;
     board_height?: unknown;
+    undo_enabled?: unknown;
   } | null | undefined;
   listModes?: () => Array<{
     key?: unknown;
     label?: unknown;
     board_width?: unknown;
     board_height?: unknown;
+    undo_enabled?: unknown;
   } | null | undefined>;
 }
 
@@ -277,16 +281,29 @@ export function normalizeHistoryRecordForView(
       replayString = "";
     }
   }
+  const finalBoard =
+    (base as Record<string, unknown>).final_board != null
+      ? (base as Record<string, unknown>).final_board
+      : item.final_board;
+  const hasBoardCells =
+    Array.isArray(finalBoard) && finalBoard.some((row) => Array.isArray(row) && row.length > 0);
+  const boardSumSource =
+    (base as Record<string, unknown>).board_sum != null
+      ? (base as Record<string, unknown>).board_sum
+      : item.board_sum;
   return {
     id: toText((base as Record<string, unknown>).id || item.id).trim(),
     mode: toText((base as Record<string, unknown>).mode || item.mode).trim(),
     mode_key: toText((base as Record<string, unknown>).mode_key || item.mode_key).trim(),
     score: Math.floor(Number((base as Record<string, unknown>).score != null ? (base as Record<string, unknown>).score : item.score) || 0),
+    board_sum: hasBoardCells
+      ? calculateHistoryBoardSum(finalBoard)
+      : Math.max(0, Math.floor(Number(boardSumSource) || 0)),
     best_tile: Math.floor(Number((base as Record<string, unknown>).best_tile != null ? (base as Record<string, unknown>).best_tile : item.best_tile) || 0),
     duration_ms: Math.floor(Number((base as Record<string, unknown>).duration_ms != null ? (base as Record<string, unknown>).duration_ms : item.duration_ms) || 0),
     ended_at: toText((base as Record<string, unknown>).ended_at || item.ended_at).trim(),
     replay_string: replayString,
-    final_board: (base as Record<string, unknown>).final_board != null ? (base as Record<string, unknown>).final_board : item.final_board,
+    final_board: finalBoard,
     owner_type: toText((base as Record<string, unknown>).owner_type != null ? (base as Record<string, unknown>).owner_type : item.owner_type).trim().toLowerCase(),
     owner_user_id: toText((base as Record<string, unknown>).owner_user_id != null ? (base as Record<string, unknown>).owner_user_id : item.owner_user_id).trim(),
     owner_nickname: toText((base as Record<string, unknown>).owner_nickname != null ? (base as Record<string, unknown>).owner_nickname : item.owner_nickname).trim(),

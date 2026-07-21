@@ -295,7 +295,8 @@ function applyGameManagerModeStatics() {
   GameManager.DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
   GameManager.DEFAULT_MODE_CONFIG = createGameManagerDefaultModeConfig();
   GameManager.FALLBACK_MODE_CONFIGS = createGameManagerFallbackModeConfigs(GameManager.DEFAULT_MODE_CONFIG);
-  GameManager.TIMER_SLOT_IDS = createGameManagerTimerSlotIds();
+  GameManager.DEFAULT_TIMER_SLOT_IDS = createGameManagerTimerSlotIds();
+  GameManager.TIMER_SLOT_IDS = GameManager.DEFAULT_TIMER_SLOT_IDS.slice();
 }
 
 function applyGameManagerStaticConfiguration() {

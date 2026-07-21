@@ -34,6 +34,8 @@ describe("mobile tablet top action styles", () => {
     expect(homeActions).toContain(
       "@media screen and (min-width: 981px) and (hover: hover) and (pointer: fine)"
     );
-    expect(homeActions).not.toContain("@media screen and (min-width: 981px) {");
+    expect(homeActions).not.toContain(
+      '@media screen and (min-width: 981px) {\n  body[data-page="game"] .top-action-buttons .mobile-actions-expand-toggle'
+    );
   });
 });

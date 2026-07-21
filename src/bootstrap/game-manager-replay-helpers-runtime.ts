@@ -12,12 +12,14 @@ import {
   type ReplayV1Record
 } from "../core/replay-codec";
 import { computePostMoveRecord as computePostMoveRecordCore } from "../core/post-move-record";
+import { calculateHistoryBoardSum } from "../contracts";
 
 const REPLAY_V1_RPL_BASE64_PREFIX = "REPLAY_v1RPL_B64_";
 const REPLAY_V1_EXT_MODE_KEY = 1;
 const REPLAY_V1_EXT_RULESET = 2;
 const REPLAY_V1_EXT_CHALLENGE_ID = 3;
 const REPLAY_V1_EXT_SEED = 4;
+const REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 const LEGACY_VRS_NEW_CHARSET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
   Array.from({ length: 64 }, (_unused, index) => String.fromCharCode(0xc0 + index)).join("") +
@@ -273,6 +275,11 @@ function createReplayV1ExtRecords(session: Record<string, unknown>): ReplayV1Rec
     appendReplayV1ExtRecord(records, REPLAY_V1_EXT_RULESET, ruleset);
   }
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CHALLENGE_ID, session.challenge_id);
+  appendReplayV1ExtRecord(
+    records,
+    REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS,
+    session.custom_secondary_timer_rule_text
+  );
   const seedValue = Math.floor(Number(session.seed));
   if (Number.isInteger(seedValue) && seedValue >= 0) {
     appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
@@ -366,6 +373,28 @@ function resolveReplayRulesetFromDecoded(manager: ManagerLike, decoded: Record<s
   return String(toRecord(config).ruleset || "").toLowerCase() === "fibonacci" ? "fibonacci" : "pow2";
 }
 
+function resolveCustomSecondaryTimerRuleTextFromDecoded(decoded: Record<string, unknown>): string {
+  const records = Array.isArray(decoded.records) ? decoded.records : [];
+  for (let i = 0; i < records.length; i += 1) {
+    const record = toRecord(records[i]);
+    if (Number(record.extType) !== REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS) continue;
+    return decodeReplayV1ExtTextPayload(record.payload).trim();
+  }
+  return "";
+}
+
+function applyReplayCustomSecondaryTimerRuleText(
+  manager: ManagerLike,
+  ruleText: unknown
+): void {
+  if (typeof ruleText !== "string") return;
+  const windowLike = getWindowLikeForManager(manager);
+  const applyRuleText = asFunction<(manager: ManagerLike, text: string) => unknown>(
+    windowLike.applyCustomSecondaryTimerRuleText
+  );
+  if (applyRuleText) applyRuleText.call(windowLike, manager, ruleText);
+}
+
 function callManagerMethod<T>(manager: ManagerLike, methodName: string, args: unknown[]): T | null {
   const method = asFunction<(...callArgs: unknown[]) => T>(manager[methodName]);
   if (!method) return null;
@@ -406,6 +435,7 @@ function applyStructuredReplaySession(
   }
 
   if (!applied) return false;
+  applyReplayCustomSecondaryTimerRuleText(manager, envelope.customSecondaryTimerRuleText);
   manager.score = 0;
   manager.successfulMoveCount = 0;
   manager.moveHistory = [];
@@ -446,7 +476,11 @@ function parseStructuredReplayJson(manager: ManagerLike, text: string): Record<s
       kind: "v3-json",
       modeKey: String(parsed.mode_key || manager.modeKey || manager.mode || "standard_4x4_pow2_no_undo"),
       actions: parsed.actions.slice(),
-      seed: parsed.seed ?? null
+      seed: parsed.seed ?? null,
+      customSecondaryTimerRuleText:
+        typeof parsed.custom_secondary_timer_rule_text === "string"
+          ? parsed.custom_secondary_timer_rule_text
+          : ""
     };
   }
   return null;
@@ -797,7 +831,10 @@ function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<s
         modeKey,
         initialBoard,
         replayMoves: actions.replayMoves,
-        replaySpawns: actions.replaySpawns
+        replaySpawns: actions.replaySpawns,
+        customSecondaryTimerRuleText: resolveCustomSecondaryTimerRuleTextFromDecoded(
+          decoded as unknown as Record<string, unknown>
+        )
       };
     } catch (error) {
       const structured = parseStructuredReplayJson(manager, decodeBytesToUtf8Text(bytes));
@@ -1094,7 +1131,11 @@ export function serializeReplay(manager: ManagerLike): string {
       seed: manager.seed || manager.initialSeed,
       successful_move_count: manager.successfulMoveCount,
       board: getFinalBoardMatrix(manager),
-      actions: cloneJsonSafe(toRecord(manager.sessionReplayV3).actions) || []
+      actions: cloneJsonSafe(toRecord(manager.sessionReplayV3).actions) || [],
+      custom_secondary_timer_rule_text:
+        typeof manager.customSecondaryTimerRuleText === "string"
+          ? manager.customSecondaryTimerRuleText
+          : ""
     };
     return `${REPLAY_V1_RPL_BASE64_PREFIX}${encodeBase64(JSON.stringify(payload), windowLike)}`;
   } catch (error) {
@@ -1118,6 +1159,10 @@ export function serializeReplayV3(manager: ManagerLike): Record<string, unknown>
     mode_family: source.mode_family || manager.modeFamily,
     rank_policy: source.rank_policy || manager.rankPolicy,
     special_rules_snapshot: cloneJsonSafe(source.special_rules_snapshot || manager.specialRules || {}) || {},
+    custom_secondary_timer_rule_text:
+      typeof source.custom_secondary_timer_rule_text === "string"
+        ? source.custom_secondary_timer_rule_text
+        : "",
     challenge_id: source.challenge_id || manager.challengeId || null,
     seed: resolveReplayV3Seed(manager, source),
     actions: resolveReplayV3Actions(source)
@@ -1458,10 +1503,12 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
   }
   const endedAt = new Date().toISOString();
   const replayString = serializeReplay(manager);
+  const finalBoard = getFinalBoardMatrix(manager);
   const record = {
     mode_key: manager.modeKey || manager.mode,
     score: manager.score,
-    final_board: getFinalBoardMatrix(manager),
+    board_sum: calculateHistoryBoardSum(finalBoard),
+    final_board: finalBoard,
     duration_ms: manager.getDurationMs ? asFunction<() => unknown>(manager.getDurationMs)?.call(manager) : 0,
     ended_at: endedAt,
     end_reason: resolveTerminalSessionEndReason(manager) || "game_over",

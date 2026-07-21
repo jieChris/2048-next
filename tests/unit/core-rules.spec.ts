@@ -8,6 +8,7 @@ import {
   getSpawnCount,
   getSpawnStatPair,
   getTheoreticalMaxTile,
+  getTimerSlotIdsForBoard,
   getTimerMilestoneSlotByValue,
   getTotalSpawnCount,
   getTimerMilestoneValues,
@@ -32,6 +33,7 @@ describe("core rules runtime installer", () => {
     expect(runtime.applySpawnValueCount).toBe(applySpawnValueCount);
     expect(runtime.nextFibonacci).toBe(nextFibonacci);
     expect(runtime.getMergedValue).toBe(getMergedValue);
+    expect(runtime.getTimerSlotIdsForBoard).toBe(getTimerSlotIdsForBoard);
     expect(runtime.getTimerMilestoneValues).toBe(getTimerMilestoneValues);
     expect(runtime.getTimerMilestoneSlotByValue).toBe(getTimerMilestoneSlotByValue);
   });
@@ -97,8 +99,18 @@ describe("core rules: getTheoreticalMaxTile", () => {
     expect(getTheoreticalMaxTile(4, 4, "pow2")).toBe(131072);
   });
 
+  it("computes pow2 caps for rectangular boards", () => {
+    expect(getTheoreticalMaxTile(4, 2, "pow2")).toBe(512);
+    expect(getTheoreticalMaxTile(4, 3, "pow2")).toBe(8192);
+  });
+
   it("computes fibonacci cap for 4x4", () => {
     expect(getTheoreticalMaxTile(4, 4, "fibonacci")).toBe(4181);
+  });
+
+  it("computes fibonacci caps for rectangular boards", () => {
+    expect(getTheoreticalMaxTile(4, 2, "fibonacci")).toBe(89);
+    expect(getTheoreticalMaxTile(4, 3, "fibonacci")).toBe(610);
   });
 
   it("returns null for invalid size", () => {
@@ -168,12 +180,83 @@ describe("core rules: pickSpawnValue", () => {
 });
 
 describe("core rules: getTimerMilestoneValues", () => {
+  it("builds pow2 timer slots through the theoretical max tile", () => {
+    expect(getTimerSlotIdsForBoard("pow2", 3, 3, [32, 64, 128, 256, 512, 1024, 2048])).toEqual([
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024
+    ]);
+    expect(getTimerSlotIdsForBoard("pow2", 4, 2)).toEqual([32, 64, 128, 256, 512]);
+    expect(getTimerSlotIdsForBoard("pow2", 4, 3)).toEqual([32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]);
+    expect(getTimerSlotIdsForBoard("pow2", 4, 4).at(-1)).toBe(131072);
+    expect(getTimerSlotIdsForBoard("pow2", 5, 5, [32, 64, 128, 256, 512, 1024, 2048])).toContain(67108864);
+    expect(getTimerSlotIdsForBoard("pow2", 4, 4, [], 64)).toEqual([32, 64]);
+  });
+
   it("returns fibonacci milestones in fibonacci mode", () => {
     expect(getTimerMilestoneValues("fibonacci", [16, 32, 64]).slice(0, 4)).toEqual([13, 21, 34, 55]);
   });
 
   it("returns timer slots for pow2 mode", () => {
     expect(getTimerMilestoneValues("pow2", [16, 32, 64])).toEqual([16, 32, 64]);
+  });
+
+  it("limits milestone values to the current board theoretical max tile", () => {
+    expect(getTimerMilestoneValues("pow2", [32, 64, 128, 256, 512, 1024, 2048, 4096], 3, 3)).toEqual([
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024
+    ]);
+    expect(getTimerMilestoneValues("pow2", getTimerSlotIdsForBoard("pow2", 4, 2), 4, 2)).toEqual([
+      32,
+      64,
+      128,
+      256,
+      512
+    ]);
+    expect(getTimerMilestoneValues("pow2", getTimerSlotIdsForBoard("pow2", 4, 3), 4, 3)).toEqual([
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024,
+      2048,
+      4096,
+      8192
+    ]);
+    expect(getTimerMilestoneValues("fibonacci", [32, 64, 128, 256, 512], 3, 3)).toEqual([
+      13,
+      21,
+      34,
+      55,
+      89,
+      144
+    ]);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 2), 4, 2)).toEqual([
+      13,
+      21,
+      34,
+      55,
+      89
+    ]);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 3), 4, 3)).toEqual([
+      13,
+      21,
+      34,
+      55,
+      89,
+      144,
+      233,
+      377,
+      610
+    ]);
   });
 });
 

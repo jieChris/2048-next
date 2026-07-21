@@ -12,6 +12,7 @@ import {
   SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
   SESSION_INIT_PAYLOAD_REQUIRED_KEYS,
   SUBMIT_PAYLOAD_REQUIRED_KEYS,
+  calculateHistoryBoardSum,
   createEmptyReplayRecord,
   createSessionSnapshot,
   isHistoryExportEnvelopeLike,
@@ -117,6 +118,7 @@ describe("contracts: HistoryRecord type shape", () => {
       special_rules_snapshot: {},
       challenge_id: null,
       score: 1234,
+      board_sum: 6,
       best_tile: 256,
       duration_ms: 60000,
       final_board: [[0, 2, 4, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
@@ -151,6 +153,7 @@ describe("contracts: HistoryRecord type shape", () => {
       "special_rules_snapshot",
       "challenge_id",
       "score",
+      "board_sum",
       "best_tile",
       "duration_ms",
       "final_board",
@@ -203,6 +206,7 @@ describe("contracts: HistoryRecord type shape", () => {
     expect(normalized?.mode).toBe("local");
     expect(normalized?.mode_key).toBe("unknown");
     expect(normalized?.score).toBe(12);
+    expect(normalized?.board_sum).toBe(0);
     expect(normalized?.best_tile).toBe(128);
     expect(normalized?.duration_ms).toBe(0);
     expect(normalized?.client_version).toBe("1.9");
@@ -211,6 +215,18 @@ describe("contracts: HistoryRecord type shape", () => {
     expect(normalized?.owner_type).toBe("guest");
     expect(normalized?.owner_key).toBe("guest");
     expect(normalized?.diagnostics_index_entries).toEqual([]);
+  });
+
+  it("calculates and persists board sum from legacy final boards", () => {
+    expect(calculateHistoryBoardSum([[2, "4", 0], [8, -1, Number.NaN]])).toBe(14);
+
+    const normalized = normalizeHistoryRecordLike({
+      board_sum: 999,
+      final_board: [[2, 4], [8, 16]]
+    });
+
+    expect(normalized?.board_sum).toBe(30);
+    expect(normalized?.final_board).toEqual([[2, 4], [8, 16]]);
   });
 });
 

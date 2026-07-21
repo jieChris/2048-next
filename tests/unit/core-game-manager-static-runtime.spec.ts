@@ -4,7 +4,11 @@ import vm from "node:vm";
 
 import { describe, expect, it } from "vitest";
 
-function loadStaticRuntime(): { GameManager: { FALLBACK_MODE_CONFIGS?: Record<string, { ranked_bucket?: string }> } } {
+function loadStaticRuntime(): { GameManager: {
+  FALLBACK_MODE_CONFIGS?: Record<string, { ranked_bucket?: string }>;
+  DEFAULT_TIMER_SLOT_IDS?: number[];
+  TIMER_SLOT_IDS?: number[];
+} } {
   const script = readFileSync(path.resolve(process.cwd(), "js/core_game_manager_static_runtime.js"), "utf8");
   const context = {
     GameManager: {},
@@ -24,5 +28,7 @@ describe("core game manager static runtime fallback modes", () => {
     expect(GameManager.FALLBACK_MODE_CONFIGS?.board_3x3_pow2_undo?.ranked_bucket).toBe("pow2_3x3_undo");
     expect(GameManager.FALLBACK_MODE_CONFIGS?.board_3x4_pow2_undo?.ranked_bucket).toBe("pow2_3x4_undo");
     expect(GameManager.FALLBACK_MODE_CONFIGS?.board_2x4_pow2_undo?.ranked_bucket).toBe("pow2_2x4_undo");
+    expect(GameManager.TIMER_SLOT_IDS).toEqual(GameManager.DEFAULT_TIMER_SLOT_IDS);
+    expect(GameManager.TIMER_SLOT_IDS).not.toBe(GameManager.DEFAULT_TIMER_SLOT_IDS);
   });
 });

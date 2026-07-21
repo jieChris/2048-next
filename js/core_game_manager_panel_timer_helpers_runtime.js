@@ -65,7 +65,12 @@ function resolveNormalizedTimerModuleView(view) {
 function applyTimerModuleViewLayout(manager, timerBox, next) {
   manager.timerModuleView = next;
   if (next === "hidden") timerBox.classList.add("timerbox-hidden-mode");
-  else timerBox.classList.remove("timerbox-hidden-mode");
+  else {
+    timerBox.classList.remove("timerbox-hidden-mode");
+    timerBox.classList.remove("timerbox-leaderboard-mode");
+    var root = timerBox.ownerDocument && timerBox.ownerDocument.documentElement;
+    if (root && typeof root.removeAttribute === "function") root.removeAttribute("data-initial-timer-leaderboard");
+  }
   if (manager.timerModuleBaseHeight > 0) {
     timerBox.style.minHeight = manager.timerModuleBaseHeight + "px";
   }

@@ -12,6 +12,7 @@ describe("history-record-normalize", () => {
       mode_key: "pow2",
       score: "120",
       best_tile: "256",
+      final_board: [[2, 4], [8, 16]],
       duration_ms: "1200",
       ended_at: "2024-01-01T00:00:00.000Z",
       replay_string: "replay",
@@ -24,6 +25,7 @@ describe("history-record-normalize", () => {
     expect(result.id).toBe("abc");
     expect(result.mode_key).toBe("pow2");
     expect(result.score).toBe(120);
+    expect(result.board_sum).toBe(30);
     expect(result.best_tile).toBe(256);
     expect(result.duration_ms).toBe(1200);
     expect(result.ended_at).toBe("2024-01-01T00:00:00.000Z");

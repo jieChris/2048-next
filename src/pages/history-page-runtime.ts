@@ -25,6 +25,7 @@ const HISTORY_COPY: Record<
     unknownOwner: string;
     noRecords: string;
     score: string;
+    boardSum: string;
     bestTile: string;
     duration: string;
     ended: string;
@@ -37,9 +38,6 @@ const HISTORY_COPY: Record<
     deleteConfirm: string;
     deleteFailed: string;
     deleteSuccess: string;
-    importReplaceConfirm: string;
-    importInvalid: string;
-    importReadFailed: string;
     loadFailed: string;
     moduleMissing: string;
     exportAllSuccess: string;
@@ -61,6 +59,7 @@ const HISTORY_COPY: Record<
     unknownOwner: "\u672a\u77e5\u7528\u6237",
     noRecords: "\u6682\u65e0\u5386\u53f2\u8bb0\u5f55\u3002\u4f60\u53ef\u4ee5\u5f00\u59cb\u4e00\u5c40\u6e38\u620f\u540e\u518d\u56de\u6765\u67e5\u770b\u3002",
     score: "\u5206\u6570",
+    boardSum: "\u76d8\u9762\u548c",
     bestTile: "\u6700\u5927\u5757",
     duration: "\u65f6\u957f",
     ended: "\u7ed3\u675f",
@@ -73,9 +72,6 @@ const HISTORY_COPY: Record<
     deleteConfirm: "\u786e\u8ba4\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\uff1f",
     deleteFailed: "\u5220\u9664\u5931\u8d25",
     deleteSuccess: "\u5df2\u5220\u9664\u8bb0\u5f55",
-    importReplaceConfirm: "\u786e\u8ba4\u5bfc\u5165\u5e76\u66ff\u6362\u5168\u90e8\u5f53\u524d\u5386\u53f2\u8bb0\u5f55\uff1f",
-    importInvalid: "\u5bfc\u5165\u5931\u8d25\uff1a\u6587\u4ef6\u683c\u5f0f\u4e0d\u6b63\u786e",
-    importReadFailed: "\u5bfc\u5165\u5931\u8d25\uff1a\u6587\u4ef6\u8bfb\u53d6\u9519\u8bef",
     loadFailed: "\u52a0\u8f7d\u5386\u53f2\u5931\u8d25",
     moduleMissing: "\u672c\u5730\u5386\u53f2\u6a21\u5757\u672a\u52a0\u8f7d",
     exportAllSuccess: "\u5df2\u5bfc\u51fa\u5168\u90e8\u5386\u53f2\u8bb0\u5f55",
@@ -96,6 +92,7 @@ const HISTORY_COPY: Record<
     unknownOwner: "Unknown User",
     noRecords: "No local records yet. Start a game and come back later.",
     score: "Score",
+    boardSum: "Board Sum",
     bestTile: "Max Tile",
     duration: "Duration",
     ended: "Ended",
@@ -108,9 +105,6 @@ const HISTORY_COPY: Record<
     deleteConfirm: "Delete this record?",
     deleteFailed: "Delete failed",
     deleteSuccess: "Record deleted",
-    importReplaceConfirm: "Import and replace all current local history records?",
-    importInvalid: "Import failed: invalid file format",
-    importReadFailed: "Import failed: file read error",
     loadFailed: "Failed to load history",
     moduleMissing: "Local history module is not loaded",
     exportAllSuccess: "Exported all local history records",
@@ -399,6 +393,7 @@ function renderList(
         "<strong>" + escapeHtml(modeText) + "</strong>" +
         "<span class='history-owner-tag'>" + escapeHtml(ownerDisplay.label) + "</span>" +
         "<span>" + escapeHtml(copy.score) + ": " + escapeHtml(Number(item.score) || 0) + "</span>" +
+        "<span>" + escapeHtml(copy.boardSum) + ": " + escapeHtml(Number(item.board_sum) || 0) + "</span>" +
         "<span>" + escapeHtml(copy.bestTile) + ": " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
         "<span>" + escapeHtml(copy.duration) + ": " + escapeHtml(formatDuration(item.duration_ms)) + "</span>" +
         "<span>" + escapeHtml(copy.ended) + ": " + escapeHtml(formatEndedAt(item.ended_at)) + "</span>" +
@@ -495,7 +490,12 @@ function applyControls(documentLike: Document, state: HistoryFilterState): void 
   const owner = documentLike.getElementById("history-owner") as HTMLSelectElement | null;
   const keyword = documentLike.getElementById("history-keyword") as HTMLInputElement | null;
   const sort = documentLike.getElementById("history-sort") as HTMLSelectElement | null;
-  if (mode) mode.value = toText(state.modeKey);
+  if (mode) {
+    const preferredModeKey = toText(state.modeKey);
+    const hasPreferredMode = Array.from(mode.options).some((option) => option.value === preferredModeKey);
+    if (hasPreferredMode) mode.value = preferredModeKey;
+    if (!mode.value && mode.options.length > 0) mode.selectedIndex = 0;
+  }
   if (owner) owner.value = toText(state.ownerKey);
   if (keyword) keyword.value = toText(state.keyword);
   if (sort) sort.value = toText(state.sortBy || "ended_desc");
@@ -504,19 +504,45 @@ function applyControls(documentLike: Document, state: HistoryFilterState): void 
 function initModeFilter(
   documentLike: Document,
   controller: ReturnType<typeof createHistoryPageController>,
-  lang: HistoryUiLang
+  lang: HistoryUiLang,
+  preferredModeKey = ""
 ): void {
+  const undoSelect = documentLike.getElementById("history-undo") as HTMLSelectElement | null;
   const modeSelect = documentLike.getElementById("history-mode") as HTMLSelectElement | null;
-  if (!modeSelect) return;
+  if (!undoSelect || !modeSelect) return;
   const listModes = controller.listModes();
+
+  const modeUsesUndo = (mode: (typeof listModes)[number]): boolean => {
+    if (typeof mode?.undo_enabled === "boolean") return mode.undo_enabled;
+    const key = toText(mode?.key).toLowerCase();
+    return key === "practice" || (key.endsWith("_undo") && !key.endsWith("_no_undo"));
+  };
+
+  const preferredMode = listModes.find((mode) => toText(mode?.key) === preferredModeKey);
+  if (preferredMode) undoSelect.value = modeUsesUndo(preferredMode) ? "undo" : "no_undo";
+  const undoEnabled = undoSelect.value === "undo";
+  clearSelectOptions(modeSelect);
+
   for (let i = 0; i < listModes.length; i += 1) {
     const mode = listModes[i] || {};
     if (!mode.key || !mode.label) continue;
+    if (modeUsesUndo(mode) !== undoEnabled) continue;
     const option = documentLike.createElement("option");
     option.value = String(mode.key);
-    option.textContent = controller.resolveModeLabel(String(mode.key), String(mode.label), lang);
+    option.textContent = controller
+      .resolveModeLabel(String(mode.key), String(mode.label), lang)
+      .replace(/\s*[（(](?:无撤回|可撤回|No Undo|Undo)[）)]\s*$/i, "")
+      .replace(/，(?:无撤回|可撤回)(?=）$)/, "")
+      .replace(/,\s*(?:No Undo|Undo)(?=\)$)/i, "")
+      .replace(/(?:无撤回|可撤回)$/u, "")
+      .replace(/^经典4x4$/, "4x4")
+      .replace(/^(?:Standard|Classic) 4x4$/i, "4x4")
+      .trim();
     modeSelect.appendChild(option);
   }
+
+  modeSelect.value = preferredModeKey;
+  if (!modeSelect.value && modeSelect.options.length > 0) modeSelect.selectedIndex = 0;
 }
 
 function clearSelectOptions(selectNode: HTMLSelectElement | null): void {
@@ -601,69 +627,6 @@ async function rebuildOwnerFilterOptions(
   ownerSelect.value = "";
 }
 
-function bindImport(
-  historyStore: Record<string, unknown> | null,
-  windowLike: Window,
-  documentLike: Document,
-  resolveLang: () => HistoryUiLang,
-  loadHistory: (resetPage: boolean) => Promise<void>
-): void {
-  const importBtn = documentLike.getElementById("history-import-btn") as HTMLButtonElement | null;
-  const importReplaceBtn = documentLike.getElementById("history-import-replace-btn") as HTMLButtonElement | null;
-  const fileInput = documentLike.getElementById("history-import-file") as HTMLInputElement | null;
-  if (!importBtn || !importReplaceBtn || !fileInput) return;
-  const fileInputEl = fileInput;
-
-  let merge = true;
-
-  function openPicker(nextMerge: boolean) {
-    merge = !!nextMerge;
-    fileInputEl.setAttribute("data-import-mode", merge ? "merge" : "replace");
-    fileInputEl.value = "";
-    fileInputEl.click();
-  }
-
-  importBtn.addEventListener("click", () => {
-    openPicker(true);
-  });
-
-  importReplaceBtn.addEventListener("click", async () => {
-    if (!(await confirmWithGameDialog(windowLike, getHistoryCopy(resolveLang()).importReplaceConfirm, { kind: "danger" }))) return;
-    openPicker(false);
-  });
-
-  fileInputEl.addEventListener("change", () => {
-    const file = fileInputEl.files && fileInputEl.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const text = typeof reader.result === "string" ? reader.result : "";
-        const result = await callStore(historyStore, "importRecords", text, { merge });
-        const lang = resolveLang();
-        setStatus(
-          documentLike,
-          merge
-            ? lang === "en"
-              ? "Import complete: added " + result.imported + ", replaced " + result.replaced
-              : "\u5bfc\u5165\u5b8c\u6210\uff1a\u65b0\u589e " + result.imported + "\uff0c\u66ff\u6362 " + result.replaced
-            : lang === "en"
-              ? "Import and replace complete: " + result.total + " records total"
-              : "\u5bfc\u5165\u5e76\u66ff\u6362\u5b8c\u6210\uff1a\u603b\u8ba1 " + result.total + " \u6761",
-          false
-        );
-        await loadHistory(true);
-      } catch (_err) {
-        setStatus(documentLike, getHistoryCopy(resolveLang()).importInvalid, true);
-      }
-    };
-    reader.onerror = () => {
-      setStatus(documentLike, getHistoryCopy(resolveLang()).importReadFailed, true);
-    };
-    reader.readAsText(file, "utf-8");
-  });
-}
-
 export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions): void {
   const windowLike = options?.windowLike || (typeof window !== "undefined" ? window : null);
   const documentLike = options?.documentLike || (typeof document !== "undefined" ? document : null);
@@ -730,7 +693,7 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       return;
     }
 
-    initModeFilter(documentLike, controller, resolveLang());
+    initModeFilter(documentLike, controller, resolveLang(), state.modeKey);
     rebuildOwnerFilterOptions(historyStore, documentLike, controller, resolveLang(), state.ownerKey)
       .then(() => {
         applyControls(documentLike, state);
@@ -748,10 +711,17 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
       });
     }
 
+    const undo = documentLike.getElementById("history-undo");
     const mode = documentLike.getElementById("history-mode");
     const owner = documentLike.getElementById("history-owner");
     const sort = documentLike.getElementById("history-sort");
     const keyword = documentLike.getElementById("history-keyword");
+    if (undo) {
+      undo.addEventListener("change", () => {
+        initModeFilter(documentLike, controller, resolveLang());
+        loadHistory(true);
+      });
+    }
     if (mode) mode.addEventListener("change", () => { loadHistory(true); });
     if (owner) owner.addEventListener("change", () => { loadHistory(true); });
     if (sort) sort.addEventListener("change", () => { loadHistory(true); });
@@ -818,8 +788,6 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
         }
       });
     }
-
-    bindImport(historyStore, windowLike, documentLike, resolveLang, loadHistory);
   };
 
   if (documentLike.readyState === "loading") {

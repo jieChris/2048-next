@@ -704,7 +704,7 @@ function resolveLegacySavedSecondaryRows(saved) {
   return rows;
 }
 function applySavedTimerSubState(manager, saved) {
-  if (!manager || !saved) return;
+  if (!manager || !saved) return; if (typeof saved.custom_secondary_timer_rule_text === "string" && typeof applyCustomSecondaryTimerRuleText === "function") applyCustomSecondaryTimerRuleText(manager, saved.custom_secondary_timer_rule_text);
   // Secondary rows are collapsed by default on each load.
   applySecondaryTimerExpandedParentsState(manager, []);
   var secondaryRows = Array.isArray(saved.timer_secondary_rows)
@@ -1166,6 +1166,7 @@ function buildSavedGameStateTimerSnapshotPayload(manager, timerSnapshot, subStat
   var snapshot = normalizeSavedStateRecordObject(timerSnapshot, {});
   return {
     timer_module_view: manager.getTimerModuleViewMode ? manager.getTimerModuleViewMode() : "timer",
+    custom_secondary_timer_rule_text: typeof manager.customSecondaryTimerRuleText === "string" ? manager.customSecondaryTimerRuleText : "", custom_secondary_timer_rule_family: String(manager.ruleset || "").toLowerCase() === "fibonacci" ? "fibonacci" : "pow2",
     timer_fixed_rows: snapshot.timerFixedRowsState || {}, timer_dynamic_rows_capped: Array.isArray(snapshot.timerDynamicRowsCappedState) ? snapshot.timerDynamicRowsCappedState : [],
     timer_dynamic_rows_overflow: Array.isArray(snapshot.timerDynamicRowsOverflowState) ? snapshot.timerDynamicRowsOverflowState : [],
     timer_secondary_rows: Array.isArray(subState.timer_secondary_rows) ? subState.timer_secondary_rows : [],

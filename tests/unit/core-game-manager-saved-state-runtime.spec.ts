@@ -95,6 +95,7 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
     applySavedDynamicTimerRowsState: (manager: Record<string, unknown>, container: Record<string, unknown>, rowsState: unknown[], cappedState: Record<string, unknown>) => void;
     applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
+    applySavedTimerSubState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     applySavedManagerProgressState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
     applySavedManagerBaseState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
@@ -157,6 +158,28 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
 }
 
 describe("core game manager saved state runtime", () => {
+  it("restores the session rule snapshot before custom secondary timer rows", () => {
+    const calls: string[] = [];
+    const runtime = loadSavedStateRuntime([32, 64], {
+      applyCustomSecondaryTimerRuleText(_manager: unknown, text: string) {
+        calls.push("rules:" + text);
+      },
+      applySecondaryTimerExpandedParentsState() {
+        calls.push("collapsed");
+      },
+      applySecondaryTimerRowsState() {
+        calls.push("rows");
+      }
+    });
+
+    runtime.applySavedTimerSubState({}, {
+      custom_secondary_timer_rule_text: "32\n32+2",
+      timer_secondary_rows: [{ rule: "32+2", time: "1.234" }]
+    });
+
+    expect(calls).toEqual(["rules:32\n32+2", "collapsed", "rows"]);
+  });
+
   it("delegates saved payload richness scoring to the TypeScript runtime", () => {
     const resolveSavedPayloadRichnessScore = vi.fn(() => 7);
     const runtime = loadSavedStateRuntime([32768], {
@@ -1043,6 +1066,7 @@ describe("core game manager saved state runtime", () => {
       redoStack: [],
       replayCompactLog: "",
       sessionReplayV3: null,
+      customSecondaryTimerRuleText: "32\n32+2",
       comboStreak: 0,
       successfulMoveCount: 0,
       undoUsed: 0,
@@ -1082,6 +1106,8 @@ describe("core game manager saved state runtime", () => {
     };
 
     const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
+    expect(fullPayload.custom_secondary_timer_rule_text).toBe("32\n32+2");
+    expect(fullPayload.custom_secondary_timer_rule_family).toBe("pow2");
     expect(fullPayload.diagnostics_index_entries).toEqual([
       {
         key: "secondaryTimerPlacement",

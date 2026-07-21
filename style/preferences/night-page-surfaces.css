@@ -1,5 +1,5 @@
 /* Final night-mode ownership for page-specific styles loaded after main.css. */
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) {
   --night-page-bg: var(--workshop-bg);
   --night-surface: var(--workshop-panel);
   --night-surface-alt: var(--workshop-panel-soft);
@@ -9,7 +9,7 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) {
   --night-ink-dim: var(--workshop-muted);
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   label,
   .user-record-tools label,
   .user-record-head-row,
@@ -21,12 +21,12 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   color: var(--workshop-text) !important;
 }
 
-html[data-night-background="1"] body[data-page="user-profile"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="user-profile"] :is(
   .user-record-list,
   .user-record-detail-card
 ),
-html[data-night-background="1"] body[data-page="history"] .history-item,
-html[data-night-background="1"] body[data-page="relay-5x5"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="history"] .history-item,
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="relay-5x5"] :is(
   #relay-note,
   #relay-note-secondary
 ) {
@@ -37,7 +37,7 @@ html[data-night-background="1"] body[data-page="relay-5x5"] :is(
   box-shadow: none !important;
 }
 
-html[data-night-background="1"] body[data-page="user-profile"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="user-profile"] :is(
   .user-record-empty,
   .user-record-tip,
   .user-record-date
@@ -45,16 +45,16 @@ html[data-night-background="1"] body[data-page="user-profile"] :is(
   color: var(--workshop-text) !important;
 }
 
-html[data-night-background="1"] body[data-page="user-profile"] .user-record-row:hover,
-html[data-night-background="1"] body[data-page="user-profile"] .user-record-item[data-open="1"] {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="user-profile"] .user-record-row:hover,
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="user-profile"] .user-record-item[data-open="1"] {
   background: rgba(99, 170, 166, 0.08) !important;
 }
 
-html[data-night-background="1"] body[data-page="achievements"] #achievements-user-name {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="achievements"] #achievements-user-name {
   color: var(--workshop-ink) !important;
 }
 
-html[data-night-background="1"] body[data-page="achievements"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="achievements"] :is(
   p,
   .achievements-stat span,
   #achievements-summary-copy
@@ -62,7 +62,7 @@ html[data-night-background="1"] body[data-page="achievements"] :is(
   color: var(--workshop-muted) !important;
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   #account-auth-state-tag,
   #achievements-status,
   #touch-threshold-value
@@ -72,13 +72,13 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   background: var(--workshop-panel-soft) !important;
 }
 
-html[data-night-background="1"] body[data-page="relay-5x5"] #relay-my-case-pill {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="relay-5x5"] #relay-my-case-pill {
   border-color: rgba(99, 170, 166, 0.32) !important;
   color: var(--workshop-teal) !important;
   background: rgba(99, 170, 166, 0.1) !important;
 }
 
-html[data-night-background="1"]
+html[data-theme="mist_cyan"][data-night-background="1"]
   body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
   :is(
   #history-clear-all-btn,
@@ -95,14 +95,14 @@ html[data-night-background="1"]
     0 5px 12px rgba(0, 0, 0, 0.18) !important;
 }
 
-html[data-night-background="1"] body[data-page="touch-sensitivity"] .touch-card {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="touch-sensitivity"] .touch-card {
   border-color: var(--workshop-line) !important;
   color: var(--workshop-text) !important;
   background: var(--workshop-panel) !important;
   background-image: none !important;
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   .announcement-item,
   .settings-toggle-row,
   .settings-modal-content > .settings-row.language-settings-row,
@@ -120,17 +120,17 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   background: var(--workshop-panel-soft) !important;
 }
 
-html[data-night-background="1"] .game-dialog-button-secondary {
+html[data-theme="mist_cyan"][data-night-background="1"] .game-dialog-button-secondary {
   color: var(--enamel-button-ink) !important;
   background: var(--enamel-button-surface) !important;
 }
 
-html[data-night-background="1"] .game-dialog-button-primary {
+html[data-theme="mist_cyan"][data-night-background="1"] .game-dialog-button-primary {
   color: var(--enamel-button-primary-text) !important;
   background: var(--enamel-button-primary) !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] {
   --stone-bg: var(--workshop-bg);
   --stone-bg-deep: var(--workshop-bg);
   --stone-panel: var(--workshop-panel);
@@ -144,11 +144,11 @@ html[data-night-background="1"] body[data-page="stone-2k-monitor"] {
   --stone-shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-access-gate {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-access-gate {
   background: rgba(7, 12, 11, 0.76) !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   .stone-access-card,
   .stone-hero,
   .stone-control-card,
@@ -163,7 +163,7 @@ html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   backdrop-filter: none !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   .stone-table-wrap,
   .stone-detail-list > div
 ) {
@@ -172,19 +172,19 @@ html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   background: var(--workshop-panel-soft) !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-hero-badge {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-hero-badge {
   border-color: rgba(99, 170, 166, 0.3) !important;
   color: #8bd0cb !important;
   background: rgba(99, 170, 166, 0.12) !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-board-preview {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] .stone-board-preview {
   border-color: var(--workshop-line) !important;
   color: var(--workshop-text) !important;
   background: var(--workshop-board) !important;
 }
 
-html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   .stone-access-input,
   .stone-field input,
   .stone-field select,
@@ -195,7 +195,7 @@ html[data-night-background="1"] body[data-page="stone-2k-monitor"] :is(
   background: #1d2725 !important;
 }
 
-html[data-night-background="1"] body[data-page="admin-console"] .admin-card {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="admin-console"] .admin-card {
   border-color: var(--workshop-line) !important;
   color: var(--workshop-text) !important;
   background: var(--workshop-panel) !important;
@@ -203,7 +203,7 @@ html[data-night-background="1"] body[data-page="admin-console"] .admin-card {
   box-shadow: var(--workshop-shadow) !important;
 }
 
-html[data-night-background="1"] body[data-page="admin-console"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="admin-console"] :is(
   .admin-upload-panel,
   .admin-beta-access-console,
   .admin-output,
@@ -217,7 +217,7 @@ html[data-night-background="1"] body[data-page="admin-console"] :is(
   box-shadow: none !important;
 }
 
-html[data-night-background="1"] body[data-page="admin-console"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="admin-console"] :is(
   .admin-input,
   .admin-textarea,
   .settings-select
@@ -227,7 +227,7 @@ html[data-night-background="1"] body[data-page="admin-console"] :is(
   background-color: #1d2725 !important;
 }
 
-html[data-night-background="1"] body[data-page="admin-console"] :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="admin-console"] :is(
   .admin-card h3,
   .admin-result-table th,
   .admin-result-table td
@@ -236,7 +236,7 @@ html[data-night-background="1"] body[data-page="admin-console"] :is(
   border-color: var(--workshop-line) !important;
 }
 
-html[data-night-background="1"] body[data-page="admin-console"] .panel-pill {
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page="admin-console"] .panel-pill {
   border-color: var(--workshop-line) !important;
   color: var(--workshop-text) !important;
   background: var(--workshop-panel-soft) !important;

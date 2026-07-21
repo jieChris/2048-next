@@ -3,6 +3,59 @@ import { expect, test } from "@playwright/test";
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 
 test.describe("History smoke: export", () => {
+  test("backfills, displays, sorts, searches and exports board sum", async ({ page }) => {
+    await mockAcceptedBetaAccess(page);
+
+    const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+
+    await page.evaluate(() => {
+      const now = Date.now();
+      window.localStorage.setItem("local_game_history_v1", JSON.stringify([
+        {
+          id: "legacy_sum_30",
+          mode: "local",
+          mode_key: "standard_4x4_pow2_no_undo",
+          score: 900,
+          best_tile: 16,
+          duration_ms: 1000,
+          final_board: [[2, 4], [8, 16]],
+          ended_at: new Date(now).toISOString()
+        },
+        {
+          id: "legacy_sum_64",
+          mode: "local",
+          mode_key: "standard_4x4_pow2_no_undo",
+          score: 100,
+          best_tile: 64,
+          duration_ms: 1000,
+          final_board: [[64, 0], [0, 0]],
+          ended_at: new Date(now - 1000).toISOString()
+        }
+      ]));
+    });
+
+    await page.click("#history-load-btn");
+    await expect(page.locator(".history-item")).toHaveCount(2);
+    await expect(page.locator(".history-item").first()).toContainText("盘面和: 30");
+
+    await page.selectOption("#history-sort", "board_sum_desc");
+    await expect(page.locator(".history-item").first()).toContainText("盘面和: 64");
+
+    await page.fill("#history-keyword", "30");
+    await page.press("#history-keyword", "Enter");
+    await expect(page.locator(".history-item")).toHaveCount(1);
+    await expect(page.locator(".history-item").first()).toContainText("盘面和: 30");
+
+    const exported = await page.evaluate(() => {
+      const payload = (window as any).LocalHistoryStore.exportRecords();
+      return JSON.parse(String(payload || "{}"));
+    });
+    expect(exported.records).toHaveLength(2);
+    expect(exported.records.map((record: any) => record.board_sum).sort((a: number, b: number) => a - b)).toEqual([30, 64]);
+  });
+
   test("supports export-all and single-record export", async ({ page }) => {
     await mockAcceptedBetaAccess(page);
 
@@ -19,7 +72,7 @@ test.describe("History smoke: export", () => {
       store.saveRecord({
         id: "export_1",
         mode: "local",
-        mode_key: "practice",
+        mode_key: "standard_4x4_pow2_no_undo",
         board_width: 4,
         board_height: 4,
         score: 123,

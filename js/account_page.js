@@ -117,7 +117,7 @@
       navSettings: "账号设置",
       navHome: "首页",
       navHistory: "本地历史",
-      navPalette: "主题设置",
+      navPalette: "设置",
       navPractice: "练习板",
       navRegister: "去注册",
       authHeading: "账号",
@@ -142,8 +142,11 @@
       userEmail: "邮箱：",
       userCreated: "注册时间：",
       boardHeading: "排行榜",
-      boardSubtitle: "按模式和榜单筛选后查看排行。",
+      boardSubtitle: "按撤回类型、模式和榜单筛选后查看排行。",
       boardFilterAria: "排行榜筛选",
+      boardUndo: "撤回",
+      boardUndoDisabled: "无撤回",
+      boardUndoEnabled: "可撤回",
       boardMode: "模式",
       boardMetric: "榜单",
       boardLimit: "条数",
@@ -154,12 +157,15 @@
       summaryRefresh: "最近刷新",
       summaryAria: "排行榜概览",
       boardMetricScore: "分数",
+      boardMetricSpeed: "竞速",
+      boardSpeedTargetAria: "合成目标",
       boardMetricMinSteps2k: "合成2K最少步数",
       boardMetricMinSteps4k: "合成4K最少步数",
       boardMetricMinSteps8k: "合成8K最少步数",
       colRank: "排名",
       colName: "昵称",
       colScore: "分数",
+      colTime: "用时",
       colMinSteps: "最少步数",
       colDate: "更新时间",
       boardLoading: "加载中...",
@@ -191,7 +197,7 @@
       navSettings: "Account Settings",
       navHome: "Home",
       navHistory: "Local History",
-      navPalette: "Theme Settings",
+      navPalette: "Settings",
       navPractice: "Practice",
       navRegister: "Create Account",
       authHeading: "Account",
@@ -216,8 +222,11 @@
       userEmail: "Email:",
       userCreated: "Created:",
       boardHeading: "Leaderboard",
-      boardSubtitle: "Filter by mode and metric.",
+      boardSubtitle: "Filter by undo type, mode, and metric.",
       boardFilterAria: "Leaderboard Filters",
+      boardUndo: "Undo",
+      boardUndoDisabled: "No Undo",
+      boardUndoEnabled: "Undo",
       boardMode: "Mode",
       boardMetric: "Metric",
       boardLimit: "Limit",
@@ -228,12 +237,15 @@
       summaryRefresh: "Last Refresh",
       summaryAria: "Leaderboard Summary",
       boardMetricScore: "Score",
+      boardMetricSpeed: "Speedrun",
+      boardSpeedTargetAria: "Target Tile",
       boardMetricMinSteps2k: "Fewest Steps to 2K",
       boardMetricMinSteps4k: "Fewest Steps to 4K",
       boardMetricMinSteps8k: "Fewest Steps to 8K",
       colRank: "Rank",
       colName: "Nickname",
       colScore: "Score",
+      colTime: "Time",
       colMinSteps: "Fewest Steps",
       colDate: "Updated",
       boardLoading: "Loading...",
@@ -349,20 +361,22 @@
   };
   var LEADERBOARD_METRIC_ALIAS = {
     score: "score",
-    by_score: "score"
+    by_score: "score",
+    speed: "speed"
   };
+  var LEADERBOARD_SPEED_TARGET_TILES = [2048, 4096, 8192, 16384, 32768];
 
   var LEADERBOARD_MODE_OPTIONS = [
-    { value: "standard_no_undo", zh: "4x4无撤回", en: "4x4 (No Undo)" },
-    { value: "standard_undo", zh: "4x4可撤回", en: "4x4 (Undo)" },
-    { value: "pow2_3x3", zh: "3x3无撤回", en: "3x3 (No Undo)" },
-    { value: "pow2_3x3_undo", zh: "3x3可撤回", en: "3x3 (Undo)" },
-    { value: "pow2_2x4", zh: "4x2无撤回", en: "4x2 (No Undo)" },
-    { value: "pow2_2x4_undo", zh: "4x2可撤回", en: "4x2 (Undo)" },
-    { value: "pow2_3x4", zh: "4x3无撤回", en: "4x3 (No Undo)" },
-    { value: "pow2_3x4_undo", zh: "4x3可撤回", en: "4x3 (Undo)" },
-    { value: "pow2_5x5", zh: "5x5无撤回", en: "5x5 (No Undo)" },
-    { value: "pow2_5x5_undo", zh: "5x5可撤回", en: "5x5 (Undo)" },
+    { value: "standard_no_undo", zh: "4x4", en: "4x4" },
+    { value: "standard_undo", zh: "4x4", en: "4x4" },
+    { value: "pow2_3x3", zh: "3x3", en: "3x3" },
+    { value: "pow2_3x3_undo", zh: "3x3", en: "3x3" },
+    { value: "pow2_2x4", zh: "4x2", en: "4x2" },
+    { value: "pow2_2x4_undo", zh: "4x2", en: "4x2" },
+    { value: "pow2_3x4", zh: "4x3", en: "4x3" },
+    { value: "pow2_3x4_undo", zh: "4x3", en: "4x3" },
+    { value: "pow2_5x5", zh: "5x5", en: "5x5" },
+    { value: "pow2_5x5_undo", zh: "5x5", en: "5x5" },
     { value: "diag_3x3", zh: "3x3八方向", en: "3x3 Diagonal" },
     { value: "diag_4x4", zh: "4x4八方向", en: "4x4 Diagonal" },
     { value: "diag_3x4", zh: "4x3八方向", en: "4x3 Diagonal" },
@@ -372,17 +386,18 @@
     { value: "capped_1024", zh: "1024封顶", en: "1024 Capped" },
     { value: "capped_4096", zh: "4096封顶", en: "4096 Capped" },
     { value: "obstacle_4x4", zh: "障碍块", en: "Obstacle" },
-    { value: "fib_4x4", zh: "斐波那契4x4无撤回", en: "Fibonacci 4x4 (No Undo)" },
-    { value: "fib_4x4_undo", zh: "斐波那契4x4可撤回", en: "Fibonacci 4x4 (Undo)" },
-    { value: "fib_3x3", zh: "斐波那契3x3无撤回", en: "Fibonacci 3x3 (No Undo)" },
-    { value: "fib_3x3_undo", zh: "斐波那契3x3可撤回", en: "Fibonacci 3x3 (Undo)" },
-    { value: "fib_4x3", zh: "斐波那契4x3无撤回", en: "Fibonacci 4x3 (No Undo)" },
-    { value: "fib_4x3_undo", zh: "斐波那契4x3可撤回", en: "Fibonacci 4x3 (Undo)" },
-    { value: "fib_4x2", zh: "斐波那契4x2无撤回", en: "Fibonacci 4x2 (No Undo)" },
-    { value: "fib_4x2_undo", zh: "斐波那契4x2可撤回", en: "Fibonacci 4x2 (Undo)" }
+    { value: "fib_4x4", zh: "斐波那契4x4", en: "Fibonacci 4x4" },
+    { value: "fib_4x4_undo", zh: "斐波那契4x4", en: "Fibonacci 4x4" },
+    { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" },
+    { value: "fib_3x3_undo", zh: "斐波那契3x3", en: "Fibonacci 3x3" },
+    { value: "fib_4x3", zh: "斐波那契4x3", en: "Fibonacci 4x3" },
+    { value: "fib_4x3_undo", zh: "斐波那契4x3", en: "Fibonacci 4x3" },
+    { value: "fib_4x2", zh: "斐波那契4x2", en: "Fibonacci 4x2" },
+    { value: "fib_4x2_undo", zh: "斐波那契4x2", en: "Fibonacci 4x2" }
   ];
   var LEADERBOARD_METRIC_OPTIONS = [
-    { value: "score", copyKey: "boardMetricScore" }
+    { value: "score", copyKey: "boardMetricScore" },
+    { value: "speed", copyKey: "boardMetricSpeed" }
   ];
 
   function normalizeLeaderboardNickname(nameLike) {
@@ -439,6 +454,7 @@
 
   function resolveMetricTargetTile(metricLike) {
     var metric = resolveLeaderboardMetric(metricLike);
+    if (metric === "speed") return getSelectedSpeedTargetTile();
     if (metric === "min_steps_2048") return 2048;
     if (metric === "min_steps_4096") return 4096;
     if (metric === "min_steps_8192") return 8192;
@@ -488,23 +504,58 @@
     return resolveLeaderboardMode(modeValue) || DEFAULT_BOARD_MODE;
   }
 
+  function getSelectedUndoFilter() {
+    var undoSelect = byId("account-board-undo");
+    return toText(undoSelect && undoSelect.value).trim().toLowerCase() === "undo" ? "undo" : "no_undo";
+  }
+
+  function isUndoLeaderboardMode(modeLike) {
+    var mode = resolveLeaderboardMode(modeLike) || "";
+    return mode === "standard_undo" || (mode !== "standard_no_undo" && mode.slice(-5) === "_undo");
+  }
+
   function getSelectedLeaderboardMetric() {
     var metricSelect = byId("account-board-metric");
     var metricValue = toText(metricSelect && metricSelect.value).trim();
     return resolveLeaderboardMetric(metricValue) || DEFAULT_BOARD_METRIC;
   }
 
+  function isSpeedrunMetricAvailable() {
+    return getSelectedUndoFilter() === "no_undo" && getSelectedModeBucket() === DEFAULT_BOARD_MODE;
+  }
+
+  function getSelectedSpeedTargetTile() {
+    var targetSelect = byId("account-board-speed-target");
+    var selected = Math.floor(Number(targetSelect && targetSelect.value) || 0);
+    return LEADERBOARD_SPEED_TARGET_TILES.indexOf(selected) >= 0 ? selected : LEADERBOARD_SPEED_TARGET_TILES[0];
+  }
+
+  function syncSpeedTargetVisibility() {
+    var targetSelect = byId("account-board-speed-target");
+    if (!targetSelect) return;
+    var visible = isSpeedrunMetricAvailable() && getSelectedLeaderboardMetric() === "speed";
+    targetSelect.hidden = !visible;
+    targetSelect.disabled = !visible;
+  }
+
   function getSelectedModeText() {
     var modeSelect = byId("account-board-mode");
+    var modeText = "";
     if (modeSelect && modeSelect.selectedOptions && modeSelect.selectedOptions[0]) {
-      return toText(modeSelect.selectedOptions[0].textContent).trim();
+      modeText = toText(modeSelect.selectedOptions[0].textContent).trim();
     }
-    var selectedMode = getSelectedModeBucket();
-    var lang = currentLang === "en" ? "en" : "zh";
-    for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
-      if (LEADERBOARD_MODE_OPTIONS[i].value === selectedMode) return LEADERBOARD_MODE_OPTIONS[i][lang];
+    if (!modeText) {
+      var selectedMode = getSelectedModeBucket();
+      var lang = currentLang === "en" ? "en" : "zh";
+      for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
+        if (LEADERBOARD_MODE_OPTIONS[i].value === selectedMode) {
+          modeText = LEADERBOARD_MODE_OPTIONS[i][lang];
+          break;
+        }
+      }
     }
-    return selectedMode || "--";
+    var undoText = getSelectedUndoFilter() === "undo" ? t("boardUndoEnabled") : t("boardUndoDisabled");
+    return modeText ? modeText + " · " + undoText : "--";
   }
 
   function syncLeaderboardSummary() {
@@ -946,10 +997,27 @@
     return null;
   }
 
+  function formatDurationMs(value) {
+    var ms = Math.floor(Number(value));
+    if (!Number.isFinite(ms) || ms < 0) return null;
+    var seconds = Math.floor(ms / 1000);
+    var milli = String(ms % 1000).padStart(3, "0");
+    var secondPart = String(seconds % 60);
+    var minutes = Math.floor(seconds / 60);
+    if (minutes > 0) secondPart = secondPart.padStart(2, "0");
+    var hours = Math.floor(minutes / 60);
+    if (hours > 0) return hours + ":" + String(minutes % 60).padStart(2, "0") + ":" + secondPart + "." + milli;
+    return (minutes > 0 ? minutes + ":" : "") + secondPart + "." + milli;
+  }
+
   function resolveLeaderboardDisplayValue(item, metricLike) {
     var metric = resolveLeaderboardMetric(metricLike) || DEFAULT_BOARD_METRIC;
     if (metric === "score") {
       return Math.floor(Number(item && item.score) || 0);
+    }
+    if (metric === "speed") {
+      var speedMs = resolveMetricValueFromKeys(item, ["speed_ms", "best_ms", "tile_time_ms"]);
+      return speedMs == null ? null : formatDurationMs(speedMs);
     }
     if (metric === "min_steps_2048") {
       return resolveMetricValueFromKeys(item, [
@@ -982,7 +1050,7 @@
     var scoreHeader = byId("account-col-score");
     if (!scoreHeader) return;
     var metric = resolveLeaderboardMetric(metricLike) || DEFAULT_BOARD_METRIC;
-    scoreHeader.textContent = metric === "score" ? t("colScore") : t("colMinSteps");
+    scoreHeader.textContent = metric === "score" ? t("colScore") : (metric === "speed" ? t("colTime") : t("colMinSteps"));
   }
 
   function renderBoardList(resultList, pageLike, pageSizeLike, metricLike, stateLike) {
@@ -1066,10 +1134,12 @@
 
     var lang = currentLang === "en" ? "en" : "zh";
     var prevValue = resolveLeaderboardMode(modeSelect.value) || DEFAULT_BOARD_MODE;
+    var undoEnabled = getSelectedUndoFilter() === "undo";
     modeSelect.innerHTML = "";
 
     for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
       var optionDef = LEADERBOARD_MODE_OPTIONS[i];
+      if (isUndoLeaderboardMode(optionDef.value) !== undoEnabled) continue;
       var optionEl = global.document.createElement("option");
       optionEl.value = optionDef.value;
       optionEl.textContent = lang === "en" ? optionDef.en : optionDef.zh;
@@ -1077,8 +1147,15 @@
     }
 
     modeSelect.value = prevValue;
-    if (!modeSelect.value) modeSelect.value = DEFAULT_BOARD_MODE;
+    if (!modeSelect.value && modeSelect.options.length > 0) modeSelect.selectedIndex = 0;
     syncLeaderboardSummary();
+  }
+
+  function refreshUndoSelectOptions() {
+    var undoSelect = byId("account-board-undo");
+    if (!undoSelect || !undoSelect.options || undoSelect.options.length < 2) return;
+    undoSelect.options[0].textContent = t("boardUndoDisabled");
+    undoSelect.options[1].textContent = t("boardUndoEnabled");
   }
 
   function refreshMetricSelectOptions() {
@@ -1090,6 +1167,7 @@
 
     for (var i = 0; i < LEADERBOARD_METRIC_OPTIONS.length; i += 1) {
       var optionDef = LEADERBOARD_METRIC_OPTIONS[i];
+      if (optionDef.value === "speed" && !isSpeedrunMetricAvailable()) continue;
       var optionEl = global.document.createElement("option");
       optionEl.value = optionDef.value;
       optionEl.textContent = t(optionDef.copyKey);
@@ -1098,6 +1176,23 @@
 
     metricSelect.value = prevValue;
     if (!metricSelect.value) metricSelect.value = DEFAULT_BOARD_METRIC;
+    syncSpeedTargetVisibility();
+  }
+
+  function refreshSpeedTargetOptions() {
+    var targetSelect = byId("account-board-speed-target");
+    if (!targetSelect) return;
+    var previousValue = getSelectedSpeedTargetTile();
+    targetSelect.innerHTML = "";
+    for (var i = 0; i < LEADERBOARD_SPEED_TARGET_TILES.length; i += 1) {
+      var tile = LEADERBOARD_SPEED_TARGET_TILES[i];
+      var optionEl = global.document.createElement("option");
+      optionEl.value = String(tile);
+      optionEl.textContent = String(tile);
+      targetSelect.appendChild(optionEl);
+    }
+    targetSelect.value = String(previousValue);
+    if (!targetSelect.value) targetSelect.value = String(LEADERBOARD_SPEED_TARGET_TILES[0]);
   }
 
   function resetUserInfo() {
@@ -1418,6 +1513,7 @@
       "account-summary-refresh-label": t("summaryRefresh"),
       "account-board-heading": t("boardHeading"),
       "account-board-subtitle": t("boardSubtitle"),
+      "account-board-undo-label": t("boardUndo"),
       "account-board-mode-label": t("boardMode"),
       "account-board-metric-label": t("boardMetric"),
       "account-board-refresh": t("boardRefresh"),
@@ -1441,11 +1537,15 @@
     if (passwordInput) passwordInput.setAttribute("placeholder", t("passwordPlaceholder"));
     if (loginCaptchaInput) loginCaptchaInput.setAttribute("placeholder", t("loginCaptchaPlaceholder"));
     if (loginCaptchaImage) loginCaptchaImage.setAttribute("alt", t("loginCaptchaLabel"));
+    var speedTargetSelect = byId("account-board-speed-target");
+    if (speedTargetSelect) speedTargetSelect.setAttribute("aria-label", t("boardSpeedTargetAria"));
     var boardFilterRow = global.document.querySelector(".account-board-filter-row");
     if (boardFilterRow) boardFilterRow.setAttribute("aria-label", t("boardFilterAria"));
     var boardSummaryRow = global.document.querySelector(".account-board-summary-row");
     if (boardSummaryRow) boardSummaryRow.setAttribute("aria-label", t("summaryAria"));
+    refreshUndoSelectOptions();
     refreshModeSelectOptions();
+    refreshSpeedTargetOptions();
     refreshMetricSelectOptions();
     syncLeaderboardMetricColumnHeader(getSelectedLeaderboardMetric());
 
@@ -1460,8 +1560,10 @@
     var resetPasswordBtn = byId("account-open-reset-password-btn");
     var refreshBtn = byId("account-board-refresh");
     var loginCaptchaRefreshBtn = byId("account-login-captcha-refresh");
+    var undoSelect = byId("account-board-undo");
     var modeSelect = byId("account-board-mode");
     var metricSelect = byId("account-board-metric");
+    var speedTargetSelect = byId("account-board-speed-target");
     var emailInput = byId("account-email");
     var passwordInput = byId("account-password");
     var loginCaptchaInput = byId("account-login-captcha-answer");
@@ -1482,15 +1584,30 @@
         refreshLoginCaptchaChallenge(true);
       });
     }
+    if (undoSelect) {
+      undoSelect.value = "no_undo";
+      undoSelect.addEventListener("change", function () {
+        refreshModeSelectOptions();
+        refreshMetricSelectOptions();
+        refreshLeaderboard(true);
+      });
+    }
     if (modeSelect) {
       modeSelect.value = DEFAULT_BOARD_MODE;
       modeSelect.addEventListener("change", function () {
+        refreshMetricSelectOptions();
         refreshLeaderboard(true);
       });
     }
     if (metricSelect) {
       metricSelect.value = DEFAULT_BOARD_METRIC;
       metricSelect.addEventListener("change", function () {
+        syncSpeedTargetVisibility();
+        refreshLeaderboard(true);
+      });
+    }
+    if (speedTargetSelect) {
+      speedTargetSelect.addEventListener("change", function () {
         refreshLeaderboard(true);
       });
     }

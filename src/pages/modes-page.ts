@@ -10,7 +10,6 @@ const MODES_PAGE_COPY: Record<
   {
     title: string;
     homeAria: string;
-    logoAlt: string;
     brandTitle: string;
     frequentTitle: string;
     tabListAria: string;
@@ -23,32 +22,29 @@ const MODES_PAGE_COPY: Record<
   zh: {
     title: "2048 模式选择",
     homeAria: "返回首页",
-    logoAlt: "2048 标志",
     brandTitle: "模式选择",
     frequentTitle: "常用模式",
     tabListAria: "模式分类",
     priority: {
       "2048.html": { title: "标准 4×4", subtitle: "不可撤回" },
       "undo_2048.html": { title: "经典 4×4", subtitle: "可撤回" },
-      "play.html?mode_key=board_5x5_pow2_no_undo": { title: "5×5", subtitle: "不可撤回" },
-      "relay_5x5.html": { title: "5×5 接力", subtitle: "测试版" }
+      "play.html?mode_key=board_3x3_pow2_no_undo": { title: "3×3", subtitle: "不可撤回" },
+      "palette.html": { title: "设置", subtitle: "主题与计时器" }
     },
     tabs: {
       standard: "标准",
       fibonacci: "斐波那契",
-      diagonal: "八方向",
-      capped: "封顶",
       special: "特殊玩法",
       tools: "记录与工具"
     },
     groups: [
       "经典 - 无撤回",
       "经典 - 可撤回",
-      "斐波那契 - 无撤回",
-      "斐波那契 - 可撤回",
-      "八方向模式",
+      "经典 - 八方向",
       "封顶模式",
       "禁止目标",
+      "斐波那契 - 无撤回",
+      "斐波那契 - 可撤回",
       "规则魔改",
       "记录与工具"
     ],
@@ -104,39 +100,36 @@ const MODES_PAGE_COPY: Record<
       "Practice_board.html?practice_fresh=1": "练习板",
       "history.html": "历史",
       "replay.html": "回放",
-      "palette.html": "主题色板",
+      "palette.html": "设置",
       "account.html": "排行榜"
     }
   },
   en: {
     title: "2048 Modes",
     homeAria: "Back to Home",
-    logoAlt: "2048 Logo",
     brandTitle: "Mode Selection",
     frequentTitle: "Common Modes",
     tabListAria: "Mode categories",
     priority: {
       "2048.html": { title: "Standard 4x4", subtitle: "No Undo" },
       "undo_2048.html": { title: "Classic 4x4", subtitle: "Undo" },
-      "play.html?mode_key=board_5x5_pow2_no_undo": { title: "5x5", subtitle: "No Undo" },
-      "relay_5x5.html": { title: "5x5 Relay", subtitle: "Beta" }
+      "play.html?mode_key=board_3x3_pow2_no_undo": { title: "3x3", subtitle: "No Undo" },
+      "palette.html": { title: "Settings", subtitle: "Themes & Timers" }
     },
     tabs: {
       standard: "Standard",
       fibonacci: "Fibonacci",
-      diagonal: "8 Directions",
-      capped: "Capped",
       special: "Special",
       tools: "Records & Tools"
     },
     groups: [
       "Classic - No Undo",
       "Classic - Undo",
-      "Fibonacci - No Undo",
-      "Fibonacci - Undo",
-      "8-Direction Modes",
+      "Classic - 8 Directions",
       "Capped Modes",
       "Target Ban",
+      "Fibonacci - No Undo",
+      "Fibonacci - Undo",
       "Rule Variants",
       "Records & Tools"
     ],
@@ -174,7 +167,7 @@ const MODES_PAGE_COPY: Record<
       "Practice_board.html?practice_fresh=1": "Practice Board",
       "history.html": "History",
       "replay.html": "Replay",
-      "palette.html": "Theme Palette",
+      "palette.html": "Settings",
       "account.html": "Leaderboard"
     }
   }
@@ -244,10 +237,6 @@ function resolveModesPageLang(): ModesPageLang {
   return "zh";
 }
 
-function resolveRelayLinkLabel(): string {
-  return resolveModesPageLang() === "en" ? "5x5 Relay Mode (MVP)" : "5×5 接力模式（试用版）";
-}
-
 function applyPriorityCardCopy(card: Element, copy: (typeof MODES_PAGE_COPY)[ModesPageLang]): void {
   const href = card.getAttribute("href") || "";
   const item = copy.priority[href];
@@ -268,8 +257,6 @@ function applyModesPageLanguage(): void {
 
   const homeLink = document.querySelector(".mode-brand-panel a");
   if (homeLink) homeLink.setAttribute("aria-label", copy.homeAria);
-  const logo = document.querySelector(".mode-brand-logo");
-  if (logo) logo.setAttribute("alt", copy.logoAlt);
   const title = document.querySelector(".mode-brand-title");
   if (title) title.textContent = copy.brandTitle;
   const frequent = document.querySelector(".mode-frequent-title");
@@ -293,20 +280,6 @@ function applyModesPageLanguage(): void {
   });
 }
 
-function ensureRelayModeEntry(): void {
-  if (typeof document === "undefined") return;
-  const existing = document.querySelector("a[data-mode-relay='5x5']");
-  if (existing) return;
-  const actionRow = document.querySelector(".mode-key-actions");
-  if (!actionRow) return;
-  const link = document.createElement("a");
-  link.className = "mode-hub-btn";
-  link.href = "relay_5x5.html";
-  link.setAttribute("data-mode-relay", "5x5");
-  link.textContent = resolveRelayLinkLabel();
-  actionRow.appendChild(link);
-}
-
 export function bootstrapModesPage(): void {
   if (typeof document === "undefined") {
     return;
@@ -318,8 +291,6 @@ export function bootstrapModesPage(): void {
   if (document.body) {
     document.body.setAttribute("data-page-family", "modes");
   }
-  ensureRelayModeEntry();
-
   window.addEventListener("uilanguagechange", () => {
     applyModesPageLanguage();
   });

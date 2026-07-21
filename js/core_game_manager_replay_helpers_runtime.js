@@ -50,6 +50,7 @@ var REPLAY_V1_EXT_MODE_KEY = 1;
 var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
 var REPLAY_V1_EXT_SEED = 4;
+var REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 var LEGACY_VRS_VARIANT_CONFIG_MAP = {
   "2x4": { key: "2x4", width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
   "3x3": { key: "3x3", width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
@@ -1509,6 +1510,7 @@ function createSerializedReplayV3(manager, source) {
     mode_family: resolveSerializedReplayV3ModeFamily(manager, source),
     rank_policy: resolveSerializedReplayV3RankPolicy(manager, source),
     special_rules_snapshot: resolveSerializedReplayV3SpecialRulesSnapshot(manager, source),
+    custom_secondary_timer_rule_text: typeof source.custom_secondary_timer_rule_text === "string" ? source.custom_secondary_timer_rule_text : "",
     challenge_id: resolveSerializedReplayV3ChallengeId(manager, source),
     seed: source.seed,
     actions: resolveSerializedReplayV3Actions(source)
@@ -1617,8 +1619,22 @@ function assignAutoSubmitPayloadFields(target, fields) {
   }
 }
 
+function calculateAutoSubmitBoardSum(finalBoard) {
+  var boardSum = 0;
+  for (var y = 0; y < finalBoard.length; y += 1) {
+    var row = Array.isArray(finalBoard[y]) ? finalBoard[y] : [];
+    for (var x = 0; x < row.length; x += 1) {
+      var numeric = Math.floor(Number(row[x]));
+      if (!Number.isFinite(numeric) || numeric <= 0) continue;
+      boardSum = Math.min(Number.MAX_SAFE_INTEGER, boardSum + numeric);
+    }
+  }
+  return boardSum;
+}
+
 function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
   var replayPayload = resolveAutoSubmitReplayPayload(manager);
+  var finalBoard = getFinalBoardMatrix(manager);
   return {
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height,
@@ -1626,8 +1642,8 @@ function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
     ranked_bucket: manager.rankedBucket, mode_family: manager.modeFamily, rank_policy: manager.rankPolicy,
     challenge_id: manager.challengeId || null,
     special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
-    score: manager.score, best_tile: bestTileValue, duration_ms: getDurationMs(manager),
-    final_board: getFinalBoardMatrix(manager), ended_at: endedAt, replay: replayPayload.replay,
+    score: manager.score, board_sum: calculateAutoSubmitBoardSum(finalBoard), best_tile: bestTileValue, duration_ms: getDurationMs(manager),
+    final_board: finalBoard, ended_at: endedAt, replay: replayPayload.replay,
     replay_string: replayPayload.replayString
   };
 }
@@ -2455,6 +2471,12 @@ function applyV1RplStructuredReplayEnvelope(manager, envelope, replayModeConfig)
   });
   setRuntimeDisableSessionSyncForReplay(manager, true);
   restartWithBoard(manager, envelope.initialBoard, replayModeConfig, { asReplay: true });
+  if (
+    typeof envelope.customSecondaryTimerRuleText === "string" &&
+    typeof applyCustomSecondaryTimerRuleText === "function"
+  ) {
+    applyCustomSecondaryTimerRuleText(manager, envelope.customSecondaryTimerRuleText);
+  }
 }
 
 function parseV9RplBufferLike(sourceBuffer) {
@@ -3248,6 +3270,11 @@ function resolveReplayV1RulesetFromExt(decoded) {
   return ruleset === "fibonacci" ? "fibonacci" : (ruleset === "pow2" ? "pow2" : "");
 }
 
+function resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded) {
+  var payload = resolveReplayV1ExtPayload(decoded, REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS);
+  return decodeReplayV1Utf8Text(payload).trim();
+}
+
 function resolveReplayV1ModeKeyByShape(width, height, hasUndo) {
   if (width === 4 && height === 4) return hasUndo ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo";
   if (width === 4 && height === 3) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
@@ -3288,7 +3315,14 @@ function createReplayV1StructuredReplayEnvelope(manager, decoded) {
   var ruleset = resolveReplayV1RulesetFromModeKey(manager, modeKey, decoded);
   var initialBoard = codec.replayV1InitTilesToBoard(decoded.width, decoded.height, decoded.initTiles || [], ruleset);
   var actions = codec.replayV1RecordsToReplayActions(decoded.records || [], decoded.width, ruleset);
-  return { kind: "v1rpl", modeKey: modeKey, initialBoard: initialBoard, replayMoves: actions.replayMoves, replaySpawns: actions.replaySpawns };
+  return {
+    kind: "v1rpl",
+    modeKey: modeKey,
+    initialBoard: initialBoard,
+    replayMoves: actions.replayMoves,
+    replaySpawns: actions.replaySpawns,
+    customSecondaryTimerRuleText: resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded)
+  };
 }
 
 function parseV1RplBase64ReplayEnvelopeByBody(manager, encodedBase64) {
@@ -3351,6 +3385,7 @@ function hasReplayV3IncompatibleActionsForV4(manager) {
 
 function shouldSerializeReplayAsV4(manager) {
   if (!manager) return false;
+  if (typeof manager.customSecondaryTimerRuleText === "string" && manager.customSecondaryTimerRuleText.trim()) return false;
   if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) return false;
   if (!GameManager.REPLAY_V4_MODE_KEY_TO_CODE || !GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey]) return false;
   if (hasReplayV3IncompatibleActionsForV4(manager)) return false;
@@ -3389,6 +3424,11 @@ function createReplayV1ExtRecords(session) {
   if (ruleset !== "pow2" && ruleset !== "fibonacci") return records;
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_RULESET, ruleset);
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CHALLENGE_ID, session && session.challenge_id);
+  appendReplayV1ExtRecord(
+    records,
+    REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS,
+    session && session.custom_secondary_timer_rule_text
+  );
   var seedValue = Math.floor(Number(session && session.seed));
   if (Number.isInteger(seedValue) && seedValue >= 0) {
     appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
@@ -3896,7 +3936,10 @@ function createReplayV3JsonEnvelope(manager, replaySource) {
     modeKey: resolveReplayV3ModeKeyFromEnvelope(manager, normalizedSource),
     seed: Number.isFinite(parsedSeed) ? parsedSeed : null,
     actions: actions,
-    specialRulesSnapshot: resolveReplayV3SpecialRulesSnapshotForEnvelope(normalizedSource)
+    specialRulesSnapshot: resolveReplayV3SpecialRulesSnapshotForEnvelope(normalizedSource),
+    customSecondaryTimerRuleText: typeof normalizedSource.custom_secondary_timer_rule_text === "string"
+      ? normalizedSource.custom_secondary_timer_rule_text
+      : ""
   };
 }
 
@@ -3915,6 +3958,12 @@ function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
     throw "Missing v3 replay seed";
   }
   restartWithSeed(manager, envelope.seed, replayModeConfig);
+  if (
+    typeof envelope.customSecondaryTimerRuleText === "string" &&
+    typeof applyCustomSecondaryTimerRuleText === "function"
+  ) {
+    applyCustomSecondaryTimerRuleText(manager, envelope.customSecondaryTimerRuleText);
+  }
   applyReplayImportActions(manager, {
     replayMoves: Array.isArray(envelope && envelope.actions) ? envelope.actions : [],
     replaySpawns: null

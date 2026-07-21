@@ -25,7 +25,7 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260713-night-pages-v1");
+    expect(html).toContain("style/main.css?v=20260721-float-containment-v1");
     expect(html).not.toContain("style/main.css?v=20260626-breakout-window-controls");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-burst");
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-favicon");
@@ -42,7 +42,7 @@ describe("home user display style", () => {
     expect(html).not.toContain("style/main.css?v=20260607-userdisplay");
   });
 
-  it("keeps the top profile button on the animated icon system", () => {
+  it("keeps the profile animation for icon mode without excluding text mode", () => {
     const html = readFileSync("2048.html", "utf8");
     const css = readCssEntry("style/main.css");
 
@@ -56,7 +56,7 @@ describe("home user display style", () => {
     expect(html).toContain('width="34" height="34"');
     expect(css).toContain("width: 34px !important;");
     expect(css).toContain("stroke-width: 1.65;");
-    expect(css).toContain('.top-action-buttons .top-action-btn:not(#top-user-profile-btn)');
+    expect(css).not.toContain('.top-action-buttons .top-action-btn:not(#top-user-profile-btn)');
     expect(css).toContain("@keyframes profile-line-draw");
     expect(css).toContain("@keyframes profile-origin-fade");
   });

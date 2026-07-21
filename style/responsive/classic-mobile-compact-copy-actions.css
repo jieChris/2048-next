@@ -28,6 +28,7 @@
 
   .tile .tile-inner {
     font-size: 35px;
+    line-height: 1;
   }
 
   .game-message p {

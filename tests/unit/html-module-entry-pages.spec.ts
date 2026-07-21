@@ -76,6 +76,9 @@ describe("module entry html pages", () => {
     expect(html).toContain('id="palette-editor-fib"');
     expect(html).toContain('id="palette-preview-pow2"');
     expect(html).toContain('id="palette-preview-fib"');
+    expect(html).toContain('id="timer-settings"');
+    expect(html).toContain('id="custom-secondary-timer-editor"');
+    expect(html).not.toContain('id="custom-secondary-timer-editor" open');
     expect(html).not.toContain('id="palette-preview-legend"');
   });
 

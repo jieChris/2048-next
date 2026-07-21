@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 
 test.describe("History smoke: mode and filter", () => {
-  test("supports mode filter, keyword and score sort", async ({ page }) => {
+  test("supports undo-first mode filter and keyword search", async ({ page }) => {
     await mockAcceptedBetaAccess(page);
 
     const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
@@ -62,23 +62,47 @@ test.describe("History smoke: mode and filter", () => {
 
     await page.click("#history-load-btn");
 
-    const optionCount = await page.locator("#history-mode option").count();
-    expect(optionCount).toBeGreaterThan(1);
+    await expect(page.locator("#history-import-btn")).toHaveCount(0);
+    await expect(page.locator("#history-import-replace-btn")).toHaveCount(0);
+    await expect(page.locator("#history-import-file")).toHaveCount(0);
+    await expect(page.locator("#history-keyword")).toBeVisible();
+    await expect(page.locator("#history-undo")).toHaveValue("no_undo");
+    await expect(page.locator("#history-mode")).toHaveValue("standard_4x4_pow2_no_undo");
+    await expect(page.locator(".history-item")).toHaveCount(1);
+    await expect(page.locator(".history-item-head").first()).toContainText("分数: 512");
+
+    const noUndoOptions = await page.locator("#history-mode option").evaluateAll((options) =>
+      options.map((option) => ({ value: (option as HTMLOptionElement).value, label: option.textContent || "" }))
+    );
+    expect(noUndoOptions.some((option) => option.value === "standard_4x4_pow2_no_undo")).toBeTruthy();
+    expect(noUndoOptions.some((option) => option.value === "classic_4x4_pow2_undo")).toBeFalsy();
+    expect(noUndoOptions.some((option) => option.label.includes("无撤回"))).toBeFalsy();
+
+    await page.selectOption("#history-undo", "undo");
+    await expect(page.locator("#history-mode")).toHaveValue("classic_4x4_pow2_undo");
+    const undoOptions = await page.locator("#history-mode option").evaluateAll((options) =>
+      options.map((option) => ({ value: (option as HTMLOptionElement).value, label: option.textContent || "" }))
+    );
+    expect(undoOptions.some((option) => option.value === "practice")).toBeTruthy();
+    expect(undoOptions.some((option) => option.value === "standard_4x4_pow2_no_undo")).toBeFalsy();
+    expect(undoOptions.some((option) => option.label.includes("可撤回"))).toBeFalsy();
 
     await page.selectOption("#history-mode", "practice");
     await expect(page.locator(".history-item")).toHaveCount(1);
     await expect(page.locator(".history-item-head").first()).toContainText("分数: 2048");
 
-    await page.selectOption("#history-mode", "");
     await page.fill("#history-keyword", "kw_hit");
     await page.press("#history-keyword", "Enter");
     await expect(page.locator(".history-item")).toHaveCount(1);
     await expect(page.locator(".history-item-head").first()).toContainText("分数: 2048");
 
     await page.fill("#history-keyword", "");
-    await page.selectOption("#history-sort", "score_desc");
+    await page.selectOption("#history-mode", "classic_4x4_pow2_undo");
+    await expect(page.locator(".history-item")).toHaveCount(1);
+    await expect(page.locator(".history-item-head").first()).toContainText("分数: 4096");
 
-    const firstHead = await page.locator(".history-item-head").first().textContent();
-    expect(firstHead || "").toContain("分数: 4096");
+    await page.setViewportSize({ width: 390, height: 844 });
+    const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(hasHorizontalOverflow).toBeFalsy();
   });
 });

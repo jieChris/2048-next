@@ -6,6 +6,7 @@ import {
   type GameManagerBaseHelpersRuntimeWindowLike
 } from "../../src/bootstrap/game-manager-base-helpers-runtime";
 import {
+  applyCustomSecondaryTimerRuleText,
   applySecondaryTimerRowsState,
   applySecondaryTimerExpandedParentsState,
   bindSecondaryTimerParentToggleEvents,
@@ -59,6 +60,7 @@ import {
   safeClonePlain,
   setSecondaryTimerParentExpanded,
   stampSecondaryTimerDescriptor,
+  stampCustomSecondaryTimersForBoard,
   stampSecondaryTimersForMergedValue,
   toggleSecondaryTimerParentExpanded,
   tryHandleCoreRawValue
@@ -83,6 +85,7 @@ const expectedRuntime = {
   safeClonePlain,
   hasOwnKey,
   readOptionValue,
+  applyCustomSecondaryTimerRuleText,
   normalizeSecondaryTimerValue,
   isSecondaryTimerPowerOfTwo,
   getSecondaryTimerSlotIds,
@@ -112,6 +115,7 @@ const expectedRuntime = {
   refreshSecondaryTimerRowsVisibility,
   resetSecondaryTimerRowsForSetup,
   stampSecondaryTimerDescriptor,
+  stampCustomSecondaryTimersForBoard,
   stampSecondaryTimersForMergedValue,
   invalidateSecondaryTimersByLimit,
   collectSecondaryTimerRowsState,

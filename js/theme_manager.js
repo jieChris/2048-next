@@ -26,6 +26,42 @@
     border: "Border",
     glow: "Glow"
   };
+  var COLD_CYAN_TILE_COLORS = [
+    "#E7F7F6", "#A9DAD7", "#4ABDB7", "#147F86",
+    "#8BCDD0", "#287D99", "#35B9B3", "#0C5C70",
+    "#73B9D2", "#1B6D98", "#55C4BB", "#08495F",
+    "#4CA5C3", "#096A74", "#4D9BD5", "#05384B"
+  ];
+  var COLD_CYAN_TILE_TEXT = [
+    "#082A30", "#082A30", "#082A30", "#F7FEFD",
+    "#082A30", "#F7FEFD", "#082A30", "#F7FEFD",
+    "#082A30", "#F7FEFD", "#082A30", "#F7FEFD",
+    "#082A30", "#F7FEFD", "#082A30", "#F7FEFD"
+  ];
+  var WARM_GLAZE_TILE_COLORS = [
+    "#F7E3C3", "#E9A85F", "#C95E4B", "#F28E3B",
+    "#B53A32", "#F2B33D", "#C96B35", "#F1C94A",
+    "#A9493F", "#E99138", "#8F3248", "#D86C55",
+    "#6E2948", "#B94062", "#7A3E24", "#4C1E45"
+  ];
+  var WARM_GLAZE_TILE_TEXT = [
+    "#21100C", "#21100C", "#21100C", "#21100C",
+    "#FFF9F2", "#21100C", "#21100C", "#21100C",
+    "#FFF9F2", "#21100C", "#FFF9F2", "#21100C",
+    "#FFF9F2", "#FFF9F2", "#FFF9F2", "#FFF9F2"
+  ];
+  var JADE_OCHRE_TILE_COLORS = [
+    "#F4EAD8", "#B6A15F", "#315F54", "#C56F52",
+    "#806E2D", "#5D8A7A", "#7B3947", "#D3B975",
+    "#28463F", "#A7593F", "#493144", "#9D8248",
+    "#1F3935", "#B46858", "#4F2B36", "#102F28"
+  ];
+  var JADE_OCHRE_TILE_TEXT = [
+    "#15110D", "#15110D", "#FFFCF6", "#15110D",
+    "#FFFCF6", "#15110D", "#FFFCF6", "#15110D",
+    "#FFFCF6", "#FFFCF6", "#FFFCF6", "#15110D",
+    "#FFFCF6", "#15110D", "#FFFCF6", "#FFFCF6"
+  ];
   var BUILTIN_TILE_PALETTES = [
     {
       id: "eyestrain-soft",
@@ -58,6 +94,30 @@
         "#a7a095", "#9f978d", "#978f85", "#8f867d",
         "#877e75", "#80766d", "#786d65", "#70655d"
       ]
+    },
+    {
+      id: "cold-cyan-steps",
+      name: "冷青·跃阶",
+      pow2: COLD_CYAN_TILE_COLORS,
+      fibonacci: COLD_CYAN_TILE_COLORS,
+      pow2Text: COLD_CYAN_TILE_TEXT,
+      fibonacciText: COLD_CYAN_TILE_TEXT
+    },
+    {
+      id: "warm-glaze-steps",
+      name: "暖釉·跃阶",
+      pow2: WARM_GLAZE_TILE_COLORS,
+      fibonacci: WARM_GLAZE_TILE_COLORS,
+      pow2Text: WARM_GLAZE_TILE_TEXT,
+      fibonacciText: WARM_GLAZE_TILE_TEXT
+    },
+    {
+      id: "jade-ochre",
+      name: "翡翠·赭金",
+      pow2: JADE_OCHRE_TILE_COLORS,
+      fibonacci: JADE_OCHRE_TILE_COLORS,
+      pow2Text: JADE_OCHRE_TILE_TEXT,
+      fibonacciText: JADE_OCHRE_TILE_TEXT
     }
   ];
 
@@ -219,13 +279,15 @@
     };
   }
 
+  var CLASSIC_TILE_COLORS = [
+    "#eee4da", "#ede0c8", "#f2b179", "#f59563",
+    "#f67c5f", "#f65e3b", "#edcf72", "#edcc61",
+    "#edc850", "#edc53f", "#edc22e", "#aa44cc",
+    "#662288", "#331155", "#000000", "#111111"
+  ];
+
   var themes = {
-    classic: makeTheme("classic", "经典", [
-      "#eee4da", "#ede0c8", "#f2b179", "#f59563",
-      "#f67c5f", "#f65e3b", "#edcf72", "#edcc61",
-      "#edc850", "#edc53f", "#edc22e", "#aa44cc",
-      "#662288", "#331155", "#000000", "#111111"
-    ], {
+    classic: makeTheme("classic", "经典", CLASSIC_TILE_COLORS.slice(), {
       lightTextFrom: 2,
       gradient: false,
       neon: false,
@@ -240,6 +302,23 @@
         buttonText: "#fff",
         buttonHoverBg: "#7f6a56",
         buttonHoverText: "#fff"
+      }
+    }),
+    mist_cyan: makeTheme("mist_cyan", "雾青灰", CLASSIC_TILE_COLORS.slice(), {
+      lightTextFrom: 2,
+      gradient: false,
+      neon: false,
+      timer: {
+        panelBg: "#fbfdfc",
+        panelText: "#3d4f52",
+        panelLabel: "#637476",
+        cellBg: "#edf3f2",
+        cellText: "#3d4f52",
+        cellShadow: "0 0 0 1px rgba(47,92,99,0.18) inset",
+        buttonBg: "#fffef9",
+        buttonText: "#3d4f52",
+        buttonHoverBg: "#edf3f2",
+        buttonHoverText: "#1b5262"
       }
     }),
     ocean: makeTheme("ocean", "海洋之风", [
@@ -1079,7 +1158,7 @@
 
   function buildFollowThemePaletteTextColors(theme, ruleset, backgroundColors) {
     var textColors = buildDefaultPaletteTextColors(theme, ruleset, backgroundColors);
-    if (theme && theme.id === "classic" && ruleset === "pow2") {
+    if (theme && (theme.id === "classic" || theme.id === "mist_cyan") && ruleset === "pow2") {
       for (var i = 6; i <= 10; i++) {
         textColors[i] = "#f9f6f2";
       }
@@ -1383,8 +1462,9 @@
     var uiTheme = resolveUiTheme(theme);
     var t = uiTheme.timer;
     var css = "";
-    css += "#timer{background:" + t.panelBg + ";color:" + t.panelText + ";box-shadow:0 0 10px " + rgba(t.panelBg, 0.3) + ";}\n";
-    css += "#timer:after{color:" + t.panelLabel + ";}\n";
+    css += "#timer,.timer-leaderboard-summary{background:" + t.panelBg + ";color:" + t.panelText + ";box-shadow:0 0 10px " + rgba(t.panelBg, 0.3) + ";}\n";
+    css += "#timer:after,.timer-leaderboard-summary:after{color:" + t.panelLabel + ";}\n";
+    css += ".timer-leaderboard-summary:after{font-size:13px;}\n";
     css += ".timertile{background:" + t.cellBg + ";color:" + t.cellText + ";box-shadow:" + t.cellShadow + ";}\n";
     css += ".timer-scroll-btn{background:" + t.cellBg + ";color:" + t.cellText + ";}\n";
     css += ".timer-scroll-btn:hover{background:" + t.cellBg + ";color:" + t.cellText + ";}\n";
@@ -1393,6 +1473,46 @@
 
   function getUiTokens(theme) {
     var uiTheme = resolveUiTheme(theme);
+    if (uiTheme.id === "classic") {
+      return {
+        pageBgA: "#faf8ef",
+        pageBgB: "#faf8ef",
+        text: "#776e65",
+        muted: "#8e857a",
+        border: "#d8d4d0",
+        surface: "#f9f6f2",
+        surfaceSoft: "#eee4da",
+        buttonBg: "#8f7a66",
+        buttonHoverBg: "#7f6a56",
+        buttonText: "#f9f6f2",
+        gameBg: "#bbada0",
+        gridCellBg: "rgba(238,228,218,0.35)",
+        link: "#8f7a66",
+        linkHover: "#6f665d",
+        shadow: "0 6px 20px rgba(110,94,78,0.12)",
+        panelLine: "rgba(143,122,102,0.26)"
+      };
+    }
+    if (uiTheme.id === "mist_cyan") {
+      return {
+        pageBgA: "#f3f6f5",
+        pageBgB: "#f3f6f5",
+        text: "#3d4f52",
+        muted: "#637476",
+        border: "#b7c7c5",
+        surface: "#fbfdfc",
+        surfaceSoft: "#edf3f2",
+        buttonBg: "#20383d",
+        buttonHoverBg: "#2d4c52",
+        buttonText: "#fffdf6",
+        gameBg: "#b8c9c7",
+        gridCellBg: "#dce7e5",
+        link: "#256b7d",
+        linkHover: "#1b5262",
+        shadow: "0 6px 20px rgba(42,74,78,0.12)",
+        panelLine: "rgba(47,92,99,0.26)"
+      };
+    }
     var accentA = colorForIndex(uiTheme, 0, uiTheme.colors.length);
     var accentB = colorForIndex(uiTheme, 5, uiTheme.colors.length);
     var accentC = colorForIndex(uiTheme, 10, uiTheme.colors.length);
@@ -1450,8 +1570,8 @@
     css += ".theme-preview-grid,.final-board-grid{background:" + mixHex(t.gameBg, t.surface, 0.3) + ";}\n";
     css += ".final-board-cell,.final-board-cell-empty{background:" + t.gridCellBg + ";color:" + t.muted + ";}\n";
     css += ".portal-table th,.portal-table td{border-bottom-color:" + t.panelLine + ";color:" + t.text + ";}\n";
-    css += "input[type=range]::-webkit-slider-runnable-track{background:" + mixHex(t.border, t.surface, 0.4) + ";}\n";
-    css += "input[type=range]::-webkit-slider-thumb{background:" + colorForIndex(uiTheme, 8, uiTheme.colors.length) + ";}\n";
+    css += "input[type=range]::-webkit-slider-runnable-track{background:" + (uiTheme.id === "mist_cyan" ? "var(--app-border-control)" : mixHex(t.border, t.surface, 0.4)) + ";}\n";
+    css += "input[type=range]::-webkit-slider-thumb{background:" + (uiTheme.id === "mist_cyan" ? "var(--app-accent)" : colorForIndex(uiTheme, 8, uiTheme.colors.length)) + ";}\n";
 
     if (uiTheme.neon) {
       css += ".game-container,.top-action-btn,.restart-button,.mode-hub-btn,.portal-card,.history-item{box-shadow:0 0 0 1px " + rgba(t.border, 0.6) + ",0 0 18px " + rgba(colorForIndex(uiTheme, 0, uiTheme.colors.length), 0.22) + ",0 10px 28px rgba(6,8,18,0.52);}\n";
@@ -1480,8 +1600,33 @@
     return css;
   }
 
-  function nightBackgroundCss() {
+  function nightBackgroundCss(theme) {
     var css = "";
+    if (resolveUiTheme(theme).id === "mist_cyan") {
+      css += "html[data-night-background='1']{color-scheme:dark;--night-page-bg:var(--app-page-bg);--night-page-bg-deep:var(--app-page-bg);--night-surface:var(--app-surface-light);--night-surface-alt:var(--app-surface-soft);--night-surface-soft:var(--app-accent-soft);--night-line:var(--app-border-structure);--night-line-strong:var(--app-border-control);--night-ink:var(--app-text-strong);--night-ink-soft:var(--app-text);--night-ink-dim:var(--app-text-muted);--night-accent:var(--app-accent);--night-accent-strong:var(--app-link-hover);--night-button:var(--app-surface-control);--night-button-hover:var(--app-accent-soft);--night-grid:var(--app-surface-empty-tile);background:var(--app-page-bg) !important;background-image:none !important;}\n";
+      css += "html[data-night-background='1'] body{background:var(--app-page-bg) !important;background-image:none !important;color:var(--app-text) !important;}\n";
+      css += "html[data-night-background='1'] body::before,html[data-night-background='1'] body::after{display:none !important;}\n";
+      css += "html[data-night-background='1'] h1.title,html[data-night-background='1'] h1.title a,html[data-night-background='1'] .mode-group-title,html[data-night-background='1'] .replay-modal-content h3,html[data-night-background='1'] .settings-modal-content h3,html[data-night-background='1'] .announcement-modal-content h3{color:var(--app-text-strong) !important;}\n";
+      css += "html[data-night-background='1'] p,html[data-night-background='1'] .game-intro,html[data-night-background='1'] .game-explanation,html[data-night-background='1'] .settings-note,html[data-night-background='1'] .stats-left,html[data-night-background='1'] .stats-right,html[data-night-background='1'] .site-record-footer p{color:var(--app-text) !important;}\n";
+      css += "html[data-night-background='1'] a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button){color:var(--app-link) !important;}\n";
+      css += "html[data-night-background='1'] hr{border-bottom-color:var(--app-border-structure) !important;}\n";
+      css += "html[data-night-background='1'] .score-container,html[data-night-background='1'] .best-container,html[data-night-background='1'] #timer,html[data-night-background='1'] .timer-container,html[data-night-background='1'] .timer-leaderboard-summary{background:var(--app-action-muted-bg) !important;color:var(--app-text-strong) !important;box-shadow:0 7px 18px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.04) !important;}\n";
+      css += "html[data-night-background='1'] .score-container:after,html[data-night-background='1'] .best-container:after,html[data-night-background='1'] #timer:after,html[data-night-background='1'] .timer-container:after,html[data-night-background='1'] .timer-leaderboard-summary:after{color:var(--app-text-muted) !important;}\n";
+      css += "html[data-night-background='1'] .timer-scroll-btn,html[data-night-background='1'] .timerbox-toggle-btn,html[data-night-background='1'] .mobile-hint-toggle-btn,html[data-night-background='1'] .stats-panel-toggle{background:var(--app-surface-control) !important;color:var(--app-text-strong) !important;border:1px solid var(--app-border-control) !important;box-shadow:0 7px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.04) !important;}\n";
+      css += "html[data-night-background='1'] .timer-scroll-btn:hover,html[data-night-background='1'] .timerbox-toggle-btn:hover,html[data-night-background='1'] .mobile-hint-toggle-btn:hover,html[data-night-background='1'] .stats-panel-toggle:hover{background:var(--app-accent-soft) !important;color:var(--app-link-hover) !important;}\n";
+      css += "html[data-night-background='1'] .timertile:not([class*='timer-legend-']),html[data-night-background='1'] .timer-leaderboard-row .timer-leaderboard-name-tile{background:var(--app-surface-soft) !important;color:var(--app-text-strong) !important;box-shadow:inset 0 0 0 1px var(--app-border-structure) !important;}\n";
+      css += "html[data-night-background='1'] .game-container{background:var(--app-surface-board) !important;box-shadow:0 12px 28px rgba(0,0,0,0.24),inset 0 0 0 1px rgba(255,255,255,0.04) !important;border:none !important;}\n";
+      css += "html[data-night-background='1'] .grid-cell{background:var(--app-surface-empty-tile) !important;box-shadow:none !important;}\n";
+      css += "html[data-night-background='1'] .game-container .game-message{background:var(--app-surface-overlay) !important;color:var(--app-text-strong) !important;}\n";
+      css += "html[data-night-background='1'] .game-container .game-message.game-won{background:color-mix(in srgb,var(--app-milestone) 72%,transparent) !important;}\n";
+      css += "html[data-night-background='1'] .game-container .game-message.game-over{background:var(--app-surface-overlay) !important;}\n";
+      css += "html[data-night-background='1'] .restart-button,html[data-night-background='1'] .game-container .game-message a{background:var(--app-action-bg) !important;color:var(--app-text-on-action) !important;}\n";
+      css += "html[data-night-background='1'] .top-action-btn,html[data-night-background='1'] .replay-button,html[data-night-background='1'] .replay-modal-actions .replay-button,html[data-night-background='1'] .replay-control-btn,html[data-night-background='1'] .import-replay-button,html[data-night-background='1'] .mode-hub-btn{background:var(--app-surface-control) !important;color:var(--app-text-strong) !important;border-color:var(--app-border-control) !important;box-shadow:0 7px 16px rgba(0,0,0,0.18),inset 0 1px 0 rgba(255,255,255,0.04) !important;}\n";
+      css += "html[data-night-background='1'] .top-action-btn:hover,html[data-night-background='1'] .replay-button:hover,html[data-night-background='1'] .replay-modal-actions .replay-button:hover,html[data-night-background='1'] .replay-control-btn:hover,html[data-night-background='1'] .mode-hub-btn:hover{background:var(--app-accent-soft) !important;color:var(--app-link-hover) !important;}\n";
+      css += "html[data-night-background='1'] .top-action-btn svg,html[data-night-background='1'] .restart-button svg{stroke:currentColor !important;}\n";
+      css += "html[data-night-background='1'] .replay-modal-content,html[data-night-background='1'] .portal-card,html[data-night-background='1'] .history-item,html[data-night-background='1'] .mode-hub,html[data-night-background='1'] .replay-controls-panel,html[data-night-background='1'] .settings-modal-content,html[data-night-background='1'] .announcement-modal-content,html[data-night-background='1'] .mobile-hint-modal-content,html[data-night-background='1'] .mobile-hint-body{background:var(--app-surface-light) !important;border-color:var(--app-border-structure) !important;color:var(--app-text) !important;box-shadow:0 14px 30px rgba(0,0,0,0.24),inset 0 1px 0 rgba(255,255,255,0.04) !important;}\n";
+      return css;
+    }
     css += "html[data-night-background='1']{background:linear-gradient(180deg,#101726 0%,#0b1220 52%,#070d16 100%) !important;color-scheme:dark;}\n";
     css += "html[data-night-background='1'] body{background:transparent !important;color:#ece2d3 !important;}\n";
     css += "html[data-night-background='1'] h1.title,html[data-night-background='1'] h1.title a,html[data-night-background='1'] .mode-group-title,html[data-night-background='1'] .replay-modal-content h3,html[data-night-background='1'] .settings-modal-content h3,html[data-night-background='1'] .announcement-modal-content h3{color:#ece2d3 !important;}\n";
@@ -1516,26 +1661,37 @@
 
   function buildThemeCss(theme) {
     var css = "";
+    var uiTheme = resolveUiTheme(theme);
     var activeTilePalette = resolveActiveTilePalette(theme);
     var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
     var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
     var pow2PaletteColors = pow2PaletteStyles.background;
     var fibPaletteColors = fibPaletteStyles.background;
-    if (resolveUiTheme(theme).id === "classic") {
+    if (uiTheme.id === "classic") {
       // Authentic 2048 looks
-      css += "html, body { background: #faf8ef !important; color: #776e65 !important; }\n";
+      css += "html, body { background: #faf8ef !important; background-image: none !important; color: #776e65 !important; }\n";
       css += ".game-container { background: #bbada0 !important; border-radius: 6px !important; border: none !important; box-shadow: none !important; }\n";
-      css += ".grid-cell { background: #cdc1b4 !important; box-shadow: none !important; border-radius: 3px !important; }\n";
+      css += ".grid-cell { background: rgba(238, 228, 218, 0.35) !important; box-shadow: none !important; border-radius: 3px !important; }\n";
       css += ".tile .tile-inner { border-radius: 3px !important; box-shadow: none !important; font-weight: bold !important; text-shadow: none !important; }\n";
       css += "h1.title { color: #776e65 !important; font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif !important; font-weight: 700 !important; }\n";
       css += "p, .game-intro, .game-explanation { color: #776e65 !important; font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif !important; }\n";
       css += ".score-container, .best-container { background: #bbada0 !important; color: #f9f6f2 !important; box-shadow: none !important; border-radius: 3px !important; }\n";
       css += ".score-container:after, .best-container:after { color: #eee4da !important; opacity: 0.7; }\n";
-      css += ".restart-button { background: #8f7a66 !important; color: #f9f6f2 !important; border-radius: 3px !important; box-shadow: none !important; font-weight: bold; }\n";
-      css += "a { color: #8f7a66 !important; font-weight: bold; text-shadow: none !important; }\n";
-      css += ".mode-hub-btn { color: #f9f6f2 !important; }\n";
-      css += ".mode-hub-btn:hover { color: #f9f6f2 !important; }\n";
+      css += ".restart-button:not(.top-action-btn), .game-container .game-message a { background: #8f7a66 !important; color: #f9f6f2 !important; border-radius: 3px !important; box-shadow: none !important; font-weight: bold; }\n";
       css += ".top-action-btn { background: #8f7a66 !important; color: #f9f6f2 !important; border-radius: 3px !important; box-shadow: none !important; }\n";
+      css += "a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button) { color: #8f7a66 !important; text-shadow: none !important; }\n";
+    }
+    if (uiTheme.id === "mist_cyan") {
+      css += "html, body { background: var(--app-page-bg) !important; background-image: none !important; color: var(--app-text) !important; }\n";
+      css += ".game-container { background: var(--app-surface-board) !important; border-radius: 6px !important; border: none !important; box-shadow: none !important; }\n";
+      css += ".grid-cell { background: var(--app-surface-empty-tile) !important; box-shadow: none !important; border-radius: 3px !important; }\n";
+      css += ".tile .tile-inner { border-radius: 3px !important; box-shadow: none !important; font-weight: bold !important; text-shadow: none !important; }\n";
+      css += "h1.title { color: var(--app-text-strong) !important; font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif !important; font-weight: 700 !important; }\n";
+      css += "p, .game-intro, .game-explanation { color: var(--app-text) !important; font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif !important; }\n";
+      css += ".score-container, .best-container { background: var(--app-surface-light) !important; color: var(--app-text-strong) !important; box-shadow: 0 6px 16px rgba(42,74,78,0.1) !important; border-radius: 6px !important; }\n";
+      css += ".score-container:after, .best-container:after { color: var(--app-text-muted) !important; opacity: 1; }\n";
+      css += ".restart-button:not(.top-action-btn), .game-container .game-message a { background: var(--app-action-bg) !important; color: var(--app-text-on-action) !important; border-radius: var(--app-radius-control) !important; font-weight: bold; }\n";
+      css += "a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button) { color: var(--app-link) !important; text-shadow: none !important; }\n";
     }
     if (theme.id === "yanyuan") {
       css += "html,body{background:#f8f3ec !important;color:#6d564d !important;}\n";
@@ -2107,9 +2263,9 @@
     }
     
     css += pageCss(theme);
-    if (resolveUiTheme(theme).id === "classic") {
-      css += ".restart-button,.top-action-btn,.replay-button,.replay-modal-actions .replay-button,.replay-control-btn,.import-replay-button,.game-container .game-message a,.game-container .game-message a.export-replay-button,.game-container .game-message a.import-replay-button,.game-container .game-message a.undo-button,.mode-hub-btn{color:#ffffff !important;}\n";
-      css += ".top-action-btn svg,.restart-button svg{stroke:#ffffff !important;}\n";
+    if (uiTheme.id === "classic" || uiTheme.id === "mist_cyan") {
+      css += ".restart-button:not(.top-action-btn),.game-container .game-message a{color:var(--app-text-on-action) !important;}\n";
+      css += ".top-action-btn svg,.restart-button svg{stroke:currentColor !important;}\n";
     }
 
     if (theme.horse_year) {
@@ -2206,7 +2362,7 @@
     
     css += timerCss(theme);
     css += legendCss(theme, pow2PaletteColors);
-    css += nightBackgroundCss();
+    css += nightBackgroundCss(theme);
     css += lowPerfCss();
     return css;
   }
@@ -2358,8 +2514,11 @@
   function syncTimerLegendStyles() {
     if (typeof document === "undefined") return;
     var cache = {};
-    for (var i = 0; i < TIMER_VALUES.length; i++) {
-      var slot = TIMER_VALUES[i];
+    var timerValues = typeof GameManager !== "undefined" && Array.isArray(GameManager.TIMER_SLOT_IDS)
+      ? GameManager.TIMER_SLOT_IDS
+      : TIMER_VALUES;
+    for (var i = 0; i < timerValues.length; i++) {
+      var slot = timerValues[i];
       var nodes = document.querySelectorAll(".timer-legend-" + String(slot));
       for (var j = 0; j < nodes.length; j++) {
         var node = nodes[j];

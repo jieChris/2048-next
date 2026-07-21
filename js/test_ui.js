@@ -11,6 +11,10 @@ document.addEventListener("DOMContentLoaded", function () {
   var PRACTICE_TRANSFER_SESSION_KEY = "practice_board_transfer_session_v1";
   var gridContainer = document.getElementById("test-grid-container");
   var selectionGrid = document.getElementById("selection-grid");
+  var selectionPager = document.getElementById("selection-pager");
+  var selectionPagePrev = document.getElementById("selection-page-prev");
+  var selectionPageNext = document.getElementById("selection-page-next");
+  var selectionPageStatus = document.getElementById("selection-page-status");
   var practiceModePickerBtn = document.getElementById("practice-mode-picker-btn");
   var practiceModePanel = document.getElementById("practice-mode-panel");
   var practiceModeCloseBtn = document.getElementById("practice-mode-close");
@@ -23,37 +27,28 @@ document.addEventListener("DOMContentLoaded", function () {
   var practiceBoardCodeConfirmBtn = document.getElementById("practice-board-code-confirm");
   var currentPracticeModeSelectionKey = "";
   var selectedValue = null;
+  var selectionValues = [];
+  var selectionPage = 0;
+  var selectionPageSize = 16;
   var zeroCycleValues = [];
   var currentSelectionRuleset = "pow2";
   var practiceRelayoutTimer = null;
   var practicePhaseSyncTimer = null;
   var lastPracticeEditLocked = null;
+  var lastPracticePlacementMaxTile = null;
   var lastGridTouchAt = 0;
   var gridTouchStartX = 0;
   var gridTouchStartY = 0;
   var gridTouchMoved = false;
   var TOUCH_TAP_MAX_DISTANCE = 12;
+  var DESKTOP_SELECTION_PAGE_SIZE = 16;
+  var MOBILE_SELECTION_PAGE_SIZE = 21;
   var PRACTICE_CODE_SHAPES = {
     16: { width: 4, height: 4 },
     12: { width: 4, height: 3 },
     9: { width: 3, height: 3 },
     8: { width: 4, height: 2 }
   };
-  var POW2_ZERO_CYCLE_VALUES = (function () {
-    var values = [0];
-    for (var exp = 1; exp <= 16; exp++) {
-      values.push(Math.pow(2, exp)); // 2..65536
-    }
-    return values;
-  })();
-  var FIBONACCI_VALUES = (function () {
-    var values = [1, 2];
-    while (values.length < 16) {
-      values.push(values[values.length - 1] + values[values.length - 2]);
-    }
-    return values;
-  })();
-  var FIBONACCI_ZERO_CYCLE_VALUES = [0].concat(FIBONACCI_VALUES);
   var zeroCyclePhaseByCell = {};
 
   function cloneJsonSafe(value) {
@@ -384,6 +379,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function syncPracticeModePickerUi() {
     syncPracticeBoardCodeUi();
+    syncSelectionPagerUi();
     var lang = readPracticeUiLang();
     var activeKey = resolveCurrentPracticeModeSelectionKey();
     if (activeKey) currentPracticeModeSelectionKey = activeKey;
@@ -633,7 +629,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     var modeConfig = buildPracticeModeConfigForBoard(manager, decoded.width, decoded.height);
-    var maxTile = Number(modeConfig && modeConfig.max_tile);
+    var maxTile = resolvePracticePlacementMaxTile(getCurrentRuleset(), modeConfig);
     var boardValidation = validatePracticeBoardValuesAgainstMaxTile(decoded.board, maxTile);
     if (!boardValidation.ok) {
       showGameAlert(boardValidation.message);
@@ -925,22 +921,68 @@ document.addEventListener("DOMContentLoaded", function () {
     return getPracticeRulesetParam();
   }
 
-  function resolvePracticePlacementMaxTile() {
+  function resolvePracticePlacementMaxTile(ruleset, modeConfigOverride) {
     var manager = window.game_manager;
+    var primaryModeConfig = modeConfigOverride && typeof modeConfigOverride === "object"
+      ? modeConfigOverride
+      : (manager && manager.modeConfig ? manager.modeConfig : null);
     var sources = [
-      manager && manager.modeConfig ? manager.modeConfig : null,
+      primaryModeConfig,
       window.GAME_MODE_CONFIG && typeof window.GAME_MODE_CONFIG === "object" ? window.GAME_MODE_CONFIG : null
     ];
+    var explicitMaxTile = null;
     for (var i = 0; i < sources.length; i++) {
       var source = sources[i];
       var raw = Number(source && source.max_tile);
-      if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+      if (Number.isFinite(raw) && raw > 0) {
+        explicitMaxTile = Math.floor(raw);
+        break;
+      }
     }
     var managerMaxTile = Number(manager && manager.maxTile);
-    if (Number.isFinite(managerMaxTile) && managerMaxTile > 0) {
-      return Math.floor(managerMaxTile);
+    if (explicitMaxTile === null && Number.isFinite(managerMaxTile) && managerMaxTile > 0) {
+      explicitMaxTile = Math.floor(managerMaxTile);
     }
-    return null;
+    if (!(manager && manager.noXSelectionPending === true)) {
+      var noXRuleSources = [
+        manager && manager.specialRules,
+        sources[0] && sources[0].special_rules,
+        sources[1] && sources[1].special_rules
+      ];
+      for (var ruleIndex = 0; ruleIndex < noXRuleSources.length; ruleIndex++) {
+        var noXRules = noXRuleSources[ruleIndex];
+        var noXTarget = Number(noXRules && noXRules.no_x_target);
+        if (!(noXRules && noXRules.no_x_enabled === true)) continue;
+        if (!Number.isInteger(noXTarget) || noXTarget <= 0) continue;
+        var noXPlacementMaxTile = Math.floor(noXTarget / 2);
+        explicitMaxTile = explicitMaxTile === null
+          ? noXPlacementMaxTile
+          : Math.min(explicitMaxTile, noXPlacementMaxTile);
+        break;
+      }
+    }
+
+    var modeConfig = sources[0] || sources[1] || {};
+    var width = toPositiveInt(modeConfig.board_width, toPositiveInt(manager && manager.width, 4));
+    var height = toPositiveInt(modeConfig.board_height, toPositiveInt(manager && manager.height, width));
+    var theoreticalMaxTile = null;
+    var rulesRuntime = window.CoreRulesRuntime;
+    if (rulesRuntime && typeof rulesRuntime.getTheoreticalMaxTile === "function") {
+      theoreticalMaxTile = Number(rulesRuntime.getTheoreticalMaxTile(width, height, ruleset));
+      if (!Number.isFinite(theoreticalMaxTile) || theoreticalMaxTile <= 0) {
+        theoreticalMaxTile = null;
+      }
+    }
+
+    if (explicitMaxTile !== null && theoreticalMaxTile !== null) {
+      return Math.min(explicitMaxTile, Math.floor(theoreticalMaxTile));
+    }
+    if (explicitMaxTile !== null) return explicitMaxTile;
+    if (width === 4 && height === 4) {
+      return ruleset === "fibonacci" ? 1597 : 32768;
+    }
+    if (theoreticalMaxTile !== null) return Math.floor(theoreticalMaxTile);
+    return ruleset === "fibonacci" ? 1597 : 32768;
   }
 
   function isPracticePlacementValueAllowed(value, maxTile) {
@@ -997,9 +1039,30 @@ document.addEventListener("DOMContentLoaded", function () {
     return { ok: true };
   }
 
-  function getSelectionValuesForRuleset(ruleset) {
-    if (ruleset === "fibonacci") return [0].concat(FIBONACCI_VALUES);
-    return [0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768];
+  function getSelectionValuesForRuleset(ruleset, maxTile) {
+    var limit = Number(maxTile);
+    if (!Number.isFinite(limit) || limit <= 0) {
+      limit = ruleset === "fibonacci" ? 1597 : 32768;
+    }
+    var values = [0];
+    if (ruleset === "fibonacci") {
+      var previous = 1;
+      var current = 2;
+      if (previous <= limit) values.push(previous);
+      while (current <= limit) {
+        values.push(current);
+        var next = previous + current;
+        if (!Number.isFinite(next) || next <= current) break;
+        previous = current;
+        current = next;
+      }
+      return values;
+    }
+    for (var value = 2; value <= limit; value *= 2) {
+      values.push(value);
+      if (!Number.isFinite(value * 2) || value * 2 <= value) break;
+    }
+    return values;
   }
 
   function isPracticeMobileViewport() {
@@ -1079,14 +1142,55 @@ document.addEventListener("DOMContentLoaded", function () {
     syncPracticeGestureEntryUi();
   }
 
-  function renderSelectionGrid(values, defaultValue) {
+  function resolveSelectionPageSize() {
+    return Number(window.innerWidth) <= 520
+      ? MOBILE_SELECTION_PAGE_SIZE
+      : DESKTOP_SELECTION_PAGE_SIZE;
+  }
+
+  function syncSelectionPagerUi() {
+    var pageCount = Math.max(1, Math.ceil(selectionValues.length / selectionPageSize));
+    var lang = readPracticeUiLang();
+    var previousLabel = lang === "en" ? "Previous tile page" : "上一页棋子";
+    var nextLabel = lang === "en" ? "Next tile page" : "下一页棋子";
+    if (selectionPager) selectionPager.hidden = pageCount <= 1;
+    if (selectionPagePrev) {
+      selectionPagePrev.disabled = selectionPage <= 0;
+      selectionPagePrev.setAttribute("aria-label", previousLabel);
+      selectionPagePrev.setAttribute("title", previousLabel);
+    }
+    if (selectionPageNext) {
+      selectionPageNext.disabled = selectionPage >= pageCount - 1;
+      selectionPageNext.setAttribute("aria-label", nextLabel);
+      selectionPageNext.setAttribute("title", nextLabel);
+    }
+    if (selectionPageStatus) {
+      selectionPageStatus.textContent = String(selectionPage + 1) + " / " + String(pageCount);
+      selectionPageStatus.setAttribute(
+        "aria-label",
+        lang === "en"
+          ? "Tile page " + String(selectionPage + 1) + " of " + String(pageCount)
+          : "棋子第 " + String(selectionPage + 1) + " 页，共 " + String(pageCount) + " 页"
+      );
+    }
+  }
+
+  function renderSelectionPage(defaultValue) {
     if (!selectionGrid) return;
     selectionGrid.innerHTML = "";
+    var pageCount = Math.max(1, Math.ceil(selectionValues.length / selectionPageSize));
+    selectionPage = Math.max(0, Math.min(selectionPage, pageCount - 1));
+    var start = selectionPage * selectionPageSize;
+    var values = selectionValues.slice(start, start + selectionPageSize);
 
     for (var i = 0; i < values.length; i++) {
       var value = values[i];
       var tile = document.createElement("div");
       tile.className = value === 0 ? "selection-tile tile-0" : ("selection-tile tile tile-" + String(value));
+      if (value > 65536) tile.classList.add("tile-super");
+      if (value > 32768) {
+        tile.classList.add(String(value).length >= 8 ? "selection-tile-xlong" : "selection-tile-long");
+      }
       tile.setAttribute("data-value", String(value));
 
       var inner = document.createElement("div");
@@ -1095,18 +1199,35 @@ document.addEventListener("DOMContentLoaded", function () {
       tile.appendChild(inner);
       selectionGrid.appendChild(tile);
     }
-    setSelectedValue(defaultValue);
+    var nextValue = values.indexOf(defaultValue) !== -1
+      ? defaultValue
+      : resolvePracticeDefaultSelectionValue(currentSelectionRuleset, values);
+    setSelectedValue(nextValue);
+    syncSelectionPagerUi();
+  }
+
+  function renderSelectionGrid(values, defaultValue) {
+    selectionValues = Array.isArray(values) ? values.slice() : [];
+    selectionPageSize = resolveSelectionPageSize();
+    selectionPage = 0;
+    renderSelectionPage(defaultValue);
+  }
+
+  function changeSelectionPage(delta) {
+    var pageCount = Math.max(1, Math.ceil(selectionValues.length / selectionPageSize));
+    var nextPage = Math.max(0, Math.min(selectionPage + delta, pageCount - 1));
+    if (nextPage === selectionPage) return;
+    selectionPage = nextPage;
+    renderSelectionPage(selectedValue);
   }
 
   function syncSelectionGridByRuleset() {
     var ruleset = getCurrentRuleset();
-    var maxTile = resolvePracticePlacementMaxTile();
+    var maxTile = resolvePracticePlacementMaxTile(ruleset);
+    lastPracticePlacementMaxTile = maxTile;
     currentSelectionRuleset = ruleset;
-    zeroCycleValues = filterPracticePlacementValues(
-      ruleset === "fibonacci" ? FIBONACCI_ZERO_CYCLE_VALUES.slice() : POW2_ZERO_CYCLE_VALUES.slice(),
-      maxTile
-    );
-    var values = filterPracticePlacementValues(getSelectionValuesForRuleset(ruleset), maxTile);
+    var values = filterPracticePlacementValues(getSelectionValuesForRuleset(ruleset, maxTile), maxTile);
+    zeroCycleValues = values.slice();
     var defaultValue = resolvePracticeDefaultSelectionValue(ruleset, values);
     zeroCyclePhaseByCell = {};
     renderSelectionGrid(values, defaultValue);
@@ -1118,6 +1239,13 @@ document.addEventListener("DOMContentLoaded", function () {
     if (practiceRelayoutTimer) clearTimeout(practiceRelayoutTimer);
     practiceRelayoutTimer = setTimeout(function () {
       syncPracticeGestureEntryUi();
+      var nextPageSize = resolveSelectionPageSize();
+      if (nextPageSize !== selectionPageSize) {
+        var firstVisibleIndex = selectionPage * selectionPageSize;
+        selectionPageSize = nextPageSize;
+        selectionPage = Math.floor(firstVisibleIndex / selectionPageSize);
+        renderSelectionPage(selectedValue);
+      }
       var gm = window.game_manager;
       if (!gm) return;
       if (gm.actuator && typeof gm.actuator.invalidateLayoutCache === "function") {
@@ -1335,6 +1463,17 @@ document.addEventListener("DOMContentLoaded", function () {
     selectionGrid.addEventListener("touchend", handleSelectionInteraction, { passive: false });
   }
 
+  if (selectionPagePrev) {
+    selectionPagePrev.addEventListener("click", function () {
+      changeSelectionPage(-1);
+    });
+  }
+  if (selectionPageNext) {
+    selectionPageNext.addEventListener("click", function () {
+      changeSelectionPage(1);
+    });
+  }
+
   var scoreContainer = document.querySelector(".scores-container");
   if (scoreContainer) {
     var setGestureMode = function (e) {
@@ -1387,15 +1526,21 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!window.game_manager) return;
       if (selectedValue === null) return;
 
+      var placementValue = selectedValue;
       if (selectedValue === 0) {
-        var cycleValue = getNextZeroCycleValue(x, y);
-        window.game_manager.insertCustomTile(x, y, cycleValue);
-        applyPracticeTimerPlaceholderForValue(cycleValue);
+        placementValue = getNextZeroCycleValue(x, y);
       } else {
         resetZeroCycleValue(x, y);
-        window.game_manager.insertCustomTile(x, y, selectedValue);
-        applyPracticeTimerPlaceholderForValue(selectedValue);
       }
+      if (!isPracticePlacementValueAllowed(
+        placementValue,
+        resolvePracticePlacementMaxTile(getCurrentRuleset())
+      )) {
+        syncSelectionGridByRuleset();
+        return;
+      }
+      window.game_manager.insertCustomTile(x, y, placementValue);
+      applyPracticeTimerPlaceholderForValue(placementValue);
     }
 
     function handleGridInteraction(e, fromTouch, touchCanPlace) {
@@ -1451,6 +1596,10 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!window.__practicePhaseSyncBound) {
     window.__practicePhaseSyncBound = true;
     practicePhaseSyncTimer = window.setInterval(function () {
+      if (resolvePracticePlacementMaxTile(getCurrentRuleset()) !== lastPracticePlacementMaxTile) {
+        syncSelectionGridByRuleset();
+        return;
+      }
       syncPracticeSetupPhaseUi();
     }, 150);
   }

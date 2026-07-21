@@ -9,15 +9,16 @@
 .settings-switch-row input[type=checkbox] {
   width: 18px;
   height: 18px;
+  accent-color: var(--app-accent);
 }
 
 .settings-toggle-row {
   width: calc(50% - 7px);
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid #e2dbd2;
+  border: 1px solid var(--app-border-muted);
   border-radius: 12px;
-  background: #fffaf3;
+  background: var(--app-surface-soft);
   box-sizing: border-box;
 }
 
@@ -62,7 +63,7 @@
 }
 
 .settings-action-copy .settings-toggle-desc {
-  color: #8f8174;
+  color: var(--app-text-muted);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -126,7 +127,7 @@
   height: 30px;
   border-radius: 50%;
   background: #ffffff;
-  color: #c94d4d;
+  color: var(--app-text-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -139,7 +140,7 @@
 
 .language-settings-switch input[type=checkbox]:checked ~ .language-switch-thumb {
   transform: translateX(36px);
-  color: #7c9e18;
+  color: var(--app-accent);
 }
 
 .settings-toggle-main {
@@ -178,7 +179,7 @@
   padding: 0 10px;
   border: 1px solid var(--app-border-control);
   border-radius: 6px;
-  background: #fffdfa;
+  background: var(--app-surface-control);
   color: var(--app-text);
   font: inherit;
   font-size: 14px;
@@ -213,7 +214,7 @@
   position: absolute;
   inset: 0;
   display: block;
-  background: #b7afa6;
+  background: var(--app-border-control);
   border-radius: 999px;
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
@@ -232,7 +233,7 @@
 }
 
 .settings-switch input[type=checkbox]:checked + .settings-switch-slider {
-  background: #bada55;
+  background: var(--app-accent);
 }
 
 .settings-switch input[type=checkbox]:checked + .settings-switch-slider::after {
@@ -244,14 +245,14 @@
 }
 
 .settings-switch input[type=checkbox]:focus-visible + .settings-switch-slider {
-  box-shadow: 0 0 0 3px rgba(186, 218, 85, 0.28);
+  box-shadow: 0 0 0 3px var(--app-focus-ring-control);
 }
 
 .settings-switch input[type=checkbox]:disabled + .settings-switch-slider {
-  background: #d8d1c7;
+  background: var(--app-border-muted);
   cursor: not-allowed;
 }
 
 .settings-switch input[type=checkbox]:disabled + .settings-switch-slider::after {
-  background: #f4f0ea;
+  background: var(--app-surface-soft);
 }

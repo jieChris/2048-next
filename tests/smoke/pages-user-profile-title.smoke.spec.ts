@@ -168,6 +168,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.click("#user-nav-menu");
     await expect(page.locator("#user-nav-logout")).toBeVisible();
+    await page.click("#user-record-heading");
+    await expect(page.locator("#user-nav-logout")).toBeHidden();
+
+    await page.click("#user-nav-menu");
+    await expect(page.locator("#user-nav-logout")).toBeVisible();
     await page.click("#user-nav-logout");
     await page.waitForURL(/account\.html/);
 
@@ -287,6 +292,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-other-date");
     });
 
+    const recordRequests: string[] = [];
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
       if (url.includes("/user/me")) {
@@ -301,6 +307,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return;
       }
       if (url.includes("/user/7/records")) {
+        recordRequests.push(url);
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -314,6 +321,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 mode_key: "standard_4x4_pow2_no_undo",
                 score: 512,
                 best_tile: 64,
+                final_board: [
+                  [64, 32, 16, 8],
+                  [4, 2, 0, 0],
+                  [0, 0, 0, 0],
+                  [0, 0, 0, 0]
+                ],
                 duration_ms: 6000,
                 ended_at: "2026-03-14T10:00:00.000Z",
                 created_at: "2026-03-14 10:01:02"
@@ -345,10 +358,70 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
     await page.waitForSelector(".user-record-item");
 
+    await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
+      "href",
+      "style/user_profile_page.css?v=20260721-record-sort-v10"
+    );
+
     await expect(page.locator(".user-record-mode").first()).toHaveText("经典4x4");
+    await expect(page.locator("#user-col-board-sum")).toHaveText("盘面和");
+    await expect(page.locator(".user-record-board-sum").first()).toHaveText("126");
+    await expect(page.locator("#user-col-best-tile")).toHaveText("最大方块");
+    await expect(page.locator(".user-record-best-tile").first()).toHaveText("64");
+    await expect(page.locator("#user-col-duration")).toHaveText("用时");
+    await expect(page.locator(".user-record-duration").first()).toHaveText("00:00:06");
     await expect(page.locator("#user-col-date")).toHaveText("上传时间");
     await expect(page.locator(".user-record-date").first()).toHaveText("2026-03-14 18:01:02");
+    const recordColumnLayout = await page.locator(
+      ".user-record-mode, .user-record-score, .user-record-board-sum, .user-record-best-tile, .user-record-duration, .user-record-date"
+    ).evaluateAll((nodes) => nodes.slice(0, 6).map((node) => ({
+      align: getComputedStyle(node).textAlign,
+      width: node.getBoundingClientRect().width
+    })));
+    expect(recordColumnLayout.map((column) => column.align)).toEqual(["left", ...Array(4).fill("center"), "right"]);
+    await expect(page.locator("#user-col-mode")).toHaveCSS("text-align", "left");
+    await expect(page.locator("#user-col-mode")).toHaveCSS("padding-left", "10px");
+    await expect(page.locator("#user-col-date")).toHaveCSS("text-align", "right");
+    await expect(page.locator("#user-col-date")).toHaveCSS("padding-right", "10px");
+    expect(recordColumnLayout[0].width / recordColumnLayout[1].width).toBeCloseTo(1.35, 1);
+    expect(recordColumnLayout.slice(2).every((column) => Math.abs(column.width - recordColumnLayout[1].width) < 1)).toBe(true);
     await expect(page.locator("#user-record-page")).toHaveText("第1/3页");
+    const labelSizes = await page.locator("#user-undo-label, #user-mode-label, #user-sort-label, #user-order-label")
+      .evaluateAll((nodes) => nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        return [rect.width, rect.height];
+      }));
+    expect(labelSizes).toEqual([[1, 1], [1, 1], [1, 1], [1, 1]]);
+    const controlWidths = await page.locator("#user-record-undo, #user-record-mode, #user-record-sort, #user-record-order")
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
+    expect(controlWidths).toEqual([160, 320, 180, 160]);
+    const modePickerMargin = await page.locator("#user-record-mode").evaluate((node) =>
+      getComputedStyle(node, "::picker-icon").marginLeft
+    );
+    expect(Number.parseFloat(modePickerMargin)).toBeGreaterThan(100);
+
+    const sortOptions = await page.locator("#user-record-sort option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(sortOptions).toEqual(["time", "score", "board_sum"]);
+
+    const orderOptions = await page.locator("#user-record-order option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(orderOptions).toEqual(["desc", "asc"]);
+
+    await page.selectOption("#user-record-sort", "board_sum");
+    await page.selectOption("#user-record-order", "asc");
+    await expect.poll(() =>
+      recordRequests.some((url) => url.includes("sort_by=board_sum") && url.includes("order=asc"))
+    ).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileWidth = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth
+    }));
+    expect(mobileWidth.scroll).toBeLessThanOrEqual(mobileWidth.client);
   });
 
   test("user profile supports mode filter and expandable record detail", async ({ page }) => {
@@ -468,18 +541,36 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
 
     await page.waitForSelector(".user-record-item");
-    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
-    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("斐波那契4x2可撤回");
-    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最近活跃");
+    await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("3");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最高分");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("8192");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
+    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("2048");
+
+    await expect(page.locator("#user-record-undo")).toHaveValue("no_undo");
+    const undoOptionValues = await page.locator("#user-record-undo option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(undoOptionValues).toEqual(["no_undo", "undo"]);
     const modeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
-    expect(modeOptionValues).toContain("pow2_5x5_undo");
+    expect(modeOptionValues).toContain("pow2_5x5");
     expect(modeOptionValues).toContain("capped_4096");
-    expect(modeOptionValues).toContain("fib_4x2_undo");
+    expect(modeOptionValues).toContain("fib_4x2");
+    expect(modeOptionValues).not.toContain("pow2_5x5_undo");
+    expect(modeOptionValues).not.toContain("fib_4x2_undo");
 
-    await page.selectOption("#user-record-mode", "standard_no_undo");
+    await page.selectOption("#user-record-undo", "undo");
+    const undoModeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(undoModeOptionValues).toContain("pow2_5x5_undo");
+    expect(undoModeOptionValues).toContain("fib_4x2_undo");
+    expect(undoModeOptionValues).not.toContain("pow2_5x5");
+    expect(undoModeOptionValues).not.toContain("capped_4096");
+
     await page.selectOption("#user-record-mode", "fib_4x2_undo");
     await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
     await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
@@ -489,9 +580,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
     await expect(page.locator("#user-summary-best-tile-value")).toHaveText("987");
 
-    const requestsBeforeAllModes = recordRequests.length;
-    await page.selectOption("#user-record-mode", "all");
-    await expect.poll(() => recordRequests.length).toBeGreaterThan(requestsBeforeAllModes);
+    const requestsBeforeNoUndo = recordRequests.length;
+    await page.selectOption("#user-record-undo", "no_undo");
+    await expect(page.locator("#user-record-mode")).toHaveValue("standard_no_undo");
+    await expect.poll(() => recordRequests.length).toBeGreaterThan(requestsBeforeNoUndo);
     await expect(page.locator(".user-record-item")).toHaveCount(1);
 
     await page.locator(".user-record-row").first().click();

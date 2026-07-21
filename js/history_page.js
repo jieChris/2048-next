@@ -569,6 +569,7 @@
           "<strong>" + escapeHtml(modeText) + "</strong>" +
           "<span class='history-owner-tag'>" + escapeHtml(ownerDisplay.label) + "</span>" +
           "<span>分数: " + escapeHtml(Number(item.score) || 0) + "</span>" +
+          "<span>盘面和: " + escapeHtml(Number(item.board_sum) || 0) + "</span>" +
           "<span>最大块: " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
           "<span>时长: " + escapeHtml(formatDuration(item.duration_ms)) + "</span>" +
           "<span>结束: " + escapeHtml(formatEndedAt(item.ended_at)) + "</span>" +

@@ -129,7 +129,10 @@
   body[data-page="game"] #timerbox.is-mobile-expanded .timertile,
   body[data-page="practice"] #timerbox.is-mobile-expanded .timertile {
     float: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     vertical-align: top;
     margin-top: 4px;
   }

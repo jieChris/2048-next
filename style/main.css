@@ -2,6 +2,7 @@
 @import url("base/state.css");
 @import url(fonts/clear-sans.css);
 @import url("components/logo.css");
+@import url("components/secondary-page-back.css");
 @import url("base/document.css");
 @import url("layout/shell.css");
 @import url("components/score.css");

@@ -4,6 +4,8 @@
   if (!global) return;
 
   var FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
+  var FIRST_TIMER_SLOT_VALUE = 32;
+  var MAX_SAFE_TIMER_SLOT_VALUE = 4503599627370496;
 
   function normalizeRuleset(ruleset) {
     return ruleset === "fibonacci" ? "fibonacci" : "pow2";
@@ -49,6 +51,64 @@
     }
 
     return Math.pow(2, cells + 1);
+  }
+
+  function resolveTimerMaxTile(width, height, ruleset, maxTileOverride) {
+    var theoreticalMax = getTheoreticalMaxTile(width, height, ruleset);
+    var override = Number(maxTileOverride);
+    if (!Number.isFinite(override) || override <= 0) return theoreticalMax;
+    return theoreticalMax === null ? Math.floor(override) : Math.min(theoreticalMax, Math.floor(override));
+  }
+
+  function normalizePositiveIntegerList(values) {
+    var out = [];
+    var seen = {};
+    var list = Array.isArray(values) ? values : [];
+    for (var i = 0; i < list.length; i++) {
+      var value = Number(list[i]);
+      if (!Number.isInteger(value) || value <= 0 || seen[String(value)]) continue;
+      seen[String(value)] = true;
+      out.push(value);
+    }
+    out.sort(function (left, right) { return left - right; });
+    return out;
+  }
+
+  function getFibonacciMilestonesUpTo(maxTile) {
+    if (!Number.isFinite(maxTile) || Number(maxTile) <= 0) return FIBONACCI_MILESTONES.slice();
+    var out = [];
+    var previous = 1;
+    var current = 2;
+    while (current <= Number(maxTile)) {
+      if (current >= 13) out.push(current);
+      var next = previous + current;
+      previous = current;
+      current = next;
+    }
+    return out;
+  }
+
+  function getPow2TimerSlotsUpTo(maxTile) {
+    if (!Number.isFinite(maxTile) || Number(maxTile) < FIRST_TIMER_SLOT_VALUE) return [];
+    var out = [];
+    var value = FIRST_TIMER_SLOT_VALUE;
+    var limit = Math.min(Math.floor(Number(maxTile)), MAX_SAFE_TIMER_SLOT_VALUE);
+    while (value <= limit) {
+      out.push(value);
+      value *= 2;
+    }
+    return out;
+  }
+
+  function getTimerSlotIdsForBoard(ruleset, width, height, fallbackTimerSlotIds, maxTileOverride) {
+    var normalizedRuleset = normalizeRuleset(ruleset);
+    var maxTile = resolveTimerMaxTile(width, height, normalizedRuleset, maxTileOverride);
+    if (maxTile === null) return normalizePositiveIntegerList(fallbackTimerSlotIds);
+    if (normalizedRuleset !== "fibonacci") return getPow2TimerSlotsUpTo(maxTile);
+
+    var count = getFibonacciMilestonesUpTo(maxTile).length;
+    var slots = getPow2TimerSlotsUpTo(Math.pow(2, count + 4));
+    return slots.slice(0, count);
   }
 
   function resolveRulesRandomUnitFloat() {
@@ -176,11 +236,24 @@
     return fibMerged;
   }
 
-  function getTimerMilestoneValues(ruleset, timerSlotIds) {
-    if (normalizeRuleset(ruleset) === "fibonacci") {
-      return FIBONACCI_MILESTONES.slice();
+  function getTimerMilestoneValues(ruleset, timerSlotIds, width, height, maxTileOverride) {
+    var normalizedRuleset = normalizeRuleset(ruleset);
+    var hasBoardSize =
+      typeof width === "number" &&
+      typeof height === "number" &&
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width > 0 &&
+      height > 0;
+    var maxTile = hasBoardSize
+      ? resolveTimerMaxTile(width, height, normalizedRuleset, maxTileOverride)
+      : null;
+    if (normalizedRuleset === "fibonacci") {
+      return hasBoardSize ? getFibonacciMilestonesUpTo(maxTile) : FIBONACCI_MILESTONES.slice();
     }
-    return Array.isArray(timerSlotIds) ? timerSlotIds.slice() : [];
+    var slots = normalizePositiveIntegerList(timerSlotIds);
+    if (!hasBoardSize || maxTile === null) return slots;
+    return slots.filter(function (value) { return value <= maxTile; });
   }
 
   function getTimerMilestoneSlotByValue(timerMilestones, timerSlotIds) {
@@ -206,6 +279,7 @@
   global.CoreRulesRuntime.applySpawnValueCount = applySpawnValueCount;
   global.CoreRulesRuntime.nextFibonacci = nextFibonacci;
   global.CoreRulesRuntime.getMergedValue = getMergedValue;
+  global.CoreRulesRuntime.getTimerSlotIdsForBoard = getTimerSlotIdsForBoard;
   global.CoreRulesRuntime.getTimerMilestoneValues = getTimerMilestoneValues;
   global.CoreRulesRuntime.getTimerMilestoneSlotByValue = getTimerMilestoneSlotByValue;
 })(typeof window !== "undefined" ? window : undefined);

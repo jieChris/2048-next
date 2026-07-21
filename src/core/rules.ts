@@ -22,6 +22,8 @@ export interface SpawnValueUpdateResult {
 }
 
 const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
+const FIRST_TIMER_SLOT_VALUE = 32;
+const MAX_SAFE_TIMER_SLOT_VALUE = 4503599627370496;
 
 export function normalizeSpawnTable(
   spawnTable: SpawnTableItem[] | null | undefined,
@@ -65,6 +67,74 @@ export function getTheoreticalMaxTile(width: number, height: number, ruleset: Ru
   }
 
   return Math.pow(2, cells + 1);
+}
+
+function resolveTimerMaxTile(
+  width: number,
+  height: number,
+  ruleset: Ruleset,
+  maxTileOverride?: number | null
+): number | null {
+  const theoreticalMax = getTheoreticalMaxTile(width, height, ruleset);
+  const override = Number(maxTileOverride);
+  if (!Number.isFinite(override) || override <= 0) return theoreticalMax;
+  return theoreticalMax === null ? Math.floor(override) : Math.min(theoreticalMax, Math.floor(override));
+}
+
+function normalizePositiveIntegerList(values: unknown[] | null | undefined): number[] {
+  const out: number[] = [];
+  const seen = new Set<number>();
+  const list = Array.isArray(values) ? values : [];
+  for (const rawValue of list) {
+    const value = Number(rawValue);
+    if (!Number.isInteger(value) || value <= 0 || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  out.sort((left, right) => left - right);
+  return out;
+}
+
+function getFibonacciMilestonesUpTo(maxTile: number | null): number[] {
+  if (!Number.isFinite(maxTile) || Number(maxTile) <= 0) return FIBONACCI_MILESTONES.slice();
+  const out: number[] = [];
+  let previous = 1;
+  let current = 2;
+  while (current <= Number(maxTile)) {
+    if (current >= 13) out.push(current);
+    const next = previous + current;
+    previous = current;
+    current = next;
+  }
+  return out;
+}
+
+function getPow2TimerSlotsUpTo(maxTile: number | null): number[] {
+  if (!Number.isFinite(maxTile) || Number(maxTile) < FIRST_TIMER_SLOT_VALUE) return [];
+  const out: number[] = [];
+  let value = FIRST_TIMER_SLOT_VALUE;
+  const limit = Math.min(Math.floor(Number(maxTile)), MAX_SAFE_TIMER_SLOT_VALUE);
+  while (value <= limit) {
+    out.push(value);
+    value *= 2;
+  }
+  return out;
+}
+
+export function getTimerSlotIdsForBoard(
+  ruleset: Ruleset,
+  width: number,
+  height: number,
+  fallbackTimerSlotIds: number[] = [],
+  maxTileOverride?: number | null
+): number[] {
+  const maxTile = resolveTimerMaxTile(width, height, ruleset, maxTileOverride);
+  if (maxTile === null) return normalizePositiveIntegerList(fallbackTimerSlotIds);
+  if (ruleset !== "fibonacci") return getPow2TimerSlotsUpTo(maxTile);
+
+  const count = getFibonacciMilestonesUpTo(maxTile).length;
+  const slots = getPow2TimerSlotsUpTo(Math.pow(2, count + 4));
+  return slots.slice(0, count);
 }
 
 export function pickSpawnValue(
@@ -198,11 +268,29 @@ export function getMergedValue(
   return fibMerged;
 }
 
-export function getTimerMilestoneValues(ruleset: Ruleset, timerSlotIds: number[]): number[] {
+export function getTimerMilestoneValues(
+  ruleset: Ruleset,
+  timerSlotIds: number[],
+  width?: number,
+  height?: number,
+  maxTileOverride?: number | null
+): number[] {
+  const hasBoardSize =
+    typeof width === "number" &&
+    typeof height === "number" &&
+    Number.isFinite(width) &&
+    Number.isFinite(height) &&
+    width > 0 &&
+    height > 0;
+  const maxTile = hasBoardSize
+    ? resolveTimerMaxTile(width, height, ruleset, maxTileOverride)
+    : null;
   if (ruleset === "fibonacci") {
-    return FIBONACCI_MILESTONES.slice();
+    return hasBoardSize ? getFibonacciMilestonesUpTo(maxTile) : FIBONACCI_MILESTONES.slice();
   }
-  return timerSlotIds.slice();
+  const slots = normalizePositiveIntegerList(timerSlotIds);
+  if (!hasBoardSize || maxTile === null) return slots;
+  return slots.filter((value) => value <= maxTile);
 }
 
 export function getTimerMilestoneSlotByValue(
@@ -229,6 +317,7 @@ export interface RulesRuntime {
   applySpawnValueCount: typeof applySpawnValueCount;
   nextFibonacci: typeof nextFibonacci;
   getMergedValue: typeof getMergedValue;
+  getTimerSlotIdsForBoard: typeof getTimerSlotIdsForBoard;
   getTimerMilestoneValues: typeof getTimerMilestoneValues;
   getTimerMilestoneSlotByValue: typeof getTimerMilestoneSlotByValue;
 }
@@ -253,6 +342,7 @@ export function createRulesRuntime(): RulesRuntime {
     applySpawnValueCount,
     nextFibonacci,
     getMergedValue,
+    getTimerSlotIdsForBoard,
     getTimerMilestoneValues,
     getTimerMilestoneSlotByValue
   };

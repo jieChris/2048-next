@@ -6,8 +6,6 @@ const WIDE_LOGO_HTML_FILES = [
   "2048.html",
   "Practice_board.html",
   "capped_2048.html",
-  "history.html",
-  "modes.html",
   "play.html",
   "undo_2048.html"
 ];

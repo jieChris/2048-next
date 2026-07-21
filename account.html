@@ -8,11 +8,11 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/account_page.css?v=20260707-leaderboard-summary" rel="stylesheet" type="text/css">
+  <link href="style/account_page.css?v=20260720-leaderboard-filters-v4" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -20,12 +20,12 @@
   <main class="palette-page-shell account-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <h1 class="palette-title" id="account-title">排行榜</h1>
+        <a class="page-back-button" href="2048.html" id="account-nav-home">首页</a>
+        <h1 class="palette-title page-title-visually-hidden" id="account-title">排行榜</h1>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="user.html" id="account-nav-user" hidden>用户中心</a>
         <a class="replay-button palette-nav-btn" href="account_settings.html" id="account-nav-settings">登录</a>
-        <a class="replay-button palette-nav-btn" href="2048.html" id="account-nav-home">首页</a>
       </nav>
     </header>
 
@@ -47,10 +47,16 @@
         </div>
         <div class="account-board-filter-row" role="group" aria-label="排行榜筛选">
           <div class="account-board-tools">
+            <label for="account-board-undo" id="account-board-undo-label">撤回</label>
+            <select id="account-board-undo" class="settings-select">
+              <option value="no_undo">无撤回</option>
+              <option value="undo">可撤回</option>
+            </select>
             <label for="account-board-mode" id="account-board-mode-label">模式</label>
             <select id="account-board-mode" class="settings-select"></select>
             <label for="account-board-metric" id="account-board-metric-label">指标</label>
             <select id="account-board-metric" class="settings-select"></select>
+            <select id="account-board-speed-target" class="settings-select" aria-label="合成目标" hidden></select>
             <button id="account-board-refresh" class="replay-button" type="button">刷新</button>
           </div>
         </div>

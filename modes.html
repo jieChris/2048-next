@@ -8,9 +8,9 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="HandheldFriendly" content="True">
   <meta name="MobileOptimized" content="320">
@@ -18,18 +18,18 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <style>
     :root {
-      --mode-page-bg: #f6f1e7;
-      --mode-surface: #fdfaf4;
-      --mode-surface-soft: #fffdf8;
-      --mode-line: #d7caba;
-      --mode-line-strong: #bea78f;
-      --mode-ink: #5f564b;
-      --mode-ink-soft: #766b5f;
-      --mode-primary: #2f86a0;
-      --mode-primary-press: #1f647d;
-      --mode-primary-tint: #dceff2;
-      --mode-secondary: #d79b32;
-      --mode-secondary-tint: #f8e8c3;
+      --mode-page-bg: var(--app-page-bg);
+      --mode-surface: var(--app-surface-light);
+      --mode-surface-soft: var(--app-surface-soft);
+      --mode-line: var(--app-border-structure);
+      --mode-line-strong: var(--app-border-control);
+      --mode-ink: var(--app-text-strong);
+      --mode-ink-soft: var(--app-text-muted);
+      --mode-primary: var(--app-accent);
+      --mode-primary-press: var(--app-link);
+      --mode-primary-tint: var(--app-accent-soft);
+      --mode-secondary: var(--app-milestone);
+      --mode-secondary-tint: color-mix(in srgb, var(--app-milestone) 14%, transparent);
       --mode-shadow: rgba(44, 116, 135, 0.13);
     }
 
@@ -41,7 +41,7 @@
     body[data-page="modes"] {
       margin: 0;
       min-height: 100vh;
-      background: linear-gradient(180deg, var(--mode-surface-soft) 0%, var(--mode-page-bg) 100%);
+      background: var(--mode-page-bg);
     }
 
     .mode-select-page {
@@ -52,16 +52,16 @@
       padding: 24px 16px 32px;
       color: var(--mode-ink);
       font-family: "Clear Sans", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-      background: linear-gradient(180deg, var(--mode-surface-soft) 0%, var(--mode-page-bg) 100%);
-      border: 1px solid #dfd2c2;
+      background: var(--mode-page-bg);
+      border: 1px solid var(--mode-line);
       border-radius: 16px;
-      box-shadow: 0 12px 28px rgba(69, 49, 26, 0.08);
+      box-shadow: 0 12px 28px rgba(42, 74, 78, 0.08);
       overflow-x: hidden;
     }
 
     .mode-select-top {
       display: grid;
-      grid-template-columns: 220px 68px 1fr;
+      grid-template-columns: 44px 68px 1fr;
       gap: 16px;
       margin-bottom: 18px;
       align-items: stretch;
@@ -73,35 +73,16 @@
       padding: 2px 0 0;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       box-sizing: border-box;
       min-height: 144px;
-    }
-
-    .mode-brand-logo {
-      width: 340px;
-      max-width: 100%;
-      height: auto;
-      display: block;
-      margin-bottom: 10px;
-    }
-
-    .mode-brand-title {
-      margin: 0;
-      line-height: 1.05;
-      font-size: clamp(36px, 4.2vw, 46px);
-      font-weight: 700;
-      color: var(--mode-ink);
-      letter-spacing: 1px;
-      text-align: center;
-      text-shadow: 0 1px 0 #fff8ef;
     }
 
     .mode-frequent-title {
       border: 0;
       border-left: 5px solid var(--mode-secondary);
       border-radius: 10px;
-      background: linear-gradient(180deg, rgba(47, 134, 160, 0.08) 0%, rgba(215, 155, 50, 0.08) 100%);
+      background: linear-gradient(180deg, var(--mode-primary-tint) 0%, var(--mode-secondary-tint) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -155,7 +136,7 @@
       z-index: -1;
       width: 0;
       border-radius: inherit;
-      background: linear-gradient(135deg, #e0aa45 0%, #58aaa6 54%, #2f86a0 100%);
+      background: var(--mode-primary-tint);
       box-shadow:
         -7px -7px 20px rgba(255, 255, 255, 0.78),
         -4px -4px 5px rgba(255, 255, 255, 0.7),
@@ -165,7 +146,7 @@
     }
 
     .mode-priority-card:hover {
-      color: #fffaf2 !important;
+      color: var(--mode-primary-press) !important;
       transform: translateY(-1px);
       box-shadow:
         inset 2px 2px 4px rgba(25, 91, 111, 0.16),
@@ -182,7 +163,7 @@
     .mode-priority-card strong {
       font-size: 18px;
       line-height: 1.2;
-      color: #4d443a;
+      color: var(--mode-ink);
     }
 
     .mode-priority-card small {
@@ -194,13 +175,13 @@
 
     .mode-priority-card:hover strong,
     .mode-priority-card:hover small {
-      color: #fffaf2;
-      text-shadow: 0 1px 0 rgba(15, 73, 91, 0.3);
+      color: var(--mode-primary-press);
+      text-shadow: none;
     }
 
     @media (min-width: 901px) {
       html[data-ui-lang="en"] .mode-select-top {
-        grid-template-columns: 220px minmax(0, 1fr);
+        grid-template-columns: 44px minmax(0, 1fr);
         grid-template-rows: 48px auto;
         grid-template-areas:
           "brand frequent"
@@ -239,17 +220,17 @@
       border-radius: 14px;
       background: var(--mode-surface);
       overflow: hidden;
-      box-shadow: inset 0 1px 0 #fff, 0 6px 14px rgba(68, 51, 28, 0.05);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 6px 14px rgba(42, 74, 78, 0.07);
     }
 
     .mode-tab-bar {
       position: relative;
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       padding: 10px;
       border-bottom: 1px solid var(--mode-line);
-      background: linear-gradient(180deg, #f4fbf9 0%, #f2eee6 100%);
+      background: linear-gradient(180deg, var(--mode-surface) 0%, var(--mode-surface-soft) 100%);
       isolation: isolate;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
     }
@@ -262,11 +243,11 @@
       width: var(--mode-tab-width, 0px);
       height: var(--mode-tab-height, 0px);
       border-radius: 9px;
-      background: linear-gradient(180deg, #fffdf8 0%, #f8f2e8 100%);
+      background: var(--app-surface-control);
       box-shadow:
         0 8px 18px rgba(44, 116, 135, 0.12),
-        inset 0 0 0 1px rgba(47, 134, 160, 0.16),
-        inset 0 -3px 0 rgba(215, 155, 50, 0.45);
+        inset 0 0 0 1px color-mix(in srgb, var(--mode-primary) 22%, transparent),
+        inset 0 -3px 0 color-mix(in srgb, var(--mode-secondary) 45%, transparent);
       transition:
         left 0.18s ease,
         top 0.18s ease,
@@ -328,7 +309,7 @@
 
     .mode-group-title {
       margin: 0 0 12px;
-      color: #5e5448;
+      color: var(--mode-ink);
       font-size: 20px;
       font-weight: 700;
       letter-spacing: 0.4px;
@@ -397,7 +378,7 @@
       z-index: -1;
       width: 0;
       border-radius: inherit;
-      background: linear-gradient(135deg, #e0aa45 0%, #58aaa6 54%, #2f86a0 100%);
+      background: var(--mode-primary-tint);
       box-shadow:
         -7px -7px 20px rgba(255, 255, 255, 0.78),
         -4px -4px 5px rgba(255, 255, 255, 0.7),
@@ -407,7 +388,7 @@
     }
 
     .mode-hub-btn:hover {
-      color: #fffaf2 !important;
+      color: var(--mode-primary-press) !important;
       transform: translateY(-1px);
       box-shadow:
         inset 2px 2px 4px rgba(25, 91, 111, 0.16),
@@ -433,29 +414,31 @@
     }
 
     html[data-night-background="1"] {
-      --mode-page-bg: rgba(12, 18, 30, 0.88);
-      --mode-surface: rgba(18, 29, 46, 0.92);
-      --mode-surface-soft: rgba(28, 40, 62, 0.88);
-      --mode-line: rgba(171, 189, 214, 0.14);
-      --mode-line-strong: rgba(213, 191, 150, 0.3);
-      --mode-ink: #ece2d3;
-      --mode-ink-soft: #b8c2d3;
-      --mode-primary: #63b7c2;
-      --mode-primary-press: #2d7f98;
-      --mode-primary-tint: rgba(99, 183, 194, 0.18);
-      --mode-secondary: #e0b25a;
-      --mode-secondary-tint: rgba(224, 178, 90, 0.18);
+      --mode-page-bg: var(--app-page-bg);
+      --mode-surface: var(--app-surface-light);
+      --mode-surface-soft: var(--app-surface-soft);
+      --mode-line: var(--app-border-structure);
+      --mode-line-strong: var(--app-border-control);
+      --mode-ink: var(--app-text-strong);
+      --mode-ink-soft: var(--app-text-muted);
+      --mode-primary: var(--app-accent);
+      --mode-primary-press: var(--app-link-hover);
+      --mode-primary-tint: var(--app-accent-soft);
+      --mode-secondary: var(--app-milestone);
+      --mode-secondary-tint: color-mix(in srgb, var(--app-milestone) 16%, transparent);
       --mode-shadow: rgba(2, 6, 16, 0.34);
     }
 
     html[data-night-background="1"] {
-      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
+      background: var(--mode-page-bg) !important;
+      background-image: none !important;
       color-scheme: dark;
     }
 
     html[data-night-background="1"] body {
-      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
-      color: var(--mode-ink);
+      background: var(--mode-page-bg) !important;
+      background-image: none !important;
+      color: var(--mode-ink) !important;
     }
 
     html[data-night-background="1"] body::before {
@@ -467,18 +450,13 @@
     }
 
     html[data-night-background="1"] .mode-select-page {
-      background: linear-gradient(180deg, #182336 0%, #111a2a 56%, #0f1826 100%);
-      border-color: rgba(171, 189, 214, 0.08);
+      background: var(--mode-page-bg);
+      border-color: var(--mode-line);
       box-shadow: none;
     }
 
-    html[data-night-background="1"] .mode-brand-title {
-      color: var(--mode-ink);
-      text-shadow: 0 1px 0 rgba(4, 7, 14, 0.8);
-    }
-
     html[data-night-background="1"] .mode-frequent-title {
-      background: linear-gradient(180deg, rgba(99, 183, 194, 0.08) 0%, rgba(224, 178, 90, 0.08) 100%);
+      background: linear-gradient(180deg, var(--mode-primary-tint) 0%, var(--mode-secondary-tint) 100%);
       border-left-color: var(--mode-secondary);
       box-shadow: inset 0 0 0 1px rgba(213, 191, 150, 0.12);
     }
@@ -487,7 +465,7 @@
     html[data-night-background="1"] .mode-select-body,
     html[data-night-background="1"] .mode-tab-panels,
     html[data-night-background="1"] .mode-hub-btn {
-      background: linear-gradient(180deg, rgba(28, 40, 62, 0.95) 0%, rgba(16, 26, 42, 0.95) 100%);
+      background: var(--mode-surface);
       border-color: var(--mode-line);
       box-shadow: 0 8px 18px rgba(2, 6, 16, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     }
@@ -502,16 +480,16 @@
     }
 
     html[data-night-background="1"] .mode-tab-bar {
-      background: linear-gradient(180deg, rgba(32, 50, 72, 0.92) 0%, rgba(21, 34, 52, 0.92) 100%);
+      background: var(--mode-surface-soft);
       border-bottom-color: var(--mode-line);
     }
 
     html[data-night-background="1"] .mode-tab-indicator {
-      background: linear-gradient(180deg, rgba(36, 57, 82, 0.96) 0%, rgba(25, 42, 64, 0.96) 100%);
+      background: var(--app-surface-control);
       box-shadow:
         0 8px 18px rgba(2, 6, 16, 0.28),
-        inset 0 0 0 1px rgba(99, 183, 194, 0.2),
-        inset 0 -3px 0 rgba(224, 178, 90, 0.48);
+        inset 0 0 0 1px color-mix(in srgb, var(--mode-primary) 24%, transparent),
+        inset 0 -3px 0 color-mix(in srgb, var(--mode-secondary) 48%, transparent);
     }
 
     html[data-night-background="1"] .mode-tab-button {
@@ -521,12 +499,12 @@
     }
 
     html[data-night-background="1"] .mode-tab-button:hover {
-      background: rgba(255, 247, 236, 0.08);
-      color: #fff7ec;
+      background: var(--mode-primary-tint);
+      color: var(--mode-ink);
     }
 
     html[data-night-background="1"] .mode-tab-button.is-active {
-      color: #fff7ec;
+      color: var(--mode-ink);
     }
 
     html[data-night-background="1"] .mode-tab-button.is-active::after {
@@ -543,7 +521,7 @@
 
     html[data-night-background="1"] .mode-priority-card::after,
     html[data-night-background="1"] .mode-hub-btn::after {
-      background: linear-gradient(135deg, #e0b25a 0%, #63b7c2 56%, #2d7f98 100%);
+      background: var(--mode-primary-tint);
       box-shadow:
         -7px -7px 18px rgba(255, 255, 255, 0.04),
         7px 7px 18px rgba(2, 6, 16, 0.38),
@@ -551,7 +529,7 @@
     }
 
     html[data-night-background="1"] .mode-priority-card:hover {
-      color: #fff7ec !important;
+      color: var(--mode-primary-press) !important;
       box-shadow:
         inset 2px 2px 4px rgba(2, 6, 16, 0.34),
         7px 7px 18px rgba(2, 6, 16, 0.28);
@@ -559,7 +537,7 @@
 
     html[data-night-background="1"] .mode-priority-card:hover strong,
     html[data-night-background="1"] .mode-priority-card:hover small {
-      color: #fff7ec;
+      color: var(--mode-primary-press);
     }
 
     html[data-night-background="1"] .mode-tab-button:nth-child(n),
@@ -570,7 +548,7 @@
     html[data-night-background="1"] .mode-tab-button:focus-visible,
     html[data-night-background="1"] .mode-priority-card:focus-visible,
     html[data-night-background="1"] .mode-hub-btn:focus-visible {
-      outline-color: rgba(237, 195, 123, 0.9);
+      outline-color: var(--mode-primary);
     }
 
     @media (max-width: 900px) {
@@ -583,9 +561,8 @@
         grid-template-columns: 1fr;
       }
 
-      .mode-brand-logo {
-        margin-left: auto;
-        margin-right: auto;
+      .mode-brand-panel {
+        min-height: 44px;
       }
 
       .mode-frequent-title {
@@ -598,7 +575,7 @@
       }
 
       .mode-tab-bar {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         padding: 8px;
       }
@@ -606,10 +583,6 @@
       .mode-tab-button {
         min-height: 46px;
         border-bottom: 0;
-      }
-
-      .mode-tab-button:nth-child(3n) {
-        border: 0;
       }
 
       .mode-tab-panels {
@@ -637,10 +610,6 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
-      .mode-brand-title {
-        font-size: 38px;
-      }
-
       .mode-tab-button {
         font-size: 16px;
       }
@@ -661,10 +630,8 @@
   <div class="container mode-select-page">
     <section class="mode-select-top">
       <div class="mode-brand-panel">
-        <a href="2048.html" aria-label="返回首页">
-          <img class="mode-brand-logo" width="234" height="101" decoding="async" src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 标志">
-        </a>
-        <h1 class="mode-brand-title">模式选择</h1>
+        <a class="page-back-button" href="2048.html" aria-label="返回首页"></a>
+        <h1 class="mode-brand-title page-title-visually-hidden">模式选择</h1>
       </div>
 
       <div class="mode-frequent-title">常用模式</div>
@@ -678,13 +645,13 @@
           <strong>经典 4x4</strong>
           <small>可撤回</small>
         </a>
-        <a class="mode-priority-card" href="play.html?mode_key=board_5x5_pow2_no_undo">
-          <strong>5x5</strong>
+        <a class="mode-priority-card" href="play.html?mode_key=board_3x3_pow2_no_undo">
+          <strong>3x3</strong>
           <small>不可撤回</small>
         </a>
-        <a class="mode-priority-card" href="relay_5x5.html" data-mode-relay="5x5">
-          <strong>5x5 接力</strong>
-          <small>测试版</small>
+        <a class="mode-priority-card" href="palette.html">
+          <strong>设置</strong>
+          <small>主题与计时器</small>
         </a>
       </div>
     </section>
@@ -694,8 +661,6 @@
         <span class="mode-tab-indicator" aria-hidden="true"></span>
         <button class="mode-tab-button is-active" type="button" data-tab-target="standard" role="tab" aria-selected="true">标准</button>
         <button class="mode-tab-button" type="button" data-tab-target="fibonacci" role="tab" aria-selected="false">斐波那契</button>
-        <button class="mode-tab-button" type="button" data-tab-target="diagonal" role="tab" aria-selected="false">八方向</button>
-        <button class="mode-tab-button" type="button" data-tab-target="capped" role="tab" aria-selected="false">封顶</button>
         <button class="mode-tab-button" type="button" data-tab-target="special" role="tab" aria-selected="false">特殊玩法</button>
         <button class="mode-tab-button" type="button" data-tab-target="tools" role="tab" aria-selected="false">记录与工具</button>
       </div>
@@ -729,6 +694,27 @@
             <a class="mode-hub-btn" href="play.html?mode_key=board_9x9_pow2_undo">9x9</a>
             <a class="mode-hub-btn" href="play.html?mode_key=board_10x10_pow2_undo">10x10</a>
           </div>
+
+          <div class="mode-group-title">经典 - 八方向</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=diag_3x3_pow2_no_undo">3x3 八方向</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=diag_4x4_pow2_no_undo">4x4 八方向</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=diag_3x4_pow2_no_undo">4x3 八方向</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=diag_2x4_pow2_no_undo">4x2 八方向</a>
+          </div>
+
+          <div class="mode-group-title">封顶模式</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_64_no_undo">4x4 封顶64</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_1024_no_undo">4x4 封顶1024</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_no_undo">4x4 封顶2048</a>
+            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_4096_no_undo">4x4 封顶4096</a>
+          </div>
+
+          <div class="mode-group-title">禁止目标</div>
+          <div class="mode-hub-actions mode-hub-actions--dense">
+            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（64~32k）</a>
+          </div>
         </div>
 
         <div id="mode-tab-fibonacci" class="mode-tab-panel" data-tab-panel="fibonacci" role="tabpanel" aria-hidden="true">
@@ -749,30 +735,6 @@
           </div>
         </div>
 
-        <div id="mode-tab-diagonal" class="mode-tab-panel" data-tab-panel="diagonal" role="tabpanel" aria-hidden="true">
-          <div class="mode-group-title">八方向模式</div>
-          <div class="mode-hub-actions mode-hub-actions--dense">
-            <a class="mode-hub-btn" href="play.html?mode_key=diag_3x3_pow2_no_undo">3x3 八方向</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=diag_4x4_pow2_no_undo">4x4 八方向</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=diag_3x4_pow2_no_undo">4x3 八方向</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=diag_2x4_pow2_no_undo">4x2 八方向</a>
-          </div>
-        </div>
-
-        <div id="mode-tab-capped" class="mode-tab-panel" data-tab-panel="capped" role="tabpanel" aria-hidden="true">
-          <div class="mode-group-title">封顶模式</div>
-          <div class="mode-hub-actions mode-hub-actions--dense">
-            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_64_no_undo">4x4 封顶64</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_1024_no_undo">4x4 封顶1024</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_no_undo">4x4 封顶2048</a>
-            <a class="mode-hub-btn" href="play.html?mode_key=capped_4x4_pow2_4096_no_undo">4x4 封顶4096</a>
-          </div>
-          <div class="mode-group-title">禁止目标</div>
-          <div class="mode-hub-actions mode-hub-actions--dense">
-            <a class="mode-hub-btn" href="play.html?mode_key=nox_4x4_pow2_no_undo">NO X（64~32k）</a>
-          </div>
-        </div>
-
         <div id="mode-tab-special" class="mode-tab-panel" data-tab-panel="special" role="tabpanel" aria-hidden="true">
           <div class="mode-group-title">规则魔改</div>
           <div class="mode-hub-actions mode-hub-actions--dense mode-hub-actions--entertainment">
@@ -786,7 +748,7 @@
             <a class="mode-hub-btn" href="play.html?mode_key=item_4x4_pow2_no_undo">4x4 道具模式</a>
             <a class="mode-hub-btn" href="play.html?mode_key=stone_4x4_pow2_no_undo">4x4 石头模式</a>
             <a class="mode-hub-btn" href="play.html?mode_key=timed5s_4x4_pow2_no_undo">4x4 限时5秒</a>
-            <a class="mode-hub-btn" href="relay_5x5.html">5x5 接力模式</a>
+            <a class="mode-hub-btn" href="relay_5x5.html" data-mode-relay="5x5">5x5 接力模式</a>
           </div>
         </div>
 
@@ -796,7 +758,7 @@
             <a class="mode-hub-btn" href="history.html">历史</a>
             <a class="mode-hub-btn" href="replay.html">回放</a>
             <a class="mode-hub-btn" href="Practice_board.html?practice_fresh=1">练习板</a>
-            <a class="mode-hub-btn" href="palette.html">主题色板</a>
+            <a class="mode-hub-btn" href="palette.html">设置</a>
             <a class="mode-hub-btn" href="account.html">排行榜</a>
           </div>
         </div>

@@ -279,6 +279,26 @@ function collectTextContent(node: unknown): string {
 }
 
 describe("online leaderboard terminal submission", () => {
+  it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager(),
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      isLeaderboardModeSupported(modeKey: string): boolean;
+      resolveLeaderboardMode(modeKey: string): string | null;
+    };
+
+    expect(onlineRuntime.resolveLeaderboardMode("board_5x5_pow2_no_undo")).toBe("pow2_5x5");
+    expect(onlineRuntime.resolveLeaderboardMode("board_5x5_pow2_undo")).toBe("pow2_5x5_undo");
+    for (const size of [6, 7, 8, 9, 10]) {
+      expect(onlineRuntime.isLeaderboardModeSupported(`board_${size}x${size}_pow2_no_undo`)).toBe(false);
+      expect(onlineRuntime.isLeaderboardModeSupported(`board_${size}x${size}_pow2_undo`)).toBe(false);
+      expect(onlineRuntime.resolveLeaderboardMode(`board_${size}x${size}_pow2_no_undo`)).toBeNull();
+      expect(onlineRuntime.resolveLeaderboardMode(`board_${size}x${size}_pow2_undo`)).toBeNull();
+    }
+  });
+
   it("syncs the authenticated account best score for the current exact mode on startup", async () => {
     const storage = new MemoryStorage();
     const scoreManager = createScoreManagerStub(storage, 16);

@@ -116,6 +116,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "夜间模式"
     );
 
+    const timerToggleLayout = await page.evaluate(() => {
+      const timerRow = document.querySelector("#timer-module-view-toggle")?.closest<HTMLElement>(".settings-row");
+      const bgmRow = document.getElementById("bgm-settings-row");
+      return {
+        inlineWidth: timerRow?.style.width || "",
+        timerWidth: Math.round(timerRow?.getBoundingClientRect().width || 0),
+        siblingWidth: Math.round(bgmRow?.getBoundingClientRect().width || 0)
+      };
+    });
+    expect(timerToggleLayout.inlineWidth).toBe("");
+    expect(timerToggleLayout.timerWidth).toBe(timerToggleLayout.siblingWidth);
+
     await page.click("label.settings-switch[for='bgm-toggle']");
     await page.waitForFunction(() => {
       return window.localStorage.getItem("settings_bgm_enabled_v1") === "1";
@@ -389,7 +401,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.dataAttribute).toBe("1");
     expect(snapshot.groupTitleColor).toContain("236, 226, 211");
-    expect(snapshot.rootBackgroundImage).toContain("linear-gradient");
+    expect(snapshot.rootBackgroundImage).toBe("none");
     expect(snapshot.bodyBeforeDisplay).toBe("none");
     expect(snapshot.bodyAfterDisplay).toBe("none");
   });
@@ -436,7 +448,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     const targets = [
-      { url: "/account_settings.html", selector: ".settings-card" },
+      { url: "/account_settings.html", selector: ".account-auth-form-surface" },
       { url: "/replay.html", selector: ".replay-metric-card" },
       { url: "/palette.html", selector: ".theme-selection-col" },
       { url: "/history.html", selector: ".portal-card" },

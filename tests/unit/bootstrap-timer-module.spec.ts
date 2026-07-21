@@ -15,6 +15,7 @@ describe("bootstrap timer module", () => {
     const html = buildTimerModuleSettingsRowInnerHtml();
     expect(html).toContain("timer-module-view-toggle");
     expect(html).toContain("timer-module-view-note");
+    expect(html).not.toContain("custom-secondary-timer-rules");
   });
 
   it("resolves settings state from view mode", () => {

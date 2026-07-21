@@ -10,6 +10,43 @@ export interface DirectPageBootstrapResult {
   architecture: "manifest-bootstrap";
 }
 
+function bindContextualBackNavigation(): void {
+  if (
+    typeof window === "undefined" ||
+    typeof document === "undefined" ||
+    !window.history ||
+    window.history.length <= 1
+  ) return;
+
+  let referrerUrl: URL;
+  try {
+    referrerUrl = new URL(document.referrer);
+  } catch (_err) {
+    return;
+  }
+  if (referrerUrl.origin !== window.location.origin || referrerUrl.href === window.location.href) return;
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      const mouseEvent = event as MouseEvent;
+      if (
+        mouseEvent.defaultPrevented ||
+        mouseEvent.button !== 0 ||
+        mouseEvent.metaKey ||
+        mouseEvent.ctrlKey ||
+        mouseEvent.shiftKey ||
+        mouseEvent.altKey
+      ) return;
+      const target = mouseEvent.target as Element | null;
+      if (!target?.closest("a.page-back-button[href]")) return;
+      mouseEvent.preventDefault();
+      window.history.back();
+    },
+    true
+  );
+}
+
 export async function bootstrapDirectPage(
   pageId: string,
   pageInit?: (() => void | Promise<void>) | null
@@ -42,6 +79,7 @@ export async function bootstrapDirectPage(
       storageLike: window.localStorage
     });
   }
+  bindContextualBackNavigation();
 
   if (shouldRunBetaAccessGate(manifest.pageId)) {
     const access = await runBetaAccessGate(manifest.pageId);

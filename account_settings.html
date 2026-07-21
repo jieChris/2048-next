@@ -8,12 +8,12 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/account_page.css?v=20260707-leaderboard-summary" rel="stylesheet" type="text/css">
-  <link href="style/account_settings_page.css?v=20260711-centered-account-panels" rel="stylesheet" type="text/css">
+  <link href="style/account_settings_page.css?v=20260720-unified-auth-v3" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -21,18 +21,20 @@
   <main class="palette-page-shell account-settings-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap">
-        <p class="palette-kicker" id="settings-kicker">2048 在线中心</p>
-        <h1 class="palette-title" id="settings-title">账号设置</h1>
-        <p class="palette-subtitle" id="settings-subtitle">在这里统一管理昵称、密码和登录状态。</p>
+        <a class="page-back-button" href="account.html" id="settings-nav-account">返回排行榜</a>
+        <div class="page-title-visually-hidden">
+          <p class="palette-kicker" id="settings-kicker">2048 在线中心</p>
+          <h1 class="palette-title" id="settings-title">账号设置</h1>
+          <p class="palette-subtitle" id="settings-subtitle">在这里统一管理昵称、密码和登录状态。</p>
+        </div>
       </div>
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="user.html" id="settings-nav-user" hidden>用户中心</a>
-        <a class="replay-button palette-nav-btn" href="account.html" id="settings-nav-account">返回排行榜</a>
         <a class="replay-button palette-nav-btn" href="2048.html" id="settings-nav-home">首页</a>
       </nav>
     </header>
 
-    <section class="card-surface settings-card">
+    <section class="settings-stack">
       <section class="settings-section settings-auth-section">
         <div class="settings-section-title-row">
           <h2 id="account-auth-heading">账号登录</h2>
@@ -61,12 +63,11 @@
               <input id="account-login-captcha-answer" class="account-input" type="text" maxlength="8" autocomplete="off" placeholder="请输入验证码">
             </div>
           </div>
-        </div>
-
-        <div id="account-action-row" class="account-action-row settings-action-row">
-          <button id="account-login-btn" class="replay-button" type="button">登录</button>
-          <a id="account-open-register-btn" class="account-auth-link" href="register.html">注册账号</a>
-          <a id="account-open-reset-password-btn" class="account-auth-link" href="password.html?mode=reset">忘记密码</a>
+          <div id="account-action-row" class="account-action-row settings-action-row">
+            <button id="account-login-btn" class="replay-button" type="button">登录</button>
+            <a id="account-open-register-btn" class="account-auth-link" href="register.html">注册账号</a>
+            <a id="account-open-reset-password-btn" class="account-auth-link" href="password.html?mode=reset">忘记密码</a>
+          </div>
         </div>
 
         <p id="account-auth-tip" class="account-tip" aria-live="polite"></p>

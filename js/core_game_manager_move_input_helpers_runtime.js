@@ -644,7 +644,6 @@ function applyMergedTileEffects(manager, mergedValue, timeStr) {
   }
   applyNoXForbiddenTileLoss(manager, mergedValue);
   applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr);
-  stampSecondaryTimersForMergedValue(manager, mergedValue, timeStr);
   applyMoveMergeVisibilityEffects(manager, mergeEffects);
 }
 
@@ -715,6 +714,7 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   processItemModeAfterSuccessfulMove(manager);
   var forcedOver = !!manager.over;
   if (!forcedOver) addRandomTile(manager);
+  if (typeof stampCustomSecondaryTimersForBoard === "function") stampCustomSecondaryTimersForBoard(manager, manager.pretty(manager.time));
   var hasMovesAvailable = forcedOver ? false : movesAvailable(manager);
   var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver);
   if (shouldCaptureUndoHistoryForMove(manager)) pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));

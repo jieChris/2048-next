@@ -8,18 +8,18 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
 <body data-page="history">
   <div class="container portal-container">
     <div class="portal-header">
-      <h1 class="title"><a href="2048.html" style="text-decoration:none;color:inherit;"><img class="site-logo" style="width:234px;max-width:none;display:block" width="234" height="101" decoding="async" src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 标志"></a> 本地历史</h1>
+      <a class="page-back-button" id="history-page-back" href="2048.html">首页</a>
+      <h1 class="title page-title-visually-hidden">本地历史</h1>
       <div class="portal-nav">
-        <a href="2048.html">首页</a>
         <a href="modes.html">模式</a>
         <a href="replay.html">回放</a>
       </div>
@@ -27,35 +27,47 @@
 
     <div class="portal-card">
       <div class="portal-actions-inline">
-        <label>模式</label>
-        <select id="history-mode" class="settings-select portal-inline-select">
-          <option value="">全部模式</option>
-        </select>
+        <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+          <label for="history-undo">撤回</label>
+          <select id="history-undo" class="settings-select portal-inline-select">
+            <option value="no_undo">无撤回</option>
+            <option value="undo">可撤回</option>
+          </select>
+        </span>
 
-        <label>归属</label>
-        <select id="history-owner" class="settings-select portal-inline-select">
-          <option value="">全部归属</option>
-        </select>
+        <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+          <label for="history-mode">模式</label>
+          <select id="history-mode" class="settings-select portal-inline-select"></select>
+        </span>
 
-        <label>关键词</label>
-        <input id="history-keyword" class="portal-inline-input" placeholder="模式/分数/编号">
+        <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+          <label for="history-owner">归属</label>
+          <select id="history-owner" class="settings-select portal-inline-select">
+            <option value="">全部归属</option>
+          </select>
+        </span>
 
-        <label>排序</label>
-        <select id="history-sort" class="settings-select portal-inline-select">
-          <option value="ended_desc">按时间（新到旧）</option>
-          <option value="ended_asc">按时间（旧到新）</option>
-          <option value="score_desc">按分数（高到低）</option>
-        </select>
+        <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+          <label for="history-keyword">关键词</label>
+          <input id="history-keyword" class="portal-inline-input" placeholder="模式/分数/盘面和/编号">
+        </span>
+
+        <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+          <label for="history-sort">排序</label>
+          <select id="history-sort" class="settings-select portal-inline-select">
+            <option value="ended_desc">按时间（新到旧）</option>
+            <option value="ended_asc">按时间（旧到新）</option>
+            <option value="score_desc">按分数（高到低）</option>
+            <option value="board_sum_desc">按盘面和（高到低）</option>
+          </select>
+        </span>
 
         <button class="replay-button" id="history-load-btn">刷新</button>
       </div>
 
       <div class="portal-actions-inline" style="margin-top:8px;">
         <button class="replay-button" id="history-export-all-btn">导出全部</button>
-        <button class="replay-button" id="history-import-btn">导入合并</button>
-        <button class="replay-button" id="history-import-replace-btn">导入并替换</button>
         <button class="replay-button" id="history-clear-all-btn">清空全部</button>
-        <input id="history-import-file" type="file" accept="application/json,.json" style="display:none;">
       </div>
 
       <div id="history-status" class="portal-status"></div>

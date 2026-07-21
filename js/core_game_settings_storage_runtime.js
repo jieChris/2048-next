@@ -59,6 +59,21 @@
     return out;
   }
 
+  function calculateHistoryBoardSum(value) {
+    if (!Array.isArray(value)) return 0;
+    var total = 0;
+    for (var y = 0; y < value.length; y += 1) {
+      var row = value[y];
+      if (!Array.isArray(row)) continue;
+      for (var x = 0; x < row.length; x += 1) {
+        var numeric = Math.floor(Number(row[x]));
+        if (!Number.isFinite(numeric) || numeric <= 0) continue;
+        total = Math.min(Number.MAX_SAFE_INTEGER, total + numeric);
+      }
+    }
+    return total;
+  }
+
   function normalizeInteger(value, fallback) {
     var numeric = Number(value);
     return Number.isFinite(numeric) ? Math.floor(numeric) : fallback;
@@ -717,6 +732,8 @@
       maxArrayItems: opts.maxDiagnosticArrayItems,
       keyMaxLength: opts.maxDiagnosticKeyLength
     });
+    var finalBoard = normalizeHistoryBoardMatrix(source.final_board);
+    var hasBoardCells = finalBoard.some(function (row) { return row.length > 0; });
 
     return {
       id: id,
@@ -732,9 +749,12 @@
       special_rules_snapshot: isObjectRecord(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
       challenge_id: typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
       score: normalizeInteger(source.score, 0),
+      board_sum: hasBoardCells
+        ? calculateHistoryBoardSum(finalBoard)
+        : normalizeNonNegativeInteger(source.board_sum, 0),
       best_tile: normalizeInteger(source.best_tile, 0),
       duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
-      final_board: normalizeHistoryBoardMatrix(source.final_board),
+      final_board: finalBoard,
       ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
       saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
       end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",

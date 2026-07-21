@@ -21,6 +21,15 @@ body[data-page="account-settings-hub"][data-i18n-ready="0"] {
   padding: 16px;
 }
 
+html body[data-page="account-settings-hub"] main.account-settings-page-shell > .settings-stack > .settings-auth-section {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
 .settings-section + .settings-section {
   margin-top: 16px;
   padding-top: 14px;
@@ -68,19 +77,30 @@ body[data-page="account-settings-hub"][data-i18n-ready="0"] {
   font-size: 25px;
 }
 
-.settings-auth-section #account-auth-state-tag {
+html body[data-page="account-settings-hub"] .settings-auth-section #account-auth-state-tag {
   margin-right: 15px;
   padding-right: 12px;
   padding-left: 12px;
+  border: 1px solid var(--app-border-structure) !important;
+  background: var(--app-accent-soft) !important;
+  color: var(--app-link) !important;
 }
 
-.settings-auth-section .settings-action-row {
+html body[data-page="account-settings-hub"][data-auth-state="authed"] .settings-auth-section #account-auth-state-tag {
+  background: var(--app-success-soft) !important;
+  color: var(--app-success) !important;
+}
+
+html body[data-page="account-settings-hub"] .settings-auth-section #account-action-row {
   box-sizing: border-box;
   width: 100%;
-  max-width: 560px;
-  margin: 12px auto 0;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  max-width: none;
+  margin: 14px 0 0;
+  padding: 0 0 12px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 body[data-page="account-settings-hub"] :is(#settings-kicker, #settings-subtitle, #home-user-display) {

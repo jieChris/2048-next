@@ -276,7 +276,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [time, score]
+            enum: [time, score, board_sum]
         - name: order
           in: query
           schema:
@@ -346,7 +346,12 @@ paths:
           in: query
           schema:
             type: string
-            enum: [score, time]
+            enum: [score, speed]
+        - name: target_tile
+          in: query
+          schema:
+            type: integer
+            enum: [2048, 4096, 8192, 16384, 32768]
       responses:
         "200":
           description: Leaderboard result.
@@ -357,6 +362,11 @@ paths:
                   - $ref: "#/components/schemas/ApiEnvelope"
                   - type: object
                     properties:
+                      metric:
+                        type: string
+                        enum: [score, speed]
+                      target_tile:
+                        type: integer
                       data:
                         type: array
                         items:
@@ -1396,6 +1406,8 @@ components:
           type: integer
         duration_ms:
           type: integer
+        speed_ms:
+          type: integer
         mode:
           type: string
         mode_key:
@@ -1451,6 +1463,8 @@ components:
         nickname:
           type: string
         score:
+          type: integer
+        board_sum:
           type: integer
         duration_ms:
           type: integer

@@ -39,7 +39,7 @@
   body[data-page="replay"] .best-container:after {
     top: 6px;
     font-size: 12px;
-    line-height: 12px;
+    line-height: 15px;
   }
 }
 
@@ -57,4 +57,3 @@
     padding: 18px 6px 8px;
   }
 }
-

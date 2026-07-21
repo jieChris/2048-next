@@ -224,6 +224,47 @@ function resolveTheoreticalMaxTile(manager, width, height, ruleset) {
     });
   });
 }
+function normalizeTimerSlotIdsFromCore(coreValue) {
+  if (!Array.isArray(coreValue)) return undefined;
+  var out = [];
+  for (var i = 0; i < coreValue.length; i++) {
+    var value = Number(coreValue[i]);
+    if (!Number.isInteger(value) || value <= 0) continue;
+    out.push(value);
+  }
+  return out;
+}
+function resolveTimerSlotIdsForBoardFallback(fallbackTimerSlotIds, maxTileOverride) {
+  var slots = normalizeTimerSlotIdsFromCore(fallbackTimerSlotIds) || [];
+  var override = Number(maxTileOverride);
+  if (!Number.isFinite(override) || override <= 0) return slots;
+  return slots.filter(function (value) { return value <= Math.floor(override); });
+}
+function resolveTimerSlotIdsForBoard(manager, width, height, ruleset, maxTileOverride) {
+  var fallbackTimerSlotIds = Array.isArray(GameManager.DEFAULT_TIMER_SLOT_IDS)
+    ? GameManager.DEFAULT_TIMER_SLOT_IDS
+    : (Array.isArray(GameManager.TIMER_SLOT_IDS) ? GameManager.TIMER_SLOT_IDS : []);
+  if (!manager) return fallbackTimerSlotIds.slice();
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreRulesRuntime",
+    "getTimerSlotIdsForBoard",
+    [ruleset, width, height, fallbackTimerSlotIds, maxTileOverride],
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
+        return normalizeTimerSlotIdsFromCore(coreValue);
+      }, function () {
+        return resolveTimerSlotIdsForBoardFallback(fallbackTimerSlotIds, maxTileOverride);
+      });
+    }
+  );
+}
+function applyTimerSlotIdsForMode(manager) {
+  if (!manager) return;
+  var slots = resolveTimerSlotIdsForBoard(manager, manager.width, manager.height, manager.ruleset, manager.maxTile);
+  if (Array.isArray(slots)) GameManager.TIMER_SLOT_IDS = slots;
+}
 function createDefaultSpawnTableByRuleset(ruleset) {
   if (ruleset === "fibonacci") {
     return [{ value: 1, weight: 90 }, { value: 2, weight: 10 }];
@@ -421,7 +462,10 @@ function resolveModeConfig(manager, modeId) {
 function createTimerMilestoneResolveArgs(manager) {
   return [
     manager.isFibonacciMode() ? "fibonacci" : "pow2",
-    GameManager.TIMER_SLOT_IDS
+    GameManager.TIMER_SLOT_IDS,
+    manager.width,
+    manager.height,
+    manager.maxTile
   ];
 }
 function normalizeTimerMilestoneValuesFromCore(coreValue) {
@@ -429,8 +473,7 @@ function normalizeTimerMilestoneValuesFromCore(coreValue) {
 }
 function resolveTimerMilestoneValuesFallback(currentManager) {
   if (currentManager.isFibonacciMode()) {
-    // 13 slots mapped to Fibonacci milestones.
-    return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
+    return [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181].slice(0, GameManager.TIMER_SLOT_IDS.length);
   }
   return GameManager.TIMER_SLOT_IDS.slice();
 }
@@ -465,6 +508,7 @@ function applySetupModeConfigBaseFields(manager, cfg) {
   manager.size = manager.width;
   manager.ruleset = cfg.ruleset;
   manager.maxTile = cfg.max_tile || Infinity;
+  applyTimerSlotIdsForMode(manager);
   manager.spawnTable = manager.normalizeSpawnTable(cfg.spawn_table, cfg.ruleset);
   manager.specialRules = manager.normalizeSpecialRules(cfg.special_rules);
   manager.rankedBucket = cfg.ranked_bucket || "none";

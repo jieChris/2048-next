@@ -16,32 +16,34 @@ test.describe("Home user display", () => {
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account_settings.html");
   });
 
-  test("keeps the profile button animated when text button mode is enabled", async ({ page }) => {
+  test("switches the profile button between text and icon modes", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("settings_top_button_style_v1", "text");
     });
 
     await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toHaveAttribute("data-top-button-style", "text");
+    await expect(page.locator("#top-user-profile-btn")).toHaveText("用户");
+    await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(0);
+    await expect(page.locator("#top-mobile-hint-btn")).toBeHidden();
+    await expect(page.locator("#top-mobile-undo-btn")).toBeHidden();
+
+    const textButtonLayout = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>(".top-action-buttons .top-action-btn"))
+        .filter((button) => button.offsetParent !== null)
+        .map((button) => ({
+          height: button.getBoundingClientRect().height,
+          borderRadius: getComputedStyle(button).borderRadius,
+          overflows: button.scrollWidth > button.clientWidth
+        }))
+    );
+    expect(textButtonLayout.length).toBeGreaterThan(0);
+    expect(textButtonLayout.every(({ height }) => height === 50)).toBe(true);
+    expect(textButtonLayout.every(({ borderRadius }) => borderRadius === "12px")).toBe(true);
+    expect(textButtonLayout.every(({ overflows }) => !overflows)).toBe(true);
+
+    await page.evaluate(() => (window as any).CoreTopButtonStyleRuntime.applyTopButtonStyle("icon"));
     await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(1);
-
-    await page.hover("#top-user-profile-btn");
-    const style = await page.locator("#top-user-profile-btn .profile-head-left").evaluate((node) => {
-      const computed = window.getComputedStyle(node);
-      const svg = document.querySelector("#top-user-profile-btn svg") as SVGElement | null;
-      const svgStyle = svg ? window.getComputedStyle(svg) : null;
-      return {
-        animationName: computed.animationName,
-        animationDuration: computed.animationDuration,
-        width: svgStyle?.width,
-        height: svgStyle?.height
-      };
-    });
-
-    expect(style.animationName).toBe("profile-line-draw");
-    expect(style.animationDuration).toBe("0.44s");
-    expect(style.width).toBe("34px");
-    expect(style.height).toBe("34px");
   });
 
   test("shows stored nickname on the action row and aligns the logo with scores", async ({ page }) => {

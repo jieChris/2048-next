@@ -193,6 +193,9 @@
 }
 
 .timertile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0), inset 0 0 0 1px rgba(255, 255, 255, 0);
   border-radius: var(--app-radius-tile);
@@ -201,14 +204,13 @@
   z-index: 10;
   width: 42px;
   height: 42px;
-  line-height: 42px;
+  line-height: 1;
   color: var(--app-text);
   background: var(--app-surface-tile);
-  font-family: 'Clear Sans';
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   float: left;
   margin-left: 15px;
   margin-top: 9px;
   font-size: 19px;
   /* Default size */
 }
-

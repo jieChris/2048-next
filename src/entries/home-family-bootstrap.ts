@@ -55,6 +55,7 @@ import { installUndoStackEntryRuntime } from "../bootstrap/undo-stack-entry-runt
 import { installUndoTileRestoreRuntime } from "../bootstrap/undo-tile-restore-runtime";
 import { installUndoTileSnapshotRuntime } from "../bootstrap/undo-tile-snapshot-runtime";
 import { installCappedRepeatLegendRuntime } from "../core/capped-repeat-legend";
+import { installCustomSecondaryTimerRuntime } from "../core/custom-secondary-timers";
 import { installFallbackModeConfigsRuntime } from "../core/game-manager-fallback-mode-configs";
 import { installCappedUiManagerForwardBindingsRuntime } from "../core/capped-ui-bindings";
 import { installGameManagerActuatorPayloadStateRuntime } from "../core/game-manager-actuator-payload-state";
@@ -342,6 +343,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   );
   installCryptoRandomRuntime();
   installGameManagerClientRecordIdRuntime();
+  installCustomSecondaryTimerRuntime();
   installGameManagerBaseHelpersRuntime();
   installGameManagerEnvHelpersRuntime();
   installGameManagerRuntimeCallHelpersRuntime();

@@ -336,6 +336,7 @@ function createNoXSelectionOptionButton(
   if (!button) throw new Error("NO X selection document cannot create button");
   button.type = "button";
   button.setAttribute?.("data-no-x-value", String(value));
+  button.setAttribute?.("class", `no-x-selection-option${value === selectedValue ? " is-selected" : ""}`);
   button.textContent = `NO ${formatNoXForbiddenTileLabel(value).toUpperCase()}`;
   button.style.padding = "10px 12px";
   button.style.borderRadius = "8px";
@@ -369,6 +370,7 @@ export function ensureNoXSelectionOverlayForManager(manager: NoXSelectionManager
 
   const overlay = documentLike.createElement("div");
   overlay.id = resolveNoXSelectionOverlayId();
+  overlay.setAttribute?.("class", "no-x-selection-overlay");
   overlay.style.position = "fixed";
   overlay.style.inset = "0";
   overlay.style.zIndex = "4000";
@@ -379,6 +381,7 @@ export function ensureNoXSelectionOverlayForManager(manager: NoXSelectionManager
   overlay.style.padding = "20px";
 
   const panel = documentLike.createElement("div");
+  panel.setAttribute?.("class", "no-x-selection-panel");
   panel.style.width = "min(520px, 96vw)";
   panel.style.background = "#fbf8f1";
   panel.style.border = "1px solid #d8ccbc";
@@ -388,6 +391,7 @@ export function ensureNoXSelectionOverlayForManager(manager: NoXSelectionManager
   panel.style.boxSizing = "border-box";
 
   const title = documentLike.createElement("div");
+  title.setAttribute?.("class", "no-x-selection-title");
   title.textContent = buildNoXSelectionTitle(manager, windowLike);
   title.style.fontSize = "20px";
   title.style.fontWeight = "700";
@@ -396,6 +400,7 @@ export function ensureNoXSelectionOverlayForManager(manager: NoXSelectionManager
   panel.appendChild?.(title);
 
   const subtitle = documentLike.createElement("div");
+  subtitle.setAttribute?.("class", "no-x-selection-subtitle");
   subtitle.textContent = buildNoXSelectionSubtitle(manager, windowLike);
   subtitle.style.fontSize = "14px";
   subtitle.style.color = "#7b7167";
@@ -403,6 +408,7 @@ export function ensureNoXSelectionOverlayForManager(manager: NoXSelectionManager
   panel.appendChild?.(subtitle);
 
   const grid = documentLike.createElement("div");
+  grid.setAttribute?.("class", "no-x-selection-grid");
   grid.style.display = "grid";
   grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(86px, 1fr))";
   grid.style.gap = "10px";

@@ -5,6 +5,10 @@ import {
   applyTimerModuleSettingsUi,
   ensureTimerModuleSettingsToggle
 } from "../../src/bootstrap/timer-module-settings-host";
+import {
+  createCustomSecondaryTimerRuntime,
+  readCustomSecondaryTimerRuleText
+} from "../../src/core/custom-secondary-timers";
 
 function createTimerRuntime() {
   return {
@@ -209,6 +213,87 @@ describe("bootstrap timer module settings host", () => {
       didSync: false
     });
     expect(scheduleRetry).toHaveBeenCalledWith(60);
+  });
+
+  it("validates and saves custom rules without changing the active game", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem(key: string) {
+        return values.get(key) || null;
+      },
+      setItem(key: string, value: string) {
+        values.set(key, value);
+      }
+    };
+    const handlers: Record<string, () => void> = {};
+    const createButton = (name: string) => ({
+      textContent: "",
+      addEventListener(event: string, handler: () => void) {
+        handlers[name + ":" + event] = handler;
+      }
+    });
+    const attributes: Record<string, string> = {};
+    const rulesInput = {
+      value: "",
+      setAttribute(name: string, value: string) {
+        attributes[name] = value;
+      },
+      removeAttribute(name: string) {
+        delete attributes[name];
+      }
+    };
+    const saveButton = createButton("save");
+    const clearButton = createButton("clear");
+    const family = { textContent: "" };
+    const customNote = { textContent: "", style: {} };
+    const row = { style: {}, querySelector: vi.fn(() => null) };
+    const toggle = {
+      checked: true,
+      disabled: false,
+      addEventListener: vi.fn(),
+      closest: vi.fn(() => row)
+    };
+    const nodes: Record<string, unknown> = {
+      "custom-secondary-timer-rules": rulesInput,
+      "custom-secondary-timer-save": saveButton,
+      "custom-secondary-timer-clear": clearButton,
+      "custom-secondary-timer-family": family,
+      "custom-secondary-timer-note": customNote
+    };
+    const manager = {
+      ruleset: "pow2",
+      timerMilestones: [32, 64],
+      getTimerModuleViewMode: () => "timer",
+      setTimerModuleViewMode: vi.fn()
+    };
+
+    applyTimerModuleSettingsUi({
+      toggle,
+      noteElement: { textContent: "", style: {} },
+      documentLike: {
+        body: { getAttribute: () => "standard_4x4_pow2_no_undo" },
+        getElementById: (id: string) => nodes[id] || null,
+        querySelector: () => null
+      },
+      windowLike: {
+        game_manager: manager,
+        localStorage: storage,
+        CoreCustomSecondaryTimerRuntime: createCustomSecondaryTimerRuntime(),
+        OnlineLeaderboardRuntime: { isLeaderboardModeSupported: () => true }
+      },
+      timerModuleRuntime: createTimerRuntime()
+    });
+
+    rulesInput.value = "32\n32+3";
+    handlers["save:click"]();
+    expect(attributes["aria-invalid"]).toBe("true");
+    expect(readCustomSecondaryTimerRuleText(storage, "pow2")).toBe("");
+
+    rulesInput.value = "32\n32+2";
+    handlers["save:click"]();
+    expect(attributes["aria-invalid"]).toBeUndefined();
+    expect(readCustomSecondaryTimerRuleText(storage, "pow2")).toBe("32\n32+2");
+    expect((manager as Record<string, unknown>).customSecondaryTimerRules).toBeUndefined();
   });
 
   it("binds toggle and syncs view mode with manager", () => {

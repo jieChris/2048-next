@@ -49,5 +49,7 @@
     width: 100% !important;
     max-width: 980px;
     margin: 0 auto;
+    box-sizing: border-box;
+    padding-top: 36px;
   }
 }

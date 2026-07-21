@@ -3,6 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 async function installNightModeFixture(page: Page): Promise<void> {
   await page.addInitScript(() => {
     window.localStorage.setItem("settings_night_background_enabled_v1", "1");
+    window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+    window.localStorage.setItem("settings_day_theme_profile_v1", "mist_cyan");
+    window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
     window.localStorage.setItem("2048_auth_token_v1", "night-mode-smoke-token");
     window.localStorage.setItem("2048_auth_userId_v1", "42");
     window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");

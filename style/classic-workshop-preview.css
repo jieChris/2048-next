@@ -269,44 +269,87 @@ body[data-preview-page="classic-workshop"] {
   }
 }
 
-/* Candidate theme: loaded only inside the preview iframe. */
-body[data-page]:not([data-page="modes"]) {
-  --workshop-bg: #f4f1ea;
-  --workshop-panel: #fffcf6;
-  --workshop-panel-soft: #f0ebe4;
-  --workshop-board: #c7bdb2;
-  --workshop-score: #fbf8f1;
-  --workshop-grid-cell: #e2dbd2;
-  --workshop-timer-track: #f0ebe4;
-  --workshop-ink: #514a44;
-  --workshop-text: #655e57;
-  --workshop-muted: #81786f;
-  --workshop-line: rgba(81, 74, 68, 0.17);
-  --workshop-shadow: 0 6px 16px rgba(76, 65, 55, 0.1);
+/* Classic Workshop product theme. */
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) {
+  --workshop-bg: var(--app-page-bg);
+  --workshop-panel: var(--app-surface-light);
+  --workshop-panel-soft: var(--app-surface-soft);
+  --workshop-board: var(--app-surface-board);
+  --workshop-score: var(--app-surface-light);
+  --workshop-grid-cell: var(--app-surface-empty-tile);
+  --workshop-timer-track: var(--app-surface-soft);
+  --workshop-ink: var(--app-text-strong);
+  --workshop-text: var(--app-text);
+  --workshop-muted: var(--app-text-muted);
+  --workshop-teal: var(--app-accent);
+  --workshop-gold: var(--app-milestone);
+  --workshop-line: var(--app-border-structure);
+  --workshop-shadow: 0 6px 16px rgba(42, 74, 78, 0.1);
   color: var(--workshop-text) !important;
   background: var(--workshop-bg) !important;
   background-image: none !important;
 }
 
-html:not([data-night-background="1"]):has(body[data-page]:not([data-page="modes"])) {
-  background: #f4f1ea !important;
+html[data-theme="mist_cyan"]:not([data-night-background="1"]):has(body[data-page]:not([data-page="modes"])) {
+  background: #f3f6f5 !important;
   background-image: none !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(h1, h2, h3, .palette-title) {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(h1, h2, h3, .palette-title) {
   color: var(--workshop-ink) !important;
   background: none !important;
   -webkit-text-fill-color: currentColor !important;
   letter-spacing: 0 !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(.palette-kicker, .palette-subtitle, .account-tip, .relay-note) {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(.palette-kicker, .palette-subtitle, .account-tip, .relay-note) {
   color: var(--workshop-muted) !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
+  p,
+  .game-intro,
+  .game-explanation,
+  .settings-note,
+  .settings-toggle-desc,
+  .portal-muted,
+  .touch-kicker,
+  .touch-subtitle,
+  .touch-hint,
+  .touch-feedback,
+  .user-profile-inline-info
+) {
+  color: var(--workshop-text);
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) a:not(
+  .top-action-btn,
+  .restart-button,
+  .replay-button,
+  .mode-hub-btn,
+  .keep-playing-button,
+  .retry-button,
+  .undo-button
+) {
+  color: var(--app-link) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) a:not(
+  .top-action-btn,
+  .restart-button,
+  .replay-button,
+  .mode-hub-btn,
+  .keep-playing-button,
+  .retry-button,
+  .undo-button
+):hover {
+  color: var(--app-link-hover) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
   .card-surface,
   .portal-card,
+  .settings-card,
   .account-summary-card,
   .account-auth-form-surface,
   .account-action-row,
@@ -324,7 +367,43 @@ body[data-page]:not([data-page="modes"]) :is(
   backdrop-filter: none !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"] body[data-page="user-profile"] :is(
+  .user-nav-menu-panel,
+  .user-summary-card,
+  .user-summary-summary,
+  .user-summary-row,
+  .user-record-list,
+  .user-record-detail-card
+),
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(
+  .relay-replay-case-name,
+  .relay-advanced-panel
+) {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--workshop-shadow) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="user-profile"] :is(
+  .user-summary-card span,
+  .user-summary-summary,
+  .user-summary-preview,
+  .user-record-date
+) {
+  color: var(--workshop-muted) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="user-profile"] :is(
+  .user-summary-card strong,
+  .user-summary-preview strong,
+  .user-profile-inline-info strong
+) {
+  color: var(--workshop-ink) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
   input,
   textarea,
   select,
@@ -340,14 +419,14 @@ body[data-page]:not([data-page="modes"]) :is(
   box-shadow: inset 3px 0 0 rgba(47, 134, 160, 0.15) !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus,
-body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus-visible {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus,
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(input, textarea, select):focus-visible {
   border-color: var(--workshop-teal) !important;
   outline: 2px solid rgba(47, 134, 160, 0.22) !important;
   outline-offset: 1px;
 }
 
-body[data-page]:not([data-page="modes"]) select:not([multiple]) {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]) {
   appearance: none !important;
   min-height: 38px;
   padding-right: 34px !important;
@@ -363,28 +442,28 @@ body[data-page]:not([data-page="modes"]) select:not([multiple]) {
   cursor: pointer;
 }
 
-body[data-page]:not([data-page="modes"]) select:not([multiple]):hover {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]):hover {
   border-color: rgba(47, 134, 160, 0.42) !important;
 }
 
-body[data-page]:not([data-page="modes"]) select option {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select option {
   color: var(--workshop-ink);
   background: var(--workshop-panel);
 }
 
 @supports (appearance: base-select) {
-  body[data-page]:not([data-page="modes"]) select:not([multiple]),
-  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]),
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
     appearance: base-select !important;
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple]) {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]) {
     align-items: center;
     padding-right: 12px !important;
     background-image: none !important;
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple])::picker(select) {
     max-height: min(360px, 60vh);
     margin-top: 4px;
     padding: 5px;
@@ -392,32 +471,32 @@ body[data-page]:not([data-page="modes"]) select option {
     border-radius: 8px;
     color: var(--workshop-ink);
     background: var(--workshop-panel);
-    box-shadow: 0 12px 28px rgba(76, 65, 55, 0.16);
+    box-shadow: 0 12px 28px rgba(42, 74, 78, 0.16);
     overflow-y: auto;
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple]) option {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]) option {
     min-height: 38px;
     padding: 8px 10px;
     border-radius: 5px;
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple]) option:is(:hover, :focus) {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]) option:is(:hover, :focus) {
     background: var(--workshop-panel-soft);
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple]) option:checked {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]) option:checked {
     color: #356b76;
     background: rgba(47, 134, 160, 0.1);
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple])::picker-icon {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple])::picker-icon {
     content: "";
     box-sizing: border-box;
     width: 8px;
     height: 8px;
     margin-right: 2px;
-    margin-left: 8px;
+    margin-left: auto;
     border-right: 2px solid currentColor;
     border-bottom: 2px solid currentColor;
     color: var(--workshop-ink);
@@ -425,119 +504,157 @@ body[data-page]:not([data-page="modes"]) select option {
     transition: transform 140ms ease;
   }
 
-  body[data-page]:not([data-page="modes"]) select:not([multiple]):open::picker-icon {
+  html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) select:not([multiple]):open::picker-icon {
     transform: rotate(225deg);
   }
 }
 
-body[data-page="game"] :is(.score-container, .best-container),
-body[data-page="practice"] :is(.score-container, .best-container) {
+html[data-theme="mist_cyan"] body[data-page="game"] :is(.score-container, .best-container),
+html[data-theme="mist_cyan"] body[data-page="practice"] :is(.score-container, .best-container) {
   border: 0 !important;
   border-radius: 6px !important;
   background: var(--workshop-score) !important;
   box-shadow: var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) #timer {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) #timer {
   border-radius: 6px !important;
-  color: #91b45c !important;
+  color: var(--workshop-ink) !important;
   background: var(--workshop-score) !important;
-  box-shadow: var(--workshop-shadow) !important;
+  box-shadow: inset 0 3px 0 var(--workshop-board), var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) .score-container {
-  color: #168c87 !important;
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .score-container {
+  color: var(--workshop-ink) !important;
+  box-shadow: inset 0 3px 0 var(--workshop-teal), var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) .best-container {
-  color: #e47e39 !important;
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .best-container {
+  color: var(--workshop-ink) !important;
+  box-shadow: inset 0 3px 0 var(--workshop-gold), var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(.score-container, .best-container, #timer)::after {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(.score-container, .best-container, #timer)::after {
   color: var(--workshop-muted) !important;
 }
 
-:is(
-  html:not([data-theme]),
-  html[data-theme="classic"],
-  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
-)
-  body[data-page="game"] .game-container,
-:is(
-  html:not([data-theme]),
-  html[data-theme="classic"],
-  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
-)
-  body[data-page="practice"] .game-container {
+html[data-theme="mist_cyan"] body[data-page="game"] .game-container,
+html[data-theme="mist_cyan"] body[data-page="practice"] .game-container {
   border-radius: 7px !important;
   background: var(--workshop-board) !important;
-  box-shadow: 0 10px 24px rgba(76, 65, 55, 0.13) !important;
+  box-shadow: 0 10px 24px rgba(42, 74, 78, 0.13) !important;
 }
 
-:is(
-  html:not([data-theme]),
-  html[data-theme="classic"],
-  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
-)
-  body[data-page="game"] .grid-cell:not(.grid-cell-obstacle),
-:is(
-  html:not([data-theme]),
-  html[data-theme="classic"],
-  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
-)
-  body[data-page="practice"] .grid-cell:not(.grid-cell-obstacle) {
+html[data-theme="mist_cyan"] body[data-page="game"] .grid-cell:not(.grid-cell-obstacle),
+html[data-theme="mist_cyan"] body[data-page="practice"] .grid-cell:not(.grid-cell-obstacle) {
   background: var(--workshop-grid-cell) !important;
 }
 
-:is(
-  html:not([data-theme]),
-  html[data-theme="classic"],
-  html[data-theme="midnight_nebula"]:not([data-night-background="1"])
-)
-  body[data-page="practice"] .dashboard-box {
-  background: var(--workshop-board) !important;
+html[data-theme="mist_cyan"] body[data-page="practice"] .dashboard-box {
+  border: 1px solid var(--workshop-line) !important;
+  color: var(--workshop-text) !important;
+  background: var(--workshop-panel-soft) !important;
+  box-shadow: var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) #timerbox .timertile[id^="timer"] {
+html[data-theme="mist_cyan"] body[data-page="practice"] .dashboard-controls label {
+  color: var(--workshop-ink) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] :is(
+  .selection-page-btn,
+  .practice-mode-option
+) {
+  border-color: var(--app-border-control) !important;
+  color: var(--workshop-ink) !important;
+  background: var(--app-surface-control) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] :is(
+  .selection-page-btn,
+  .practice-mode-option
+):not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--workshop-teal) !important;
+  background: color-mix(in srgb, var(--workshop-teal) 8%, var(--app-surface-control)) !important;
+  box-shadow: 0 6px 14px rgba(42, 74, 78, 0.12) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] .practice-mode-option.is-active {
+  border-color: var(--workshop-teal) !important;
+  background: var(--workshop-panel-soft) !important;
+  box-shadow: inset 3px 0 0 var(--workshop-teal) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] :is(
+  .practice-mode-current,
+  .practice-mode-option-meta,
+  .practice-mode-empty
+) {
+  color: var(--workshop-muted) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] :is(
+  .practice-mode-title,
+  .practice-board-code-title
+) {
+  color: var(--workshop-ink) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] .practice-mode-badge {
+  border-color: var(--workshop-line) !important;
+  color: var(--workshop-ink) !important;
+  background: var(--workshop-panel) !important;
+  background-image: none !important;
+  box-shadow: var(--workshop-shadow) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"] .selection-tile.selected {
+  border-color: var(--workshop-teal) !important;
+  box-shadow: 0 0 0 2px var(--workshop-teal), 0 6px 14px rgba(42, 74, 78, 0.16) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="practice"]
+  .scores-container.practice-gesture-entry.practice-gesture-active {
+  box-shadow: 0 0 0 2px var(--workshop-teal) inset !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) #timerbox .timertile[id^="timer"] {
   background: var(--workshop-timer-track) !important;
   box-shadow: none !important;
 }
 
-body[data-page]:not([data-page="modes"]) .timer-scroll-btn {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .timer-scroll-btn {
   color: var(--workshop-ink) !important;
   background: var(--enamel-button-surface) !important;
 }
 
-body[data-page]:not([data-page="modes"]) .timer-scroll-btn:hover {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .timer-scroll-btn:hover {
   background: var(--workshop-score) !important;
 }
 
-body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary {
-  border-radius: 7px !important;
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary {
+  border-radius: 6px !important;
+  color: var(--workshop-ink) !important;
   background: var(--workshop-score) !important;
+  box-shadow: inset 0 3px 0 var(--workshop-board), var(--workshop-shadow) !important;
 }
 
-body[data-page]:not([data-page="modes"]) #timer-leaderboard-panel {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) #timer-leaderboard-panel {
   background: transparent !important;
   box-shadow: none !important;
 }
 
-body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary {
-  color: var(--workshop-teal) !important;
-  box-shadow:
-    inset 0 0 0 1px var(--workshop-line),
-    var(--workshop-shadow) !important;
-}
-
-body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary::after {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary::after {
   color: var(--workshop-muted) !important;
+  font-size: 13px;
 }
 
-body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary:focus-visible {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .timer-leaderboard-summary:focus-visible {
   outline-color: var(--workshop-teal);
 }
 
-body[data-page]:not([data-page="modes"])
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
   #timerbox
   .timer-leaderboard-row
   .timer-leaderboard-name-tile {
@@ -547,21 +664,21 @@ body[data-page]:not([data-page="modes"])
   letter-spacing: 0;
 }
 
-body[data-page]:not([data-page="modes"])
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
   #timerbox
   .timer-leaderboard-row.is-empty
   .timer-leaderboard-name-tile {
   color: var(--workshop-muted) !important;
 }
 
-body[data-page]:not([data-page="modes"]) .replay-diagnostics-panel {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .replay-diagnostics-panel {
   border: 1px solid var(--workshop-line) !important;
   border-radius: 7px !important;
   background: var(--workshop-panel-soft) !important;
   box-shadow: none !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
   .replay-modal-overlay,
   .game-dialog-overlay,
   .practice-mode-panel,
@@ -572,7 +689,7 @@ body[data-page]:not([data-page="modes"]) :is(
   backdrop-filter: blur(3px) !important;
 }
 
-body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
   .replay-modal-content,
   .game-dialog-panel,
   .practice-mode-dialog,
@@ -587,32 +704,101 @@ body[data-page]:not([data-page="modes"]) :is(
   box-shadow: 0 18px 42px rgba(34, 51, 50, 0.24) !important;
 }
 
-body[data-page="account-hub"] .account-page-shell,
-body[data-page="achievements"] .achievements-page-shell {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .game-container .game-message {
+  color: var(--workshop-ink) !important;
+  background: color-mix(in srgb, var(--workshop-bg) 86%, transparent) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  .game-container .game-message.game-won {
+  color: var(--app-text-on-action) !important;
+  background: color-mix(in srgb, var(--workshop-gold) 70%, transparent) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(
+  .restart-button:not(.top-action-btn),
+  .game-container .game-message a
+) {
+  border-color: var(--app-action-bg) !important;
+  color: var(--app-text-on-action) !important;
+  background: var(--app-action-bg) !important;
+  box-shadow: 0 7px 16px rgba(24, 46, 51, 0.2) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay {
+  background: var(--app-surface-overlay) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-panel {
+  border: 1px solid var(--app-border-structure) !important;
+  border-radius: var(--app-radius-dialog) !important;
+  color: var(--app-text) !important;
+  background: var(--app-surface-modal) !important;
+  box-shadow: var(--app-shadow-dialog) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-title {
+  color: var(--app-text-strong) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-subtitle {
+  color: var(--app-text-muted) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-option {
+  border: 1px solid var(--app-border-control) !important;
+  border-radius: 7px !important;
+  color: var(--app-text-strong) !important;
+  background: var(--app-surface-control) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-option:is(:hover, :focus-visible) {
+  border-color: var(--app-accent) !important;
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface-control)) !important;
+  outline: 2px solid var(--app-focus-ring-control);
+  outline-offset: 2px;
+}
+
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"])
+  #no-x-selection-overlay .no-x-selection-option.is-selected {
+  border: 2px solid var(--app-accent) !important;
+  background: var(--app-surface-soft) !important;
+  box-shadow: inset 3px 0 0 var(--app-accent) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="account-hub"] .account-page-shell,
+html[data-theme="mist_cyan"] body[data-page="achievements"] .achievements-page-shell {
   width: min(1120px, calc(100vw - 32px));
 }
 
-body[data-page]:not([data-page="modes"]) .palette-page-header {
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) .palette-page-header {
   padding-bottom: 15px;
   border-bottom: 1px solid var(--workshop-line);
 }
 
-body[data-page="account-hub"] :is(.account-board-head-row, .account-board-row),
-body[data-page="relay-5x5"] :is(.relay-table th, .relay-table td) {
+html[data-theme="mist_cyan"] body[data-page="account-hub"] :is(.account-board-head-row, .account-board-row),
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(.relay-table th, .relay-table td) {
   border-color: var(--workshop-line) !important;
 }
 
-body[data-page="account-hub"] .account-board-list,
-body[data-page="account-hub"] .account-board-table-wrap {
+html[data-theme="mist_cyan"] body[data-page="account-hub"] .account-board-list,
+html[data-theme="mist_cyan"] body[data-page="account-hub"] .account-board-table-wrap {
   border-radius: 7px !important;
   background: var(--workshop-panel) !important;
 }
 
-body[data-page="account-hub"] .account-board-row:hover {
-  background: #edf2ee !important;
+html[data-theme="mist_cyan"] body[data-page="account-hub"] .account-board-row:hover {
+  background: var(--app-accent-soft) !important;
 }
 
-body[data-page="achievements"] :is(
+html[data-theme="mist_cyan"] body[data-page="achievements"] :is(
   .achievements-summary-card,
   .achievements-showcase-card,
   .achievements-list-card,
@@ -630,78 +816,96 @@ body[data-page="achievements"] :is(
   transform: none !important;
 }
 
-body[data-page="achievements"] .achievement-card.is-selected {
+html[data-theme="mist_cyan"] body[data-page="achievements"] .achievement-card.is-selected {
   border-color: var(--workshop-teal) !important;
-  box-shadow: inset 3px 0 0 var(--workshop-teal), inset 0 -2px 0 rgba(215, 155, 50, 0.3) !important;
+  background: color-mix(in srgb, var(--workshop-teal) 7%, var(--workshop-panel)) !important;
+  box-shadow: inset 3px 0 0 var(--workshop-teal) !important;
 }
 
-body[data-page="achievements"] .achievement-light-state {
+html[data-theme="mist_cyan"] body[data-page="achievements"] .achievement-light-state {
   border-color: rgba(215, 155, 50, 0.25) !important;
   color: #7d5d20 !important;
   background: rgba(215, 155, 50, 0.1) !important;
 }
 
-body[data-page="relay-5x5"] .relay-page {
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-page {
   width: min(1080px, calc(100vw - 28px));
 }
 
-body[data-page="relay-5x5"] :is(.relay-table, .relay-table th) {
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(.relay-table, .relay-table th) {
   background: var(--workshop-panel) !important;
 }
 
-body[data-page="relay-5x5"] .relay-pill {
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(.relay-panel h2, .relay-table th) {
+  color: var(--workshop-ink) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(.relay-table td, .relay-claim-item-main, .relay-claim-empty, .relay-page-info) {
+  color: var(--workshop-text) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-table th {
+  background: var(--workshop-panel-soft) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] :is(.relay-claim-card, .relay-claim-item) {
+  border-color: var(--workshop-line) !important;
+  background: var(--workshop-panel-soft) !important;
+}
+
+html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-pill {
   border: 1px solid rgba(47, 134, 160, 0.24) !important;
   color: #356b76 !important;
   background: rgba(47, 134, 160, 0.08) !important;
 }
 
 @media (max-width: 520px) {
-  body[data-page="account-settings-hub"] .account-settings-page-shell {
+  html[data-theme="mist_cyan"] body[data-page="account-settings-hub"] .account-settings-page-shell {
     width: 100% !important;
     margin: 56px auto 18px !important;
   }
 
-  body[data-page="relay-5x5"] .relay-page {
+  html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-page {
     margin-top: 56px !important;
   }
 
-  body[data-page="practice"]
+  html[data-theme="mist_cyan"] body[data-page="practice"]
     :is(.selection-tile.tile-16384, .selection-tile.tile-32768) .tile-inner {
     font-size: 12px !important;
   }
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) {
-  --workshop-bg: #18201f;
-  --workshop-panel: #232e2c;
-  --workshop-panel-soft: #2b3734;
-  --workshop-board: #435450;
-  --workshop-score: #354946;
-  --workshop-grid-cell: #5b6b67;
-  --workshop-timer-track: #273532;
-  --workshop-line: rgba(151, 185, 176, 0.2);
-  --workshop-ink: #edf2ed;
-  --workshop-text: #ccd7d1;
-  --workshop-muted: #9eada6;
-  --workshop-teal: #63aaa6;
-  --workshop-gold: #d5aa55;
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) {
+  --workshop-bg: var(--app-page-bg);
+  --workshop-panel: var(--app-surface-light);
+  --workshop-panel-soft: var(--app-surface-soft);
+  --workshop-board: var(--app-surface-board);
+  --workshop-score: var(--app-action-muted-bg);
+  --workshop-grid-cell: var(--app-surface-empty-tile);
+  --workshop-timer-track: var(--app-surface-soft);
+  --workshop-line: var(--app-border-structure);
+  --workshop-ink: var(--app-text-strong);
+  --workshop-text: var(--app-text);
+  --workshop-muted: var(--app-text-muted);
+  --workshop-teal: var(--app-accent);
+  --workshop-gold: var(--app-milestone);
   --workshop-shadow: 0 7px 18px rgba(0, 0, 0, 0.22);
   color: var(--workshop-text) !important;
   background: var(--workshop-bg) !important;
   background-image: none !important;
 }
 
-html[data-night-background="1"]:has(body[data-page]:not([data-page="modes"])) {
+html[data-theme="mist_cyan"][data-night-background="1"]:has(body[data-page]:not([data-page="modes"])) {
   background: #18201f !important;
   background-image: none !important;
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"])
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"])
   :is(.score-container, .best-container, #timer) {
   color: #edf2ed !important;
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   input,
   textarea,
   select,
@@ -714,7 +918,7 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   background: #1d2725 !important;
 }
 
-html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
+html[data-theme="mist_cyan"][data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
   .replay-modal-overlay,
   .game-dialog-overlay,
   .practice-mode-panel,
@@ -726,7 +930,7 @@ html[data-night-background="1"] body[data-page]:not([data-page="modes"]) :is(
 
 @media (prefers-reduced-motion: reduce) {
   body[data-preview-page="classic-workshop"] *,
-  html:has(body[data-page]:not([data-page="modes"])) * {
+  html[data-theme="mist_cyan"]:has(body[data-page]:not([data-page="modes"])) * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

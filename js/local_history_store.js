@@ -9,7 +9,7 @@
   var MAX_DIAGNOSTIC_ARRAY_ITEMS = 8;
 
   var DB_NAME = "game_history_db";
-  var DB_VERSION = 1;
+  var DB_VERSION = 2;
   var STORE_NAME = "records";
   var MIGRATION_FLAG = "idb_history_migrated_v1";
   var AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
@@ -249,6 +249,43 @@
     return records;
   }
 
+  function normalizeHistoryBoardMatrix(value) {
+    if (!Array.isArray(value)) return [];
+    var board = [];
+    for (var y = 0; y < value.length; y += 1) {
+      var row = Array.isArray(value[y]) ? value[y] : [];
+      var normalizedRow = [];
+      for (var x = 0; x < row.length; x += 1) {
+        normalizedRow.push(Math.floor(Number(row[x]) || 0));
+      }
+      board.push(normalizedRow);
+    }
+    return board;
+  }
+
+  function calculateHistoryBoardSum(value) {
+    if (!Array.isArray(value)) return 0;
+    var total = 0;
+    for (var y = 0; y < value.length; y += 1) {
+      var row = Array.isArray(value[y]) ? value[y] : [];
+      for (var x = 0; x < row.length; x += 1) {
+        var numeric = Math.floor(Number(row[x]));
+        if (!Number.isFinite(numeric) || numeric <= 0) continue;
+        total = Math.min(Number.MAX_SAFE_INTEGER, total + numeric);
+      }
+    }
+    return total;
+  }
+
+  function resolveHistoryBoardSum(board, storedValue) {
+    var hasBoardCells = Array.isArray(board) && board.some(function (row) {
+      return Array.isArray(row) && row.length > 0;
+    });
+    if (hasBoardCells) return calculateHistoryBoardSum(board);
+    var stored = Math.floor(Number(storedValue));
+    return Number.isFinite(stored) && stored > 0 ? stored : 0;
+  }
+
   function normalizeRecordFallback(raw) {
     raw = isPlainObject(raw) ? raw : {};
     var modeKey = typeof raw.mode_key === "string" && raw.mode_key ? raw.mode_key : "unknown";
@@ -278,7 +315,12 @@
       end_reason: raw.end_reason || "game_over",
       client_version: raw.client_version || "1.8",
       replay: isPlainObject(raw.replay) ? raw.replay : null,
-      replay_string: replayString
+      replay_string: replayString,
+      owner_type: raw.owner_type,
+      owner_user_id: raw.owner_user_id,
+      owner_nickname: raw.owner_nickname,
+      owner_key: raw.owner_key,
+      diagnostics_index_entries: raw.diagnostics_index_entries
     };
   }
 
@@ -312,6 +354,11 @@
     var base = hasRuntimeBase
       ? normalizedByRuntime
       : normalizeRecordFallback(raw);
+    var finalBoard = normalizeHistoryBoardMatrix(base.final_board);
+    base = Object.assign({}, base, {
+      board_sum: resolveHistoryBoardSum(finalBoard, base.board_sum),
+      final_board: finalBoard
+    });
     if (hasRuntimeBase) {
       return Object.assign({}, base, {
         diagnostics_index_entries: Array.isArray(base.diagnostics_index_entries)
@@ -369,12 +416,25 @@
       var request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = function () {
         var db = request.result;
+        var store = null;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          var store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
+          store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
           store.createIndex("mode_key", "mode_key", { unique: false });
           store.createIndex("ended_at", "ended_at", { unique: false });
           store.createIndex("score", "score", { unique: false });
+        } else {
+          store = request.transaction.objectStore(STORE_NAME);
         }
+        if (!store.indexNames.contains("board_sum")) {
+          store.createIndex("board_sum", "board_sum", { unique: false });
+        }
+        var cursorRequest = store.openCursor();
+        cursorRequest.onsuccess = function () {
+          var cursor = cursorRequest.result;
+          if (!cursor) return;
+          cursor.update(normalizeRecord(cursor.value));
+          cursor.continue();
+        };
       };
       request.onsuccess = function () {
         resolve(request.result || null);
@@ -467,6 +527,7 @@
       item.mode_key,
       item.mode,
       String(item.score),
+      String(item.board_sum),
       String(item.best_tile),
       item.ruleset,
       item.challenge_id || "",
@@ -498,19 +559,30 @@
       : 50;
 
     var fallbackList = readAllFallback();
+    var normalizedFallbackList = [];
     var filteredFallback = [];
+    var needsBackfill = false;
     for (var f = 0; f < fallbackList.length; f += 1) {
-      var row = fallbackList[f];
+      var rawRow = fallbackList[f];
+      var row = normalizeRecord(rawRow);
       if (!row) continue;
+      normalizedFallbackList.push(row);
+      if (!rawRow || rawRow.board_sum !== row.board_sum) needsBackfill = true;
       if (modeKey && row.mode_key !== modeKey) continue;
       if (!matchesOwner(row, ownerKey)) continue;
       if (!matchesKeyword(row, keyword)) continue;
       filteredFallback.push(row);
     }
+    if (needsBackfill) writeAllFallback(normalizedFallbackList);
 
     if (sortBy === "score_desc") {
       filteredFallback.sort(function (a, b) {
         if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+        return compareDatesDesc(a, b);
+      });
+    } else if (sortBy === "board_sum_desc") {
+      filteredFallback.sort(function (a, b) {
+        if ((b.board_sum || 0) !== (a.board_sum || 0)) return (b.board_sum || 0) - (a.board_sum || 0);
         return compareDatesDesc(a, b);
       });
     } else if (sortBy === "ended_asc") {
@@ -574,7 +646,7 @@
     var tx = db.transaction(STORE_NAME, "readonly");
     var value = await requestToPromise(tx.objectStore(STORE_NAME).get(key));
     await txDonePromise(tx);
-    return value || null;
+    return value ? normalizeRecord(value) : null;
   }
 
   async function deleteById(id, skipFallbackMirror) {
@@ -656,7 +728,9 @@
     return new Promise(function (resolve, reject) {
       var tx = db.transaction(STORE_NAME, "readonly");
       var store = tx.objectStore(STORE_NAME);
-      var indexName = sortBy === "score_desc" ? "score" : "ended_at";
+      var indexName = sortBy === "score_desc"
+        ? "score"
+        : (sortBy === "board_sum_desc" ? "board_sum" : "ended_at");
       var direction = sortBy === "ended_asc" ? "next" : "prev";
       var source = store.index(indexName);
       var request = source.openCursor(null, direction);
@@ -678,7 +752,7 @@
           return;
         }
 
-        var item = cursor.value;
+        var item = normalizeRecord(cursor.value);
         if ((!modeKey || item.mode_key === modeKey) && matchesOwner(item, ownerKey) && matchesKeyword(item, keyword)) {
           if (total >= start && total < endExclusive) {
             items.push(item);
@@ -755,7 +829,7 @@
           }
           var item = cursor.value;
           if (!idSet || idSet[item.id]) {
-            out.push(item);
+            out.push(normalizeRecord(item));
           }
           cursor.continue();
         };
@@ -921,7 +995,7 @@
     var all = readAllFallback();
     for (var i = 0; i < all.length; i += 1) {
       var item = all[i];
-      if (item && item.id === key) return item;
+      if (item && item.id === key) return normalizeRecord(item);
     }
     return null;
   }
@@ -970,7 +1044,7 @@
     var all = readAllFallback();
     var rows = [];
     for (var r = 0; r < all.length; r += 1) {
-      var row = all[r];
+      var row = normalizeRecord(all[r]);
       if (!row) continue;
       if (idSet && !idSet[row.id]) continue;
       rows.push(row);

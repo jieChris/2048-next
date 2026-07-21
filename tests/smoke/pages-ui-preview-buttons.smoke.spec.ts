@@ -301,7 +301,7 @@ test("production mobile-only top actions use enamel chrome without horizontal ov
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("production button families use enamel tones while excluded pages stay unchanged", async ({ page }) => {
+test("production button families use classic semantic tones while excluded pages stay unchanged", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
   });
@@ -339,7 +339,7 @@ test("production button families use enamel tones while excluded pages stay unch
   })).toEqual({
     color: "rgb(167, 70, 59)",
     backgroundColor: "rgb(255, 249, 246)",
-    bandColor: "rgb(189, 84, 71)"
+    bandColor: "rgb(167, 70, 59)"
   });
 
   await page.goto("/palette.html", { waitUntil: "domcontentloaded" });

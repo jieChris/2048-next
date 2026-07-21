@@ -2,37 +2,100 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>2048 色板中心</title>
+  <title>2048 设置</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
   <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260418-01"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260713-night-pages-v1" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260711-enamel-controls" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260720-theme-controls-v1" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
 <body data-page="palette-hub">
   <main class="palette-page-shell">
     <header class="palette-page-header">
-      <div class="palette-title-wrap">
-        <p class="palette-kicker">2048 色板中心</p>
-        <h1 class="palette-title">色板中心</h1>
-        <p class="palette-subtitle">按棋盘类型与配色维度统一管理颜色，支持当前棋盘实时预览。</p>
+      <div class="palette-title-wrap palette-nav">
+        <a class="palette-nav-btn page-back-button" href="2048.html">回首页</a>
+        <div class="page-title-visually-hidden">
+          <p class="palette-kicker">2048 设置</p>
+          <h1 class="palette-title">设置</h1>
+          <p class="palette-subtitle">集中管理计时器、主题与色板，相关选项按类别收纳。</p>
+        </div>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="2048.html">回首页</a>
         <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
         <a class="replay-button palette-nav-btn palette-touch-entry" href="touch_sensitivity.html">触屏灵敏度</a>
       </nav>
     </header>
 
+    <nav class="settings-category-nav" aria-label="设置分类">
+      <a class="settings-category-link" href="#timer-settings">
+        <strong>计时器</strong>
+        <span>自定义子计时器规则</span>
+      </a>
+      <a class="settings-category-link" href="#appearance-settings">
+        <strong>外观与配色</strong>
+        <span>主题、色板与棋盘预览</span>
+      </a>
+    </nav>
+
+    <section id="timer-settings" class="card-surface palette-settings-card">
+      <div class="panel-head">
+        <h2>计时器设置</h2>
+        <span class="panel-pill">计时</span>
+      </div>
+      <details id="custom-secondary-timer-editor" class="settings-disclosure">
+        <summary>
+          <span class="settings-disclosure-copy">
+            <strong>自定义子计时器</strong>
+            <small>按规则体系保存，每行填写一条完整规则。</small>
+          </span>
+          <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
+          <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
+        </summary>
+        <div class="custom-secondary-timer-body">
+          <div class="custom-secondary-timer-family-tabs" role="tablist" aria-label="子计时器规则体系">
+            <button type="button" class="custom-secondary-timer-family-btn is-active" data-timer-family="pow2" role="tab" aria-selected="true">2048</button>
+            <button type="button" class="custom-secondary-timer-family-btn" data-timer-family="fibonacci" role="tab" aria-selected="false">Fibonacci</button>
+          </div>
+          <div class="custom-secondary-timer-generator">
+            <label>
+              <span class="custom-secondary-timer-range-start-label">起始母计时器</span>
+              <select id="custom-secondary-timer-range-start"></select>
+            </label>
+            <label>
+              <span class="custom-secondary-timer-range-end-label">结束母计时器</span>
+              <select id="custom-secondary-timer-range-end"></select>
+            </label>
+            <button id="custom-secondary-timer-generate" class="replay-button" type="button">生成推荐规则</button>
+          </div>
+          <p class="custom-secondary-timer-generator-hint">生成结果会替换规则内容；点击保存前不会生效。</p>
+          <label for="custom-secondary-timer-rules" class="custom-secondary-timer-label">规则内容</label>
+          <p id="custom-secondary-timer-family" class="custom-secondary-timer-desc">2 的幂模式共享；每行一条完整规则。</p>
+          <textarea id="custom-secondary-timer-rules" rows="8" spellcheck="false" placeholder="32&#10;32+2&#10;32+4"></textarea>
+          <div class="custom-secondary-timer-actions">
+            <button id="custom-secondary-timer-save" class="replay-button" type="button">保存规则</button>
+            <button id="custom-secondary-timer-clear" class="replay-button" type="button">清空</button>
+          </div>
+          <p id="custom-secondary-timer-note" class="palette-note" aria-live="polite"></p>
+        </div>
+      </details>
+    </section>
+
+    <section id="appearance-settings" class="palette-settings-section">
+      <div class="settings-section-head">
+        <p class="palette-kicker">外观设置</p>
+        <h2>主题与色板</h2>
+        <p>主题选择、棋盘配色和颜色编辑集中在这一分类。</p>
+      </div>
+
     <section class="card-surface palette-theme-card">
       <div class="panel-head">
-        <h2>主题与模式</h2>
+        <h2>主题选择</h2>
         <span class="panel-pill">主题</span>
       </div>
       <div class="theme-settings-row palette-theme-settings-row">
@@ -159,6 +222,7 @@
 
         <p id="palette-note" class="palette-note" aria-live="polite"></p>
       </section>
+    </section>
     </section>
   </main>
 

@@ -24,6 +24,7 @@
   var SETTINGS_VALUE_NOTE_ID = "top-button-style-note";
 
   var ID_LABEL_MAP = {
+    "top-user-profile-btn": { zh: "\u7528\u6237", en: "Account" },
     "top-announcement-btn": { zh: "\u516c\u544a", en: "News" },
     "stats-panel-toggle": { zh: "\u7edf\u8ba1", en: "Stats" },
     "top-export-replay-btn": { zh: "\u5bfc\u51fa", en: "Export" },
@@ -344,7 +345,7 @@
   function getTopActionButtons(documentLike) {
     return querySelectorAll(
       documentLike,
-      'body[data-page="game"] .top-action-buttons .top-action-btn:not(#top-user-profile-btn), body[data-page="game"] .top-action-buttons .restart-button, body[data-page="game"] .top-action-buttons #top-restart-btn, body[data-page="game"] .above-game .restart-button, body[data-page="game"] #timerbox-toggle-btn'
+      'body[data-page="game"] .top-action-buttons .top-action-btn, body[data-page="game"] .top-action-buttons .restart-button, body[data-page="game"] .top-action-buttons #top-restart-btn, body[data-page="game"] .above-game .restart-button, body[data-page="game"] #timerbox-toggle-btn'
     );
   }
 

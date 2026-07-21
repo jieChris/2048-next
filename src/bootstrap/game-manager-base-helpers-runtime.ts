@@ -1,4 +1,5 @@
 import {
+  applyCustomSecondaryTimerRuleText,
   applySecondaryTimerRowsState,
   applySecondaryTimerExpandedParentsState,
   bindSecondaryTimerParentToggleEvents,
@@ -52,6 +53,7 @@ import {
   safeClonePlain,
   setSecondaryTimerParentExpanded,
   stampSecondaryTimerDescriptor,
+  stampCustomSecondaryTimersForBoard,
   stampSecondaryTimersForMergedValue,
   toggleSecondaryTimerParentExpanded,
   tryHandleCoreRawValue
@@ -76,6 +78,7 @@ export interface GameManagerBaseHelpersRuntime {
   safeClonePlain: typeof safeClonePlain;
   hasOwnKey: typeof hasOwnKey;
   readOptionValue: typeof readOptionValue;
+  applyCustomSecondaryTimerRuleText: typeof applyCustomSecondaryTimerRuleText;
   normalizeSecondaryTimerValue: typeof normalizeSecondaryTimerValue;
   isSecondaryTimerPowerOfTwo: typeof isSecondaryTimerPowerOfTwo;
   getSecondaryTimerSlotIds: typeof getSecondaryTimerSlotIds;
@@ -105,6 +108,7 @@ export interface GameManagerBaseHelpersRuntime {
   refreshSecondaryTimerRowsVisibility: typeof refreshSecondaryTimerRowsVisibility;
   resetSecondaryTimerRowsForSetup: typeof resetSecondaryTimerRowsForSetup;
   stampSecondaryTimerDescriptor: typeof stampSecondaryTimerDescriptor;
+  stampCustomSecondaryTimersForBoard: typeof stampCustomSecondaryTimersForBoard;
   stampSecondaryTimersForMergedValue: typeof stampSecondaryTimersForMergedValue;
   invalidateSecondaryTimersByLimit: typeof invalidateSecondaryTimersByLimit;
   collectSecondaryTimerRowsState: typeof collectSecondaryTimerRowsState;
@@ -150,6 +154,7 @@ export function createGameManagerBaseHelpersRuntime(): GameManagerBaseHelpersRun
     safeClonePlain,
     hasOwnKey,
     readOptionValue,
+    applyCustomSecondaryTimerRuleText,
     normalizeSecondaryTimerValue,
     isSecondaryTimerPowerOfTwo,
     getSecondaryTimerSlotIds,
@@ -179,6 +184,7 @@ export function createGameManagerBaseHelpersRuntime(): GameManagerBaseHelpersRun
     refreshSecondaryTimerRowsVisibility,
     resetSecondaryTimerRowsForSetup,
     stampSecondaryTimerDescriptor,
+    stampCustomSecondaryTimersForBoard,
     stampSecondaryTimersForMergedValue,
     invalidateSecondaryTimersByLimit,
     collectSecondaryTimerRowsState,

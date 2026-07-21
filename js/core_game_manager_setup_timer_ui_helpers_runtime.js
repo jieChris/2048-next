@@ -65,6 +65,41 @@ function createSetupTimerRowElement(documentLike, rowId) {
   return row;
 }
 
+function resolveSetupTimerLegendFontSize(slot) {
+  if (slot >= 131072) return "9px";
+  if (slot >= 16384) return "11px";
+  if (slot >= 1024) return "14px";
+  return "18px";
+}
+
+function createSetupTimerLegendElement(manager, documentLike, slot) {
+  if (!(documentLike && typeof documentLike.createElement === "function")) return null;
+  var legend = documentLike.createElement("div");
+  if (!legend) return null;
+  legend.className = "timertile timer-legend-" + String(slot);
+  var slotIndex = getSetupTimerSlotIds().indexOf(slot);
+  var milestone = manager && Array.isArray(manager.timerMilestones) ? Number(manager.timerMilestones[slotIndex]) : NaN;
+  legend.textContent = String(Number.isInteger(milestone) && milestone > 0 ? milestone : slot);
+  if (legend.style) {
+    legend.style.color = "#f9f6f2";
+    legend.style.fontSize = resolveSetupTimerLegendFontSize(slot);
+  }
+  return legend;
+}
+
+function createSetupTimerValueElement(documentLike, slot) {
+  if (!(documentLike && typeof documentLike.createElement === "function")) return null;
+  var timerEl = documentLike.createElement("div");
+  if (!timerEl) return null;
+  timerEl.id = "timer" + String(slot);
+  timerEl.className = "timertile";
+  if (timerEl.style) {
+    timerEl.style.marginLeft = "6px";
+    timerEl.style.width = "187px";
+  }
+  return timerEl;
+}
+
 function resolveCoreSetupTimerRowNormalizeRuntime() {
   return typeof CoreSetupTimerRowNormalizeRuntime !== "undefined" && CoreSetupTimerRowNormalizeRuntime ? CoreSetupTimerRowNormalizeRuntime : (typeof window !== "undefined" && window ? window.CoreSetupTimerRowNormalizeRuntime : null);
 }
@@ -98,19 +133,23 @@ function ensureSetupTimerTrailingBreakNodes(row, documentLike, movedBr) {
 function createSetupTimerRowForSlot(manager, timerBox, documentLike, slot) {
   if (!manager || !timerBox) return;
   var timerEl = resolveManagerElementById(manager, "timer" + String(slot));
-  if (!(timerEl && timerEl.parentNode === timerBox)) return;
+  var isExistingTimerEl = !!(timerEl && timerEl.parentNode === timerBox);
+  if (!timerEl) timerEl = createSetupTimerValueElement(documentLike, slot);
+  if (!timerEl || (isExistingTimerEl === false && timerEl.parentNode && timerEl.parentNode !== timerBox)) return;
 
   var rowId = "timer-row-" + String(slot);
   var row = createSetupTimerRowElement(documentLike, rowId);
   if (!row) return;
 
-  var legend = resolveSetupTimerLegendForSlot(timerEl, timerBox, slot);
+  var legend = isExistingTimerEl
+    ? resolveSetupTimerLegendForSlot(timerEl, timerBox, slot)
+    : createSetupTimerLegendElement(manager, documentLike, slot);
   var nextAfterTimer = timerEl.nextSibling;
-  timerBox.insertBefore(row, legend || timerEl);
+  timerBox.insertBefore(row, isExistingTimerEl ? (legend || timerEl) : null);
   if (legend) row.appendChild(legend);
   row.appendChild(timerEl);
 
-  var movedBr = appendSetupTimerTrailingNodes(row, nextAfterTimer);
+  var movedBr = isExistingTimerEl ? appendSetupTimerTrailingNodes(row, nextAfterTimer) : 0;
   ensureSetupTimerTrailingBreakNodes(row, documentLike, movedBr);
 }
 
@@ -402,5 +441,6 @@ function resetTimerUiForSetup(manager) {
   var cappedStateForReset = manager.resolveCappedModeState();
   resetCappedContainersForSetup(manager, cappedStateForReset, cappedTimerContainer);
   manager.getCappedOverflowContainer(cappedStateForReset);
+  manager.callWindowNamespaceMethod("ThemeManager", "syncTimerLegendStyles");
   manager.callWindowMethod("cappedTimerReset");
 }

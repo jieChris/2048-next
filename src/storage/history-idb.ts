@@ -22,7 +22,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const DB_NAME = "game_history_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "records";
 const LEGACY_STORAGE_KEY = "local_game_history_v1";
 const MIGRATION_FLAG = "idb_history_migrated_v1";
@@ -87,12 +87,26 @@ function openDatabase(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
+      let store: IDBObjectStore;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
         store.createIndex("mode_key", "mode_key", { unique: false });
         store.createIndex("ended_at", "ended_at", { unique: false });
         store.createIndex("score", "score", { unique: false });
+      } else {
+        store = request.transaction!.objectStore(STORE_NAME);
       }
+      if (!store.indexNames.contains("board_sum")) {
+        store.createIndex("board_sum", "board_sum", { unique: false });
+      }
+      const cursorRequest = store.openCursor();
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+        if (!cursor) return;
+        const normalized = normalizeHistoryRecordLike(cursor.value);
+        if (normalized) cursor.update(normalized);
+        cursor.continue();
+      };
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -233,7 +247,7 @@ export async function listRecords(options?: {
     if (keyword) {
       const haystack = [
         item.id, item.mode_key, item.mode,
-        String(item.score), String(item.best_tile),
+        String(item.score), String(item.board_sum), String(item.best_tile),
         item.ruleset, item.challenge_id || ""
       ].join(" ").toLowerCase();
       if (!haystack.includes(keyword)) return false;
@@ -243,6 +257,8 @@ export async function listRecords(options?: {
 
   if (sortBy === "score_desc") {
     filtered.sort((a, b) => (b.score || 0) - (a.score || 0) || compareDates(b.ended_at, a.ended_at));
+  } else if (sortBy === "board_sum_desc") {
+    filtered.sort((a, b) => (b.board_sum || 0) - (a.board_sum || 0) || compareDates(b.ended_at, a.ended_at));
   } else if (sortBy === "ended_asc") {
     filtered.sort((a, b) => compareDates(a.ended_at, b.ended_at));
   } else {

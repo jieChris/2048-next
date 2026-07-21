@@ -1294,6 +1294,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   function resolveLeaderboardMode(modeLike) {
     var key = toText(modeLike).trim().toLowerCase();
     if (!key) return null;
+    if (/^board_(?:[6-9]|10)x(?:[6-9]|10)_pow2_(?:no_undo|undo)$/.test(key)) return null;
     return MODE_BUCKET_ALIAS[key] || null;
   }
 

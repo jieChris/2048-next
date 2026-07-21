@@ -1,6 +1,6 @@
 :root {
-  --ap-good: #4e8b58;
-  --ap-bad: #c2473b;
+  --ap-good: var(--app-success);
+  --ap-bad: var(--app-danger);
 }
 
 body[data-page="account-hub"] {
@@ -39,6 +39,7 @@ body[data-page="account-hub"][data-auth-state] .account-grid {
 
 .account-board-card {
   padding: 18px;
+  background: var(--app-surface-light);
 }
 
 body[data-page="account-hub"][data-auth-state="guest"] .account-auth-card {
@@ -370,18 +371,18 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
 .account-summary-card {
   min-height: 74px;
   padding: 12px 14px;
-  border: 1px solid #dfd2c2;
+  border: 1px solid var(--app-border-structure);
   border-radius: 10px;
-  background: rgba(255, 250, 243, 0.9);
+  background: var(--app-surface-light);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 4px 12px rgba(110, 88, 68, 0.08);
+    0 4px 12px rgba(42, 74, 78, 0.06);
   box-sizing: border-box;
 }
 
 .account-summary-card span {
   display: block;
-  color: #8a7765;
+  color: var(--app-text-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -389,7 +390,7 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
 .account-summary-card strong {
   display: block;
   margin-top: 8px;
-  color: #4d4035;
+  color: var(--app-text-strong);
   font-size: 20px;
   line-height: 1.15;
   font-weight: 900;
@@ -398,14 +399,13 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
 
 .account-board-filter-row {
   margin-bottom: 12px;
-  border: 1px solid #e2d7ca;
+  border: 1px solid var(--app-border-structure);
   border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(252, 245, 236, 0.82));
+  background: var(--app-surface-soft);
   padding: 10px 12px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.66),
-    0 1px 3px rgba(127, 104, 84, 0.08);
+    0 1px 3px rgba(42, 74, 78, 0.08);
 }
 
 .account-board-tools {
@@ -419,12 +419,40 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
 .account-board-tools label {
   margin: 0;
   font-size: 13px;
-  color: #7b6c5f;
+  color: var(--app-text);
   font-weight: 700;
 }
 
 .account-board-tools .replay-button {
   min-height: 38px;
+}
+
+body[data-page="account-hub"] #account-board-undo {
+  box-sizing: border-box;
+  flex: 0 0 160px;
+  width: 160px;
+}
+
+body[data-page="account-hub"] #account-board-mode {
+  box-sizing: border-box;
+  flex: 0 0 240px;
+  width: 240px;
+}
+
+body[data-page="account-hub"] #account-board-metric {
+  box-sizing: border-box;
+  flex: 0 0 160px;
+  width: 160px;
+}
+
+body[data-page="account-hub"] #account-board-speed-target {
+  box-sizing: border-box;
+  flex: 0 0 112px;
+  width: 112px;
+}
+
+body[data-page="account-hub"] #account-board-refresh {
+  margin-left: auto;
 }
 
 .account-board-tools .replay-button.is-loading {
@@ -436,7 +464,7 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
   min-width: 78px;
   text-align: center;
   font-size: 12px;
-  color: #7b6c5f;
+  color: var(--app-text-muted);
   font-weight: 700;
 }
 
@@ -444,14 +472,14 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
   -webkit-appearance: none;
   appearance: none;
   min-height: 38px;
-  border: 1px solid #d9cabc;
+  border: 1px solid var(--app-border-control);
   border-radius: 12px;
   padding: 0 36px 0 12px;
-  background-color: #fff8f0;
+  background-color: var(--app-surface-control);
   background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 241, 232, 0.95)),
-    linear-gradient(45deg, transparent 50%, #806f5f 50%),
-    linear-gradient(135deg, #806f5f 50%, transparent 50%);
+    linear-gradient(180deg, var(--app-surface-control), var(--app-surface-light)),
+    linear-gradient(45deg, transparent 50%, var(--app-text-strong) 50%),
+    linear-gradient(135deg, var(--app-text-strong) 50%, transparent 50%);
   background-repeat: no-repeat, no-repeat, no-repeat;
   background-position:
     center center,
@@ -461,7 +489,7 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 1px 2px rgba(117, 99, 82, 0.08);
-  color: #66584b;
+  color: var(--app-text-strong);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -470,22 +498,22 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
 }
 
 body[data-page="account-hub"] .account-board-tools .settings-select:hover {
-  border-color: #ccb8a6;
-  background-color: #fff4ea;
+  border-color: var(--app-accent);
+  background-color: var(--app-surface-control);
 }
 
 body[data-page="account-hub"] .account-board-tools .settings-select:focus,
 body[data-page="account-hub"] .account-board-tools .settings-select:focus-visible {
-  border-color: #ad8f74;
+  border-color: var(--app-accent);
   box-shadow:
-    0 0 0 3px rgba(173, 143, 116, 0.16),
+    0 0 0 3px var(--app-focus-ring-control),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .account-board-table-wrap {
-  border: 1px solid #dfd3c5;
+  border: 1px solid var(--app-border-structure);
   border-radius: 12px;
-  background: #fffaf3;
+  background: var(--app-surface-light);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
     0 1px 2px rgba(123, 100, 79, 0.08);
@@ -497,9 +525,9 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
   grid-template-columns: 56px minmax(96px, 1fr) 90px 170px;
   gap: 8px;
   padding: 10px 10px;
-  border-bottom: 1px solid rgba(154, 133, 113, 0.26);
-  background: linear-gradient(180deg, #f7efe5, #f4eadf);
-  color: #847463;
+  border-bottom: 1px solid var(--app-border-structure);
+  background: var(--app-surface-soft);
+  color: var(--app-text);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -509,7 +537,7 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
   min-height: 260px;
   max-height: 560px;
   overflow: auto;
-  background: #fffaf3;
+  background: var(--app-surface-light);
   position: relative;
 }
 
@@ -518,11 +546,11 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 }
 
 .account-board-list[data-board-state="error"] {
-  background: #fff8f6;
+  background: var(--app-danger-soft);
 }
 
 .account-board-list[data-board-state="empty"] {
-  background: #fffaf3;
+  background: var(--app-surface-light);
 }
 
 .account-board-empty,
@@ -537,19 +565,19 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 }
 
 .account-board-row + .account-board-row {
-  border-top: 1px solid rgba(154, 133, 113, 0.2);
+  border-top: 1px solid var(--app-border-muted);
 }
 
 .account-board-row:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.34);
+  background: var(--app-surface-light);
 }
 
 .account-board-row:nth-child(even) {
-  background: rgba(248, 239, 229, 0.46);
+  background: var(--app-surface-soft);
 }
 
 .account-board-row:hover {
-  background: #fff2e2;
+  background: var(--app-accent-soft);
 }
 
 .account-board-empty {
@@ -557,7 +585,7 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8f7f70;
+  color: var(--app-text-muted);
 }
 
 .account-board-empty.err {
@@ -577,21 +605,21 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
   width: 32px;
   min-height: 24px;
   border-radius: 999px;
-  background: #efe4d6;
-  color: #6f5b49;
+  background: var(--app-surface-soft);
+  color: var(--app-text-strong);
   font-size: 12px;
 }
 
 .account-board-row.is-rank-top1 {
-  background: #fff2dc;
+  background: color-mix(in srgb, var(--app-milestone) 14%, var(--app-surface-light));
 }
 
 .account-board-row.is-rank-top2 {
-  background: #f5f0e6;
+  background: var(--app-surface-soft);
 }
 
 .account-board-row.is-rank-top3 {
-  background: #f7ede2;
+  background: color-mix(in srgb, #b98053 10%, var(--app-surface-light));
 }
 
 .account-board-row.is-rank-top1 .account-rank {
@@ -617,7 +645,7 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 }
 
 .account-name-link {
-  color: #594637;
+  color: var(--app-link);
   text-decoration: none;
   cursor: pointer;
   font-weight: 700;
@@ -625,27 +653,24 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 
 .account-name-link:hover,
 .account-name-link:focus-visible {
-  color: #2f241b;
+  color: var(--app-link-hover);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .account-date {
-  color: #8d7a67;
+  color: var(--app-text-muted);
   font-size: 12px;
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] {
-  --pp-ink: #ece2d3;
-  --pp-muted: #97a7bc;
-  --pp-line: rgba(181, 198, 221, 0.16);
-  --pp-panel: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
-  --pp-btn: #436282;
-  --pp-btn-hover: #537598;
-  background:
-    radial-gradient(circle at 18% 14%, rgba(82, 110, 151, 0.16), transparent 30%),
-    radial-gradient(circle at 80% 6%, rgba(109, 87, 146, 0.12), transparent 24%),
-    linear-gradient(180deg, #101726 0%, #0b1220 52%, #070d16 100%);
+  --pp-ink: var(--app-text-strong);
+  --pp-muted: var(--app-text-muted);
+  --pp-line: var(--app-border-structure);
+  --pp-panel: var(--app-surface-light);
+  --pp-btn: var(--app-action-bg);
+  --pp-btn-hover: var(--app-action-muted-hover-bg);
+  background: var(--app-page-bg);
   color: var(--pp-ink);
 }
 
@@ -657,7 +682,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-tip,
 html[data-night-background="1"] body[data-page="account-hub"] .account-date,
 html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card span,
 html[data-night-background="1"] body[data-page="account-hub"] .account-page-indicator {
-  color: #a6b3c6;
+  color: var(--app-text-muted);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-title,
@@ -667,7 +692,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-user-card
 html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card strong,
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-grid label,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools label {
-  color: #ece2d3;
+  color: var(--app-text-strong);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .card-surface,
@@ -677,7 +702,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-user-card
 html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap {
-  border-color: rgba(181, 198, 221, 0.16);
+  border-color: var(--app-border-structure);
   box-shadow:
     0 18px 36px rgba(1, 5, 14, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -687,17 +712,19 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-auth-form
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-card,
 html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-list {
-  background:
-    linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+  background: var(--app-surface-light);
+}
+
+html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row {
+  background: var(--app-surface-soft);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .panel-pill,
 html[data-night-background="1"] body[data-page="account-hub"] .account-rank {
-  background: rgba(69, 98, 130, 0.82);
-  color: #f6efe3;
+  background: var(--app-surface-soft);
+  color: var(--app-text-strong);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-lines,
@@ -706,63 +733,63 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-emp
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-name,
 html[data-night-background="1"] body[data-page="account-hub"] .account-score {
-  color: #d9d0c2;
+  color: var(--app-text);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-user-lines strong,
 html[data-night-background="1"] body[data-page="account-hub"] .account-name-link {
-  color: #f0dcc0;
+  color: var(--app-link);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-name-link:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-name-link:focus-visible {
-  color: #fff4e1;
+  color: var(--app-link-hover);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-input,
 html[data-night-background="1"] body[data-page="account-hub"] .account-login-captcha-image,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select {
-  border-color: rgba(181, 198, 221, 0.16);
-  background-color: rgba(16, 24, 38, 0.92);
-  color: #ece2d3;
+  border-color: var(--app-border-control);
+  background-color: var(--app-surface-control);
+  color: var(--app-text-strong);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 1px 2px rgba(2, 6, 16, 0.16);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-input::placeholder {
-  color: #8390a2;
+  color: var(--app-text-muted);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-input:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:hover {
-  border-color: rgba(213, 168, 106, 0.44);
+  border-color: var(--app-accent);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-input:focus,
 html[data-night-background="1"] body[data-page="account-hub"] .account-input:focus-visible,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:focus,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:focus-visible {
-  border-color: rgba(213, 168, 106, 0.72);
-  background-color: rgba(19, 29, 45, 0.96);
+  border-color: var(--app-accent);
+  background-color: var(--app-surface-control);
   box-shadow:
-    0 0 0 3px rgba(213, 168, 106, 0.14),
+    0 0 0 3px var(--app-focus-ring-control),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select {
   background-image:
-    linear-gradient(180deg, rgba(26, 37, 57, 0.96), rgba(14, 22, 35, 0.98)),
-    linear-gradient(45deg, transparent 50%, #c8d6e8 50%),
-    linear-gradient(135deg, #c8d6e8 50%, transparent 50%);
+    linear-gradient(180deg, var(--app-surface-control), var(--app-surface-light)),
+    linear-gradient(45deg, transparent 50%, var(--app-text-strong) 50%),
+    linear-gradient(135deg, var(--app-text-strong) 50%, transparent 50%);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button {
-  background: linear-gradient(180deg, rgba(69, 98, 130, 0.98) 0%, rgba(47, 68, 92, 0.98) 100%);
-  color: #f6efe3;
-  border: 1px solid rgba(181, 198, 221, 0.16);
+  background: var(--app-surface-control);
+  color: var(--app-text-strong);
+  border: 1px solid var(--app-border-control);
   box-shadow:
     0 10px 22px rgba(2, 6, 16, 0.24),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -771,38 +798,38 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-too
 html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button:hover {
-  background: linear-gradient(180deg, rgba(84, 117, 152, 1) 0%, rgba(56, 81, 109, 1) 100%);
-  color: #fff4e1;
+  background: var(--app-accent-soft);
+  color: var(--app-link-hover);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link {
-  color: #f0dcc0;
+  color: var(--app-link);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:hover,
 html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:focus-visible {
-  color: #fff4e1;
+  color: var(--app-link-hover);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-head-row {
-  border-bottom-color: rgba(181, 198, 221, 0.12);
-  background: linear-gradient(180deg, rgba(29, 43, 66, 0.98), rgba(19, 29, 45, 0.98));
+  border-bottom-color: var(--app-border-structure);
+  background: var(--app-surface-soft);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row + .account-board-row {
-  border-top-color: rgba(181, 198, 221, 0.1);
+  border-top-color: var(--app-border-muted);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:nth-child(odd) {
-  background: rgba(18, 28, 43, 0.74);
+  background: var(--app-surface-light);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:nth-child(even) {
-  background: rgba(24, 36, 56, 0.82);
+  background: var(--app-surface-soft);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:hover {
-  background: rgba(46, 64, 91, 0.92);
+  background: var(--app-accent-soft);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-board-row.is-rank-top1 {
@@ -931,7 +958,20 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
   }
 
   body[data-page="account-hub"] .account-board-tools .settings-select {
+    flex: 1 1 140px;
+    width: auto;
     min-width: 140px;
+    max-width: 100%;
+  }
+
+  body[data-page="account-hub"] .account-board-tools :is(
+    #account-board-undo,
+    #account-board-mode,
+    #account-board-metric,
+    #account-board-speed-target
+  ) {
+    flex: 1 1 140px;
+    width: auto;
   }
 
   .account-board-head-row,

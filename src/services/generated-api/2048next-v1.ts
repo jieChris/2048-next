@@ -487,7 +487,7 @@ export interface paths {
                     page?: components["parameters"]["PageQuery"];
                     limit?: components["parameters"]["LimitQuery"];
                     mode?: string;
-                    sort_by?: "time" | "score";
+                    sort_by?: "time" | "score" | "board_sum";
                     order?: "asc" | "desc";
                     visibility?: "active" | "deleted" | "all";
                 };
@@ -576,7 +576,8 @@ export interface paths {
                     period?: "all" | "daily" | "weekly" | "monthly";
                     mode?: string;
                     mode_key?: string;
-                    metric?: "score" | "time";
+                    metric?: "score" | "speed";
+                    target_tile?: 2048 | 4096 | 8192 | 16384 | 32768;
                 };
                 header?: never;
                 path?: never;
@@ -591,6 +592,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
+                            /** @enum {string} */
+                            metric?: "score" | "speed";
+                            target_tile?: number;
                             data?: components["schemas"]["LeaderboardEntry"][];
                         };
                     };
@@ -2222,6 +2226,7 @@ export interface components {
             nickname?: string;
             score?: number;
             duration_ms?: number;
+            speed_ms?: number;
             mode?: string;
             mode_key?: string;
             /** Format: date-time */
@@ -2257,6 +2262,7 @@ export interface components {
             user_id?: number;
             nickname?: string;
             score?: number;
+            board_sum?: number;
             duration_ms?: number;
             mode?: string;
             mode_key?: string;

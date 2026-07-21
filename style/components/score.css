@@ -48,7 +48,7 @@
   left: 0;
   text-transform: uppercase;
   font-size: 13px;
-  line-height: 13px;
+  line-height: 16px;
   text-align: center;
   color: var(--app-text-on-board-muted);
 }
@@ -88,4 +88,3 @@
 .best-container.score-value-tiny {
   font-size: 19px;
 }
-

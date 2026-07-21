@@ -97,6 +97,7 @@ describe("core game manager replay auto submit", () => {
     expect(savedRecords[0]).toMatchObject({
       mode_key: "standard_4x4_pow2_no_undo",
       score: 4096,
+      board_sum: 4096,
       replay_string: "REPLAY_v1RPL_B64_rescue"
     });
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });

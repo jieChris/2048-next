@@ -80,6 +80,7 @@ export interface HistoryRecord {
   special_rules_snapshot: Record<string, unknown>;
   challenge_id: string | null;
   score: number;
+  board_sum: number;
   best_tile: number;
   duration_ms: number;
   final_board: number[][];
@@ -129,6 +130,7 @@ export const HISTORY_RECORD_REQUIRED_KEYS = [
   "special_rules_snapshot",
   "challenge_id",
   "score",
+  "board_sum",
   "best_tile",
   "duration_ms",
   "final_board",
@@ -170,6 +172,20 @@ function resolveHistoryRecordIso(nowIso?: () => string): string {
 function normalizeHistoryBoardMatrix(value: unknown): number[][] {
   if (!Array.isArray(value)) return [];
   return value.map((row) => (Array.isArray(row) ? row.map((cell) => Math.floor(Number(cell) || 0)) : []));
+}
+
+export function calculateHistoryBoardSum(value: unknown): number {
+  if (!Array.isArray(value)) return 0;
+  let total = 0;
+  for (const row of value) {
+    if (!Array.isArray(row)) continue;
+    for (const cell of row) {
+      const numeric = Math.floor(Number(cell));
+      if (!Number.isFinite(numeric) || numeric <= 0) continue;
+      total = Math.min(Number.MAX_SAFE_INTEGER, total + numeric);
+    }
+  }
+  return total;
 }
 
 function normalizeInteger(value: unknown, fallback: number): number {
@@ -401,6 +417,8 @@ export function normalizeHistoryRecordLike(
   const diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntriesLike(
     source.diagnostics_index_entries
   );
+  const finalBoard = normalizeHistoryBoardMatrix(source.final_board);
+  const hasBoardCells = finalBoard.some((row) => row.length > 0);
   return {
     id,
     mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
@@ -415,9 +433,12 @@ export function normalizeHistoryRecordLike(
     special_rules_snapshot: isNonArrayObject(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
     challenge_id: typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
     score: normalizeInteger(source.score, 0),
+    board_sum: hasBoardCells
+      ? calculateHistoryBoardSum(finalBoard)
+      : normalizeNonNegativeInteger(source.board_sum, 0),
     best_tile: normalizeInteger(source.best_tile, 0),
     duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
-    final_board: normalizeHistoryBoardMatrix(source.final_board),
+    final_board: finalBoard,
     ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
     saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
     end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",

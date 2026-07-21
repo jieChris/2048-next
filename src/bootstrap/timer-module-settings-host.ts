@@ -106,6 +106,28 @@ function resolveLeaderboardSupport(windowLike: unknown, manager: unknown, docume
   }
 }
 
+function setElementAttribute(element: unknown, name: string, value: string): void {
+  const setter = asFunction<(attributeName: string, attributeValue: string) => unknown>(
+    toRecord(element).setAttribute
+  );
+  if (setter) (setter as unknown as Function).call(element, name, value);
+}
+
+function removeElementAttribute(element: unknown, name: string): void {
+  const remover = asFunction<(attributeName: string) => unknown>(toRecord(element).removeAttribute);
+  if (remover) (remover as unknown as Function).call(element, name);
+}
+
+function formatCustomSecondaryTimerErrors(errors: unknown, lang: "zh" | "en"): string {
+  const list = Array.isArray(errors) ? errors : [];
+  return list.map((error) => {
+    const record = toRecord(error);
+    const line = Number(record.line) || 0;
+    const message = resolveText(record.message);
+    return lang === "en" ? `Line ${line}: ${message}` : `第 ${line} 行：${message}`;
+  }).join("\n");
+}
+
 export interface LegacyUndoSettingsCleanupResult {
   hadToggle: boolean;
   didRemoveRow: boolean;
@@ -292,7 +314,90 @@ export function applyTimerModuleSettingsUi(input: {
 
   const noteElement = source.noteElement;
   const syncMobileTimerboxUi = asFunction<() => unknown>(source.syncMobileTimerboxUi);
+  const customRulesInput = getElementById(source.documentLike, "custom-secondary-timer-rules");
+  const customSaveButton = getElementById(source.documentLike, "custom-secondary-timer-save");
+  const customClearButton = getElementById(source.documentLike, "custom-secondary-timer-clear");
+  const customFamilyElement = getElementById(source.documentLike, "custom-secondary-timer-family");
+  const customNoteElement = getElementById(source.documentLike, "custom-secondary-timer-note");
+  const customRuntime = toRecord(windowLike.CoreCustomSecondaryTimerRuntime);
+  const resolveCustomFamily = asFunction<(ruleset: unknown) => unknown>(
+    customRuntime.resolveCustomSecondaryTimerFamily
+  );
+  const parseCustomRules = asFunction<(payload: unknown) => unknown>(
+    customRuntime.parseCustomSecondaryTimerRules
+  );
+  const readCustomRuleText = asFunction<(storage: unknown, family: unknown) => unknown>(
+    customRuntime.readCustomSecondaryTimerRuleText
+  );
+  const writeCustomRuleText = asFunction<(
+    storage: unknown,
+    family: unknown,
+    text: string
+  ) => unknown>(customRuntime.writeCustomSecondaryTimerRuleText);
   let didSync = false;
+
+  const resolveCustomContext = function (manager: Record<string, unknown>) {
+    const family = resolveCustomFamily ? resolveText(resolveCustomFamily(manager.ruleset)) : "pow2";
+    return {
+      family,
+      parentValues: Array.isArray(manager.timerMilestones) ? manager.timerMilestones : [],
+      storage: windowLike.localStorage
+    };
+  };
+
+  const saveCustomRules = function (): void {
+    if (!customRulesInput || !windowLike.game_manager || !parseCustomRules || !writeCustomRuleText) return;
+    const manager = toRecord(windowLike.game_manager);
+    const context = resolveCustomContext(manager);
+    const text = resolveText(toRecord(customRulesInput).value);
+    const parsed = toRecord(parseCustomRules({
+      text,
+      family: context.family,
+      parentValues: context.parentValues
+    }));
+    const errors = Array.isArray(parsed.errors) ? parsed.errors : [];
+    const lang = readUiLang(windowLike);
+    if (errors.length > 0) {
+      setElementAttribute(customRulesInput, "aria-invalid", "true");
+      if (customNoteElement) {
+        toRecord(customNoteElement).textContent = formatCustomSecondaryTimerErrors(errors, lang);
+        toRecord(toRecord(customNoteElement).style).whiteSpace = "pre-line";
+      }
+      return;
+    }
+    removeElementAttribute(customRulesInput, "aria-invalid");
+    const saved = !!writeCustomRuleText(context.storage, context.family, text);
+    if (customNoteElement) {
+      toRecord(customNoteElement).textContent = saved
+        ? (lang === "en" ? "Saved. Applies from the next game." : "已保存，将从下一局开始生效。")
+        : (lang === "en" ? "Unable to save rules." : "规则保存失败。");
+    }
+  };
+
+  const syncCustomEditor = function (manager: Record<string, unknown>, lang: "zh" | "en"): void {
+    if (!customRulesInput) return;
+    const context = resolveCustomContext(manager);
+    const inputRecord = toRecord(customRulesInput);
+    if (inputRecord.__customSecondaryTimerFamily !== context.family) {
+      inputRecord.__customSecondaryTimerFamily = context.family;
+      inputRecord.value = readCustomRuleText
+        ? resolveText(readCustomRuleText(context.storage, context.family))
+        : "";
+      removeElementAttribute(customRulesInput, "aria-invalid");
+      if (customNoteElement) toRecord(customNoteElement).textContent = "";
+    }
+    if (customFamilyElement) {
+      toRecord(customFamilyElement).textContent = context.family === "fibonacci"
+        ? (lang === "en" ? "Shared by Fibonacci modes; one complete rule per line." : "Fibonacci 模式共享；每行一条完整规则。")
+        : (lang === "en" ? "Shared by power-of-two modes; one complete rule per line." : "2 的幂模式共享；每行一条完整规则。");
+    }
+    if (customSaveButton) {
+      toRecord(customSaveButton).textContent = lang === "en" ? "Save rules" : "保存规则";
+    }
+    if (customClearButton) {
+      toRecord(customClearButton).textContent = lang === "en" ? "Clear" : "清空";
+    }
+  };
 
   const sync = function (): void {
     if (!windowLike.game_manager) return;
@@ -345,11 +450,18 @@ export function applyTimerModuleSettingsUi(input: {
     const closest = asFunction<(selector: string) => unknown>(toggleRecord.closest);
     const row = closest ? (closest as unknown as Function).call(toggle, ".settings-row") : null;
     if (row) {
-      toRecord(toRecord(row).style).display = settingsState.rowVisible === false ? "none" : "";
+      const rowStyle = toRecord(toRecord(row).style);
+      rowStyle.display = "";
+      const toggleMain = querySelector(row, ".settings-toggle-main");
+      if (toggleMain) {
+        toRecord(toRecord(toggleMain).style).display = settingsState.rowVisible === false ? "none" : "";
+      }
     }
     if (noteElement) {
       toRecord(noteElement).textContent = resolveText(settingsState.noteText);
+      toRecord(toRecord(noteElement).style).display = settingsState.rowVisible === false ? "none" : "";
     }
+    syncCustomEditor(manager, lang);
     if (syncMobileTimerboxUi) {
       syncMobileTimerboxUi();
     }
@@ -393,6 +505,16 @@ export function applyTimerModuleSettingsUi(input: {
           refreshTimerLeaderboardPanel(false, true);
         } catch (_errRefresh) {}
       }
+    });
+  }
+
+  const customRulesRecord = toRecord(customRulesInput);
+  if (customRulesInput && !customRulesRecord.__customSecondaryTimerBound) {
+    customRulesRecord.__customSecondaryTimerBound = true;
+    bindListener(customSaveButton, "click", saveCustomRules);
+    bindListener(customClearButton, "click", function () {
+      customRulesRecord.value = "";
+      saveCustomRules();
     });
   }
 

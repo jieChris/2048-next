@@ -1,13 +1,13 @@
 :root {
-  --touch-bg: #faf8ef;
-  --touch-panel: #f7f4ec;
-  --touch-line: #cbbbaa;
-  --touch-ink: #4d4338;
-  --touch-muted: #7f7468;
-  --touch-accent: #2f86a0;
-  --touch-accent-strong: #23677d;
-  --touch-warm: #edc22e;
-  --touch-board: #bbada0;
+  --touch-bg: var(--app-page-bg);
+  --touch-panel: var(--app-surface-light);
+  --touch-line: var(--app-border-structure);
+  --touch-ink: var(--app-text-strong);
+  --touch-muted: var(--app-text-muted);
+  --touch-accent: var(--app-accent);
+  --touch-accent-strong: var(--app-link);
+  --touch-warm: var(--app-milestone);
+  --touch-board: var(--app-surface-board);
 }
 
 body[data-page="touch-sensitivity"] {
@@ -24,7 +24,9 @@ body[data-page="touch-sensitivity"] {
 }
 
 .touch-page-header {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -88,8 +90,8 @@ body[data-page="touch-sensitivity"] {
 #touch-threshold-value {
   min-width: 76px;
   border-radius: 999px;
-  background: #e5ddd2;
-  color: #5c5045;
+  background: var(--app-surface-soft);
+  color: var(--app-text-strong);
   font-size: 18px;
   font-weight: 800;
   line-height: 32px;
@@ -103,15 +105,15 @@ body[data-page="touch-sensitivity"] {
   margin: 4px 0 0;
   appearance: none;
   border-radius: 999px;
-  border: 1px solid #c8b8a6;
-  background: linear-gradient(90deg, var(--touch-accent) 0%, var(--touch-warm) 100%);
+  border: 1px solid var(--app-border-control);
+  background: var(--touch-accent);
 }
 
 .touch-threshold-slider::-webkit-slider-thumb {
   appearance: none;
   width: 30px;
   height: 30px;
-  border: 3px solid #fffdf8;
+  border: 3px solid var(--app-surface-control);
   border-radius: 50%;
   background: var(--touch-accent-strong);
   box-shadow: 0 2px 8px rgba(69, 49, 26, 0.22);
@@ -120,7 +122,7 @@ body[data-page="touch-sensitivity"] {
 .touch-threshold-slider::-moz-range-thumb {
   width: 24px;
   height: 24px;
-  border: 3px solid #fffdf8;
+  border: 3px solid var(--app-surface-control);
   border-radius: 50%;
   background: var(--touch-accent-strong);
   box-shadow: 0 2px 8px rgba(69, 49, 26, 0.22);
@@ -193,14 +195,14 @@ body[data-page="touch-sensitivity"] {
 }
 
 html[data-night-background="1"] body[data-page="touch-sensitivity"] {
-  --touch-bg: #0d1522;
-  --touch-panel: #182438;
-  --touch-line: rgba(181, 198, 221, 0.18);
-  --touch-ink: #ece2d3;
-  --touch-muted: #a6b3c6;
-  --touch-board: #24344c;
+  --touch-bg: var(--app-page-bg);
+  --touch-panel: var(--app-surface-light);
+  --touch-line: var(--app-border-structure);
+  --touch-ink: var(--app-text-strong);
+  --touch-muted: var(--app-text-muted);
+  --touch-board: var(--app-surface-board);
 }
 
 html[data-night-background="1"] body[data-page="touch-sensitivity"] .touch-card {
-  background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.98) 100%);
+  background: var(--app-surface-light);
 }

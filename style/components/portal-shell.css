@@ -25,7 +25,7 @@
 }
 
 .portal-card {
-  background: #fffdf7;
+  background: var(--app-surface-light);
   border: 1px solid var(--app-border-control);
   border-radius: 8px;
   padding: 14px;

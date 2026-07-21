@@ -380,4 +380,75 @@ test.describe("Legacy Multi-Page Smoke", () => {
       })
       .toEqual(baseline);
   });
+
+  test("practice board centers tools and pages tile choices by board limit", async ({ page }) => {
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+
+    await page.waitForFunction(
+      () =>
+        Boolean((window as any).game_manager) &&
+        document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0
+    );
+
+    const toolCenterDelta = await page.evaluate(() => {
+      const panel = document.querySelector(".dashboard-stats")?.getBoundingClientRect();
+      const buttons = Array.from(
+        document.querySelectorAll<HTMLElement>("#practice-stats-actions .top-action-btn")
+      ).filter((button) => {
+        const rect = button.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      if (!panel || buttons.length === 0) return null;
+      const rects = buttons.map((button) => button.getBoundingClientRect());
+      const left = Math.min(...rects.map((rect) => rect.left));
+      const right = Math.max(...rects.map((rect) => rect.right));
+      const top = Math.min(...rects.map((rect) => rect.top));
+      const bottom = Math.max(...rects.map((rect) => rect.bottom));
+      return {
+        x: Math.abs((left + right) / 2 - (panel.left + panel.right) / 2),
+        y: Math.abs((top + bottom) / 2 - (panel.top + panel.bottom) / 2)
+      };
+    });
+    expect(toolCenterDelta).not.toBeNull();
+    expect(toolCenterDelta?.x).toBeLessThanOrEqual(1);
+    expect(toolCenterDelta?.y).toBeLessThanOrEqual(1);
+    await expect(page.locator(".game-explanation")).toHaveCount(0);
+    await expect(page.locator("#selection-grid .selection-tile")).toHaveCount(16);
+    await expect(page.locator("#selection-pager")).toBeHidden();
+
+    const chooseMode = async (modeKey: string) => {
+      await page.locator("#practice-mode-picker-btn").click();
+      await page.locator(`[data-practice-mode-key="${modeKey}"]`).click();
+      await expect(page.locator("#practice-mode-picker-btn")).toHaveAttribute(
+        "data-active-practice-mode-key",
+        modeKey
+      );
+    };
+
+    await chooseMode("board_2x4_pow2_no_undo");
+    await expect(page.locator("#selection-grid .selection-tile")).toHaveCount(10);
+    expect(await page.locator("#selection-grid .selection-tile").allTextContents()).toEqual([
+      "0", "2", "4", "8", "16", "32", "64", "128", "256", "512"
+    ]);
+    await expect(page.locator("#selection-pager")).toBeHidden();
+
+    await chooseMode("board_5x5_pow2_no_undo");
+    await expect(page.locator("#selection-page-status")).toHaveText("1 / 2");
+    expect(await page.locator("#selection-grid .selection-tile").allTextContents()).toEqual([
+      "0", "2", "4", "8", "16", "32", "64", "128",
+      "256", "512", "1024", "2048", "4096", "8192", "16384", "32768"
+    ]);
+
+    await page.locator("#selection-page-next").click();
+    await expect(page.locator("#selection-page-status")).toHaveText("2 / 2");
+    expect(await page.locator("#selection-grid .selection-tile").allTextContents()).toEqual([
+      "65536", "131072", "262144", "524288", "1048576", "2097152",
+      "4194304", "8388608", "16777216", "33554432", "67108864"
+    ]);
+    await expect(page.locator("#selection-grid .selection-tile.tile-super")).toHaveCount(10);
+  });
 });

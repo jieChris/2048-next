@@ -1,3 +1,12 @@
+import {
+  matchCustomSecondaryTimerRule,
+  parseCustomSecondaryTimerRules,
+  readCustomSecondaryTimerRuleText,
+  resolveCustomSecondaryTimerFamily,
+  type CustomSecondaryTimerHitKind,
+  type CustomSecondaryTimerRule
+} from "./custom-secondary-timers";
+
 export interface CoreCallResultLike<T = unknown> {
   available?: unknown;
   value?: T;
@@ -317,6 +326,8 @@ type SecondaryTimerDocumentWithCreateElement = SecondaryTimerDocumentLike & {
 export interface SecondaryTimerDescriptorLike {
   parent?: unknown;
   child?: unknown;
+  rule?: CustomSecondaryTimerRule | null;
+  ruleKey?: unknown;
   rowId?: unknown;
   valueId?: unknown;
   row?: SecondaryTimerElementLike | null;
@@ -355,8 +366,13 @@ export interface SecondaryTimerPlacementDebugSummary {
 }
 
 export interface SecondaryTimerManagerLike extends CoreBaseHelperManagerLike {
+  ruleset?: unknown;
   timerMilestones?: unknown;
   timerMilestoneSlotByValue?: unknown;
+  customSecondaryTimerRuleText?: unknown;
+  customSecondaryTimerRules?: unknown;
+  sessionReplayV1?: unknown;
+  sessionReplayV3?: unknown;
   secondaryTimerExpandedByParent?: unknown;
   secondaryTimerPlacementDebugSnapshot?: unknown;
   secondaryTimerPlacementDebugSummary?: unknown;
@@ -364,6 +380,10 @@ export interface SecondaryTimerManagerLike extends CoreBaseHelperManagerLike {
   documentLike?: SecondaryTimerDocumentLike | null;
   getTimerRowEl?: (value: number) => SecondaryTimerElementLike | null;
   callWindowMethod?: (name: string, args?: unknown[]) => unknown;
+  getWindowLike?: () => { localStorage?: unknown } | null;
+  grid?: {
+    eachCell?: (callback: (x: number, y: number, tile: { value?: unknown } | null) => void) => void;
+  } | null;
   resolveSecondaryTimerDescriptors?: () => SecondaryTimerDescriptorLike[];
 }
 
@@ -464,14 +484,28 @@ export function resolveSecondaryTimerSlotByValue(
   return resolveSecondaryTimerSlotFromMilestoneList(manager, value) || value;
 }
 
-export function getSecondaryTimerParentValues(): number[] {
-  const slots = getSecondaryTimerSlotIds();
+function getCustomSecondaryTimerRules(
+  manager: SecondaryTimerManagerLike | null | undefined
+): CustomSecondaryTimerRule[] {
+  const rules = manager && Array.isArray(manager.customSecondaryTimerRules)
+    ? manager.customSecondaryTimerRules
+    : [];
+  return rules.filter((rule): rule is CustomSecondaryTimerRule => {
+    return !!rule && typeof rule === "object" && typeof rule.expression === "string";
+  });
+}
+
+export function getSecondaryTimerParentValues(
+  manager?: SecondaryTimerManagerLike | null
+): number[] {
+  const rules = getCustomSecondaryTimerRules(manager);
   const parents: number[] = [];
-  for (let index = 0; index < slots.length; index += 1) {
-    const value = normalizeSecondaryTimerValue(slots[index]);
+  const seen = new Set<number>();
+  for (let index = 0; index < rules.length; index += 1) {
+    const value = normalizeSecondaryTimerValue(rules[index].parent);
     if (value === null) continue;
-    if (value < 8192) continue;
-    if (!isSecondaryTimerPowerOfTwo(value)) continue;
+    if (seen.has(value)) continue;
+    seen.add(value);
     parents.push(value);
   }
   return parents;
@@ -536,7 +570,7 @@ export function collectSecondaryTimerExpandedParents(
 ): number[] {
   const out: number[] = [];
   if (!manager) return out;
-  const parents = getSecondaryTimerParentValues();
+  const parents = getSecondaryTimerParentValues(manager);
   for (let index = 0; index < parents.length; index += 1) {
     const parent = parents[index];
     if (isSecondaryTimerParentExpanded(manager, parent)) out.push(parent);
@@ -720,11 +754,12 @@ function resolveManagerElementById(
 export function bindSecondaryTimerParentToggleEvents(manager: SecondaryTimerManagerLike | null | undefined): void {
   if (!manager) return;
   const timerBox = resolveManagerElementById(manager, "timerbox");
-  const parents = getSecondaryTimerParentValues();
+  const parents = getSecondaryTimerParentValues(manager);
   for (let index = 0; index < parents.length; index += 1) {
     const parent = parents[index];
-    const row = manager.getTimerRowEl ? manager.getTimerRowEl(parent) : null;
-    const timerEl = resolveManagerElementById(manager, "timer" + String(parent));
+    const parentSlot = resolveSecondaryTimerSlotByValue(manager, parent) || parent;
+    const row = manager.getTimerRowEl ? manager.getTimerRowEl(parentSlot) : null;
+    const timerEl = resolveManagerElementById(manager, "timer" + String(parentSlot));
     const legendEl = resolveSecondaryTimerLegendElementForParent(row, timerBox, parent);
     bindSecondaryTimerToggleTargetsForParent(manager, parent, row, legendEl, timerEl);
   }
@@ -929,23 +964,6 @@ function resolveSecondaryTimerContainer(
   return timerBox;
 }
 
-function createSecondaryTimerDescriptorMeta(parent: number, child: number): {
-  rowId: string;
-  valueId: string;
-  level: number;
-  order: number;
-  timerWidth: number;
-} {
-  const level = resolveSecondaryTimerIndentLevel(parent, child);
-  return {
-    rowId: resolveSecondaryTimerRowId(parent, child),
-    valueId: resolveSecondaryTimerValueId(parent, child),
-    level,
-    order: parent + (level / 1000),
-    timerWidth: resolveSecondaryTimerWidthByLevel(level)
-  };
-}
-
 export function ensureSecondaryTimerDescriptorRow(
   manager: SecondaryTimerManagerLike,
   container: SecondaryTimerElementLike,
@@ -965,20 +983,6 @@ export function ensureSecondaryTimerDescriptorRow(
   return row;
 }
 
-function applySecondaryTimerDescriptorRowRuntimeState(
-  row: SecondaryTimerElementLike | null | undefined,
-  parent: number,
-  child: number,
-  order: number,
-  level: number
-): void {
-  if (!row) return;
-  row.setAttribute?.("data-secondary-parent", String(parent));
-  row.setAttribute?.("data-secondary-child", String(child));
-  row.setAttribute?.("data-timer-order", String(order));
-  ensureSecondaryTimerElementStyle(row).paddingLeft = String(level * 5) + "px";
-}
-
 function resolveSecondaryTimerDescriptorTimerElement(
   manager: SecondaryTimerManagerLike,
   valueId: string,
@@ -989,44 +993,94 @@ function resolveSecondaryTimerDescriptorTimerElement(
   return timerEl;
 }
 
-function createSecondaryTimerDescriptor(
-  parent: number,
-  child: number,
-  meta: ReturnType<typeof createSecondaryTimerDescriptorMeta>,
-  row: SecondaryTimerElementLike | null,
-  timerEl: SecondaryTimerElementLike | null
-): SecondaryTimerDescriptorLike {
-  return {
-    parent,
-    child,
-    rowId: meta.rowId,
-    valueId: meta.valueId,
-    row,
-    timerEl
-  };
+function resolveCustomSecondaryTimerIdSuffix(expression: string): string {
+  return expression.replace(/\+/g, "-");
 }
 
-function collectSecondaryTimerDescriptorsForParent(
+function createCustomSecondaryTimerRowElement(
+  manager: SecondaryTimerManagerLike,
+  rule: CustomSecondaryTimerRule,
+  rowId: string,
+  valueId: string,
+  level: number,
+  order: number
+): SecondaryTimerElementLike | null {
+  const documentLike = resolveManagerDocumentLike(manager);
+  if (!(documentLike && typeof documentLike.createElement === "function")) return null;
+  const documentWithCreateElement = documentLike as SecondaryTimerDocumentWithCreateElement;
+  const row = documentWithCreateElement.createElement("div");
+  row.id = rowId;
+  row.className = "timer-row-item timer-secondary-row timer-secondary-rule-row";
+  row.setAttribute?.("data-secondary-parent", String(rule.parent));
+  row.setAttribute?.("data-secondary-rule", rule.expression);
+  row.setAttribute?.("data-secondary-hidden", "1");
+  row.setAttribute?.("data-timer-order", String(order));
+  const rowStyle = ensureSecondaryTimerElementStyle(row);
+  rowStyle.display = "none";
+  rowStyle.paddingLeft = String(level * 5) + "px";
+
+  const legend = documentWithCreateElement.createElement("div");
+  const parentSlot = resolveSecondaryTimerSlotByValue(manager, rule.parent) || rule.parent;
+  legend.className = "timertile timer-secondary-legend timer-legend-" + String(parentSlot);
+  legend.textContent = rule.expression;
+  legend.setAttribute?.("title", rule.expression);
+  const legendStyle = ensureSecondaryTimerElementStyle(legend);
+  legendStyle.color = "#f9f6f2";
+  legendStyle.fontSize = rule.expression.length > 8 ? "9px" : "11px";
+  row.appendChild?.(legend);
+  row.appendChild?.(createSecondaryTimerValueElement(documentWithCreateElement, valueId, level));
+  appendSecondaryTimerRowBreaks(documentWithCreateElement, row);
+  return row;
+}
+
+function collectCustomSecondaryTimerDescriptor(
   manager: SecondaryTimerManagerLike,
   container: SecondaryTimerElementLike,
-  parent: number,
+  rule: CustomSecondaryTimerRule,
+  index: number,
   descriptors: SecondaryTimerDescriptorLike[],
   validRowIds: Record<string, boolean>
 ): void {
-  const children = getSecondaryTimerChildValues(parent);
-  for (let childIndex = 0; childIndex < children.length; childIndex += 1) {
-    const child = children[childIndex];
-    const meta = createSecondaryTimerDescriptorMeta(parent, child);
-    const row = ensureSecondaryTimerDescriptorRow(manager, container, meta.rowId, parent, child);
-    applySecondaryTimerDescriptorRowRuntimeState(row, parent, child, meta.order, meta.level);
-    const timerEl = resolveSecondaryTimerDescriptorTimerElement(manager, meta.valueId, meta.timerWidth);
-    descriptors.push(createSecondaryTimerDescriptor(parent, child, meta, row, timerEl));
-    validRowIds[meta.rowId] = true;
+  const suffix = resolveCustomSecondaryTimerIdSuffix(rule.expression);
+  const rowId = "timer-row-secondary-rule-" + suffix;
+  const valueId = "timer-secondary-rule-" + suffix;
+  const level = Math.max(1, rule.values.length - 1);
+  const order = rule.parent + ((index + 1) / 1000);
+  let row = resolveManagerElementById(manager, rowId);
+  if (!row) {
+    row = createCustomSecondaryTimerRowElement(manager, rule, rowId, valueId, level, order);
+    if (row) container.appendChild?.(row);
+  } else if (row.parentNode !== container) {
+    container.appendChild?.(row);
   }
+  if (row) {
+    row.setAttribute?.("data-secondary-parent", String(rule.parent));
+    row.setAttribute?.("data-secondary-rule", rule.expression);
+    row.setAttribute?.("data-timer-order", String(order));
+  }
+  const timerEl = resolveSecondaryTimerDescriptorTimerElement(
+    manager,
+    valueId,
+    resolveSecondaryTimerWidthByLevel(level)
+  );
+  descriptors.push({
+    parent: rule.parent,
+    child: rule.values[rule.values.length - 1],
+    rule,
+    ruleKey: rule.key,
+    rowId,
+    valueId,
+    row,
+    timerEl
+  });
+  validRowIds[rowId] = true;
 }
 
 function isSecondaryTimerManagedRowNode(node: SecondaryTimerElementLike | null | undefined): boolean {
-  return !!(node && parseSecondaryTimerRowIdentity(node.id));
+  return !!(
+    node &&
+    (parseSecondaryTimerRowIdentity(node.id) || String(node.id || "").indexOf("timer-row-secondary-rule-") === 0)
+  );
 }
 
 function removeStaleSecondaryTimerRows(
@@ -1048,9 +1102,9 @@ function collectSecondaryTimerDescriptorsForParents(
   descriptors: SecondaryTimerDescriptorLike[],
   validRowIds: Record<string, boolean>
 ): void {
-  const parents = getSecondaryTimerParentValues();
-  for (let parentIndex = 0; parentIndex < parents.length; parentIndex += 1) {
-    collectSecondaryTimerDescriptorsForParent(manager, container, parents[parentIndex], descriptors, validRowIds);
+  const rules = getCustomSecondaryTimerRules(manager);
+  for (let index = 0; index < rules.length; index += 1) {
+    collectCustomSecondaryTimerDescriptor(manager, container, rules[index], index, descriptors, validRowIds);
   }
 }
 
@@ -1086,7 +1140,8 @@ export function isSecondaryTimerParentReached(
   if (!manager) return false;
   const parent = normalizeSecondaryTimerValue(parentValue);
   if (parent === null) return false;
-  const parentTimer = resolveManagerElementById(manager, "timer" + String(parent));
+  const parentSlot = resolveSecondaryTimerSlotByValue(manager, parent) || parent;
+  const parentTimer = resolveManagerElementById(manager, "timer" + String(parentSlot));
   if (!parentTimer) return false;
   const text = String(parentTimer.textContent || parentTimer.innerText || "").trim();
   return text !== "";
@@ -1098,7 +1153,8 @@ function resolveSecondaryTimerParentRowAnchor(
   parent: number
 ): SecondaryTimerElementLike | null {
   if (!manager || !timerBox) return null;
-  const parentRow = manager.getTimerRowEl ? manager.getTimerRowEl(parent) : null;
+  const parentSlot = resolveSecondaryTimerSlotByValue(manager, parent) || parent;
+  const parentRow = manager.getTimerRowEl ? manager.getTimerRowEl(parentSlot) : null;
   if (parentRow && parentRow.parentNode === timerBox) return parentRow;
   return null;
 }
@@ -1109,7 +1165,8 @@ function resolveSecondaryTimerParentTimerAnchor(
   parent: number
 ): SecondaryTimerElementLike | null {
   if (!manager || !timerBox) return null;
-  const parentTimer = resolveManagerElementById(manager, "timer" + String(parent));
+  const parentSlot = resolveSecondaryTimerSlotByValue(manager, parent) || parent;
+  const parentTimer = resolveManagerElementById(manager, "timer" + String(parentSlot));
   if (!(parentTimer && parentTimer.parentNode === timerBox)) return null;
   return parentTimer;
 }
@@ -1195,6 +1252,7 @@ function resolveSecondaryTimerPlacementRowIdentity(
 function resolveSecondaryTimerPlacementParentValue(descriptor: SecondaryTimerDescriptorLike | null | undefined): number | null {
   if (!descriptor) return null;
   let parent = normalizeSecondaryTimerValue(descriptor.parent);
+  if (descriptor.rule && parent !== null) return parent;
   if (isValidSecondaryTimerParentValue(parent)) return parent;
 
   const row = descriptor.row;
@@ -1718,17 +1776,70 @@ export function refreshSecondaryTimerRowsVisibility(manager: SecondaryTimerManag
   callSecondaryTimerWindowMethod(manager, "updateTimerScroll");
 }
 
-export function resetSecondaryTimerRowsForSetup(manager: SecondaryTimerManagerLike | null | undefined): void {
-  if (!manager) return;
+function setCustomSecondaryTimerRulesFromText(
+  manager: SecondaryTimerManagerLike,
+  text: string
+): boolean {
+  const parsed = parseCustomSecondaryTimerRules({
+    text,
+    family: resolveCustomSecondaryTimerFamily(manager.ruleset),
+    parentValues: manager.timerMilestones
+  });
+  manager.customSecondaryTimerRuleText = text;
+  manager.customSecondaryTimerRules = parsed.rules;
+  if (isCoreHelperRecordObject(manager.sessionReplayV1)) {
+    manager.sessionReplayV1.custom_secondary_timer_rule_text = text;
+  }
+  if (isCoreHelperRecordObject(manager.sessionReplayV3)) {
+    manager.sessionReplayV3.custom_secondary_timer_rule_text = text;
+  }
+  return parsed.errors.length === 0;
+}
+
+function loadCustomSecondaryTimerRulesForSetup(manager: SecondaryTimerManagerLike): void {
+  let storageLike: unknown = null;
+  try {
+    storageLike = manager.getWindowLike?.()?.localStorage || null;
+  } catch (_error) {}
+  const family = resolveCustomSecondaryTimerFamily(manager.ruleset);
+  setCustomSecondaryTimerRulesFromText(
+    manager,
+    readCustomSecondaryTimerRuleText(storageLike, family)
+  );
+}
+
+function resetCustomSecondaryTimerDescriptorRows(manager: SecondaryTimerManagerLike): void {
   applySecondaryTimerExpandedParentsState(manager, []);
   const descriptors = resolveSecondaryTimerDescriptors(manager);
   placeSecondaryTimerRowsNearParents(manager, descriptors);
   for (let index = 0; index < descriptors.length; index += 1) {
     const descriptor = descriptors[index];
     if (!descriptor) continue;
-    if (descriptor.timerEl) descriptor.timerEl.textContent = "";
+    if (descriptor.timerEl) {
+      descriptor.timerEl.textContent = "";
+      descriptor.timerEl.removeAttribute?.("data-secondary-hit-kind");
+      descriptor.timerEl.removeAttribute?.("data-secondary-covered-by");
+      descriptor.timerEl.removeAttribute?.("title");
+      descriptor.timerEl.removeAttribute?.("aria-label");
+    }
     if (descriptor.row) applySecondaryTimerHiddenRowState(descriptor.row);
   }
+}
+
+export function applyCustomSecondaryTimerRuleText(
+  manager: SecondaryTimerManagerLike | null | undefined,
+  text: unknown
+): boolean {
+  if (!manager || typeof text !== "string") return false;
+  const valid = setCustomSecondaryTimerRulesFromText(manager, text);
+  resetCustomSecondaryTimerDescriptorRows(manager);
+  return valid;
+}
+
+export function resetSecondaryTimerRowsForSetup(manager: SecondaryTimerManagerLike | null | undefined): void {
+  if (!manager) return;
+  loadCustomSecondaryTimerRulesForSetup(manager);
+  resetCustomSecondaryTimerDescriptorRows(manager);
 }
 
 function canStampSecondaryTimerDescriptor(
@@ -1774,6 +1885,62 @@ export function stampSecondaryTimersForMergedValue(
   if (!isSecondaryTimerPowerOfTwo(merged)) return;
   const descriptors = resolveSecondaryTimerDescriptors(manager);
   const changed = stampSecondaryTimerDescriptorsForValue(manager, descriptors, merged, timeStr);
+  if (changed) refreshSecondaryTimerRowsVisibility(manager);
+}
+
+function collectCustomSecondaryTimerBoardValues(
+  manager: SecondaryTimerManagerLike
+): number[] {
+  const values: number[] = [];
+  if (!(manager.grid && typeof manager.grid.eachCell === "function")) return values;
+  manager.grid.eachCell((_x, _y, tile) => {
+    const value = normalizeSecondaryTimerValue(tile?.value);
+    if (value !== null) values.push(value);
+  });
+  return values;
+}
+
+function applyCustomSecondaryTimerHit(
+  descriptor: SecondaryTimerDescriptorLike,
+  timeStr: string,
+  kind: CustomSecondaryTimerHitKind,
+  coveredBy: string
+): void {
+  const timerEl = descriptor.timerEl;
+  const rule = descriptor.rule;
+  if (!timerEl || !rule) return;
+  timerEl.textContent = kind === "covered" ? timeStr + " ↑" : timeStr;
+  timerEl.setAttribute?.("data-secondary-hit-kind", kind);
+  if (kind === "covered") {
+    const explanation = "由 " + coveredBy + " 越级覆盖";
+    timerEl.setAttribute?.("data-secondary-covered-by", coveredBy);
+    timerEl.setAttribute?.("title", explanation);
+    timerEl.setAttribute?.("aria-label", rule.expression + " " + timeStr + "，" + explanation);
+    return;
+  }
+  timerEl.removeAttribute?.("data-secondary-covered-by");
+  timerEl.setAttribute?.("title", rule.expression + " " + timeStr);
+  timerEl.setAttribute?.("aria-label", rule.expression + " " + timeStr);
+}
+
+export function stampCustomSecondaryTimersForBoard(
+  manager: SecondaryTimerManagerLike | null | undefined,
+  timeValue: unknown
+): void {
+  if (!manager) return;
+  const descriptors = resolveSecondaryTimerDescriptors(manager);
+  if (descriptors.length === 0) return;
+  const boardValues = collectCustomSecondaryTimerBoardValues(manager);
+  const timeStr = String(timeValue || "");
+  let changed = false;
+  for (const descriptor of descriptors) {
+    if (!(descriptor.rule && descriptor.timerEl)) continue;
+    if (String(descriptor.timerEl.textContent || "") !== "") continue;
+    const match = matchCustomSecondaryTimerRule(boardValues, descriptor.rule);
+    if (!match) continue;
+    applyCustomSecondaryTimerHit(descriptor, timeStr, match.kind, match.coveredBy);
+    changed = true;
+  }
   if (changed) refreshSecondaryTimerRowsVisibility(manager);
 }
 
@@ -1830,19 +1997,25 @@ export function invalidateSecondaryTimersByLimit(
 
 export function collectSecondaryTimerRowsState(
   manager: SecondaryTimerManagerLike | null | undefined
-): Array<{ parent: unknown; child: unknown; time: string; display: string }> {
-  const rows: Array<{ parent: unknown; child: unknown; time: string; display: string }> = [];
+): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
   if (!manager) return rows;
   const descriptors = resolveSecondaryTimerDescriptors(manager);
   for (let index = 0; index < descriptors.length; index += 1) {
     const descriptor = descriptors[index];
     if (!descriptor || !descriptor.row) continue;
-    rows.push({
+    const rowState: Record<string, unknown> = {
       parent: descriptor.parent,
       child: descriptor.child,
       time: descriptor.timerEl ? String(descriptor.timerEl.textContent || "") : "",
       display: descriptor.row.style?.display || ""
-    });
+    };
+    if (descriptor.rule) {
+      rowState.rule = descriptor.rule.expression;
+      rowState.hit_kind = descriptor.timerEl?.getAttribute?.("data-secondary-hit-kind") || "";
+      rowState.covered_by = descriptor.timerEl?.getAttribute?.("data-secondary-covered-by") || "";
+    }
+    rows.push(rowState);
   }
   return rows;
 }
@@ -1902,14 +2075,21 @@ function normalizeSecondaryTimerRowStateTime(state: unknown): string | null {
 }
 
 function resolveSecondaryTimerRowStateKey(state: Record<PropertyKey, unknown>): string | null {
+  if (typeof state.rule === "string" && state.rule) return "rule|" + state.rule;
   const parent = normalizeSecondaryTimerValue(state.parent);
   const child = normalizeSecondaryTimerValue(state.child);
   if (!isValidSecondaryTimerParentChildPair(parent, child)) return null;
   return String(parent) + "|" + String(child);
 }
 
-function collectSecondaryTimerRowsStateByKey(rowsState: unknown): Record<string, { time: string }> {
-  const stateByKey: Record<string, { time: string }> = {};
+interface SecondaryTimerRestoredRowState {
+  time: string;
+  hitKind: string;
+  coveredBy: string;
+}
+
+function collectSecondaryTimerRowsStateByKey(rowsState: unknown): Record<string, SecondaryTimerRestoredRowState> {
+  const stateByKey: Record<string, SecondaryTimerRestoredRowState> = {};
   const rows = Array.isArray(rowsState) ? rowsState : [];
 
   for (let index = 0; index < rows.length; index += 1) {
@@ -1919,7 +2099,11 @@ function collectSecondaryTimerRowsStateByKey(rowsState: unknown): Record<string,
     if (!key) continue;
     const time = normalizeSecondaryTimerRowStateTime(state);
     if (time === null) continue;
-    stateByKey[key] = { time };
+    stateByKey[key] = {
+      time,
+      hitKind: typeof state.hit_kind === "string" ? state.hit_kind : "",
+      coveredBy: typeof state.covered_by === "string" ? state.covered_by : ""
+    };
   }
 
   return stateByKey;
@@ -1927,14 +2111,29 @@ function collectSecondaryTimerRowsStateByKey(rowsState: unknown): Record<string,
 
 function applySecondaryTimerRowStateToDescriptors(
   descriptors: SecondaryTimerDescriptorLike[],
-  stateByKey: Record<string, { time: string }>
+  stateByKey: Record<string, SecondaryTimerRestoredRowState>
 ): void {
   for (let descriptorIndex = 0; descriptorIndex < descriptors.length; descriptorIndex += 1) {
     const descriptor = descriptors[descriptorIndex];
     if (!descriptor || !descriptor.timerEl) continue;
-    const key = String(descriptor.parent) + "|" + String(descriptor.child);
+    const key = descriptor.ruleKey
+      ? "rule|" + String(descriptor.ruleKey)
+      : String(descriptor.parent) + "|" + String(descriptor.child);
     const rowState = stateByKey[key];
     descriptor.timerEl.textContent = rowState ? rowState.time : "";
+    if (!rowState) continue;
+    if (rowState.hitKind) {
+      descriptor.timerEl.setAttribute?.("data-secondary-hit-kind", rowState.hitKind);
+    }
+    if (rowState.coveredBy) {
+      const explanation = "由 " + rowState.coveredBy + " 越级覆盖";
+      descriptor.timerEl.setAttribute?.("data-secondary-covered-by", rowState.coveredBy);
+      descriptor.timerEl.setAttribute?.("title", explanation);
+      descriptor.timerEl.setAttribute?.(
+        "aria-label",
+        String(descriptor.ruleKey || "") + " " + rowState.time + "，" + explanation
+      );
+    }
   }
 }
 

@@ -114,6 +114,26 @@
     return false;
   }
 
+  function setElementAttribute(element, name, value) {
+    var setter = asFunction(toRecord(element).setAttribute);
+    if (setter) setter.call(element, name, value);
+  }
+
+  function removeElementAttribute(element, name) {
+    var remover = asFunction(toRecord(element).removeAttribute);
+    if (remover) remover.call(element, name);
+  }
+
+  function formatCustomSecondaryTimerErrors(errors, lang) {
+    var list = Array.isArray(errors) ? errors : [];
+    return list.map(function (error) {
+      var record = toRecord(error);
+      var line = Number(record.line) || 0;
+      var message = resolveText(record.message);
+      return lang === "en" ? "Line " + line + ": " + message : "第 " + line + " 行：" + message;
+    }).join("\n");
+  }
+
   function resolveUiLang(windowLike) {
     try {
       var storage = toRecord(windowLike).localStorage;
@@ -273,7 +293,70 @@
 
     var noteElement = source.noteElement;
     var syncMobileTimerboxUi = asFunction(source.syncMobileTimerboxUi);
+    var customRulesInput = getElementById(source.documentLike, "custom-secondary-timer-rules");
+    var customSaveButton = getElementById(source.documentLike, "custom-secondary-timer-save");
+    var customClearButton = getElementById(source.documentLike, "custom-secondary-timer-clear");
+    var customFamilyElement = getElementById(source.documentLike, "custom-secondary-timer-family");
+    var customNoteElement = getElementById(source.documentLike, "custom-secondary-timer-note");
+    var customRuntime = toRecord(windowLike.CoreCustomSecondaryTimerRuntime);
+    var resolveCustomFamily = asFunction(customRuntime.resolveCustomSecondaryTimerFamily);
+    var parseCustomRules = asFunction(customRuntime.parseCustomSecondaryTimerRules);
+    var readCustomRuleText = asFunction(customRuntime.readCustomSecondaryTimerRuleText);
+    var writeCustomRuleText = asFunction(customRuntime.writeCustomSecondaryTimerRuleText);
     var didSync = false;
+
+    function resolveCustomContext(manager) {
+      var family = resolveCustomFamily ? resolveText(resolveCustomFamily(manager.ruleset)) : "pow2";
+      return {
+        family: family,
+        parentValues: Array.isArray(manager.timerMilestones) ? manager.timerMilestones : [],
+        storage: windowLike.localStorage
+      };
+    }
+
+    function saveCustomRules() {
+      if (!customRulesInput || !windowLike.game_manager || !parseCustomRules || !writeCustomRuleText) return;
+      var manager = toRecord(windowLike.game_manager);
+      var context = resolveCustomContext(manager);
+      var text = resolveText(toRecord(customRulesInput).value);
+      var parsed = toRecord(parseCustomRules({ text: text, family: context.family, parentValues: context.parentValues }));
+      var errors = Array.isArray(parsed.errors) ? parsed.errors : [];
+      var lang = readUiLang(windowLike);
+      if (errors.length > 0) {
+        setElementAttribute(customRulesInput, "aria-invalid", "true");
+        if (customNoteElement) {
+          toRecord(customNoteElement).textContent = formatCustomSecondaryTimerErrors(errors, lang);
+          toRecord(toRecord(customNoteElement).style).whiteSpace = "pre-line";
+        }
+        return;
+      }
+      removeElementAttribute(customRulesInput, "aria-invalid");
+      var saved = !!writeCustomRuleText(context.storage, context.family, text);
+      if (customNoteElement) {
+        toRecord(customNoteElement).textContent = saved
+          ? (lang === "en" ? "Saved. Applies from the next game." : "已保存，将从下一局开始生效。")
+          : (lang === "en" ? "Unable to save rules." : "规则保存失败。");
+      }
+    }
+
+    function syncCustomEditor(manager, lang) {
+      if (!customRulesInput) return;
+      var context = resolveCustomContext(manager);
+      var inputRecord = toRecord(customRulesInput);
+      if (inputRecord.__customSecondaryTimerFamily !== context.family) {
+        inputRecord.__customSecondaryTimerFamily = context.family;
+        inputRecord.value = readCustomRuleText ? resolveText(readCustomRuleText(context.storage, context.family)) : "";
+        removeElementAttribute(customRulesInput, "aria-invalid");
+        if (customNoteElement) toRecord(customNoteElement).textContent = "";
+      }
+      if (customFamilyElement) {
+        toRecord(customFamilyElement).textContent = context.family === "fibonacci"
+          ? (lang === "en" ? "Shared by Fibonacci modes; one complete rule per line." : "Fibonacci 模式共享；每行一条完整规则。")
+          : (lang === "en" ? "Shared by power-of-two modes; one complete rule per line." : "2 的幂模式共享；每行一条完整规则。");
+      }
+      if (customSaveButton) toRecord(customSaveButton).textContent = lang === "en" ? "Save rules" : "保存规则";
+      if (customClearButton) toRecord(customClearButton).textContent = lang === "en" ? "Clear" : "清空";
+    }
 
     var sync = function () {
       if (!windowLike.game_manager) return;
@@ -332,12 +415,19 @@
       var closest = asFunction(toggleRecord.closest);
       var row = closest ? closest.call(toggle, ".settings-row") : null;
       if (row) {
-        toRecord(toRecord(row).style).display = settingsState.rowVisible === false ? "none" : "";
+        var rowStyle = toRecord(toRecord(row).style);
+        rowStyle.display = "";
+        var toggleMain = querySelector(row, ".settings-toggle-main");
+        if (toggleMain) {
+          toRecord(toRecord(toggleMain).style).display = settingsState.rowVisible === false ? "none" : "";
+        }
       }
 
       if (noteElement) {
         toRecord(noteElement).textContent = resolveText(settingsState.noteText);
+        toRecord(toRecord(noteElement).style).display = settingsState.rowVisible === false ? "none" : "";
       }
+      syncCustomEditor(manager, lang);
       if (syncMobileTimerboxUi) {
         syncMobileTimerboxUi();
       }
@@ -379,6 +469,16 @@
             refreshTimerLeaderboardPanel(false, true);
           } catch (_errRefresh) {}
         }
+      });
+    }
+
+    var customRulesRecord = toRecord(customRulesInput);
+    if (customRulesInput && !customRulesRecord.__customSecondaryTimerBound) {
+      customRulesRecord.__customSecondaryTimerBound = true;
+      bindListener(customSaveButton, "click", saveCustomRules);
+      bindListener(customClearButton, "click", function () {
+        customRulesRecord.value = "";
+        saveCustomRules();
       });
     }
 

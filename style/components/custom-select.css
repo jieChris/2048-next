@@ -21,7 +21,7 @@
   color: var(--app-text);
   height: 36px;
   line-height: 36px;
-  background: #fffdfa;
+  background: var(--app-surface-control);
   border: 1px solid var(--app-border-control);
   border-radius: 4px;
   cursor: pointer;
@@ -32,7 +32,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: #fffdfa;
+  background: var(--app-surface-popover);
   border: 1px solid var(--app-border-control);
   border-top: none;
   border-radius: 0 0 4px 4px;
@@ -62,12 +62,13 @@
 }
 
 .custom-option:hover {
-  background: var(--app-surface-tile);
+  background: var(--app-accent-soft);
 }
 
 .custom-option.selected {
-  background: #edc22e;
-  color: #fff;
+  color: var(--app-text-strong);
+  background: var(--app-accent-soft);
+  box-shadow: inset 3px 0 0 var(--app-accent);
 }
 
 .custom-arrow {
