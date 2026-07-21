@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test("guest login panel uses the approved compact centered layout", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("theme_profile_v1", "mist_cyan"));
     await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toHaveAttribute("data-auth-state", "guest");
     const outerStackStyle = await page.locator(".settings-stack").evaluate((stack) => {

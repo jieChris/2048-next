@@ -510,6 +510,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.goto("/replay.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".replay-metric-card").first()).toBeVisible();
     await page.locator("#replay-open-speed-btn").click();
+    await expect.poll(() => page.locator("#theme-dynamic-style").textContent()).toContain(
+      "input[type=range]::-webkit-slider-runnable-track"
+    );
 
     const snapshot = () => page.evaluate(() => {
       const color = (selector: string, property: "backgroundColor" | "borderColor" | "color" | "accentColor") => {
@@ -570,7 +573,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     await expect(page.locator('link[href^="style/replay_page_rebuild.css"]')).toHaveAttribute(
       "href",
-      "style/replay_page_rebuild.css?v=20260721-theme-split-v1"
+      "style/replay_page_rebuild.css?v=20260721-profile-text-v1"
     );
   });
 

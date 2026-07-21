@@ -194,6 +194,7 @@ test("production top actions use enamel chrome without dynamic theme CSS", async
   await page.addInitScript(() => {
     localStorage.setItem("settings_top_button_style_v1", "icon");
     localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
+    localStorage.setItem("theme_profile_v1", "mist_cyan");
   });
 
   const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
@@ -245,6 +246,7 @@ test("production mobile-only top actions use enamel chrome without horizontal ov
   await page.addInitScript(() => {
     localStorage.setItem("settings_top_button_style_v1", "icon");
     localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
+    localStorage.setItem("theme_profile_v1", "mist_cyan");
   });
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -301,9 +303,10 @@ test("production mobile-only top actions use enamel chrome without horizontal ov
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("production button families use classic semantic tones while excluded pages stay unchanged", async ({ page }) => {
+test("production button families use mist cyan semantic tones while excluded pages stay unchanged", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
+    localStorage.setItem("theme_profile_v1", "mist_cyan");
   });
 
   await page.goto("/account.html", { waitUntil: "domcontentloaded" });

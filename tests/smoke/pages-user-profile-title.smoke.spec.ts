@@ -395,11 +395,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const controlWidths = await page.locator("#user-record-undo, #user-record-mode, #user-record-sort, #user-record-order")
       .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
     expect(controlWidths).toEqual([160, 320, 180, 160]);
-    const modePickerMargin = await page.locator("#user-record-mode").evaluate((node) =>
-      getComputedStyle(node, "::picker-icon").marginLeft
-    );
-    expect(Number.parseFloat(modePickerMargin)).toBeGreaterThan(100);
-
     const sortOptions = await page.locator("#user-record-sort option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("Legacy Multi-Page Smoke", () => {
   test("account leaderboard exposes classic speedrun targets and ignores removed min-step filters", async ({ page }) => {
     await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
       (window as any).__accountMetricCalls = [];
       (window as any).__accountLeaderboardRequests = [];
 
