@@ -749,7 +749,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
           token: `smoke-token-${modeKey}`
         });
         await page.addInitScript(() => {
-          (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
           window.localStorage.setItem("2048_auth_token_v1", "smoke_token");
           window.localStorage.setItem("2048_auth_userId_v1", "42");
           window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
