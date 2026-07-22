@@ -237,8 +237,6 @@
     ["Import Replay文件 粘贴Replay代码", "Import replay file / paste replay code"],
     ["UndoBack", "undo one step"],
     ["暂停", "Pause"],
-    ["护眼·暖砂", "Eye Care · Warm Sand"],
-    ["护眼·夜纸", "Eye Care · Night Paper"],
     ["冷青·跃阶", "Cold Cyan · Steps"],
     ["跟随主题", "Follow Theme"],
     ["本地历史", "Local History"],
@@ -536,7 +534,7 @@
       ? {
           title: "Settings",
           subtitle: "Manage timers, themes, and palettes in clearly grouped sections.",
-          listTitle: "Palette List",
+          listTitle: "Palettes",
           currentName: "Current Palette",
           create: "New Copy",
           rename: "Rename",
@@ -557,7 +555,7 @@
       : {
           title: "设置",
           subtitle: "集中管理计时器、主题与色板，相关选项按类别收纳。",
-          listTitle: "色板列表",
+          listTitle: "色板",
           empty: "未选择色板",
           create: "新建副本",
           rename: "重命名",

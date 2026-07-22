@@ -26,6 +26,7 @@ describe("timer leaderboard rank style", () => {
   it("uses logo-derived rank colors instead of saturated warning colors", () => {
     const css = readCssEntry("style/main.css");
     const timerboxRule = extractRule(css, "#timerbox");
+    const mistTimerboxRule = extractRule(css, 'html[data-theme="mist_cyan"] #timerbox');
     const baseRule = extractRule(css, ".timertile.timer-leaderboard-rank-tile");
     const topOneRule = extractRule(css, ".timer-leaderboard-rank-tile.is-top-1");
     const selfRule = extractRule(css, ".timer-leaderboard-row.is-self .timer-leaderboard-rank-tile");
@@ -48,18 +49,23 @@ describe("timer leaderboard rank style", () => {
     expect(timerboxRule).toContain("--leaderboard-rank-self-text: #fffaf2;");
     expect(timerboxRule).toContain("--leaderboard-rank-top-shadow: none;");
     expect(timerboxRule).toContain("--leaderboard-rank-self-shadow: none;");
+    expect(mistTimerboxRule).toContain("--leaderboard-rank-bg: var(--app-surface-board);");
+    expect(mistTimerboxRule).toContain("--leaderboard-rank-text: var(--app-text-strong);");
+    expect(mistTimerboxRule).toContain("--leaderboard-rank-self-bg: var(--app-link);");
+    expect(mistTimerboxRule).toContain("--leaderboard-rank-self-text: var(--app-page-bg);");
+    expect(mistTimerboxRule).toContain("--leaderboard-rank-shadow: none;");
     expect(baseRule).toContain("background: var(--leaderboard-rank-bg)");
     expect(baseRule).toContain("font-weight: var(--leaderboard-rank-font-weight);");
-    expect(nightBaseRule).toContain("background: #b9aea2;");
-    expect(nightBaseRule).toContain("color: #fffaf2;");
+    expect(nightBaseRule).toContain("background: var(--leaderboard-rank-bg);");
+    expect(nightBaseRule).toContain("color: var(--leaderboard-rank-text);");
     expect(topOneRule).toContain("var(--leaderboard-rank-top-1-bg)");
     expect(topOneRule).toContain("var(--leaderboard-rank-top-1-text)");
     expect(selfRule).toContain("var(--leaderboard-rank-self-bg)");
     expect(selfRule).toContain("var(--leaderboard-rank-self-text)");
     expect(selfRule).toContain("cursor: pointer;");
     expect(selfRule).toContain("user-select: none;");
-    expect(nightSelfRule).toContain("background: #b27f58;");
-    expect(nightSelfRule).toContain("color: #fffaf2;");
+    expect(nightSelfRule).toContain("background: var(--leaderboard-rank-self-bg);");
+    expect(nightSelfRule).toContain("color: var(--leaderboard-rank-self-text);");
     expect(css).toContain("background: #f4eadf;");
     expect(css).not.toContain("#d8ab00");
     expect(css).not.toContain("#d61212");

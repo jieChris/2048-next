@@ -3,7 +3,7 @@
   var THEME_PROFILE_KEY = "theme_profile_v1";
   var DAY_THEME_KEY = "settings_day_theme_profile_v1";
   var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
-  var DEFAULT_THEME_ID = "classic";
+  var DEFAULT_THEME_ID = "mist_cyan";
   var TIMER_MODULE_VIEW_SETTINGS_KEY = "settings_timer_module_view_by_mode_v1";
   var STYLE_ID = "night-background-style";
   var doc = document;

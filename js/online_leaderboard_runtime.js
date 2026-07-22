@@ -423,7 +423,6 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (submittedToken && activeToken && activeToken !== submittedToken) return false;
     if (submittedToken && !activeToken) return false;
     if (!submittedToken && activeToken) return false;
-    if (submittedToken && hasDistinctPrefetchedRankedSession(modeKey, activeSession)) return false;
     if (
       submittedToken &&
       managerToken === submittedToken &&
@@ -443,22 +442,6 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (!submittedToken && contextToken) return false;
       global.GAME_CHALLENGE_CONTEXT = null;
     }
-    return true;
-  }
-
-  function hasDistinctPrefetchedRankedSession(modeKey, activeSession) {
-    var prefetched = readPrefetchedRankedSessionRecord(modeKey);
-    if (!prefetched) return false;
-    var prefetchedToken = toText(prefetched.ranked_session_token).trim();
-    var prefetchedChallengeId = toText(prefetched.challenge_id).trim().toLowerCase();
-    var prefetchedSeed = normalizeRankedSessionSeed(prefetched.seed);
-    if (!prefetchedToken || !prefetchedChallengeId || prefetchedSeed === null) return false;
-    var activeToken = toText(activeSession && activeSession.ranked_session_token).trim();
-    var activeChallengeId = toText(activeSession && activeSession.challenge_id).trim().toLowerCase();
-    var activeSeed = normalizeRankedSessionSeed(activeSession && activeSession.seed);
-    if (activeToken && activeToken === prefetchedToken) return false;
-    if (activeChallengeId && activeChallengeId === prefetchedChallengeId) return false;
-    if (activeSeed !== null && activeSeed === prefetchedSeed) return false;
     return true;
   }
 
@@ -960,7 +943,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       if (parsed && typeof parsed === "object") {
         var signature = toText(parsed.signature).trim();
         var createdAt = Math.max(0, Math.floor(Number(parsed.createdAt) || 0));
-        var lastAttemptAt = Math.max(0, Math.floor(Number(parsed.lastAttemptAt || createdAt) || 0));
+        var lastAttemptAt = Math.max(0, Math.floor(Number(
+          typeof parsed.lastAttemptAt === "undefined" ? createdAt : parsed.lastAttemptAt
+        ) || 0));
         var retryCount = Math.max(0, Math.floor(Number(parsed.retryCount) || 0));
         var payload = payloadNormalizer(parsed.payload);
         var ownerUserId = toText(parsed.ownerUserId || parsed.owner_user_id).trim();
@@ -1191,7 +1176,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     );
   }
 
-  function writePendingRecordSubmitSignature(signature, previousState, payload) {
+  function writePendingRecordSubmitSignature(signature, previousState, payload, options) {
     var text = toText(signature).trim();
     if (!text) {
       clearPendingRecordSubmitSignature();
@@ -1203,6 +1188,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!normalizedPayload) return;
     var now = Date.now();
     var previous = previousState && toText(previousState.signature).trim() === text ? previousState : null;
+    var durabilityOnly = !!(options && options.durabilityOnly === true);
+    var hadPreviousAttempt = !!(previous && Number(previous.lastAttemptAt) > 0);
     safeSetStorage(
       STORAGE_PENDING_RECORD_SUBMIT_KEY,
       JSON.stringify({
@@ -1210,8 +1197,10 @@ function shouldAutoLoadOnlineLeaderboard() {
         payload: normalizedPayload,
         ownerUserId: toText(getUserId()).trim() || "",
         createdAt: previous && Number(previous.createdAt) > 0 ? Math.floor(Number(previous.createdAt)) : now,
-        lastAttemptAt: now,
-        retryCount: previous ? Math.max(0, Math.floor(Number(previous.retryCount) || 0)) + 1 : 0
+        lastAttemptAt: durabilityOnly ? (hadPreviousAttempt ? Math.floor(Number(previous.lastAttemptAt)) : 0) : now,
+        retryCount: hadPreviousAttempt && !durabilityOnly
+          ? Math.max(0, Math.floor(Number(previous.retryCount) || 0)) + 1
+          : Math.max(0, Math.floor(Number(previous && previous.retryCount) || 0))
       })
     );
   }
@@ -3700,60 +3689,24 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var signature = buildRecordSubmitSignature(manager, payload);
-
-    await retryPendingRecordSubmit(opts);
-    if (recordSubmitLock) return;
-
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
     var pendingState = readPendingRecordSubmitState();
     var pendingSignature = pendingState ? pendingState.signature : "";
+    if (
+      recordSubmitLock &&
+      pendingState &&
+      toText(pendingState.payload && pendingState.payload.client_record_id).trim() ===
+        toText(payload.client_record_id).trim()
+    ) return;
     if (signature && signature === lastSignature) return;
     if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
     if (signature && pendingSignature && signature !== pendingSignature) {
       enqueuePendingRecordSubmitPayload(signature, payload);
-      return;
+    } else if (signature && !pendingSignature) {
+      writePendingRecordSubmitSignature(signature, pendingState, payload, { durabilityOnly: true });
     }
-    if (signature && !pendingSignature) {
-      writePendingRecordSubmitSignature(signature, pendingState, payload);
-    }
-    if (!getAuthToken()) return;
-
-    recordSubmitLock = true;
-    var result = null;
-    try {
-      writePendingRecordSubmitSignature(signature, pendingState, payload);
-      result = await submitRecord(payload, INTERNAL_SUBMIT_TOKEN, {
-        keepalive: opts.keepalive === true
-      });
-    } finally {
-      recordSubmitLock = false;
-    }
-
-    if (result && result.success) {
-      notifyAchievementUnlocks(result);
-      writeLastRecordSubmitResult(payload, result, true);
-      safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, signature);
-      clearPendingRecordSubmitSignature();
-      promoteAndRetryNextPendingRecordSubmit(opts);
-      cleanupRankedStateAfterRecordSubmit(manager, payload);
-      refreshLeaderboardsAfterRecordSubmit(payload && payload.mode_key);
-      return;
-    }
-
-    var errorText = toText(result && result.error ? result.error : "record_submit_failed");
-    writeLastRecordSubmitResult(payload, result, false);
-    if (isRankedSessionExpiredResult(result)) {
-      return;
-    }
-    if (isUnauthorizedSubmitErrorText(errorText)) {
-      clearAuthSessionOnly();
-      return;
-    }
-    if (!isTransientSubmitResult(result, errorText)) {
-      markRecordSubmitSignatureHandled(signature);
-      clearPendingRecordSubmitSignature();
-      promoteAndRetryNextPendingRecordSubmit(opts);
-    }
+    cleanupRankedStateAfterRecordSubmit(manager, payload);
+    await retryPendingRecordSubmit(opts);
   }
 
   function isUnauthorizedSubmitErrorText(errorTextLike) {

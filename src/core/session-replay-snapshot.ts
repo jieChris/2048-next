@@ -13,6 +13,7 @@ export interface SessionReplaySnapshotManagerLike {
   sessionReplayV3?: unknown;
   sessionReplayV1?: unknown;
   clonePlain?: (value: unknown) => unknown;
+  getWindowLike?: () => unknown;
 }
 
 export interface SessionReplaySnapshotRuntime {
@@ -33,6 +34,23 @@ function clonePlainWithManager(manager: SessionReplaySnapshotManagerLike, value:
     return manager.clonePlain(value);
   }
   return value && typeof value === "object" && !Array.isArray(value) ? { ...value } : {};
+}
+
+function readReplayOwnerStorageValue(
+  manager: SessionReplaySnapshotManagerLike,
+  key: string,
+  maxCharacters: number
+): string {
+  try {
+    const windowLike = manager.getWindowLike?.() as
+      | { localStorage?: { getItem?: (storageKey: string) => unknown } }
+      | null
+      | undefined;
+    const value = windowLike?.localStorage?.getItem?.(key);
+    return value == null ? "" : Array.from(String(value).trim()).slice(0, maxCharacters).join("");
+  } catch (_error) {
+    return "";
+  }
 }
 
 export interface ReplayV1InitTilesFromBoardMatrixInput {
@@ -74,6 +92,8 @@ export function initializeSetupSessionReplaySnapshot(
   manager: SessionReplaySnapshotManagerLike | null | undefined
 ): void {
   if (!manager) return;
+  const ownerUserId = readReplayOwnerStorageValue(manager, "2048_auth_userId_v1", 64);
+  const ownerNickname = readReplayOwnerStorageValue(manager, "2048_auth_nickname_v1", 10);
   manager.sessionReplayV3 = {
     v: 3,
     mode: resolveReplayModeTagFromModeKey(manager.modeKey, manager.mode),
@@ -96,6 +116,8 @@ export function initializeSetupSessionReplaySnapshot(
     board_width: manager.width,
     board_height: manager.height,
     start_unix_ms: Date.now(),
+    owner_user_id: ownerUserId || null,
+    owner_nickname: ownerNickname,
     challenge_id: manager.challengeId || null,
     seed: manager.initialSeed,
     init_tiles: [],

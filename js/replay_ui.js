@@ -8,6 +8,8 @@
   var REPLAY_UI_IDLE_INTERVAL_MS = 1000;
   var REPLAY_UI_HIDDEN_INTERVAL_MS = 1800;
   var REPLAY_COMPATIBILITY_BANNER_ID = "replay-compatibility-banner";
+  var REPLAY_V1_EXT_OWNER_USER_ID = 6;
+  var REPLAY_V1_EXT_OWNER_NICKNAME = 7;
   var isScrubbing = false;
   var replayRelayoutTimer = null;
   var replaySeekRafId = 0;
@@ -43,6 +45,10 @@
     available: false,
     totalSteps: 0,
     spawnValueCounts: {}
+  };
+  var replayWatermarkMeta = {
+    ownerUserId: "",
+    ownerNickname: ""
   };
 
   function showGameAlert(message) {
@@ -209,6 +215,8 @@
     var isEn = resolveLanguage() === "en";
     if (key === "stepTime") return isEn ? "Step Time" : "\u5355\u6b65\u7528\u65f6";
     if (key === "score") return isEn ? "Score" : "\u5206\u6570";
+    if (key === "watermarkNickname") return isEn ? "Player" : "\u73a9\u5bb6";
+    if (key === "watermarkStartTime") return isEn ? "Started (Beijing Time)" : "\u5f00\u5c40\u65f6\u95f4\uff08\u5317\u4eac\u65f6\u95f4\uff09";
     if (key === "stats") return isEn ? "Statistics" : "\u7edf\u8ba1\u4fe1\u606f";
     if (key === "statsTitle") return isEn ? "Replay Statistics" : "\u56de\u653e\u7edf\u8ba1\u4fe1\u606f";
     if (key === "statsSpawn1") return isEn ? "Spawn 1 Count" : "\u51fa1\u6570\u91cf";
@@ -276,20 +284,20 @@
   function formatReplayStartTime(startUnixMs) {
     var numeric = normalizeReplayStartUnixMs(startUnixMs);
     if (!Number.isFinite(numeric) || numeric <= 0) return "";
-    var date = new Date(numeric);
+    var date = new Date(numeric + 8 * 60 * 60 * 1000);
     if (Number.isNaN(date.getTime())) return "";
     return (
-      date.getFullYear() +
+      date.getUTCFullYear() +
       "-" +
-      pad2(date.getMonth() + 1) +
+      pad2(date.getUTCMonth() + 1) +
       "-" +
-      pad2(date.getDate()) +
+      pad2(date.getUTCDate()) +
       " " +
-      pad2(date.getHours()) +
+      pad2(date.getUTCHours()) +
       ":" +
-      pad2(date.getMinutes()) +
+      pad2(date.getUTCMinutes()) +
       ":" +
-      pad2(date.getSeconds())
+      pad2(date.getUTCSeconds())
     );
   }
 
@@ -308,6 +316,73 @@
     replayTimelineMeta.cumulativeMsByStep = [];
     replayTimelineMeta.totalMs = 0;
     replayTimelineMeta.startUnixMs = null;
+  }
+
+  function resetReplayWatermarkMeta() {
+    replayWatermarkMeta.ownerUserId = "";
+    replayWatermarkMeta.ownerNickname = "";
+  }
+
+  function decodeReplayV1ExtTextPayload(payload) {
+    var bytes = normalizeReplayBufferToBytes(payload);
+    if (!bytes || !bytes.length) return "";
+    if (typeof TextDecoder === "function") {
+      try {
+        return new TextDecoder("utf-8").decode(bytes).trim();
+      } catch (_error) {}
+    }
+    var binary = "";
+    for (var index = 0; index < bytes.length; index += 1) {
+      binary += String.fromCharCode(bytes[index] & 255);
+    }
+    try {
+      return decodeURIComponent(escape(binary)).trim();
+    } catch (_error2) {
+      return binary.trim();
+    }
+  }
+
+  function resolveReplayV1ExtText(decoded, extType) {
+    var records = Array.isArray(decoded && decoded.records) ? decoded.records : [];
+    for (var index = 0; index < records.length; index += 1) {
+      var record = records[index];
+      if (!(record && record.kind === "ext" && Number(record.extType) === Number(extType))) continue;
+      return decodeReplayV1ExtTextPayload(record.payload);
+    }
+    return "";
+  }
+
+  function applyReplayWatermarkFromV1Decoded(decoded) {
+    replayWatermarkMeta.ownerUserId = resolveReplayV1ExtText(decoded, REPLAY_V1_EXT_OWNER_USER_ID);
+    replayWatermarkMeta.ownerNickname = resolveReplayV1ExtText(decoded, REPLAY_V1_EXT_OWNER_NICKNAME);
+  }
+
+  function normalizeReplayWatermarkStartTime(value) {
+    var numeric = normalizeReplayStartUnixMs(value);
+    if (numeric) return numeric;
+    var parsed = Date.parse(toText(value).trim());
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  function applyReplayWatermarkRecordFallback(recordLike) {
+    var source = isObject(recordLike) ? recordLike : {};
+    var replay = isObject(source.replay) ? source.replay : {};
+    if (!replayWatermarkMeta.ownerUserId) {
+      replayWatermarkMeta.ownerUserId = toText(source.owner_user_id || replay.owner_user_id).trim();
+    }
+    if (!replayWatermarkMeta.ownerNickname) {
+      replayWatermarkMeta.ownerNickname = toText(source.owner_nickname || replay.owner_nickname).trim();
+    }
+    if (replayTimelineMeta.startUnixMs) return;
+    var startedAt = normalizeReplayWatermarkStartTime(
+      source.start_unix_ms || source.started_at || replay.start_unix_ms || replay.started_at
+    );
+    if (!startedAt) {
+      var endedAt = Date.parse(toText(source.ended_at).trim());
+      var durationMs = Math.max(0, Math.floor(Number(source.duration_ms) || 0));
+      if (Number.isFinite(endedAt) && endedAt > 0) startedAt = endedAt - durationMs;
+    }
+    replayTimelineMeta.startUnixMs = startedAt;
   }
 
   function resetReplayImportedStatsMeta() {
@@ -346,6 +421,7 @@
 
   function applyReplayTimelineFromStepDurations(rawDurations, startUnixMs) {
     resetReplayTimelineMeta();
+    replayTimelineMeta.startUnixMs = normalizeReplayStartUnixMs(startUnixMs);
     if (!Array.isArray(rawDurations) || !rawDurations.length) return;
 
     var deltas = [];
@@ -364,7 +440,6 @@
     replayTimelineMeta.stepDurationsMs = deltas;
     replayTimelineMeta.cumulativeMsByStep = cumulative;
     replayTimelineMeta.totalMs = running;
-    replayTimelineMeta.startUnixMs = normalizeReplayStartUnixMs(startUnixMs);
   }
 
   function applyReplayTimelineFromV1Decoded(decoded) {
@@ -391,6 +466,7 @@
     }
 
     applyReplayTimelineFromStepDurations(deltas, decoded.startUnixMs);
+    applyReplayWatermarkFromV1Decoded(decoded);
   }
 
   function resolveReplayV1PrefixForTimeline() {
@@ -431,18 +507,26 @@
     return !!(bytes && bytes.length >= 4 && bytes[0] === 82 && bytes[1] === 80 && bytes[2] === 76 && bytes[3] === 49);
   }
 
-  function captureReplayTimelineFromReplayPayload(payload) {
+  function captureReplayTimelineFromReplayPayload(payload, recordLike) {
     resetReplayTimelineMeta();
+    resetReplayWatermarkMeta();
     var text = toText(payload).trim();
     var prefix = resolveReplayV1PrefixForTimeline();
-    if (!text) return;
+    if (!text) {
+      applyReplayWatermarkRecordFallback(recordLike);
+      return;
+    }
     if (text.indexOf(prefix) !== 0) {
       captureReplayTimelineFromLegacyVrsText(text);
+      applyReplayWatermarkRecordFallback(recordLike);
       return;
     }
 
     var codec = window.CoreReplayCodecRuntime;
-    if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) return;
+    if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) {
+      applyReplayWatermarkRecordFallback(recordLike);
+      return;
+    }
 
     try {
       var body = text.substring(prefix.length);
@@ -452,11 +536,14 @@
       applyReplayTimelineFromV1Decoded(decoded);
     } catch (_error) {
       resetReplayTimelineMeta();
+      resetReplayWatermarkMeta();
     }
+    applyReplayWatermarkRecordFallback(recordLike);
   }
 
   function captureReplayTimelineFromRplBuffer(sourceBuffer) {
     resetReplayTimelineMeta();
+    resetReplayWatermarkMeta();
     var codec = window.CoreReplayCodecRuntime;
     if (!(codec && typeof codec.decodeReplayV1Rpl === "function")) return;
 
@@ -467,6 +554,7 @@
       applyReplayTimelineFromV1Decoded(decoded);
     } catch (_error) {
       resetReplayTimelineMeta();
+      resetReplayWatermarkMeta();
     }
   }
 
@@ -582,6 +670,23 @@
     node.textContent = numeric.toLocaleString("en-US");
   }
 
+  function syncReplayWatermarkUI() {
+    var container = document.getElementById("replay-watermark");
+    var nicknameItem = document.getElementById("replay-watermark-nickname-item");
+    var startTimeItem = document.getElementById("replay-watermark-start-time-item");
+    var nicknameValue = document.getElementById("replay-watermark-nickname");
+    var startTimeValue = document.getElementById("replay-watermark-start-time");
+    if (!(container && nicknameItem && startTimeItem && nicknameValue && startTimeValue)) return;
+
+    var nickname = toText(replayWatermarkMeta.ownerNickname).trim();
+    var startTime = formatReplayStartTime(replayTimelineMeta.startUnixMs);
+    nicknameValue.textContent = nickname;
+    startTimeValue.textContent = startTime;
+    nicknameItem.hidden = !nickname;
+    startTimeItem.hidden = !startTime;
+    container.hidden = !nickname && !startTime;
+  }
+
   function updateReplayStatLabelsUI() {
     syncReplayDocumentTitle();
 
@@ -590,6 +695,12 @@
 
     var stepLabel = document.getElementById("replay-step-time-label");
     if (stepLabel) stepLabel.textContent = resolveReplayTimelineLabel("stepTime") + "\uff1a";
+
+    var nicknameLabel = document.getElementById("replay-watermark-nickname-label");
+    if (nicknameLabel) nicknameLabel.textContent = resolveReplayTimelineLabel("watermarkNickname");
+
+    var startTimeLabel = document.getElementById("replay-watermark-start-time-label");
+    if (startTimeLabel) startTimeLabel.textContent = resolveReplayTimelineLabel("watermarkStartTime");
 
     var statsBtn = document.getElementById("replay-toggle-diagnostics-btn");
     if (statsBtn) statsBtn.textContent = resolveReplayTimelineLabel("stats");
@@ -628,6 +739,7 @@
     if (forward10Btn) forward10Btn.textContent = resolveReplayTimelineLabel("forward10");
 
     syncReplayImportedFileNameElement();
+    syncReplayWatermarkUI();
   }
 
   function cloneShallow(source) {
@@ -1371,7 +1483,7 @@
         var payload = resolveReplayPayloadForImportV1(source);
         importReplayPayloadV1(payload, "manual_text");
         syncReplayCompatibilityNotice(source, payload);
-        captureReplayTimelineFromReplayPayload(payload);
+        captureReplayTimelineFromReplayPayload(payload, source);
         clearReplayTransientQueryState();
         clearReplayImportedFileBaseName();
         window.closeReplayModal();
@@ -1484,7 +1596,7 @@
     var payload = resolveReplayPayloadForImportV1(source);
     importReplayPayloadV1(payload, "file_text");
     syncReplayCompatibilityNotice(source, payload);
-    captureReplayTimelineFromReplayPayload(payload);
+    captureReplayTimelineFromReplayPayload(payload, source);
     clearReplayTransientQueryState();
     return true;
   }
@@ -1748,6 +1860,7 @@
     gameManager.replayIndex = 0;
 
     resetReplayTimelineMeta();
+    resetReplayWatermarkMeta();
     resetReplayImportedStatsMeta();
     clearReplayDiagnosticsPanel();
     clearReplayCompatibilityNotice();
@@ -1849,7 +1962,7 @@
         var replayPayload = resolveReplayPayloadForImportV1(payload);
         importReplayPayloadV1(replayPayload, "cloud_query");
         syncReplayCompatibilityNotice(payload, replayPayload);
-        captureReplayTimelineFromReplayPayload(replayPayload);
+        captureReplayTimelineFromReplayPayload(replayPayload, payload);
         clearReplayImportedFileBaseName();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
@@ -1898,7 +2011,7 @@
         var replayPayload = resolveReplayPayloadForImportV1(localReplayPayload);
         importReplayPayloadV1(replayPayload, "local_query");
         syncReplayCompatibilityNotice(localReplayPayload, replayPayload);
-        captureReplayTimelineFromReplayPayload(replayPayload);
+        captureReplayTimelineFromReplayPayload(replayPayload, localReplayPayload);
         clearReplayTransientQueryState();
         clearReplayImportedFileBaseName();
         removeLocalStorageItem(LOCAL_REPLAY_HANDOFF_STORAGE_PREFIX + handoffId);
@@ -1931,7 +2044,7 @@
         var replayPayloadLocal = resolveReplayPayloadForImportV1(record);
         importReplayPayloadV1(replayPayloadLocal, "local_history_query");
         syncReplayCompatibilityNotice(record, replayPayloadLocal);
-        captureReplayTimelineFromReplayPayload(replayPayloadLocal);
+        captureReplayTimelineFromReplayPayload(replayPayloadLocal, record);
         clearReplayImportedFileBaseName();
         if (!resumeReplayPlaybackPreferred(window.game_manager)) {
           startReplayAutoPlayback();
@@ -2434,6 +2547,7 @@
     clearReplayImportedFileBaseName();
     clearReplayFileDropState();
     resetReplayTimelineMeta();
+    resetReplayWatermarkMeta();
     resetReplayImportedStatsMeta();
     stopReplayAutoPlayback();
     setReplayDiagnosticsVisible(false);

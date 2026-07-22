@@ -8,9 +8,9 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260721-leaderboard-rank-colors-v1" rel="stylesheet" type="text/css">
   <link href="style/replay_page_rebuild.css?v=20260721-profile-text-v1" rel="stylesheet" type="text/css">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="HandheldFriendly" content="True">
@@ -25,6 +25,16 @@
       <a id="replay-nav-history" class="replay-control-btn" href="history.html">本地历史</a>
     </nav>
     <div id="replay-imported-file-name" class="replay-imported-file-name" style="display: none;"></div>
+    <div id="replay-watermark" class="replay-watermark" hidden>
+      <div id="replay-watermark-nickname-item" class="replay-watermark-item" hidden>
+        <span id="replay-watermark-nickname-label" class="replay-watermark-label">玩家</span>
+        <strong id="replay-watermark-nickname" class="replay-watermark-value"></strong>
+      </div>
+      <div id="replay-watermark-start-time-item" class="replay-watermark-item" hidden>
+        <span id="replay-watermark-start-time-label" class="replay-watermark-label">开局时间（北京时间）</span>
+        <strong id="replay-watermark-start-time" class="replay-watermark-value"></strong>
+      </div>
+    </div>
     <div class="replay-top-stats">
       <div class="replay-metric-card">
         <span id="replay-score-label" class="replay-metric-label">&#20998;&#25968;&#65306;</span>

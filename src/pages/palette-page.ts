@@ -234,7 +234,6 @@ function applyThemePageCopy(): void {
   const subtitle = isEnglish
     ? "Manage timers, themes, and palettes in clearly grouped sections."
     : "\u96c6\u4e2d\u7ba1\u7406\u8ba1\u65f6\u5668\u3001\u4e3b\u9898\u4e0e\u8272\u677f\uff0c\u76f8\u5173\u9009\u9879\u6309\u7c7b\u522b\u6536\u7eb3\u3002";
-  const pillText = isEnglish ? "Theme" : "\u4e3b\u9898";
   const copy = isEnglish
     ? {
         kicker: "2048 Settings",
@@ -242,15 +241,10 @@ function applyThemePageCopy(): void {
         navPractice: "Practice Board",
         navTouch: "Touch Sensitivity",
         themeSelectLabel: "Select Theme",
-        themePreviewLabel: "Theme Preview",
-        boardSelectLabel: "Board Select",
-        board2048: "2048",
-        boardFib: "Fibonacci",
-        themeModesTitle: "Theme Selection",
         timerCategory: "Timer",
         timerCategoryDesc: "Custom sub-timer rules",
         appearanceCategory: "Appearance & Palette",
-        appearanceCategoryDesc: "Theme, palette, and board preview",
+        appearanceCategoryDesc: "Theme and palette settings",
         timerSettingsTitle: "Timer Settings",
         timerPill: "Timer",
         customTimerTitle: "Custom sub-timers",
@@ -264,11 +258,8 @@ function applyThemePageCopy(): void {
         rangeEnd: "End parent timer",
         generateRules: "Generate recommended rules",
         generatorHint: "Generated rules replace the editor and remain unsaved until you click Save rules.",
-        appearanceKicker: "Appearance Settings",
-        appearanceTitle: "Themes & Palettes",
-        appearanceDesc: "Theme selection, board colors, and the color editor stay together here.",
-        paletteList: "Palette List",
-        currentPalette: "Current Palette",
+        paletteList: "Palettes",
+        paletteMappingNote: "Palette colors map to other board variants by tile level.",
         create: "Create",
         rename: "Rename",
         remove: "Delete",
@@ -288,15 +279,10 @@ function applyThemePageCopy(): void {
         navPractice: "\u7ec3\u4e60\u677f",
         navTouch: "\u89e6\u5c4f\u7075\u654f\u5ea6",
         themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
-        themePreviewLabel: "\u914d\u8272\u9884\u89c8",
-        boardSelectLabel: "\u68cb\u76d8\u9009\u62e9",
-        board2048: "2048",
-        boardFib: "\u6590\u6ce2\u90a3\u5951",
-        themeModesTitle: "\u4e3b\u9898\u9009\u62e9",
         timerCategory: "\u8ba1\u65f6\u5668",
         timerCategoryDesc: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668\u89c4\u5219",
         appearanceCategory: "\u5916\u89c2\u4e0e\u914d\u8272",
-        appearanceCategoryDesc: "\u4e3b\u9898\u3001\u8272\u677f\u4e0e\u68cb\u76d8\u9884\u89c8",
+        appearanceCategoryDesc: "\u4e3b\u9898\u4e0e\u8272\u677f\u8bbe\u7f6e",
         timerSettingsTitle: "\u8ba1\u65f6\u5668\u8bbe\u7f6e",
         timerPill: "\u8ba1\u65f6",
         customTimerTitle: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668",
@@ -310,11 +296,8 @@ function applyThemePageCopy(): void {
         rangeEnd: "\u7ed3\u675f\u6bcd\u8ba1\u65f6\u5668",
         generateRules: "\u751f\u6210\u63a8\u8350\u89c4\u5219",
         generatorHint: "\u751f\u6210\u7ed3\u679c\u4f1a\u66ff\u6362\u89c4\u5219\u5185\u5bb9\uff1b\u70b9\u51fb\u4fdd\u5b58\u524d\u4e0d\u4f1a\u751f\u6548\u3002",
-        appearanceKicker: "\u5916\u89c2\u8bbe\u7f6e",
-        appearanceTitle: "\u4e3b\u9898\u4e0e\u8272\u677f",
-        appearanceDesc: "\u4e3b\u9898\u9009\u62e9\u3001\u68cb\u76d8\u914d\u8272\u548c\u989c\u8272\u7f16\u8f91\u96c6\u4e2d\u5728\u8fd9\u4e00\u5206\u7c7b\u3002",
-        paletteList: "\u8272\u677f\u5217\u8868",
-        currentPalette: "\u5f53\u524d\u8272\u677f",
+        paletteList: "\u8272\u677f",
+        paletteMappingNote: "\u8272\u677f\u989c\u8272\u4f1a\u6309\u65b9\u5757\u7b49\u7ea7\u6620\u5c04\u5230\u5176\u4ed6\u68cb\u76d8\u53d8\u4f53\u3002",
         create: "\u65b0\u5efa",
         rename: "\u91cd\u547d\u540d",
         remove: "\u5220\u9664",
@@ -334,15 +317,10 @@ function applyThemePageCopy(): void {
   const kicker = document.querySelector(".palette-kicker");
   const pageTitle = document.querySelector(".palette-title");
   const pageSubtitle = document.querySelector(".palette-subtitle");
-  const themeCardTitle = document.querySelector(".palette-theme-card .panel-head h2");
-  const panelPill = document.querySelector(".palette-theme-card .panel-pill");
   const navLinks = document.querySelectorAll(".palette-nav .palette-nav-btn");
   const themeSelectLabel = document.querySelector(".theme-selection-col > label");
-  const themePreviewLabel = document.querySelector(".theme-preview-col > label");
-  const boardSelectLabel = document.querySelector(".board-selection-col > label");
-  const boardButtons = document.querySelectorAll(".palette-board-btn");
   const listTitle = document.querySelector(".palette-sidebar .panel-head h2");
-  const currentPalette = document.getElementById("palette-current-name");
+  const paletteMappingNote = document.querySelector(".palette-variant-note");
   const createButton = document.getElementById("palette-create-btn");
   const renameButton = document.getElementById("palette-rename-btn");
   const deleteButton = document.getElementById("palette-delete-btn");
@@ -367,27 +345,16 @@ function applyThemePageCopy(): void {
   const rangeEnd = document.querySelector(".custom-secondary-timer-range-end-label");
   const generateRules = document.getElementById("custom-secondary-timer-generate");
   const generatorHint = document.querySelector(".custom-secondary-timer-generator-hint");
-  const appearanceKicker = document.querySelector(".settings-section-head .palette-kicker");
-  const appearanceTitle = document.querySelector(".settings-section-head h2");
-  const appearanceDesc = document.querySelector(".settings-section-head > p:last-child");
 
   if (kicker) kicker.textContent = copy.kicker;
   if (pageTitle) pageTitle.textContent = title;
   if (pageSubtitle) pageSubtitle.textContent = subtitle;
-  if (themeCardTitle) themeCardTitle.textContent = copy.themeModesTitle;
-  if (panelPill) panelPill.textContent = pillText;
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
   if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
-  if (themePreviewLabel) themePreviewLabel.textContent = copy.themePreviewLabel;
-  if (boardSelectLabel) boardSelectLabel.textContent = copy.boardSelectLabel;
-  if (boardButtons[0]) boardButtons[0].textContent = copy.board2048;
-  if (boardButtons[1]) boardButtons[1].textContent = copy.boardFib;
   if (listTitle) listTitle.textContent = copy.paletteList;
-  if (currentPalette && currentPalette.getAttribute("data-palette-name-bound") !== "1") {
-    currentPalette.textContent = copy.currentPalette;
-  }
+  if (paletteMappingNote) paletteMappingNote.textContent = copy.paletteMappingNote;
   if (createButton) createButton.textContent = copy.create;
   if (renameButton) renameButton.textContent = copy.rename;
   if (deleteButton) deleteButton.textContent = copy.remove;
@@ -431,10 +398,24 @@ function applyThemePageCopy(): void {
   if (rangeEnd) rangeEnd.textContent = copy.rangeEnd;
   if (generateRules) generateRules.textContent = copy.generateRules;
   if (generatorHint) generatorHint.textContent = copy.generatorHint;
-  if (appearanceKicker) appearanceKicker.textContent = copy.appearanceKicker;
-  if (appearanceTitle) appearanceTitle.textContent = copy.appearanceTitle;
-  if (appearanceDesc) appearanceDesc.textContent = copy.appearanceDesc;
   syncCustomTimerEditor(false);
+}
+
+function syncSettingsCategory(): void {
+  const activeId = window.location.hash === "#appearance-settings"
+    ? "appearance-settings"
+    : "timer-settings";
+
+  for (const id of ["timer-settings", "appearance-settings"]) {
+    const active = id === activeId;
+    const section = document.getElementById(id);
+    const link = document.querySelector<HTMLAnchorElement>(`.settings-category-link[href="#${id}"]`);
+    if (section) section.hidden = !active;
+    if (link) {
+      link.classList.toggle("is-active", active);
+      link.setAttribute("aria-current", active ? "page" : "false");
+    }
+  }
 }
 
 export function bootstrapPalettePage(): void {
@@ -469,6 +450,8 @@ export function bootstrapPalettePage(): void {
   }
 
   initCustomTimerEditor();
+  syncSettingsCategory();
   applyThemePageCopy();
+  window.addEventListener("hashchange", syncSettingsCategory);
   window.addEventListener("uilanguagechange", applyThemePageCopy);
 }

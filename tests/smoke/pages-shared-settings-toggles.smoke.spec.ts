@@ -197,14 +197,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.evaluate(() => {
       (window as any).ThemeManager.applyTheme("ocean");
-      (window as any).ThemeManager.setActiveTilePalette("night-paper");
+      (window as any).ThemeManager.setActiveTilePalette("cold-cyan-steps");
     });
     await page.waitForFunction(() => {
       return (
         window.localStorage.getItem("theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("tile_palette_active_v1") === "night-paper" &&
+        window.localStorage.getItem("tile_palette_active_v1") === "cold-cyan-steps" &&
         window.localStorage.getItem("settings_night_theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("settings_night_tile_palette_v1") === "night-paper"
+        window.localStorage.getItem("settings_night_tile_palette_v1") === "cold-cyan-steps"
       );
     });
 
@@ -266,9 +266,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(secondNightEnable.currentTheme).toBe("ocean");
-    expect(secondNightEnable.currentTilePalette).toBe("night-paper");
+    expect(secondNightEnable.currentTilePalette).toBe("cold-cyan-steps");
     expect(secondNightEnable.savedTheme).toBe("ocean");
-    expect(secondNightEnable.savedTilePalette).toBe("night-paper");
+    expect(secondNightEnable.savedTilePalette).toBe("cold-cyan-steps");
     expect(secondNightEnable.autoThemeApplied).toBe("1");
   });
 
@@ -321,7 +321,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         dataNight: "1"
       });
 
-    const paletteResponse = await page.goto("/palette.html", {
+    const paletteResponse = await page.goto("/palette.html#appearance-settings", {
       waitUntil: "domcontentloaded"
     });
     expect(paletteResponse, "Palette response should exist").not.toBeNull();
@@ -400,7 +400,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     expect(snapshot.dataAttribute).toBe("1");
-    expect(snapshot.groupTitleColor).toContain("236, 226, 211");
+    expect(snapshot.groupTitleColor).toContain("237, 242, 237");
     expect(snapshot.rootBackgroundImage).toBe("none");
     expect(snapshot.bodyBeforeDisplay).toBe("none");
     expect(snapshot.bodyAfterDisplay).toBe("none");
@@ -450,7 +450,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const targets = [
       { url: "/account_settings.html", selector: ".account-auth-form-surface" },
       { url: "/replay.html", selector: ".replay-metric-card" },
-      { url: "/palette.html", selector: ".theme-selection-col" },
+      { url: "/palette.html", selector: ".palette-sidebar" },
       { url: "/history.html", selector: ".portal-card" },
       { url: "/relay_5x5.html", selector: ".relay-panel" },
       { url: "/Practice_board.html?practice_fresh=1", selector: ".dashboard-box" }

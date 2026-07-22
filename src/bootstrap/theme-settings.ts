@@ -83,14 +83,11 @@ const FALLBACK_FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 6
 function normalizeValues(value: Array<number> | null | undefined, fallback: number[]): number[] {
   if (!Array.isArray(value) || value.length === 0) return fallback.slice();
   const normalized = value.filter((item) => typeof item === "number" && Number.isFinite(item));
-  return normalized.length > 0 ? normalized : fallback.slice();
+  return normalized.length > 0 ? normalized.slice(0, 16) : fallback.slice();
 }
 
 export function formatThemePreviewValue(value: number | null | undefined): string {
   const num = typeof value === "number" && Number.isFinite(value) ? value : 0;
-  if (num >= 1024 && num % 1024 === 0) {
-    return num / 1024 + "K";
-  }
   return "" + num;
 }
 

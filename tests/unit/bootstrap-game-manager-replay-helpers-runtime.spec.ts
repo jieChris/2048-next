@@ -133,6 +133,8 @@ describe("bootstrap game-manager replay helpers runtime", () => {
         start_unix_ms: 123456,
         mode_key: "board_2x2_pow2_no_undo",
         ruleset: "pow2",
+        owner_user_id: "42",
+        owner_nickname: "测试Player超长昵称",
         custom_secondary_timer_rule_text: "32\n32+2"
       },
       getWindowLike: () => ({
@@ -165,6 +167,20 @@ describe("bootstrap game-manager replay helpers runtime", () => {
         ? new TextDecoder().decode(customRulesRecord.payload)
         : ""
     ).toBe("32\n32+2");
+    const ownerIdRecord = decoded.records.find(
+      (record) => record.kind === "ext" && record.extType === 6
+    );
+    const ownerNicknameRecord = decoded.records.find(
+      (record) => record.kind === "ext" && record.extType === 7
+    );
+    expect(
+      ownerIdRecord?.kind === "ext" ? new TextDecoder().decode(ownerIdRecord.payload) : ""
+    ).toBe("42");
+    expect(
+      ownerNicknameRecord?.kind === "ext"
+        ? new TextDecoder().decode(ownerNicknameRecord.payload)
+        : ""
+    ).toBe("测试Player超长");
   });
 
   it("restores the opening custom timer rules through a replay v1 export/import round trip", () => {

@@ -345,7 +345,7 @@ test("production button families use mist cyan semantic tones while excluded pag
     bandColor: "rgb(167, 70, 59)"
   });
 
-  await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+  await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
   const disabledButton = page.locator("#palette-rename-btn");
   await expect(disabledButton).toBeVisible();
   await expect(disabledButton).toBeDisabled();

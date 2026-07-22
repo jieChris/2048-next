@@ -13,8 +13,9 @@
   var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
   var DAY_TILE_PALETTE_KEY = "settings_day_tile_palette_v1";
   var NIGHT_TILE_PALETTE_KEY = "settings_night_tile_palette_v1";
-  var DEFAULT_DAY_THEME_ID = "classic";
-  var DEFAULT_TILE_PALETTE_ID = "follow-theme";
+  var DEFAULT_DAY_THEME_ID = "mist_cyan";
+  var DEFAULT_DAY_TILE_PALETTE_ID = "cold-cyan-steps";
+  var DEFAULT_NIGHT_TILE_PALETTE_ID = "follow-theme";
   var STORAGE_TRUE_VALUE = "1";
   var STORAGE_FALSE_VALUE = "0";
   var STYLE_ID = "night-background-style";
@@ -156,13 +157,18 @@
     return isNight ? NIGHT_TILE_PALETTE_KEY : DAY_TILE_PALETTE_KEY;
   }
 
+  function getModeDefaultTilePaletteId(isNight) {
+    return isNight ? DEFAULT_NIGHT_TILE_PALETTE_ID : DEFAULT_DAY_TILE_PALETTE_ID;
+  }
+
   function readModeAppearance(isNight) {
     return {
       themeId:
         safeReadTextValue(getModeThemeStorageKey(isNight)) ||
         (isNight ? AUTO_THEME_ID : DEFAULT_DAY_THEME_ID),
       tilePaletteId:
-        safeReadTextValue(getModeTilePaletteStorageKey(isNight)) || DEFAULT_TILE_PALETTE_ID
+        safeReadTextValue(getModeTilePaletteStorageKey(isNight)) ||
+        getModeDefaultTilePaletteId(isNight)
     };
   }
 
@@ -206,7 +212,7 @@
         if (paletteId) return paletteId;
       } catch (_err) {}
     }
-    return safeReadTextValue(TILE_PALETTE_ACTIVE_KEY) || DEFAULT_TILE_PALETTE_ID;
+    return safeReadTextValue(TILE_PALETTE_ACTIVE_KEY) || getModeDefaultTilePaletteId(state.enabled);
   }
 
   function syncCurrentAppearanceToMode(isNight) {
@@ -232,7 +238,7 @@
         }
       }
       if (!hasNightPalette) {
-        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_TILE_PALETTE_ID);
+        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_NIGHT_TILE_PALETTE_ID);
       }
       return true;
     }
@@ -241,7 +247,7 @@
       safeWriteTextValue(DAY_THEME_KEY, readCurrentThemeId() || DEFAULT_DAY_THEME_ID);
     }
     if (!safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
-      safeWriteTextValue(DAY_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_TILE_PALETTE_ID);
+      safeWriteTextValue(DAY_TILE_PALETTE_KEY, readCurrentTilePaletteId() || DEFAULT_DAY_TILE_PALETTE_ID);
     }
     return true;
   }
@@ -432,7 +438,7 @@
         );
       }
       if (!safeReadTextValue(NIGHT_TILE_PALETTE_KEY)) {
-        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, DEFAULT_TILE_PALETTE_ID);
+        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, DEFAULT_NIGHT_TILE_PALETTE_ID);
       }
       if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY)) {
         safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, true);
@@ -445,7 +451,7 @@
         safeWriteTextValue(DAY_THEME_KEY, DEFAULT_DAY_THEME_ID);
       }
       if (!safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
-        safeWriteTextValue(DAY_TILE_PALETTE_KEY, DEFAULT_TILE_PALETTE_ID);
+        safeWriteTextValue(DAY_TILE_PALETTE_KEY, DEFAULT_DAY_TILE_PALETTE_ID);
       }
       syncAppearanceForCurrentState();
       if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {

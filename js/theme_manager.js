@@ -7,7 +7,10 @@
   var DAY_TILE_PALETTE_STORAGE_KEY = "settings_day_tile_palette_v1";
   var NIGHT_TILE_PALETTE_STORAGE_KEY = "settings_night_tile_palette_v1";
   var STORAGE_TRUE_VALUE = "1";
-  var POW2_TILE_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+  var POW2_TILE_VALUES = [
+    2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536,
+    131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864
+  ];
   var FIB_TILE_VALUES = [
     1, 2, 3, 5, 8, 13, 21, 34,
     55, 89, 144, 233, 377, 610, 987, 1597,
@@ -15,11 +18,12 @@
   ];
   var FIB_PREVIEW_VALUES = FIB_TILE_VALUES.slice(0, 16);
   var TIMER_VALUES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
-  var DEFAULT_THEME = "classic";
+  var DEFAULT_THEME = "mist_cyan";
   var TILE_PALETTE_STORAGE_KEY = "tile_palette_profiles_v1";
   var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
   var TILE_PALETTE_VERSION = 1;
-  var DEFAULT_TILE_PALETTE_ID = "follow-theme";
+  var FOLLOW_THEME_TILE_PALETTE_ID = "follow-theme";
+  var DEFAULT_TILE_PALETTE_ID = "cold-cyan-steps";
   var TILE_PALETTE_DIMENSION_SUFFIX = {
     background: "",
     text: "Text",
@@ -63,38 +67,6 @@
     "#FFFCF6", "#15110D", "#FFFCF6", "#FFFCF6"
   ];
   var BUILTIN_TILE_PALETTES = [
-    {
-      id: "eyestrain-soft",
-      name: "护眼·暖砂",
-      pow2: [
-        "#ede7df", "#e6dfd4", "#d9d8cf", "#d2d5cb",
-        "#cad2c7", "#c2cec3", "#bbc9c1", "#b4c4bf",
-        "#adbfbd", "#a6bab8", "#9fb4b2", "#98adab",
-        "#90a5a2", "#889d99", "#819591", "#798d88"
-      ],
-      fibonacci: [
-        "#ece9df", "#e7e3d8", "#dfddcf", "#d8d6c6",
-        "#d1cfbe", "#c9c8b7", "#c2c0b0", "#bab8a8",
-        "#b3b1a1", "#aba999", "#a4a291", "#9c9a89",
-        "#959381", "#8d8b7a", "#868472", "#7e7d6a"
-      ]
-    },
-    {
-      id: "night-paper",
-      name: "护眼·夜纸",
-      pow2: [
-        "#e8e5dd", "#dfddd4", "#d6d6cb", "#ced0c4",
-        "#c6cabd", "#bec4b6", "#b6beaf", "#aeb8a8",
-        "#a6b2a1", "#9eac9a", "#96a693", "#8ea08c",
-        "#879985", "#80927f", "#798a79", "#728373"
-      ],
-      fibonacci: [
-        "#e7e4dc", "#dfdbd2", "#d7d2c9", "#cfcac0",
-        "#c7c2b7", "#bfb9ae", "#b7b1a6", "#afa89d",
-        "#a7a095", "#9f978d", "#978f85", "#8f867d",
-        "#877e75", "#80766d", "#786d65", "#70655d"
-      ]
-    },
     {
       id: "cold-cyan-steps",
       name: "冷青·跃阶",
@@ -1106,19 +1078,20 @@
   function buildThemePaletteColors(theme, ruleset) {
     var values = ruleset === "fibonacci" ? FIB_PREVIEW_VALUES : POW2_TILE_VALUES;
     var colors = [];
-    for (var i = 0; i < 16; i++) {
-      colors.push(colorForIndex(theme, i, values.length));
+    for (var i = 0; i < values.length; i++) {
+      colors.push(i < 16 ? colorForIndex(theme, i, 16) : colors[15]);
     }
     return colors;
   }
 
   function normalizePaletteColorArray(input, fallbackColors) {
-    var fallback = Array.isArray(fallbackColors) ? fallbackColors.slice(0, 16) : [];
-    while (fallback.length < 16) fallback.push("#000000");
-    var result = fallback.slice(0, 16);
+    var count = Math.max(16, Math.min(POW2_TILE_VALUES.length, Array.isArray(fallbackColors) ? fallbackColors.length : 0));
+    var fallback = Array.isArray(fallbackColors) ? fallbackColors.slice(0, count) : [];
+    while (fallback.length < count) fallback.push(fallback.length ? fallback[fallback.length - 1] : "#000000");
+    var result = fallback.slice(0, count);
     if (!Array.isArray(input)) return result;
-    for (var i = 0; i < 16; i++) {
-      var fallbackColor = result[i];
+    for (var i = 0; i < count; i++) {
+      var fallbackColor = i >= input.length && i > 0 ? result[i - 1] : result[i];
       result[i] = normalizePaletteColor(input[i], fallbackColor);
     }
     return result;
@@ -1141,7 +1114,7 @@
   function buildDefaultPaletteTextColors(theme, ruleset, backgroundColors) {
     var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
     var textColors = [];
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < bgColors.length; i++) {
       var bg = bgColors[i];
       if (theme && theme.blackTiles) {
         textColors.push("#f4f7ff");
@@ -1170,7 +1143,7 @@
     var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
     var borderColors = [];
     var mixRatio = theme && theme.blackTiles ? 0.35 : 0.24;
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < bgColors.length; i++) {
       borderColors.push(mixHex(bgColors[i], "#ffffff", mixRatio));
     }
     return borderColors;
@@ -1180,7 +1153,7 @@
     var bgColors = normalizePaletteColorArray(backgroundColors, buildThemePaletteColors(theme, ruleset));
     var glowColors = [];
     var mixRatio = theme && theme.neon ? 0.06 : 0.14;
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < bgColors.length; i++) {
       glowColors.push(mixHex(bgColors[i], "#ffffff", mixRatio));
     }
     return glowColors;
@@ -1222,14 +1195,14 @@
     return {
       id: String(record.id || ""),
       name: String(record.name || ""),
-      pow2: Array.isArray(record.pow2) ? record.pow2.slice(0, 16) : [],
-      fibonacci: Array.isArray(record.fibonacci) ? record.fibonacci.slice(0, 16) : [],
-      pow2Text: Array.isArray(record.pow2Text) ? record.pow2Text.slice(0, 16) : [],
-      fibonacciText: Array.isArray(record.fibonacciText) ? record.fibonacciText.slice(0, 16) : [],
-      pow2Border: Array.isArray(record.pow2Border) ? record.pow2Border.slice(0, 16) : [],
-      fibonacciBorder: Array.isArray(record.fibonacciBorder) ? record.fibonacciBorder.slice(0, 16) : [],
-      pow2Glow: Array.isArray(record.pow2Glow) ? record.pow2Glow.slice(0, 16) : [],
-      fibonacciGlow: Array.isArray(record.fibonacciGlow) ? record.fibonacciGlow.slice(0, 16) : [],
+      pow2: Array.isArray(record.pow2) ? record.pow2.slice(0, POW2_TILE_VALUES.length) : [],
+      fibonacci: Array.isArray(record.fibonacci) ? record.fibonacci.slice(0, FIB_PREVIEW_VALUES.length) : [],
+      pow2Text: Array.isArray(record.pow2Text) ? record.pow2Text.slice(0, POW2_TILE_VALUES.length) : [],
+      fibonacciText: Array.isArray(record.fibonacciText) ? record.fibonacciText.slice(0, FIB_PREVIEW_VALUES.length) : [],
+      pow2Border: Array.isArray(record.pow2Border) ? record.pow2Border.slice(0, POW2_TILE_VALUES.length) : [],
+      fibonacciBorder: Array.isArray(record.fibonacciBorder) ? record.fibonacciBorder.slice(0, FIB_PREVIEW_VALUES.length) : [],
+      pow2Glow: Array.isArray(record.pow2Glow) ? record.pow2Glow.slice(0, POW2_TILE_VALUES.length) : [],
+      fibonacciGlow: Array.isArray(record.fibonacciGlow) ? record.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
       createdAt: Number(record.createdAt) || Date.now(),
       updatedAt: Number(record.updatedAt) || Date.now(),
       source: String(record.source || "custom"),
@@ -1238,15 +1211,28 @@
   }
 
   function createFollowThemePalette(theme) {
-    var pow2 = buildThemePaletteColors(theme, "pow2");
-    var fibonacci = buildThemePaletteColors(theme, "fibonacci");
+    var linkedPalette = theme && theme.id === "mist_cyan" ? BUILTIN_TILE_PALETTES[0] : null;
+    var pow2 = linkedPalette
+      ? normalizePaletteColorArray(linkedPalette.pow2, buildThemePaletteColors(theme, "pow2"))
+      : buildThemePaletteColors(theme, "pow2");
+    var fibonacci = linkedPalette
+      ? normalizePaletteColorArray(linkedPalette.fibonacci, buildThemePaletteColors(theme, "fibonacci"))
+      : buildThemePaletteColors(theme, "fibonacci");
     return {
-      id: DEFAULT_TILE_PALETTE_ID,
+      id: FOLLOW_THEME_TILE_PALETTE_ID,
       name: "跟随主题",
       pow2: pow2,
       fibonacci: fibonacci,
-      pow2Text: buildFollowThemePaletteTextColors(theme, "pow2", pow2),
-      fibonacciText: buildFollowThemePaletteTextColors(theme, "fibonacci", fibonacci),
+      pow2Text: linkedPalette
+        ? resolvePaletteDimensionColors(theme, linkedPalette, "pow2", "text")
+        : buildFollowThemePaletteTextColors(theme, "pow2", pow2),
+      fibonacciText: linkedPalette
+        ? resolvePaletteDimensionColors(theme, linkedPalette, "fibonacci", "text")
+        : buildFollowThemePaletteTextColors(theme, "fibonacci", fibonacci),
+      pow2Border: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "pow2", "border") : [],
+      fibonacciBorder: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "fibonacci", "border") : [],
+      pow2Glow: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "pow2", "glow") : [],
+      fibonacciGlow: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "fibonacci", "glow") : [],
       createdAt: 0,
       updatedAt: 0,
       source: "follow",
@@ -1294,7 +1280,7 @@
     for (var i = 0; i < parsed.length; i++) {
       var item = parsed[i] || {};
       var id = typeof item.id === "string" ? item.id.trim() : "";
-      if (!id || id === DEFAULT_TILE_PALETTE_ID) continue;
+      if (!id || id === FOLLOW_THEME_TILE_PALETTE_ID) continue;
       var name = typeof item.name === "string" && item.name.trim() ? item.name.trim() : "自定义色板";
       var fallbackTheme = themes[currentThemeId] || themes[DEFAULT_THEME];
       var pow2Fallback = buildThemePaletteColors(fallbackTheme, "pow2");
@@ -2804,7 +2790,8 @@
     var targetDimension = hasDimension
       ? normalizeTilePaletteDimension(dimensionOrIndex)
       : "background";
-    var targetIndex = Math.max(0, Math.min(15, Number(hasDimension ? indexOrColor : dimensionOrIndex) || 0));
+    var maxIndex = targetRuleset === "fibonacci" ? FIB_PREVIEW_VALUES.length - 1 : POW2_TILE_VALUES.length - 1;
+    var targetIndex = Math.max(0, Math.min(maxIndex, Number(hasDimension ? indexOrColor : dimensionOrIndex) || 0));
     var color = hasDimension ? maybeColor : indexOrColor;
     var custom = readStoredTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
@@ -2845,14 +2832,14 @@
       return {
         id: item.id,
         name: item.name,
-        pow2: Array.isArray(item.pow2) ? item.pow2.slice(0, 16) : [],
-        fibonacci: Array.isArray(item.fibonacci) ? item.fibonacci.slice(0, 16) : [],
-        pow2Text: Array.isArray(item.pow2Text) ? item.pow2Text.slice(0, 16) : [],
-        fibonacciText: Array.isArray(item.fibonacciText) ? item.fibonacciText.slice(0, 16) : [],
-        pow2Border: Array.isArray(item.pow2Border) ? item.pow2Border.slice(0, 16) : [],
-        fibonacciBorder: Array.isArray(item.fibonacciBorder) ? item.fibonacciBorder.slice(0, 16) : [],
-        pow2Glow: Array.isArray(item.pow2Glow) ? item.pow2Glow.slice(0, 16) : [],
-        fibonacciGlow: Array.isArray(item.fibonacciGlow) ? item.fibonacciGlow.slice(0, 16) : [],
+        pow2: Array.isArray(item.pow2) ? item.pow2.slice(0, POW2_TILE_VALUES.length) : [],
+        fibonacci: Array.isArray(item.fibonacci) ? item.fibonacci.slice(0, FIB_PREVIEW_VALUES.length) : [],
+        pow2Text: Array.isArray(item.pow2Text) ? item.pow2Text.slice(0, POW2_TILE_VALUES.length) : [],
+        fibonacciText: Array.isArray(item.fibonacciText) ? item.fibonacciText.slice(0, FIB_PREVIEW_VALUES.length) : [],
+        pow2Border: Array.isArray(item.pow2Border) ? item.pow2Border.slice(0, POW2_TILE_VALUES.length) : [],
+        fibonacciBorder: Array.isArray(item.fibonacciBorder) ? item.fibonacciBorder.slice(0, FIB_PREVIEW_VALUES.length) : [],
+        pow2Glow: Array.isArray(item.pow2Glow) ? item.pow2Glow.slice(0, POW2_TILE_VALUES.length) : [],
+        fibonacciGlow: Array.isArray(item.fibonacciGlow) ? item.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now()
       };

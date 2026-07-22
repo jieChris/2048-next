@@ -14,8 +14,8 @@ import {
 } from "../../src/bootstrap/theme-settings";
 
 describe("bootstrap theme settings", () => {
-  it("formats preview value in K units", () => {
-    expect(formatThemePreviewValue(2048)).toBe("2K");
+  it("formats preview values as exact integers", () => {
+    expect(formatThemePreviewValue(2048)).toBe("2048");
     expect(formatThemePreviewValue(1536)).toBe("1536");
   });
 
@@ -29,6 +29,21 @@ describe("bootstrap theme settings", () => {
     ).toEqual({
       pow2Values: [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
       fibonacciValues: [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597]
+    });
+  });
+
+  it("keeps theme previews limited to the original 4x4 footprint", () => {
+    expect(
+      resolveThemePreviewTileValues({
+        getTileValues(ruleset) {
+          return ruleset === "pow2"
+            ? Array.from({ length: 26 }, (_, index) => 2 ** (index + 1))
+            : Array.from({ length: 24 }, (_, index) => index + 1);
+        }
+      })
+    ).toEqual({
+      pow2Values: Array.from({ length: 16 }, (_, index) => 2 ** (index + 1)),
+      fibonacciValues: Array.from({ length: 16 }, (_, index) => index + 1)
     });
   });
 

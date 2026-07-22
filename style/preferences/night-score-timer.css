@@ -47,8 +47,8 @@ html[data-night-background="1"] .timer-leaderboard-row .timer-leaderboard-name-t
 }
 
 html[data-night-background="1"] .timer-leaderboard-row:not(.is-self) .timer-leaderboard-rank-tile:not(.is-top-1):not(.is-top-2):not(.is-top-3) {
-  background: #b9aea2;
-  color: #fffaf2;
+  background: var(--leaderboard-rank-bg);
+  color: var(--leaderboard-rank-text);
 }
 
 html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-1 {
@@ -67,8 +67,8 @@ html[data-night-background="1"] .timer-leaderboard-rank-tile.is-top-3 {
 }
 
 html[data-night-background="1"] .timer-leaderboard-row.is-self .timer-leaderboard-rank-tile {
-  background: #b27f58;
-  color: #fffaf2;
+  background: var(--leaderboard-rank-self-bg);
+  color: var(--leaderboard-rank-self-text);
 }
 
 html[data-night-background="1"] .timer-leaderboard-row.is-self .timer-leaderboard-name-tile {

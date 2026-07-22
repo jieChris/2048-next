@@ -1172,7 +1172,7 @@ describe("online leaderboard terminal submission", () => {
     expect(recordPayload?.seed).toBeNull();
   });
 
-  it("keeps ranked state and pending record retryable when final record submit reports an expired session", async () => {
+  it("retires the active session but keeps the pending record retryable when final submit reports expiry", async () => {
     const storage = new MemoryStorage();
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const session = {
@@ -1233,11 +1233,7 @@ describe("online leaderboard terminal submission", () => {
     await flushRuntimePromises();
 
     expect(clearModeSession).not.toHaveBeenCalled();
-    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}")).toMatchObject({
-      ranked_session_token: "ranked-token",
-      challenge_id: "ranked-1",
-      seed: 123
-    });
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
     expect(storage.getItem(PREFETCH_SESSION_KEY)).not.toBeNull();
     expect(JSON.parse(storage.getItem(PENDING_RECORD_KEY) || "{}")).toMatchObject({
       signature: expect.any(String),
@@ -1917,7 +1913,7 @@ describe("online leaderboard terminal submission", () => {
     expect(activeSession.seed).toBe(nextSession.seed);
   });
 
-  it("keeps active storage when stale submit cleanup wins the race before prefetch promotion", async () => {
+  it("durably captures the terminal record and retires its active session before upload finishes", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
     const oldSession = {
@@ -1944,15 +1940,18 @@ describe("online leaderboard terminal submission", () => {
     const manager = createTerminatedManager({
       rankPolicy: "ranked",
       rankedSessionToken: "old-ranked-token",
+      challengeId: "ranked-old",
       tryAutoSubmitOnGameOver: vi.fn()
     });
     let recordPayload: Record<string, unknown> | null = null;
+    const recordSubmit = createDeferred<Record<string, unknown>>();
     loadOnlineLeaderboardRuntime({
       manager,
       storage,
       fetchImpl: async (url, init) => {
         if (url.endsWith("/records")) {
           recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          await recordSubmit.promise;
           return createJsonResponse({ success: true, data: { id: "record-old" } });
         }
         if (url.includes("/ranked-checkpoint")) {
@@ -1963,15 +1962,23 @@ describe("online leaderboard terminal submission", () => {
     });
 
     (manager.tryAutoSubmitOnGameOver as { call: (thisArg: unknown) => void }).call(manager);
-    await flushRuntimePromises();
 
-    expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
-    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe(
-      "old-ranked-token"
-    );
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_KEY) || "{}")).toMatchObject({
+      payload: {
+        ranked_session_token: "old-ranked-token",
+        challenge_id: "ranked-old"
+      }
+    });
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
     expect(JSON.parse(storage.getItem(PREFETCH_SESSION_KEY) || "{}").ranked_session_token).toBe(
       "next-ranked-token"
     );
+
+    await flushRuntimePromises();
+    expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
+
+    recordSubmit.resolve({ success: true });
+    await flushRuntimePromises();
   });
 
   it("creates the next ranked session on demand when restart has no prefetched session", async () => {
@@ -2395,8 +2402,7 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.score).toBe(4096);
     expect(ensurePrefetch).toHaveBeenCalledWith(MODE_KEY);
     expect(runtime.windowLike.alert).not.toHaveBeenCalled();
-    expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
-    expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("old-ranked-token");
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).toBeNull();
     expect(manager.rankedSessionToken).toBe("old-ranked-token");
     expect(manager.rankedRestartBlockedUntilSessionReady).toBe(true);
     expect(manager.rankedRestartPreparing).toBe(false);

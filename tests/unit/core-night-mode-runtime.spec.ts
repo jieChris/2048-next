@@ -199,7 +199,7 @@ describe("core night mode runtime", () => {
     const sharedStorage = new Map<string, string>([
       ["settings_night_background_enabled_v1", "1"]
     ]);
-    let currentTilePaletteId = "night-paper";
+    let currentTilePaletteId = "cold-cyan-steps";
     const themeManager = {
       getCurrentTheme: vi.fn(() => "ocean"),
       getActiveTilePaletteId: vi.fn(() => currentTilePaletteId),
@@ -218,7 +218,7 @@ describe("core night mode runtime", () => {
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).not.toBe("1");
     expect(sharedStorage.get("settings_night_theme_profile_v1")).toBe("ocean");
-    expect(sharedStorage.get("settings_night_tile_palette_v1")).toBe("night-paper");
+    expect(sharedStorage.get("settings_night_tile_palette_v1")).toBe("cold-cyan-steps");
     expect(snapshot.enabled).toBe(true);
     expect(snapshot.autoThemeApplied).toBe(true);
     expect(snapshot.autoThemePending).toBe(false);
@@ -241,21 +241,21 @@ describe("core night mode runtime", () => {
 
     runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
     currentThemeId = "ocean";
-    currentTilePaletteId = "night-paper";
+    currentTilePaletteId = "cold-cyan-steps";
 
     runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(false);
 
     expect(currentThemeId).toBe("classic");
     expect(currentTilePaletteId).toBe("follow-theme");
     expect(runtime.storageMap.get("settings_night_theme_profile_v1")).toBe("ocean");
-    expect(runtime.storageMap.get("settings_night_tile_palette_v1")).toBe("night-paper");
+    expect(runtime.storageMap.get("settings_night_tile_palette_v1")).toBe("cold-cyan-steps");
     expect(runtime.storageMap.get("settings_day_theme_profile_v1")).toBe("classic");
     expect(runtime.storageMap.get("settings_day_tile_palette_v1")).toBe("follow-theme");
 
     runtime.context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
 
     expect(currentThemeId).toBe("ocean");
-    expect(currentTilePaletteId).toBe("night-paper");
+    expect(currentTilePaletteId).toBe("cold-cyan-steps");
   });
 
   it("syncs the checkbox state when another page changes night mode through storage", () => {

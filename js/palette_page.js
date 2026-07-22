@@ -3,7 +3,10 @@
 
   if (!global || !global.document) return;
 
-  var POW2_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+  var POW2_VALUES = [
+    2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536,
+    131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864
+  ];
   var FIB_VALUES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597];
   var LEGEND_VALUES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
   var DIMENSIONS = [
@@ -12,10 +15,6 @@
     { key: "border", tabLabelZh: "\u8fb9\u6846", tabLabelEn: "Border", panelLabelZh: "\u8fb9\u6846\u989c\u8272", panelLabelEn: "Border Color" },
     { key: "glow", tabLabelZh: "\u53d1\u5149", tabLabelEn: "Glow", panelLabelZh: "\u53d1\u5149\u989c\u8272", panelLabelEn: "Glow Color" }
   ];
-  var BOARD_LABELS = {
-    pow2: { zh: "2048", en: "2048" },
-    fibonacci: { zh: "\u6590\u6ce2\u90a3\u5951", en: "Fibonacci" }
-  };
   var REQUIRED_THEME_API_NAMES = [
     "getTilePalettes",
     "getActiveTilePaletteId",
@@ -31,9 +30,9 @@
   var runtimeRetryCount = 0;
   var bootCompleted = false;
   var state = {
-    selectedBoard: "pow2",
     selectedDimension: "background",
     activeColorIndex: 0,
+    pow2Expanded: false,
     swatchOpen: false
   };
   var bodyScrollLockState = {
@@ -251,10 +250,35 @@
 
   function valueText(value, ruleset) {
     var num = Number(value) || 0;
-    if (ruleset === "pow2" && num >= 1024 && num % 1024 === 0) {
-      return String(num / 1024) + "K";
-    }
     return String(num);
+  }
+
+  function isMobileTileViewport() {
+    if (typeof global.matchMedia === "function") {
+      if (global.matchMedia("(max-width: 980px)").matches) return true;
+      if (global.matchMedia("(pointer: coarse)").matches && global.matchMedia("(hover: none)").matches) return true;
+    }
+    return global.innerWidth <= 980;
+  }
+
+  function computePreviewTileFontSize(value, cell) {
+    var digits = String(Math.max(0, Math.floor(Math.abs(Number(value) || 0)))).length;
+    var digitScale = 1;
+    if (digits === 3) digitScale = 0.84;
+    if (digits === 4) digitScale = 0.72;
+    if (digits >= 5) digitScale = 0.6;
+
+    var mobileBoost = 1;
+    if (isMobileTileViewport()) {
+      if (digits === 3) mobileBoost = 1.1;
+      if (digits >= 4) mobileBoost = 1.03;
+    }
+
+    var raw = cell * 0.48 * digitScale * mobileBoost;
+    if (digits >= 6) raw = Math.min(raw, (cell * 0.84) / (digits * 0.58));
+    var minSize = digits >= 6 ? Math.max(8, Math.floor(cell * 0.12)) : Math.max(11, Math.floor(cell * 0.22));
+    var maxSize = Math.max(minSize, Math.floor(cell * 0.62));
+    return Math.max(minSize, Math.min(maxSize, Math.round(raw)));
   }
 
   function boardValues(ruleset) {
@@ -288,9 +312,10 @@
 
   function normalize16(input, fallback) {
     var source = resolveArray(input);
-    var out = resolveArray(fallback).slice(0, 16);
-    while (out.length < 16) out.push("#000000");
-    for (var i = 0; i < 16; i += 1) {
+    var count = Math.min(POW2_VALUES.length, Math.max(16, source.length, resolveArray(fallback).length));
+    var out = resolveArray(fallback).slice(0, count);
+    while (out.length < count) out.push(out.length ? out[out.length - 1] : "#000000");
+    for (var i = 0; i < count; i += 1) {
       out[i] = normalizeHexColor(source[i], out[i]);
     }
     return out;
@@ -332,15 +357,6 @@
     if (dimension === "text") return normalize16(toRecord(palette)[dimensionKey(ruleset, "text")], deriveTextColors(bgColors));
     if (dimension === "border") return normalize16(toRecord(palette)[dimensionKey(ruleset, "border")], deriveBorderColors(bgColors));
     return normalize16(toRecord(palette)[dimensionKey(ruleset, "glow")], deriveGlowColors(bgColors));
-  }
-
-  function getPaletteStyleBundle(palette, ruleset) {
-    return {
-      background: getDimensionColors(palette, ruleset, "background"),
-      text: getDimensionColors(palette, ruleset, "text"),
-      border: getDimensionColors(palette, ruleset, "border"),
-      glow: getDimensionColors(palette, ruleset, "glow")
-    };
   }
 
   function resolvePreviewVisualRuleset(ruleset) {
@@ -389,8 +405,6 @@
 
     var paletteListEl = byId("palette-list");
     var paletteCountEl = byId("palette-count");
-    var currentNameEl = byId("palette-current-name");
-    var currentTagEl = byId("palette-current-tag");
     var nameInputEl = byId("palette-name-input");
     var createBtn = byId("palette-create-btn");
     var renameBtn = byId("palette-rename-btn");
@@ -399,7 +413,6 @@
     var importBtn = byId("palette-import-btn");
     var importInput = byId("palette-import-input");
     var dimensionTabsEl = byId("palette-dimension-tabs");
-    var boardSwitchEl = byId("palette-board-switch");
     var editorPanelHeadEl = byId("palette-editor-panel-head");
     var editorHostEl = byId("palette-editor-current");
     var editorWorkspaceEl = editorHostEl ? editorHostEl.closest(".editor-workspace") : null;
@@ -417,8 +430,6 @@
     var previewBoardEl = byId("palette-preview-board");
     var legendPreviewEl = byId("palette-preview-legend");
     var themeModePreviewEl = byId("theme-preview-grid");
-    var themeSelectionColEl = global.document.querySelector(".theme-selection-col");
-    var themePreviewColEl = global.document.querySelector(".theme-preview-col");
     var legacyPow2EditorEl = byId("palette-editor-pow2");
     var legacyFibEditorEl = byId("palette-editor-fib");
     var legacyPow2PreviewEl = byId("palette-preview-pow2");
@@ -481,16 +492,9 @@
       return isEn ? "Background" : "\u80cc\u666f";
     }
 
-    function boardText(board) {
-      var item = BOARD_LABELS[board] || BOARD_LABELS.pow2;
-      return isEnglishUi() ? item.en : item.zh;
-    }
-
     var missingDomIds = collectMissingDomIds([
       { id: "palette-list", node: paletteListEl },
       { id: "palette-count", node: paletteCountEl },
-      { id: "palette-current-name", node: currentNameEl },
-      { id: "palette-current-tag", node: currentTagEl },
       { id: "palette-name-input", node: nameInputEl },
       { id: "palette-create-btn", node: createBtn },
       { id: "palette-rename-btn", node: renameBtn },
@@ -499,7 +503,6 @@
       { id: "palette-import-btn", node: importBtn },
       { id: "palette-import-input", node: importInput },
       { id: "palette-dimension-tabs", node: dimensionTabsEl },
-      { id: "palette-board-switch", node: boardSwitchEl },
       { id: "palette-editor-panel-head", node: editorPanelHeadEl },
       { id: "palette-editor-current", node: editorHostEl },
       { id: "palette-swatch-popover", node: swatchPopoverEl },
@@ -595,19 +598,6 @@
       }
     }
 
-    function renderBoardSwitch() {
-      var buttons = boardSwitchEl.querySelectorAll(".palette-board-btn");
-      for (var i = 0; i < buttons.length; i += 1) {
-        var button = buttons[i];
-        var key = resolveText(button.getAttribute("data-board"));
-        if (key === state.selectedBoard) {
-          button.classList.add("is-active");
-        } else {
-          button.classList.remove("is-active");
-        }
-      }
-    }
-
     function buildSwatchPaletteColors(baseColors, dimension) {
       var builtIn = [
         "#ffffff", "#f9f6f2", "#eee4da", "#edcf72", "#edc22e", "#f59563",
@@ -682,7 +672,7 @@
 
     function renderSwatchPalette(paletteId, palette, ruleset, dimension, locked) {
       var currentColors = getDimensionColors(palette, ruleset, dimension);
-      var selectedIndex = Math.max(0, Math.min(15, Number(state.activeColorIndex) || 0));
+      var selectedIndex = Math.max(0, Math.min(boardValues(ruleset).length - 1, Number(state.activeColorIndex) || 0));
       var selectedColor = normalizeHexColor(currentColors[selectedIndex], "#000000");
       var selectedValue = valueText(boardValues(ruleset)[selectedIndex], ruleset);
       var swatches = buildSwatchPaletteColors(currentColors, dimension);
@@ -703,6 +693,16 @@
           selectedIndex,
           normalizedColor
         );
+        if (updated && ruleset === "pow2" && selectedIndex < FIB_VALUES.length) {
+          updated = !!updateTilePaletteColor.call(
+            themeManager,
+            paletteId,
+            "fibonacci",
+            dimension,
+            selectedIndex,
+            normalizedColor
+          );
+        }
         if (!updated) {
           setNote(lockedPaletteMessage(), "err");
           return;
@@ -830,11 +830,15 @@
     function renderColorEditor(paletteId, palette, ruleset, dimension, locked) {
       var values = boardValues(ruleset);
       var colors = getDimensionColors(palette, ruleset, dimension);
+      var startIndex = ruleset === "pow2" && state.pow2Expanded ? 16 : 0;
+      var endIndex = ruleset === "pow2" && state.pow2Expanded ? values.length : Math.min(16, values.length);
       editorHostEl.innerHTML = "";
-      for (var i = 0; i < 16; i += 1) {
+      for (var i = startIndex; i < endIndex; i += 1) {
         var item = createEl("button", "color-target", "");
         item.type = "button";
         item.setAttribute("data-index", String(i));
+        if (ruleset === "pow2" && i >= 9) item.classList.add("is-compact-value");
+        if (ruleset === "pow2" && i >= 16) item.classList.add("is-extended");
         if (i === state.activeColorIndex) item.classList.add("is-active-target");
 
         var chip = createEl("span", "color-target-chip", "");
@@ -862,28 +866,68 @@
           });
         })(i);
       }
+      if (ruleset === "pow2" && values.length > 16) {
+        var expandButton = createEl(
+          "button",
+          "replay-button palette-expand-target",
+          state.pow2Expanded
+            ? (isEnglishUi() ? "Collapse" : "\u6536\u8d77")
+            : (isEnglishUi() ? "Extend" : "\u62d3\u5c55")
+        );
+        expandButton.type = "button";
+        expandButton.setAttribute("aria-expanded", state.pow2Expanded ? "true" : "false");
+        expandButton.addEventListener("click", function () {
+          state.pow2Expanded = !state.pow2Expanded;
+          state.activeColorIndex = state.pow2Expanded ? 16 : Math.min(state.activeColorIndex, 15);
+          state.swatchOpen = false;
+          refresh();
+        });
+        editorHostEl.appendChild(expandButton);
+      }
       renderSwatchPalette(paletteId, palette, ruleset, dimension, locked);
     }
 
-    function renderBoardPreview(palette, ruleset) {
+    function renderBoardPreview(ruleset) {
       var valueRuleset = ruleset === "fibonacci" ? "fibonacci" : "pow2";
-      var visualRuleset = resolvePreviewVisualRuleset(valueRuleset);
       var values = boardValues(valueRuleset);
-      var styleBundle = getPaletteStyleBundle(palette, visualRuleset);
-      previewBoardEl.classList.toggle("is-fibonacci", visualRuleset === "fibonacci");
-      previewBoardEl.classList.toggle("is-pow2", visualRuleset !== "fibonacci");
+      var startIndex = valueRuleset === "pow2" && state.pow2Expanded ? 16 : 0;
+      var visibleValues = values.slice(startIndex, startIndex + 16);
+      previewBoardEl.classList.toggle("is-fibonacci", valueRuleset === "fibonacci");
+      previewBoardEl.classList.toggle("is-pow2", valueRuleset !== "fibonacci");
       previewBoardEl.innerHTML = "";
-      for (var i = 0; i < 16; i += 1) {
-        var tile = createEl("div", "preview-tile", valueText(values[i], valueRuleset));
-        var background = styleBundle.background[i];
-        var text = styleBundle.text[i];
-        var border = styleBundle.border[i];
-        var glow = styleBundle.glow[i];
-        tile.style.background = background;
-        tile.style.color = text;
-        tile.style.borderColor = border;
-        tile.style.boxShadow = "0 0 14px 1px " + rgba(glow, 0.38) + ", inset 0 0 0 1px " + rgba(border, 0.44);
+      for (var i = 0; i < visibleValues.length; i += 1) {
+        var value = visibleValues[i];
+        var tile = createEl("div", "preview-tile tile tile-" + String(value), "");
+        tile.setAttribute("data-value", String(value));
+        if (value > 2048) tile.classList.add("tile-super");
+        tile.appendChild(createEl("div", "tile-inner", valueText(value, valueRuleset)));
         previewBoardEl.appendChild(tile);
+      }
+      syncPreviewBoardTileGeometry();
+    }
+
+    function syncPreviewBoardTileGeometry() {
+      if (!previewBoardEl || !previewBoardEl.clientWidth) return;
+      var styles = global.getComputedStyle(previewBoardEl);
+      var paddingLeft = parseFloat(styles.paddingLeft) || 0;
+      var paddingRight = parseFloat(styles.paddingRight) || 0;
+      var gap = parseFloat(styles.columnGap || styles.gap) || 0;
+      var boardSize = Math.max(0, previewBoardEl.clientWidth - paddingLeft - paddingRight);
+      var cell = (boardSize - (gap * 3)) / 4;
+      if (!isFinite(cell) || cell <= 0) return;
+
+      var tiles = previewBoardEl.querySelectorAll(".preview-tile");
+      for (var i = 0; i < tiles.length; i += 1) {
+        var tile = tiles[i];
+        var inner = tile.querySelector(".tile-inner");
+        if (!inner) continue;
+        var value = Number(tile.getAttribute("data-value")) || 0;
+        tile.style.width = String(cell) + "px";
+        tile.style.height = String(cell) + "px";
+        inner.style.width = String(cell) + "px";
+        inner.style.height = String(cell) + "px";
+        inner.style.lineHeight = String(cell) + "px";
+        inner.style.fontSize = String(computePreviewTileFontSize(value, cell)) + "px";
       }
     }
 
@@ -922,15 +966,6 @@
       }
     }
 
-    function syncTopPanelHeight() {
-      if (!themeSelectionColEl || !themePreviewColEl) return;
-      themeSelectionColEl.style.height = "";
-      var previewHeight = Math.ceil(themePreviewColEl.getBoundingClientRect().height || 0);
-      if (previewHeight > 0) {
-        themeSelectionColEl.style.height = String(previewHeight) + "px";
-      }
-    }
-
     function syncPreviewLegendSize() {
       if (!previewBoardEl || !legendPreviewEl) return;
       legendPreviewEl.style.width = "";
@@ -938,7 +973,8 @@
 
     function syncThemeModePreviewBoard() {
       if (!themeModePreviewEl) return;
-      themeModePreviewEl.setAttribute("data-board", state.selectedBoard === "fibonacci" ? "fibonacci" : "pow2");
+      themeModePreviewEl.setAttribute("data-board", "pow2");
+      global.document.body.setAttribute("data-ruleset", "pow2");
     }
 
     function refresh() {
@@ -952,14 +988,15 @@
       var activePalette = toRecord(map[activeId]);
       var activeName = resolveText(activePalette.name || activeId || "--");
       var locked = isLockedPalette(activePalette);
-      state.activeColorIndex = Math.max(0, Math.min(15, Number(state.activeColorIndex) || 0));
-      var boardLabel = boardText(state.selectedBoard);
-      var dimensionLabel = dimensionText(state.selectedDimension, "tab");
-
-      currentNameEl.textContent = activeName;
-      currentNameEl.setAttribute("data-palette-name-bound", "1");
-      currentTagEl.textContent = (locked ? (isEnglishUi() ? "Read-only" : "\u53ea\u8bfb") : (isEnglishUi() ? "Editable" : "\u53ef\u7f16\u8f91")) + " \u00b7 " + boardLabel + " \u00b7 " + dimensionLabel;
+      state.activeColorIndex = Math.max(
+        0,
+        Math.min(POW2_VALUES.length - 1, Number(state.activeColorIndex) || 0)
+      );
       nameInputEl.value = activeName;
+      nameInputEl.disabled = locked;
+      nameInputEl.title = locked
+        ? (isEnglishUi() ? "Built-in palette names cannot be changed. Create a copy first." : "\u5185\u7f6e\u8272\u677f\u540d\u79f0\u4e0d\u53ef\u4fee\u6539\uff0c\u8bf7\u5148\u65b0\u5efa\u526f\u672c\u3002")
+        : "";
       renameBtn.disabled = locked;
       deleteBtn.disabled = locked;
       if (editorHostEl && editorHostEl.classList) {
@@ -968,14 +1005,12 @@
       if (locked) state.swatchOpen = false;
 
       renderPaletteList(list, activeId);
-      renderBoardSwitch();
       syncThemeModePreviewBoard();
       renderDimensionTabs();
-      renderColorEditor(activeId, activePalette, state.selectedBoard, state.selectedDimension, locked);
-      renderBoardPreview(activePalette, state.selectedBoard);
+      renderColorEditor(activeId, activePalette, "pow2", state.selectedDimension, locked);
+      renderBoardPreview("pow2");
       syncPreviewLegendSize();
       renderLegacyHooks(activePalette);
-      syncTopPanelHeight();
       if (locked) {
         setNote(lockedPaletteMessage(), "err");
       }
@@ -1000,17 +1035,6 @@
       var nextDimension = resolveText(button.getAttribute("data-dimension"));
       if (!nextDimension) return;
       state.selectedDimension = nextDimension;
-      state.swatchOpen = false;
-      refresh();
-    });
-
-    boardSwitchEl.addEventListener("click", function (eventLike) {
-      var target = eventLike && eventLike.target ? eventLike.target : null;
-      var button = target ? target.closest(".palette-board-btn") : null;
-      if (!button) return;
-      var nextBoard = resolveText(button.getAttribute("data-board"));
-      if (nextBoard !== "pow2" && nextBoard !== "fibonacci") return;
-      state.selectedBoard = nextBoard;
       state.swatchOpen = false;
       refresh();
     });
@@ -1133,8 +1157,8 @@
     });
 
     global.addEventListener("resize", function () {
-      syncTopPanelHeight();
       syncPreviewLegendSize();
+      syncPreviewBoardTileGeometry();
     });
 
     global.addEventListener("themechange", function () {
@@ -1145,8 +1169,8 @@
       refresh();
     });
 
-    global.setTimeout(syncTopPanelHeight, 0);
     global.setTimeout(syncPreviewLegendSize, 0);
+    global.setTimeout(syncPreviewBoardTileGeometry, 0);
 
     setNote(isEnglishUi() ? "Palette center loaded." : "\u5df2\u52a0\u8f7d\u8272\u677f\u4e2d\u5fc3\u3002", "ok");
     refresh();

@@ -1,6 +1,43 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test("fresh profile defaults to mist cyan with the cold cyan palette", async ({ page }) => {
+    await page.addInitScript(() => {
+      for (const key of [
+        "theme_profile_v1",
+        "tile_palette_active_v1",
+        "settings_day_theme_profile_v1",
+        "settings_day_tile_palette_v1",
+        "settings_night_theme_profile_v1",
+        "settings_night_tile_palette_v1"
+      ]) {
+        window.localStorage.removeItem(key);
+      }
+      window.localStorage.setItem("settings_night_background_enabled_v1", "0");
+    });
+
+    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+
+    await expect(page.locator("#timer-settings")).toBeVisible();
+    await expect(page.locator("#appearance-settings")).toBeHidden();
+    await page.locator('.settings-category-link[href="#appearance-settings"]').click();
+    await expect(page.locator("#timer-settings")).toBeHidden();
+    await expect(page.locator("#appearance-settings")).toBeVisible();
+    await expect(page.locator('.settings-category-link[href="#appearance-settings"]')).toHaveAttribute("aria-current", "page");
+
+    await page.locator('.settings-category-link[href="#timer-settings"]').click();
+    await expect(page.locator("#timer-settings")).toBeVisible();
+    await expect(page.locator("#appearance-settings")).toBeHidden();
+    await expect(page.locator('.settings-category-link[href="#timer-settings"]')).toHaveAttribute("aria-current", "page");
+
+    await page.locator('.settings-category-link[href="#appearance-settings"]').click();
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "mist_cyan");
+    await expect(page.locator("#theme-select-trigger > span")).toHaveText("雾青灰");
+    await expect(page.locator('.palette-item.is-active[data-palette-id="cold-cyan-steps"]')).toBeVisible();
+    await expect(page.locator('#theme-select-options .custom-option[data-value="classic"]')).toHaveText("经典");
+  });
+
   test("touch sensitivity entry is hidden on desktop and shown on narrow touch devices", async ({ browser, page }) => {
     await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".palette-touch-entry")).toBeHidden();
@@ -11,8 +48,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
       hasTouch: true
     });
     const touchPage = await touchContext.newPage();
-    await touchPage.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await touchPage.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_day_theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
+    });
+    await touchPage.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     await expect(touchPage.locator(".palette-touch-entry")).toBeVisible();
+    await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("width", "280px");
+    await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("padding", "10px");
+    await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("gap", "10px");
+    await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("background-color", "rgb(184, 201, 199)");
+    expect(await touchPage.locator("#palette-list .palette-item").evaluateAll((items) =>
+      items.every((item) => item.clientHeight >= item.scrollHeight)
+    )).toBe(true);
+    await expect(touchPage.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner')).toHaveCSS("font-size", "28px");
+    await expect(touchPage.locator('#palette-preview-board .preview-tile[data-value="128"] .tile-inner')).toHaveCSS("font-size", "26px");
+    await expect(touchPage.locator('#palette-preview-board .preview-tile[data-value="1024"] .tile-inner')).toHaveCSS("font-size", "20px");
+    await expect(touchPage.locator('#palette-preview-board .preview-tile[data-value="16384"] .tile-inner')).toHaveCSS("font-size", "17px");
+    await touchPage.locator(".palette-expand-target").click();
+    expect(await touchPage.locator("#palette-preview-board .tile-inner").evaluateAll((nodes) =>
+      nodes.every((node) => node.scrollWidth <= node.clientWidth + 1)
+    )).toBe(true);
     await touchContext.close();
   });
 
@@ -22,13 +79,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("settings_day_theme_profile_v1", "mist_cyan");
       window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
     });
-    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator(".palette-item.is-active")).toBeVisible();
+    await expect(page.locator("#palette-name-input")).toBeDisabled();
+    await expect(page.locator("#palette-name-input")).toHaveCSS("opacity", "0.42");
+    await expect(page.locator("#palette-name-input")).toHaveCSS("cursor", "not-allowed");
+    await expect(page.locator("#palette-name-input")).toHaveAttribute("title", "内置色板名称不可修改，请先新建副本。");
+    await expect(page.locator(".color-panel-head > #palette-note")).toContainText("请先新建副本");
+    await expect(page.locator(".palette-editor > #palette-note")).toHaveCount(0);
+    await expect(page.locator('[data-palette-id="eyestrain-soft"]')).toHaveCount(0);
+    await expect(page.locator('[data-palette-id="night-paper"]')).toHaveCount(0);
+    await expect(page.locator("#appearance-settings .settings-section-head")).toHaveCount(0);
+    await expect(page.locator(".palette-editor > .panel-head")).toHaveCount(0);
+    await expect(page.locator(".palette-theme-card")).toHaveCount(0);
+    await expect(page.locator("#palette-board-switch")).toHaveCount(0);
+    await expect(page.locator(".palette-sidebar > .theme-selection-col")).toBeVisible();
+    await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveText("色板");
+    await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveCSS("font-size", "15px");
+    await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveCSS("font-weight", "600");
+    await expect(page.locator("#palette-list .palette-item").first()).toHaveCSS("margin-top", "4px");
+    await expect(page.locator("#theme-select-trigger .custom-arrow")).toHaveCSS("width", "12px");
+    await expect(page.locator("#theme-select-trigger .custom-arrow")).toHaveCSS("border-left-width", "0px");
+    await expect(page.locator("#theme-select-trigger .custom-arrow")).toHaveCSS("border-top-width", "0px");
+    await expect(page.locator(".palette-variant-note")).toHaveText("色板颜色会按方块等级映射到其他棋盘变体。");
     await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
       "href",
-      "style/palette_page.css?v=20260720-theme-controls-v1"
+      "style/palette_page.css?v=20260722-theme-sidebar-v8"
     );
 
     await page.waitForSelector(".swatch-chip", { state: "attached" });
@@ -47,32 +125,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       return {
-        themeSelection: snapshot(".theme-selection-col"),
-        boardSelection: snapshot(".theme-selection-col .board-selection-col"),
-        board: snapshot(".palette-board-btn:not(.is-active)"),
-        activeBoard: snapshot(".palette-board-btn.is-active"),
         activeDimension: snapshot(".palette-dimension-tab.is-active"),
         activePalette: snapshot(".palette-item.is-active"),
         selectTrigger: snapshot(".custom-select-trigger"),
         activeTarget: snapshot(".color-target.is-active-target"),
         swatch: snapshot(".swatch-chip"),
-        createButton: snapshot("#palette-create-btn")
+        createButton: snapshot("#palette-create-btn"),
+        previewBoard: snapshot("#palette-preview-board")
       };
     });
 
-    expect(styles.themeSelection).toMatchObject({
-      backgroundColor: "rgb(237, 243, 242)",
-      borderColor: "rgba(47, 92, 99, 0.26)"
-    });
-    expect(styles.boardSelection).toMatchObject({
-      backgroundColor: "rgb(237, 243, 242)",
-      borderColor: "rgba(47, 92, 99, 0.26)"
-    });
-    expect(styles.board).toMatchObject({
-      backgroundColor: "rgb(255, 254, 249)",
-      borderRadius: "7px"
-    });
-    expect(styles.activeBoard?.backgroundColor).toBe("rgb(32, 56, 61)");
     expect(styles.activeDimension?.backgroundColor).toBe("rgb(32, 56, 61)");
     expect(styles.activePalette).toMatchObject({
       borderColor: "rgb(47, 134, 160)",
@@ -88,25 +150,37 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(styles.swatch?.borderRadius).toBe("7px");
     expect(styles.createButton?.backgroundColor).toBe("rgb(32, 56, 61)");
+    expect(styles.previewBoard).toMatchObject({
+      backgroundColor: "rgb(184, 201, 199)",
+      borderRadius: "7px"
+    });
+    expect(styles.previewBoard?.boxShadow).toContain("rgba(42, 74, 78, 0.13)");
   });
 
-  test("classic follow-theme uses white text from 128 through 2K like 4K", async ({ page }) => {
+  test("classic follow-theme uses white text from 128 through 2048 like 4096", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
     });
-    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
+    await expect(page.locator("#palette-preview-board")).toHaveClass(/game-container/);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner')).toHaveCSS("font-size", "51px");
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="128"] .tile-inner')).toHaveCSS("font-size", "43px");
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="1024"] .tile-inner')).toHaveCSS("font-size", "37px");
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="4096"] .tile-inner')).toHaveCSS("font-size", "37px");
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="16384"] .tile-inner')).toHaveCSS("font-size", "31px");
 
     const colors = await page.evaluate(() => {
-      const targetLabels = ["128", "256", "512", "1K", "2K", "4K"];
+      const targetLabels = ["128", "256", "512", "1024", "2048", "4096"];
       const result: Record<string, string> = {};
       const tiles = Array.from(document.querySelectorAll("#palette-preview-board .preview-tile"));
       for (const label of targetLabels) {
         const tile = tiles.find((node) => String(node.textContent || "").trim() === label);
-        result[label] = tile ? window.getComputedStyle(tile).color : "";
+        const inner = tile?.querySelector(".tile-inner");
+        result[label] = inner ? window.getComputedStyle(inner).color : "";
       }
       return result;
     });
@@ -115,10 +189,30 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "128": "rgb(249, 246, 242)",
       "256": "rgb(249, 246, 242)",
       "512": "rgb(249, 246, 242)",
-      "1K": "rgb(249, 246, 242)",
-      "2K": "rgb(249, 246, 242)",
-      "4K": "rgb(249, 246, 242)"
+      "1024": "rgb(249, 246, 242)",
+      "2048": "rgb(249, 246, 242)",
+      "4096": "rgb(249, 246, 242)"
     });
+  });
+
+  test("mist cyan follow-theme maps to the cold cyan stepped palette", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+
+    const palettes = await page.evaluate(() => {
+      const list = (window as any).ThemeManager.getTilePalettes();
+      const follow = list.find((item: any) => item.id === "follow-theme");
+      const cold = list.find((item: any) => item.id === "cold-cyan-steps");
+      return {
+        follow: [follow?.pow2, follow?.pow2Text, follow?.pow2Border, follow?.pow2Glow],
+        cold: [cold?.pow2, cold?.pow2Text, cold?.pow2Border, cold?.pow2Glow]
+      };
+    });
+
+    expect(palettes.follow).toEqual(palettes.cold);
   });
 
   test("cold cyan stepped palette keeps adjacent values distinct", async ({ page }) => {
@@ -126,7 +220,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "cold-cyan-steps");
     });
-    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
 
     const paletteItem = page.locator('[data-palette-id="cold-cyan-steps"]');
     await expect(paletteItem).toHaveCount(1);
@@ -150,18 +244,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const b = luminance(foreground);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       };
-      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+      const pow2 = palette.pow2.slice(0, 16);
+      const pow2Text = palette.pow2Text.slice(0, 16);
+      const adjacentDistances = pow2.slice(1).map((color: string, index: number) => {
         const current = rgb(color);
-        const previous = rgb(palette.pow2[index]);
+        const previous = rgb(pow2[index]);
         return Math.hypot(...current.map((value, channel) => value - previous[channel]));
       });
-      const textContrasts = palette.pow2.map((color: string, index: number) => (
-        contrast(color, palette.pow2Text[index])
+      const textContrasts = pow2.map((color: string, index: number) => (
+        contrast(color, pow2Text[index])
       ));
       return {
-        pow2: palette.pow2,
+        pow2,
         fibonacci: palette.fibonacci,
-        pow2Text: palette.pow2Text,
+        pow2Text,
         minAdjacentDistance: Math.min(...adjacentDistances),
         minTextContrast: Math.min(...textContrasts)
       };
@@ -189,7 +285,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "warm-glaze-steps");
     });
-    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
 
     const paletteItem = page.locator('[data-palette-id="warm-glaze-steps"]');
     await expect(paletteItem).toHaveCount(1);
@@ -213,18 +309,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const b = luminance(foreground);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       };
-      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+      const pow2 = palette.pow2.slice(0, 16);
+      const pow2Text = palette.pow2Text.slice(0, 16);
+      const adjacentDistances = pow2.slice(1).map((color: string, index: number) => {
         const current = rgb(color);
-        const previous = rgb(palette.pow2[index]);
+        const previous = rgb(pow2[index]);
         return Math.hypot(...current.map((value, channel) => value - previous[channel]));
       });
-      const textContrasts = palette.pow2.map((color: string, index: number) => (
-        contrast(color, palette.pow2Text[index])
+      const textContrasts = pow2.map((color: string, index: number) => (
+        contrast(color, pow2Text[index])
       ));
       return {
-        pow2: palette.pow2,
+        pow2,
         fibonacci: palette.fibonacci,
-        pow2Text: palette.pow2Text,
+        pow2Text,
         twoFourDistance: adjacentDistances[0],
         minAdjacentDistance: Math.min(...adjacentDistances),
         minTextContrast: Math.min(...textContrasts)
@@ -254,7 +352,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "jade-ochre");
     });
-    await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
 
     const paletteItem = page.locator('[data-palette-id="jade-ochre"]');
     await expect(paletteItem).toHaveCount(1);
@@ -278,18 +376,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const b = luminance(foreground);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
       };
-      const adjacentDistances = palette.pow2.slice(1).map((color: string, index: number) => {
+      const pow2 = palette.pow2.slice(0, 16);
+      const pow2Text = palette.pow2Text.slice(0, 16);
+      const adjacentDistances = pow2.slice(1).map((color: string, index: number) => {
         const current = rgb(color);
-        const previous = rgb(palette.pow2[index]);
+        const previous = rgb(pow2[index]);
         return Math.hypot(...current.map((value, channel) => value - previous[channel]));
       });
-      const textContrasts = palette.pow2.map((color: string, index: number) => (
-        contrast(color, palette.pow2Text[index])
+      const textContrasts = pow2.map((color: string, index: number) => (
+        contrast(color, pow2Text[index])
       ));
       return {
-        pow2: palette.pow2,
+        pow2,
         fibonacci: palette.fibonacci,
-        pow2Text: palette.pow2Text,
+        pow2Text,
         twoFourDistance: adjacentDistances[0],
         minAdjacentDistance: Math.min(...adjacentDistances),
         minTextContrast: Math.min(...textContrasts)
@@ -314,130 +414,114 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(metrics.minTextContrast).toBeGreaterThanOrEqual(4.5);
   });
 
-  test("palette board switch updates preview board", async ({ page }) => {
-    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
+  test("palette editor maps colors to other board variants by tile level", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+    });
+    const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
-    await expect(page.locator("body")).toBeVisible();
-    await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
+    await expect(page.locator("#palette-board-switch")).toHaveCount(0);
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.color-target[data-index="0"]').click();
+    await page.locator("#palette-picker-r").fill("18");
+    await page.locator("#palette-picker-g").fill("52");
+    await page.locator("#palette-picker-b").fill("86");
 
-    const initialSnapshot = await page.evaluate(() => {
-      const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
-      const board = document.getElementById("palette-preview-board");
-      const boardTexts = Array.from(
-        document.querySelectorAll("#palette-preview-board .preview-tile"),
-        (node) => String(node.textContent || "").trim()
+    await expect
+      .poll(async () => {
+        return page.evaluate(() => {
+          const manager = (window as any).ThemeManager;
+          const activeId = manager.getActiveTilePaletteId();
+          const palette = manager.getTilePalettes().find((item: any) => item.id === activeId);
+          return [palette?.pow2?.[0], palette?.fibonacci?.[0]];
+        });
+      })
+      .toEqual(["#123456", "#123456"]);
+  });
+
+  test("pow2 palette extension edits colors through the 5x5 theoretical maximum", async ({ page }) => {
+    await page.addInitScript(() => {
+      if (window.sessionStorage.getItem("palette_extension_test_ready") !== "1") {
+        window.localStorage.setItem("theme_profile_v1", "classic");
+        window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+        window.localStorage.removeItem("tile_palette_profiles_v1");
+        window.sessionStorage.setItem("palette_extension_test_ready", "1");
+      }
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+
+    await expect(page.locator("#theme-preview-grid-pow2 .theme-preview-tile")).toHaveCount(16);
+    await expect(page.locator("#palette-editor-current .color-target")).toHaveCount(16);
+    await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
+    await expect(page.locator('.color-target[data-index="9"] .color-target-label')).toHaveText("1024");
+    await expect(page.locator('.color-target[data-index="15"] .color-target-label')).toHaveText("65536");
+    await expect(page.locator("#theme-preview-grid-pow2 .theme-color-1024")).toHaveText("1024");
+    await expect(page.locator("#theme-preview-grid-pow2 .theme-color-65536")).toHaveText("65536");
+    const expandButton = page.locator(".palette-expand-target");
+    await expect(expandButton).toHaveText("拓展");
+    await expect(expandButton).toHaveAttribute("aria-expanded", "false");
+
+    await page.locator("#palette-create-btn").click();
+    await expect(page.locator("#palette-name-input")).toBeEnabled();
+    await expandButton.click();
+    await expect(expandButton).toHaveText("收起");
+    await expect(expandButton).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#palette-editor-current .color-target")).toHaveCount(10);
+    await expect(page.locator('.color-target[data-index="0"]')).toHaveCount(0);
+    await expect(page.locator('.color-target[data-index="16"] .color-target-label')).toHaveText("131072");
+    await expect(page.locator('.color-target[data-index="25"] .color-target-label')).toHaveText("67108864");
+    await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(10);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="65536"]')).toHaveCount(0);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="131072"]')).toHaveCount(1);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="67108864"]')).toHaveCount(1);
+    expect(await page.locator("#palette-preview-board .tile-inner").evaluateAll((nodes) =>
+      nodes.every((node) => node.scrollWidth <= node.clientWidth + 1)
+    )).toBe(true);
+
+    await page.locator('.color-target[data-index="16"]').click();
+    await page.locator("#palette-picker-r").fill("18");
+    await page.locator("#palette-picker-g").fill("52");
+    await page.locator("#palette-picker-b").fill("86");
+    await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const activeId = manager.getActiveTilePaletteId();
+      manager.updateTilePaletteColor(activeId, "pow2", "text", 25, "#abcdef");
+      manager.updateTilePaletteColor(activeId, "pow2", "border", 25, "#654321");
+      manager.updateTilePaletteColor(activeId, "pow2", "glow", 25, "#fedcba");
+    });
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const persisted = await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const activeId = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === activeId);
+      const exportedPalette = JSON.parse(manager.exportTilePalettes()).palettes.find(
+        (item: any) => item.id === activeId
       );
+      const css = String(document.getElementById("theme-dynamic-style")?.textContent || "");
       return {
-        selectedBoard: selected?.getAttribute("data-board") || "",
-        boardClassName: String(board?.className || ""),
-        boardTexts
+        pow2Count: palette?.pow2?.length || 0,
+        highColor: palette?.pow2?.[16] || "",
+        highestText: palette?.pow2Text?.[25] || "",
+        highestBorder: palette?.pow2Border?.[25] || "",
+        highestGlow: palette?.pow2Glow?.[25] || "",
+        exportedPow2Count: exportedPalette?.pow2?.length || 0,
+        hasHighestRule: css.includes("tile-67108864")
       };
     });
 
-    expect(initialSnapshot.selectedBoard).toBe("pow2");
-    expect(initialSnapshot.boardClassName).toContain("is-pow2");
-    expect(initialSnapshot.boardClassName).not.toContain("is-fibonacci");
-    expect(initialSnapshot.boardTexts.slice(0, 4)).toEqual(["2", "4", "8", "16"]);
-
-    await page.locator('.palette-board-btn[data-board="fibonacci"]').click();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
-          return {
-            selectedBoard: selected?.getAttribute("data-board") || ""
-          };
-        });
-      })
-      .toEqual({
-        selectedBoard: "fibonacci"
-      });
-
-    const fibonacciSnapshot = await page.evaluate(() => {
-      const boardTexts = Array.from(
-        document.querySelectorAll("#palette-preview-board .preview-tile"),
-        (node) => String(node.textContent || "").trim()
-      );
-      return { boardTexts };
+    expect(persisted).toEqual({
+      pow2Count: 26,
+      highColor: "#123456",
+      highestText: "#abcdef",
+      highestBorder: "#654321",
+      highestGlow: "#fedcba",
+      exportedPow2Count: 26,
+      hasHighestRule: true
     });
-
-    expect(fibonacciSnapshot.boardTexts.slice(0, 4)).toEqual(["1", "2", "3", "5"]);
-
-    await page.locator('.palette-board-btn[data-board="pow2"]').click();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
-          const boardTexts = Array.from(
-            document.querySelectorAll("#palette-preview-board .preview-tile"),
-            (node) => String(node.textContent || "").trim()
-          );
-          return {
-            selectedBoard: selected?.getAttribute("data-board") || "",
-            boardTexts: boardTexts.slice(0, 4)
-          };
-        });
-      })
-      .toEqual({
-        selectedBoard: "pow2",
-        boardTexts: ["2", "4", "8", "16"]
-      });
   });
 
-  test("palette fibonacci preview footprint keeps parity with pow2", async ({ page }) => {
-    const response = await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
-    expect(response, "Palette response should exist").not.toBeNull();
-    expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
-    await expect(page.locator("body")).toBeVisible();
-    await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
-
-    const collectMetrics = async () => {
-      return page.evaluate(() => {
-        const board = document.getElementById("palette-preview-board");
-        const legend = document.getElementById("palette-preview-legend");
-        const firstTile = document.querySelector("#palette-preview-board .preview-tile") as HTMLElement | null;
-        const boardRect = board?.getBoundingClientRect();
-        const legendRect = legend?.getBoundingClientRect();
-        const tileRect = firstTile?.getBoundingClientRect();
-        return {
-          boardWidth: boardRect ? boardRect.width : 0,
-          boardHeight: boardRect ? boardRect.height : 0,
-          legendWidth: legendRect ? legendRect.width : 0,
-          legendHeight: legendRect ? legendRect.height : 0,
-          tileWidth: tileRect ? tileRect.width : 0,
-          tileHeight: tileRect ? tileRect.height : 0
-        };
-      });
-    };
-
-    const pow2Metrics = await collectMetrics();
-    await page.locator('.palette-board-btn[data-board="fibonacci"]').click();
-    await expect
-      .poll(async () => {
-        return page.evaluate(() => {
-          const selected = document.querySelector(".palette-board-btn.is-active") as HTMLElement | null;
-          return selected?.getAttribute("data-board") || "";
-        });
-      })
-      .toBe("fibonacci");
-    const fibMetrics = await collectMetrics();
-
-    expect(pow2Metrics.boardWidth).toBeGreaterThan(0);
-    expect(pow2Metrics.boardHeight).toBeGreaterThan(0);
-    expect(pow2Metrics.tileWidth).toBeGreaterThan(0);
-    expect(pow2Metrics.tileHeight).toBeGreaterThan(0);
-    expect(fibMetrics.boardWidth).toBeGreaterThan(0);
-    expect(fibMetrics.boardHeight).toBeGreaterThan(0);
-    expect(fibMetrics.tileWidth).toBeGreaterThan(0);
-    expect(fibMetrics.tileHeight).toBeGreaterThan(0);
-
-    // Keep the two rulesets visually aligned: no large size drift after board switch.
-    expect(Math.abs(fibMetrics.boardWidth - pow2Metrics.boardWidth)).toBeLessThanOrEqual(2);
-    expect(Math.abs(fibMetrics.boardHeight - pow2Metrics.boardHeight)).toBeLessThanOrEqual(2);
-    expect(Math.abs(fibMetrics.tileWidth - pow2Metrics.tileWidth)).toBeLessThanOrEqual(1);
-    expect(Math.abs(fibMetrics.tileHeight - pow2Metrics.tileHeight)).toBeLessThanOrEqual(1);
-    expect(Math.abs(fibMetrics.legendWidth - pow2Metrics.legendWidth)).toBeLessThanOrEqual(2);
-    expect(Math.abs(fibMetrics.legendHeight - pow2Metrics.legendHeight)).toBeLessThanOrEqual(2);
-  });
 });

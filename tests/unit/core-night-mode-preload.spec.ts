@@ -149,8 +149,11 @@ describe("core night mode preload", () => {
   });
 
   it("keeps the default state untouched when the saved flag is disabled", () => {
-    const result = runNightModePreload("0");
+    const result = runNightModePreload(null, false, {
+      storageValues: { settings_night_background_enabled_v1: "0" }
+    });
 
+    expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
     expect(result.documentElement.getAttribute("data-night-background")).toBeNull();
     expect(result.documentElement.style.colorScheme).toBe("");
     expect(result.getStyleNode()).toBeNull();

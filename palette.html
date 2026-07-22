@@ -8,10 +8,10 @@
   <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
   <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260721-profile-text-v1"></script>
+  <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260721-float-containment-v1" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260720-theme-controls-v1" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260722-board-parity-v2" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260722-theme-sidebar-v8" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -33,11 +33,11 @@
     </header>
 
     <nav class="settings-category-nav" aria-label="设置分类">
-      <a class="settings-category-link" href="#timer-settings">
+      <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="page">
         <strong>计时器</strong>
         <span>自定义子计时器规则</span>
       </a>
-      <a class="settings-category-link" href="#appearance-settings">
+      <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
         <strong>外观与配色</strong>
         <span>主题、色板与棋盘预览</span>
       </a>
@@ -86,63 +86,33 @@
       </details>
     </section>
 
-    <section id="appearance-settings" class="palette-settings-section">
-      <div class="settings-section-head">
-        <p class="palette-kicker">外观设置</p>
-        <h2>主题与色板</h2>
-        <p>主题选择、棋盘配色和颜色编辑集中在这一分类。</p>
-      </div>
-
-    <section class="card-surface palette-theme-card">
-      <div class="panel-head">
-        <h2>主题选择</h2>
-        <span class="panel-pill">主题</span>
-      </div>
-      <div class="theme-settings-row palette-theme-settings-row">
-        <div class="theme-selection-col">
+    <section id="appearance-settings" class="palette-settings-section" hidden>
+    <section class="palette-grid">
+      <aside class="palette-sidebar card-surface">
+        <div class="theme-selection-col palette-sidebar-theme">
           <label>选择主题</label>
           <div class="custom-select-wrapper">
             <div class="custom-select">
               <div class="custom-select-trigger" id="theme-select-trigger">
-                <span>经典</span>
+                <span>雾青灰</span>
                 <div class="custom-arrow"></div>
               </div>
               <div class="custom-select-options" id="theme-select-options"></div>
             </div>
           </div>
           <select id="theme-select" style="display:none"></select>
-
-          <div class="board-selection-col">
-            <label>棋盘选择</label>
-            <div id="palette-board-switch" class="palette-board-switch">
-              <button type="button" class="palette-board-btn is-active" data-board="pow2">2048</button>
-              <button type="button" class="palette-board-btn" data-board="fibonacci">斐波那契</button>
-            </div>
-          </div>
+          <p class="palette-variant-note">色板颜色会按方块等级映射到其他棋盘变体。</p>
+          <div id="theme-preview-grid" hidden aria-hidden="true"></div>
         </div>
 
-        <div class="theme-preview-col">
-          <label>颜色预览</label>
-          <div id="theme-preview-grid" class="theme-preview-grid"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="palette-grid">
-      <aside class="palette-sidebar card-surface">
         <div class="panel-head">
-          <h2>色板列表</h2>
+          <h2>色板</h2>
           <span id="palette-count" class="panel-pill">0</span>
         </div>
         <div id="palette-list" class="palette-list" aria-label="色板列表"></div>
       </aside>
 
       <section class="palette-editor card-surface">
-        <div class="panel-head">
-          <h2 id="palette-current-name">跟随主题</h2>
-          <span id="palette-current-tag" class="panel-pill">--</span>
-        </div>
-
         <div class="palette-toolbar">
           <input id="palette-name-input" class="palette-name-input" type="text" maxlength="40" placeholder="输入当前主题体名称（可编辑）">
           <button id="palette-create-btn" class="replay-button" type="button">新建副本</button>
@@ -161,7 +131,10 @@
         </div>
 
         <section class="color-panel">
-          <div id="palette-editor-panel-head" class="color-panel-head">背景颜色</div>
+          <div class="color-panel-head">
+            <span id="palette-editor-panel-head">背景颜色</span>
+            <p id="palette-note" class="palette-note" aria-live="polite"></p>
+          </div>
           <div class="editor-workspace">
             <div class="editor-targets">
               <div id="palette-editor-current" class="color-grid color-grid-targets"></div>
@@ -208,7 +181,7 @@
           <div id="palette-preview-panel-head" class="color-panel-head">颜色预览</div>
           <div class="preview-layout">
             <div class="preview-board-wrap">
-              <div id="palette-preview-board" class="palette-board-preview"></div>
+              <div id="palette-preview-board" class="game-container palette-board-preview"></div>
             </div>
           </div>
         </section>
@@ -220,7 +193,6 @@
           <div id="palette-preview-fib"></div>
         </div>
 
-        <p id="palette-note" class="palette-note" aria-live="polite"></p>
       </section>
     </section>
     </section>

@@ -69,6 +69,7 @@ Use these checks after boundary-sensitive changes:
 ### 3. Contracts
 
 - Terminal `/records` payloads must be persisted to `online_pending_record_submit_signature_v1` before the code checks whether an auth token is currently present. A ranked-session 401 can clear auth immediately before game-over submit hooks run; the terminal payload must survive that ordering.
+- Terminal payload persistence must finish synchronously before the first async retry/upload boundary. Once that durable copy exists, retire the matching active ranked session while preserving any distinct prefetched session, so refresh cannot reuse the completed seed/token.
 - A pre-auth pending write is only a durability step. It must not be counted as a network upload attempt for retry/backoff purposes when the same call will immediately submit the payload.
 - On authenticated upload success, the matching pending key may be cleared.
 - On permanent non-auth validation errors, the matching pending key may be cleared only when the backend has definitively rejected the payload.
@@ -94,6 +95,7 @@ Use these checks after boundary-sensitive changes:
 
 - Unit test: simulate `/records` returning 401 and assert pending record payload remains while auth token is removed.
 - Unit test: remove auth before game-over submit runs and assert a terminal pending record is written without calling `/records`.
+- Unit test: hold `/records` upload open and assert the pending payload is already stored, the completed active ranked session is gone, and the prefetched next session remains.
 - Unit coverage for score and stone-2k uploads should follow the same assertion pattern when those paths change.
 - Smoke test: persisted pending record is replayed after auth/session recovery.
 - Smoke test: transient `/records` failures retry after the expected first backoff interval; pre-auth pending durability writes must not advance `retryCount` for the first network attempt.

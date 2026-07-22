@@ -58,6 +58,14 @@
   --leaderboard-rank-font-weight: 620;
 }
 
+html[data-theme="mist_cyan"] #timerbox {
+  --leaderboard-rank-bg: var(--app-surface-board);
+  --leaderboard-rank-text: var(--app-text-strong);
+  --leaderboard-rank-self-bg: var(--app-link);
+  --leaderboard-rank-self-text: var(--app-page-bg);
+  --leaderboard-rank-shadow: none;
+}
+
 .timer-scroll-btn {
   display: inline-flex;
   align-items: center;

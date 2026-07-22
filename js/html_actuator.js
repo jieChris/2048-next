@@ -388,7 +388,8 @@ HTMLActuator.prototype.computeTileFontSize = function (value) {
   }
 
   var raw = cell * 0.48 * boardScale * digitScale * mobileBoost;
-  var minSize = Math.max(11, Math.floor(cell * 0.22));
+  if (digits >= 6) raw = Math.min(raw, (cell * 0.84) / (digits * 0.58));
+  var minSize = digits >= 6 ? Math.max(8, Math.floor(cell * 0.12)) : Math.max(11, Math.floor(cell * 0.22));
   var maxSize = Math.max(minSize, Math.floor(cell * 0.62));
   var size = Math.round(raw);
   return Math.max(minSize, Math.min(maxSize, size));

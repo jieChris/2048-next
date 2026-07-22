@@ -20,6 +20,8 @@ const REPLAY_V1_EXT_RULESET = 2;
 const REPLAY_V1_EXT_CHALLENGE_ID = 3;
 const REPLAY_V1_EXT_SEED = 4;
 const REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
+const REPLAY_V1_EXT_OWNER_USER_ID = 6;
+const REPLAY_V1_EXT_OWNER_NICKNAME = 7;
 const LEGACY_VRS_NEW_CHARSET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
   Array.from({ length: 64 }, (_unused, index) => String.fromCharCode(0xc0 + index)).join("") +
@@ -257,14 +259,25 @@ function normalizeReplayV1SerializedStartUnixMs(rawStartUnixMs: unknown): number
   return null;
 }
 
-function appendReplayV1ExtRecord(records: ReplayV1Record[], extType: number, rawValue: unknown): void {
-  const normalized = typeof rawValue === "string" ? rawValue.trim().toLowerCase() : "";
+function appendReplayV1ExtRecord(
+  records: ReplayV1Record[],
+  extType: number,
+  rawValue: unknown,
+  preserveCase = false
+): void {
+  const text = typeof rawValue === "string" ? rawValue.trim() : "";
+  const normalized = preserveCase ? text : text.toLowerCase();
   if (!normalized) return;
   records.push({
     kind: "ext",
     extType,
     payload: encodeReplayV1Utf8Text(normalized)
   });
+}
+
+function normalizeReplayWatermarkText(rawValue: unknown, maxCharacters: number): string {
+  if (typeof rawValue !== "string") return "";
+  return Array.from(rawValue.trim()).slice(0, maxCharacters).join("");
 }
 
 function createReplayV1ExtRecords(session: Record<string, unknown>): ReplayV1Record[] {
@@ -279,6 +292,18 @@ function createReplayV1ExtRecords(session: Record<string, unknown>): ReplayV1Rec
     records,
     REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS,
     session.custom_secondary_timer_rule_text
+  );
+  appendReplayV1ExtRecord(
+    records,
+    REPLAY_V1_EXT_OWNER_USER_ID,
+    normalizeReplayWatermarkText(session.owner_user_id, 64),
+    true
+  );
+  appendReplayV1ExtRecord(
+    records,
+    REPLAY_V1_EXT_OWNER_NICKNAME,
+    normalizeReplayWatermarkText(session.owner_nickname, 10),
+    true
   );
   const seedValue = Math.floor(Number(session.seed));
   if (Number.isInteger(seedValue) && seedValue >= 0) {

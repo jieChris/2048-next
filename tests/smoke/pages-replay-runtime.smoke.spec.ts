@@ -940,6 +940,58 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }
   });
 
+  test("replay page shows the opening nickname and Beijing start time watermark", async ({
+    browser
+  }) => {
+    const gamePage = await browser.newPage();
+    await installLiveReplaySourceSession(gamePage, "standard_4x4_pow2_no_undo", 615);
+    const gameResponse = await gamePage.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    expect(gameResponse?.ok()).toBeTruthy();
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager?.sessionReplayV1 && typeof manager.serialize === "function";
+    });
+
+    const replayText = await gamePage.evaluate(() => {
+      const manager = (window as any).game_manager;
+      manager.sessionReplayV1.owner_user_id = "42";
+      manager.sessionReplayV1.owner_nickname = "回放Player";
+      manager.sessionReplayV1.start_unix_ms = Date.parse("2026-07-21T08:09:10Z");
+      for (const direction of [0, 1, 2, 3]) {
+        const before = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+        manager.move(direction);
+        if (Array.isArray(manager.moveHistory) && manager.moveHistory.length > before) break;
+      }
+      return String(manager.serialize());
+    });
+    await gamePage.close();
+
+    const replayPage = await browser.newPage();
+    const replayResponse = await replayPage.goto("/replay.html", { waitUntil: "domcontentloaded" });
+    expect(replayResponse?.ok()).toBeTruthy();
+    await replayPage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.import === "function";
+    });
+
+    await importReplayFilePayloadAndConfirm(
+      replayPage,
+      {
+        name: "watermark-replay.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from(replayText, "utf8")
+      },
+      "watermark-replay"
+    );
+
+    await expect(replayPage.locator("#replay-watermark")).toBeVisible();
+    await expect(replayPage.locator("#replay-watermark-nickname")).toHaveText("回放Player");
+    await expect(replayPage.locator("#replay-watermark-start-time")).toHaveText(
+      "2026-07-21 16:09:10"
+    );
+    await replayPage.close();
+  });
+
   test("live v1 replay roundtrip preserves terminal board state for 4x4 and 3x3", async ({
     browser
   }) => {

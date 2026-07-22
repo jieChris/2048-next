@@ -539,7 +539,8 @@ html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]) :is(.score
 }
 
 html[data-theme="mist_cyan"] body[data-page="game"] .game-container,
-html[data-theme="mist_cyan"] body[data-page="practice"] .game-container {
+html[data-theme="mist_cyan"] body[data-page="practice"] .game-container,
+html[data-theme="mist_cyan"] body[data-page="palette-hub"] .palette-board-preview {
   border-radius: 7px !important;
   background: var(--workshop-board) !important;
   box-shadow: 0 10px 24px rgba(42, 74, 78, 0.13) !important;

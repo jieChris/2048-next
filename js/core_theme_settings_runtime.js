@@ -11,14 +11,11 @@
     var normalized = value.filter(function (item) {
       return typeof item === "number" && Number.isFinite(item);
     });
-    return normalized.length > 0 ? normalized : fallback.slice();
+    return normalized.length > 0 ? normalized.slice(0, 16) : fallback.slice();
   }
 
   function formatThemePreviewValue(value) {
     var num = typeof value === "number" && Number.isFinite(value) ? value : 0;
-    if (num >= 1024 && num % 1024 === 0) {
-      return num / 1024 + "K";
-    }
     return "" + num;
   }
 

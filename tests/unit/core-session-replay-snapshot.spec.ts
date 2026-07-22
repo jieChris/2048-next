@@ -64,7 +64,16 @@ describe("core session replay snapshot runtime", () => {
       specialRules: { blocked_cells: [0, 1] },
       challengeId: "rch_daily",
       initialSeed: 987654321,
-      clonePlain
+      clonePlain,
+      getWindowLike: () => ({
+        localStorage: {
+          getItem(key: string) {
+            if (key === "2048_auth_userId_v1") return "42";
+            if (key === "2048_auth_nickname_v1") return "测试Player超长昵称";
+            return null;
+          }
+        }
+      })
     };
 
     initializeSetupSessionReplaySnapshot(manager);
@@ -92,6 +101,8 @@ describe("core session replay snapshot runtime", () => {
       board_width: 4,
       board_height: 4,
       start_unix_ms: 1_700_000_000_111,
+      owner_user_id: "42",
+      owner_nickname: "测试Player超长",
       challenge_id: "rch_daily",
       seed: 987654321,
       init_tiles: [],
@@ -122,6 +133,8 @@ describe("core session replay snapshot runtime", () => {
     expect(manager.sessionReplayV3.mode).toBe("practice");
     expect(manager.sessionReplayV3.challenge_id).toBe("");
     expect(manager.sessionReplayV1.challenge_id).toBeNull();
+    expect(manager.sessionReplayV1.owner_user_id).toBeNull();
+    expect(manager.sessionReplayV1.owner_nickname).toBe("");
     expect(manager.sessionReplayV1.supported).toBe(true);
   });
 
