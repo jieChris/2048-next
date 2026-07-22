@@ -1,4 +1,5 @@
 import { randomBase36 } from "../utils/crypto-random";
+import { isPracticeBoardSizeAllowed } from "./practice-mode";
 
 type JsonLike = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
@@ -224,6 +225,18 @@ function resolvePracticeTransferSourceModeKey(options: PracticeTransferOptions):
   return raw && raw !== "practice" ? raw : "";
 }
 
+function resolvePracticeTransferSizeSource(
+  manager: PracticeTransferManagerLike | null | undefined
+): Record<string, unknown> {
+  if (manager && manager.modeConfig && typeof manager.modeConfig === "object") {
+    return manager.modeConfig;
+  }
+  return {
+    board_width: manager?.width,
+    board_height: manager?.height
+  };
+}
+
 export function createPracticeTransferNavigationPlan(
   options: CreatePracticeTransferNavigationPlanOptions
 ): PracticeTransferNavigationPlan {
@@ -297,6 +310,14 @@ export function resolvePracticeTransferPrecheck(
       canOpen: false,
       board: null,
       alertMessage: "当前局面尚未就绪，稍后再试。"
+    };
+  }
+
+  if (!isPracticeBoardSizeAllowed(resolvePracticeTransferSizeSource(manager))) {
+    return {
+      canOpen: false,
+      board: null,
+      alertMessage: "6x6 及以上模式不支持直通练习板。"
     };
   }
 

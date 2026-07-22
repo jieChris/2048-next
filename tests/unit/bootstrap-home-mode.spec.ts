@@ -99,6 +99,35 @@ describe("bootstrap home mode", () => {
     ]);
   });
 
+  it("ignores 6x6 and larger practice mode query selections", () => {
+    const result = resolveHomeModeSelection({
+      dataModeId: "practice",
+      defaultModeKey: DEFAULT_HOME_MODE_KEY,
+      searchLike: "?practice_mode_key=board_6x6_pow2_no_undo",
+      modeCatalog: createCatalog({
+        practice: {
+          key: "practice",
+          board_width: 4,
+          board_height: 4,
+          ruleset: "pow2",
+          spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
+        },
+        board_6x6_pow2_no_undo: {
+          key: "board_6x6_pow2_no_undo",
+          board_width: 6,
+          board_height: 6,
+          ruleset: "pow2",
+          spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }]
+        }
+      })
+    });
+
+    expect(result.modeKey).toBe("practice");
+    expect(result.modeConfig?.key).toBe("practice");
+    expect(result.modeConfig?.board_width).toBe(4);
+    expect(result.modeConfig?.board_height).toBe(4);
+  });
+
   it("does not modify non-practice mode config", () => {
     const result = resolveHomeModeSelection({
       dataModeId: "capped_4x4_pow2_no_undo",

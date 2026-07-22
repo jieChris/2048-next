@@ -293,6 +293,24 @@ describe("bootstrap practice transfer", () => {
     });
   });
 
+  it("rejects direct practice transfer from 6x6 and larger boards", () => {
+    expect(
+      resolvePracticeTransferPrecheck({
+        manager: {
+          width: 6,
+          height: 6,
+          getFinalBoardMatrix() {
+            return [[2]];
+          }
+        }
+      })
+    ).toEqual({
+      canOpen: false,
+      board: null,
+      alertMessage: "6x6 及以上模式不支持直通练习板。"
+    });
+  });
+
   it("resolves precheck board validity and success state", () => {
     expect(
       resolvePracticeTransferPrecheck({

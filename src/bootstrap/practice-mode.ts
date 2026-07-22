@@ -43,6 +43,16 @@ function toPositiveInt(value: unknown, fallback: number): number {
   return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
 }
 
+export function isPracticeBoardSizeAllowed(
+  modeConfig: PracticeModeConfigLike | null | undefined
+): boolean {
+  if (!modeConfig || typeof modeConfig !== "object") return true;
+  const width = toPositiveInt(modeConfig.board_width, 0);
+  const height = toPositiveInt(modeConfig.board_height, 0);
+  if (!width || !height) return true;
+  return width < 6 || height < 6;
+}
+
 function cloneModeConfig<T extends PracticeModeConfigLike>(modeConfig: T): T {
   try {
     return JSON.parse(JSON.stringify(modeConfig)) as T;
@@ -164,6 +174,7 @@ export function buildPracticeModeConfigFromSelection<T extends PracticeModeConfi
 export interface PracticeModeRuntime {
   parsePracticeRuleset: typeof parsePracticeRuleset;
   parsePracticeModeKey: typeof parsePracticeModeKey;
+  isPracticeBoardSizeAllowed: typeof isPracticeBoardSizeAllowed;
   buildPracticeModeConfig: typeof buildPracticeModeConfig;
   buildPracticeModeConfigFromSelection: typeof buildPracticeModeConfigFromSelection;
 }
@@ -180,6 +191,7 @@ export function createPracticeModeRuntime(): PracticeModeRuntime {
   return {
     parsePracticeRuleset,
     parsePracticeModeKey,
+    isPracticeBoardSizeAllowed,
     buildPracticeModeConfig,
     buildPracticeModeConfigFromSelection
   };

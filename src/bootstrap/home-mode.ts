@@ -2,6 +2,7 @@ import { resolveCatalogModeWithDefault, type ModeCatalogLike } from "./mode-cata
 import {
   buildPracticeModeConfigFromSelection,
   buildPracticeModeConfig,
+  isPracticeBoardSizeAllowed,
   parsePracticeModeKey,
   parsePracticeRuleset,
   type PracticeModeConfigLike
@@ -45,7 +46,8 @@ function resolvePracticeSelectedMode<T extends PracticeModeConfigLike>(
   if (!modeCatalog || typeof modeCatalog.getMode !== "function") return null;
   const key = parsePracticeModeKey(searchLike);
   if (!key) return null;
-  return (modeCatalog.getMode(key) as T | null) || null;
+  const mode = (modeCatalog.getMode(key) as T | null) || null;
+  return isPracticeBoardSizeAllowed(mode) ? mode : null;
 }
 
 function resolveDataModeIdFromBody(bodyLike: BodyLike | null | undefined): string {

@@ -5,6 +5,7 @@ import {
   buildPracticeModeConfig,
   createPracticeModeRuntime,
   installPracticeModeRuntime,
+  isPracticeBoardSizeAllowed,
   parsePracticeModeKey,
   parsePracticeRuleset,
   type PracticeModeRuntime
@@ -17,6 +18,7 @@ describe("bootstrap practice mode", () => {
 
     expect(runtime.parsePracticeRuleset).toBe(parsePracticeRuleset);
     expect(runtime.parsePracticeModeKey).toBe(parsePracticeModeKey);
+    expect(runtime.isPracticeBoardSizeAllowed).toBe(isPracticeBoardSizeAllowed);
     expect(runtime.buildPracticeModeConfig).toBe(buildPracticeModeConfig);
     expect(runtime.buildPracticeModeConfigFromSelection).toBe(buildPracticeModeConfigFromSelection);
   });
@@ -58,6 +60,13 @@ describe("bootstrap practice mode", () => {
     expect(parsePracticeModeKey("?practice_mode_key=practice")).toBe("");
     expect(parsePracticeModeKey("?practice_mode_key=%20%20")).toBe("");
     expect(parsePracticeModeKey("")).toBe("");
+  });
+
+  it("allows practice board sizes below 6x6 and rejects 6x6 or larger", () => {
+    expect(isPracticeBoardSizeAllowed({ board_width: 5, board_height: 5 })).toBe(true);
+    expect(isPracticeBoardSizeAllowed({ board_width: 6, board_height: 5 })).toBe(true);
+    expect(isPracticeBoardSizeAllowed({ board_width: 6, board_height: 6 })).toBe(false);
+    expect(isPracticeBoardSizeAllowed({ board_width: 10, board_height: 10 })).toBe(false);
   });
 
   it("builds fibonacci practice mode config", () => {

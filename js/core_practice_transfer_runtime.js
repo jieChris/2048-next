@@ -15,6 +15,14 @@
     return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
   }
 
+  function isPracticeBoardSizeAllowed(modeConfig) {
+    if (!modeConfig || typeof modeConfig !== "object") return true;
+    var width = toPositiveInt(modeConfig.board_width, 0);
+    var height = toPositiveInt(modeConfig.board_height, 0);
+    if (!width || !height) return true;
+    return width < 6 || height < 6;
+  }
+
   function safeSetStorageItem(storage, key, value) {
     if (!storage || !key || typeof storage.setItem !== "function") return false;
     try {
@@ -120,6 +128,16 @@
     return raw && raw !== "practice" ? raw : "";
   }
 
+  function resolvePracticeTransferSizeSource(manager) {
+    if (manager && manager.modeConfig && typeof manager.modeConfig === "object") {
+      return manager.modeConfig;
+    }
+    return {
+      board_width: manager && manager.width,
+      board_height: manager && manager.height
+    };
+  }
+
   function createPracticeTransferNavigationPlan(options) {
     var opts = options || {};
     var token = buildPracticeTransferToken({
@@ -190,6 +208,14 @@
         canOpen: false,
         board: null,
         alertMessage: "当前局面尚未就绪，稍后再试。"
+      };
+    }
+
+    if (!isPracticeBoardSizeAllowed(resolvePracticeTransferSizeSource(manager))) {
+      return {
+        canOpen: false,
+        board: null,
+        alertMessage: "6x6 及以上模式不支持直通练习板。"
       };
     }
 

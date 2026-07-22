@@ -258,10 +258,26 @@ document.addEventListener("DOMContentLoaded", function () {
     return source;
   }
 
+  function isPracticeBoardSizeAllowed(modeConfig) {
+    var practiceRuntime = getPracticeModeRuntime();
+    if (
+      practiceRuntime &&
+      typeof practiceRuntime.isPracticeBoardSizeAllowed === "function"
+    ) {
+      return practiceRuntime.isPracticeBoardSizeAllowed(modeConfig || null);
+    }
+    if (!(modeConfig && typeof modeConfig === "object")) return true;
+    var width = toPositiveInt(modeConfig.board_width, 0);
+    var height = toPositiveInt(modeConfig.board_height, 0);
+    if (!width || !height) return true;
+    return width < 6 || height < 6;
+  }
+
   function isPracticeSelectableCatalogMode(mode) {
     if (!(mode && typeof mode === "object")) return false;
     var key = typeof mode.key === "string" ? mode.key.trim() : "";
     if (!key || key === "practice") return false;
+    if (!isPracticeBoardSizeAllowed(mode)) return false;
     if (key === "standard_4x4_pow2_no_undo") return true;
     if (key.indexOf("board_") === 0 && key.indexOf("_pow2_no_undo") !== -1) return true;
     if (key.indexOf("capped_") === 0 && key.indexOf("_no_undo") !== -1) return true;
@@ -993,6 +1009,15 @@ document.addEventListener("DOMContentLoaded", function () {
     return numeric <= maxTile;
   }
 
+  function isPracticeBoardMatrixSizeAllowed(board) {
+    if (!Array.isArray(board) || !board.length) return true;
+    var firstRow = Array.isArray(board[0]) ? board[0] : [];
+    return isPracticeBoardSizeAllowed({
+      board_width: firstRow.length,
+      board_height: board.length
+    });
+  }
+
   function filterPracticePlacementValues(values, maxTile) {
     var list = Array.isArray(values) ? values : [];
     var out = [];
@@ -1322,6 +1347,10 @@ document.addEventListener("DOMContentLoaded", function () {
     var modeConfig = (payload.mode_config && typeof payload.mode_config === "object")
       ? (cloneJsonSafe(payload.mode_config) || payload.mode_config)
       : null;
+    if (!isPracticeBoardSizeAllowed(modeConfig) || !isPracticeBoardMatrixSizeAllowed(board)) {
+      showGameAlert("6x6 及以上模式不支持直通练习板。");
+      return;
+    }
     var noXTarget = Number(modeConfig && modeConfig.special_rules && modeConfig.special_rules.no_x_target);
     var restartOptions = {
       setPracticeRestartBase: true,

@@ -31,6 +31,14 @@
     return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
   }
 
+  function isPracticeBoardSizeAllowed(modeConfig) {
+    if (!modeConfig || typeof modeConfig !== "object") return true;
+    var width = toPositiveInt(modeConfig.board_width, 0);
+    var height = toPositiveInt(modeConfig.board_height, 0);
+    if (!width || !height) return true;
+    return width < 6 || height < 6;
+  }
+
   function cloneModeConfig(modeConfig) {
     try {
       return JSON.parse(JSON.stringify(modeConfig));
@@ -103,6 +111,8 @@
   global.CorePracticeModeRuntime = global.CorePracticeModeRuntime || {};
   global.CorePracticeModeRuntime.parsePracticeRuleset = parsePracticeRuleset;
   global.CorePracticeModeRuntime.parsePracticeModeKey = parsePracticeModeKey;
+  global.CorePracticeModeRuntime.isPracticeBoardSizeAllowed =
+    isPracticeBoardSizeAllowed;
   global.CorePracticeModeRuntime.buildPracticeModeConfig = buildPracticeModeConfig;
   global.CorePracticeModeRuntime.buildPracticeModeConfigFromSelection =
     buildPracticeModeConfigFromSelection;

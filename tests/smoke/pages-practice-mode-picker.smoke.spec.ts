@@ -317,8 +317,13 @@ test.describe("Practice Board Mode Picker", () => {
     await expect(page.locator('[data-practice-mode-key="fib_3x3_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="diag_4x4_pow2_no_undo"]')).toHaveCount(1);
     await expect(page.locator('[data-practice-mode-key="nox_4x4_pow2_no_undo"]')).toHaveCount(1);
+    await expect(page.locator('[data-practice-mode-key="board_5x5_pow2_no_undo"]')).toHaveCount(1);
 
     await expect(page.locator('[data-practice-mode-key="classic_4x4_pow2_undo"]')).toHaveCount(0);
+    await expect(page.locator('[data-practice-mode-key="board_6x6_pow2_no_undo"]')).toHaveCount(0);
+    await expect(page.locator('[data-practice-mode-key="board_6x6_pow2_undo"]')).toHaveCount(0);
+    await expect(page.locator('[data-practice-mode-key="board_10x10_pow2_no_undo"]')).toHaveCount(0);
+    await expect(page.locator('[data-practice-mode-key="board_10x10_pow2_undo"]')).toHaveCount(0);
     await expect(page.locator('[data-practice-mode-key="spawn50_3x3_pow2_no_undo"]')).toHaveCount(0);
     await expect(page.locator('[data-practice-mode-key="limit3_4x4_pow2_undo"]')).toHaveCount(0);
     await expect(page.locator('[data-practice-mode-key="combo_4x4_pow2_undo"]')).toHaveCount(0);
@@ -328,6 +333,81 @@ test.describe("Practice Board Mode Picker", () => {
       nodes.map((node) => String((node.textContent || "").trim()))
     );
     expect(visibleLabels.some((label) => /无撤回|No Undo/i.test(label))).toBe(false);
+  });
+
+  test("practice board ignores 6x6 and larger direct mode query", async ({ page }) => {
+    const response = await page.goto(
+      "/Practice_board.html?practice_fresh=1&practice_mode_key=board_6x6_pow2_no_undo",
+      {
+        waitUntil: "domcontentloaded"
+      }
+    );
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForPracticeBoardReady(page);
+
+    expect(
+      await page.evaluate(() => {
+        const cfg = (window as any).GAME_MODE_CONFIG || {};
+        return {
+          activeKey:
+            document.getElementById("practice-mode-picker-btn")?.getAttribute("data-active-practice-mode-key") ||
+            "",
+          key: cfg.key,
+          boardWidth: cfg.board_width,
+          boardHeight: cfg.board_height
+        };
+      })
+    ).toEqual({
+      activeKey: "standard_4x4_pow2_no_undo",
+      key: "practice",
+      boardWidth: 4,
+      boardHeight: 4
+    });
+  });
+
+  test("practice board ignores oversized transfer payload", async ({ page }) => {
+    const token = "oversized-practice";
+    const payload = {
+      token,
+      created_at: Date.now(),
+      board: Array.from({ length: 6 }, () => Array.from({ length: 6 }, () => 0)),
+      mode_config: {
+        key: "practice",
+        label: "练习板（直通）",
+        board_width: 6,
+        board_height: 6,
+        ruleset: "pow2",
+        undo_enabled: true,
+        spawn_table: [{ value: 2, weight: 90 }, { value: 4, weight: 10 }],
+        ranked_bucket: "none",
+        mode_family: "pow2",
+        rank_policy: "unranked",
+        special_rules: {}
+      }
+    };
+    const response = await page.goto(
+      `/Practice_board.html?practice_token=${token}&practice_payload=${encodeURIComponent(
+        JSON.stringify(payload)
+      )}`,
+      {
+        waitUntil: "domcontentloaded"
+      }
+    );
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await waitForPracticeBoardReady(page);
+
+    await page.waitForFunction(() => {
+      const cfg = (window as any).game_manager?.modeConfig || (window as any).GAME_MODE_CONFIG || {};
+      return (
+        cfg.key === "practice" &&
+        cfg.board_width === 4 &&
+        cfg.board_height === 4 &&
+        !window.location.search.includes("practice_payload=")
+      );
+    });
   });
 
   test("practice board keeps capped merge limits when switching to capped modes", async ({ page }) => {

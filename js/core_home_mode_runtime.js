@@ -40,6 +40,25 @@
     }
   }
 
+  function toPositiveInt(value, fallback) {
+    return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
+  }
+
+  function isPracticeBoardSizeAllowed(modeConfig) {
+    var practiceRuntime = global.CorePracticeModeRuntime;
+    if (
+      practiceRuntime &&
+      typeof practiceRuntime.isPracticeBoardSizeAllowed === "function"
+    ) {
+      return practiceRuntime.isPracticeBoardSizeAllowed(modeConfig || null);
+    }
+    if (!modeConfig || typeof modeConfig !== "object") return true;
+    var width = toPositiveInt(modeConfig.board_width, 0);
+    var height = toPositiveInt(modeConfig.board_height, 0);
+    if (!width || !height) return true;
+    return width < 6 || height < 6;
+  }
+
   function buildPracticeModeConfig(baseConfig, rulesetRaw) {
     var ruleset = rulesetRaw === "fibonacci" ? "fibonacci" : "pow2";
     var cfg = cloneModeConfig(baseConfig || {});
@@ -101,7 +120,8 @@
         ? practiceRuntime.parsePracticeModeKey(searchLike)
         : parsePracticeModeKey(searchLike);
     if (!key) return null;
-    return modeCatalog.getMode(key) || null;
+    var mode = modeCatalog.getMode(key) || null;
+    return isPracticeBoardSizeAllowed(mode) ? mode : null;
   }
 
   function resolveCatalogModeWithDefault(catalog, modeKey, defaultModeKey) {
