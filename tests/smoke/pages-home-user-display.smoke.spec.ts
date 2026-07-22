@@ -18,6 +18,7 @@ test.describe("Home user display", () => {
 
   test("switches the profile button between text and icon modes", async ({ page }) => {
     await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
       window.localStorage.setItem("settings_top_button_style_v1", "text");
     });
 
@@ -38,8 +39,8 @@ test.describe("Home user display", () => {
         }))
     );
     expect(textButtonLayout.length).toBeGreaterThan(0);
-    expect(textButtonLayout.every(({ height }) => height === 50)).toBe(true);
-    expect(textButtonLayout.every(({ borderRadius }) => borderRadius === "12px")).toBe(true);
+    expect(textButtonLayout.every(({ height }) => height === 42)).toBe(true);
+    expect(textButtonLayout.every(({ borderRadius }) => borderRadius === "7px")).toBe(true);
     expect(textButtonLayout.every(({ overflows }) => !overflows)).toBe(true);
 
     await page.evaluate(() => (window as any).CoreTopButtonStyleRuntime.applyTopButtonStyle("icon"));
