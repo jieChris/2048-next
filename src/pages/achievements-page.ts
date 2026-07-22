@@ -43,6 +43,7 @@ let achievementToastTimer = 0;
 const UI_LANGUAGE_KEY = "ui_language_v1";
 const ACHIEVEMENT_TOAST_DURATION_MS = 3600;
 const EASTER_EGG_DISCOVERY_ACHIEVEMENT_ID = "easter_egg_breakout_discovered";
+const LOST_PAGE_ACHIEVEMENT_ID = "lost_page_visited";
 
 const ACHIEVEMENT_COPY: Record<
   AchievementPageLang,
@@ -375,6 +376,9 @@ function achievementSourceLabel(item: AchievementViewModel): string {
   if (isEasterEggDiscoveryAchievement(item.achievement)) {
     return lang === "en" ? "Leaderboard hidden easter egg" : "排行榜隐藏彩蛋";
   }
+  if (item.achievement.id === LOST_PAGE_ACHIEVEMENT_ID) {
+    return lang === "en" ? "Lost page visit" : "迷路页面访问";
+  }
   const source = toText(item.earned.source).trim();
   const zh: Record<string, string> = {
     record: "Ranked 对局",
@@ -455,7 +459,9 @@ function isSpeedrunAchievement(achievement: AchievementDefinition): boolean {
 
 function achievementToastTitle(achievement: AchievementDefinition): string {
   const lang = resolveAchievementPageLang();
-  if (isEasterEggDiscoveryAchievement(achievement)) return lang === "en" ? "Secret Found" : "隐藏成就";
+  if (isEasterEggDiscoveryAchievement(achievement) || isHiddenAchievement(achievement)) {
+    return lang === "en" ? "Secret Found" : "隐藏成就";
+  }
   if (isMilestoneAchievement(achievement)) return lang === "en" ? "Milestone Progress" : "里程碑进度";
   if (isSpeedrunAchievement(achievement)) return lang === "en" ? "Achievement Unlocked" : "成就达成";
   return lang === "en" ? "Reward Claimed" : "奖励领取";

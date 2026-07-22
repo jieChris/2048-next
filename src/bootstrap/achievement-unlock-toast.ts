@@ -108,6 +108,14 @@ function hasRule(achievement: Record<string, unknown>, type: string): boolean {
   return rules(achievement).some((rule) => toText(rule.type) === type);
 }
 
+function isHiddenAchievement(achievement: Record<string, unknown>): boolean {
+  return rules(achievement).some((rule) => {
+    const params = toRecord(rule.params);
+    const hidden = params.hidden;
+    return hidden === true || toText(hidden).trim().toLowerCase() === "true";
+  });
+}
+
 function isEasterEgg(achievement: Record<string, unknown>): boolean {
   return achievementId(achievement) === EASTER_EGG_DISCOVERY_ACHIEVEMENT_ID;
 }
@@ -123,7 +131,7 @@ function isSpeedrun(achievement: Record<string, unknown>): boolean {
 }
 
 function toastTitle(achievement: Record<string, unknown>, lang: "zh" | "en"): string {
-  if (isEasterEgg(achievement)) return lang === "en" ? "Secret Found" : "隐藏成就";
+  if (isEasterEgg(achievement) || isHiddenAchievement(achievement)) return lang === "en" ? "Secret Found" : "隐藏成就";
   if (isMilestone(achievement)) return lang === "en" ? "Milestone Progress" : "里程碑进度";
   if (isSpeedrun(achievement)) return lang === "en" ? "Achievement Unlocked" : "成就达成";
   return lang === "en" ? "Reward Claimed" : "奖励领取";

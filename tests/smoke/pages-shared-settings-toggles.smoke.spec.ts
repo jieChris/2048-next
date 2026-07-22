@@ -450,7 +450,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const targets = [
       { url: "/account_settings.html", selector: ".account-auth-form-surface" },
       { url: "/replay.html", selector: ".replay-metric-card" },
-      { url: "/palette.html", selector: ".palette-sidebar" },
+      { url: "/palette.html#appearance-settings", selector: ".palette-sidebar" },
       { url: "/history.html", selector: ".portal-card" },
       { url: "/relay_5x5.html", selector: ".relay-panel" },
       { url: "/Practice_board.html?practice_fresh=1", selector: ".dashboard-box" }

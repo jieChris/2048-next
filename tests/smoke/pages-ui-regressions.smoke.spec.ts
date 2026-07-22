@@ -807,6 +807,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_userId_v1", "8");
       window.localStorage.setItem("2048_auth_nickname_v1", "Bob");
+      window.localStorage.setItem("settings_night_background_enabled_v1", "0");
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("settings_day_theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
     });
 
     const response = await page.goto("/2048.html", {

@@ -901,7 +901,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       token: "smoke-token-undo-deferred"
     });
     await page.addInitScript(() => {
-      (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
       window.localStorage.removeItem("online_last_record_submit_signature_v1");
       window.localStorage.removeItem("online_pending_record_submit_signature_v1");
       window.localStorage.removeItem("last_session_submit_result_v1");
@@ -919,6 +918,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return (
         !!manager &&
         !!(window as any).OnlineLeaderboardRuntime &&
+        manager.__onlineImmediateSubmitHooksBound === true &&
         typeof manager.tryAutoSubmitOnGameOver === "function" &&
         typeof manager.restart === "function"
       );

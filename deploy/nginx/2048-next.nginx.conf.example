@@ -53,6 +53,8 @@ server {
     add_header Cache-Control $browser_cache_control always;
     add_header Cloudflare-CDN-Cache-Control $cloudflare_cache_control always;
 
+    error_page 404 /404.html;
+
     # Game data and account/auth routes are served by the self-hosted API.
     location = /api {
         proxy_pass http://game_data_api/api;

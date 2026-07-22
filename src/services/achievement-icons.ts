@@ -1,4 +1,4 @@
-type AchievementIconKind = "milestone" | "speedrun" | "community" | "easter-egg";
+type AchievementIconKind = "milestone" | "speedrun" | "community" | "easter-egg" | "lost-page";
 
 type AchievementIconSource = {
   id?: unknown;
@@ -171,6 +171,30 @@ function easterEggIcon(item: AchievementIconItem): string {
     </svg>`;
 }
 
+function lostPageIcon(item: AchievementIconItem): string {
+  const id = svgId(item.id);
+  return `
+    <svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${svgText(item.name)}">
+      <defs>
+        <linearGradient id="lost-bg-${id}" x1="18" y1="16" x2="78" y2="82" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#fff8df"/>
+          <stop offset=".54" stop-color="#edc22e"/>
+          <stop offset="1" stop-color="#f67c5f"/>
+        </linearGradient>
+        <filter id="lost-shadow-${id}" x="0" y="0" width="96" height="96">
+          <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#5f5248" flood-opacity=".24"/>
+        </filter>
+      </defs>
+      <rect x="10" y="10" width="76" height="76" rx="18" fill="#bbada0" filter="url(#lost-shadow-${id})"/>
+      <rect x="19" y="19" width="58" height="58" rx="12" fill="url(#lost-bg-${id})" stroke="#fff8df" stroke-width="2"/>
+      <path class="achievement-lost-page-path" d="M28 30h20v13H38v12h20v11H35" fill="none" stroke="#3db3d8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="28" cy="30" r="5" fill="#fff8df" stroke="#3db3d8" stroke-width="2"/>
+      <path class="achievement-lost-page-pin" d="M62 62c8-9 8-18 0-25-8 7-8 16 0 25z" fill="#3db3d8" stroke="#fff8df" stroke-width="2"/>
+      <circle cx="62" cy="43" r="3" fill="#fff8df"/>
+      <text x="48" y="77" text-anchor="middle" font-size="13" font-weight="900" fill="#fff8df" font-family="Arial,Helvetica,sans-serif">404</text>
+    </svg>`;
+}
+
 function imageIcon(item: AchievementIconItem): string {
   return `<img src="${svgText(item.imageUrl!)}" alt="${svgText(item.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
 }
@@ -180,6 +204,7 @@ function iconMarkup(item: AchievementIconItem): string {
   if (item.kind === "milestone") return milestoneIcon(item);
   if (item.kind === "speedrun") return speedrunIcon(item);
   if (item.kind === "easter-egg") return easterEggIcon(item);
+  if (item.kind === "lost-page") return lostPageIcon(item);
   return communityIcon(item);
 }
 
@@ -262,6 +287,15 @@ function achievementIconItemFor(source: AchievementIconSource): AchievementIconI
       id,
       kind: "easter-egg",
       name: name || "发现彩蛋",
+      tile: 0,
+      level: sourceLevel(source.level, 1)
+    };
+  }
+  if (id === "lost_page_visited") {
+    return {
+      id,
+      kind: "lost-page",
+      name: name || "你也曾迷路",
       tile: 0,
       level: sourceLevel(source.level, 1)
     };

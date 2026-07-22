@@ -10,6 +10,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("midnight nebula only changes tile colors and restores classic colors when switched back", async ({
     page
   }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+    });
     const response = await page.goto("/2048.html", {
       waitUntil: "domcontentloaded"
     });

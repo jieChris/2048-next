@@ -1852,7 +1852,7 @@ components:
       properties:
         event_id:
           type: string
-          enum: [breakout_easter_egg_discovered]
+          enum: [breakout_easter_egg_discovered, lost_page_visited]
 
     AchievementCreateRequest:
       type: object
