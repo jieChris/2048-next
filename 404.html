@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:"
+    />
+    <title>404 · 方块掉了一地 | 2048 NEXT</title>
+    <link rel="icon" type="image/svg+xml" href="/meta/favicon.svg" />
+    <link rel="stylesheet" href="/style/achievement_unlock_showcase.css" />
+    <link rel="stylesheet" href="/style/not-found-playground.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="error-code"><span>错误</span> 404</p>
+        <h1 id="page-title">页面不见了。<br />方块还在。</h1>
+        <p class="lede">
+          随便拖动这些方块。相同数字碰到一起会合并，还会掉下新的小方块；不想玩，也可以直接回家。
+        </p>
+        <a class="leave-link" href="/2048.html">返回 2048 首页 →</a>
+      </section>
+
+      <section class="playground-panel" aria-label="404 方块互动区">
+        <header class="playground-toolbar">
+          <div>
+            <span class="live-dot" aria-hidden="true"></span>
+            <span>自由摆放</span>
+          </div>
+          <button id="scatter-button" type="button">重新散落</button>
+        </header>
+        <div
+          id="tile-playground"
+          class="tile-playground"
+          role="region"
+          aria-label="可拖动的 2048 方块。相同数字重叠后会合并。"
+        ></div>
+      </section>
+    </main>
+    <script
+      type="module"
+      src="/src/pages/not-found-playground-page.ts"
+    ></script>
+  </body>
+</html>

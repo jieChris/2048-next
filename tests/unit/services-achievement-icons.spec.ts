@@ -18,4 +18,18 @@ describe("achievement icon markup", () => {
     expect(markup).toContain("#edc22e");
     expect(markup).toContain("#3db3d8");
   });
+
+  it("uses a lost path icon for the hidden lost-page achievement", () => {
+    const markup = achievementIconMarkupFor({
+      id: "lost_page_visited",
+      name: "你也曾迷路",
+      series_id: "community-lost-page"
+    });
+
+    expect(markup).toContain("achievement-lost-page-path");
+    expect(markup).toContain("achievement-lost-page-pin");
+    expect(markup).toContain('width="96" height="96"');
+    expect(markup).toContain("#edc22e");
+    expect(markup).toContain("#3db3d8");
+  });
 });

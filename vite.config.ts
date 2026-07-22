@@ -202,6 +202,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           index: resolve(__dirname, "index.html"),
+          not_found: resolve(__dirname, "404.html"),
           game2048: resolve(__dirname, "2048.html"),
           play: resolve(__dirname, "play.html"),
           undo: resolve(__dirname, "undo_2048.html"),

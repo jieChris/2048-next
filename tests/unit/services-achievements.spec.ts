@@ -46,6 +46,22 @@ describe("services: achievements", () => {
     });
   });
 
+  it("submits known lost-page achievement events", async () => {
+    const client = {
+      request: vi.fn().mockResolvedValue({ success: true, data: { achievement: { id: "lost_page_visited" } } })
+    };
+    const service = createAchievementsService({ client });
+
+    await expect(service.grantMyAchievementEvent("lost_page_visited")).resolves.toEqual({
+      success: true,
+      data: { achievement: { id: "lost_page_visited" } }
+    });
+
+    expect(client.request).toHaveBeenCalledWith("post", "/user/me/achievement-events", {
+      body: { event_id: "lost_page_visited" }
+    });
+  });
+
   it("rejects showcase updates with more than three achievement ids before calling the API", async () => {
     const client = {
       request: vi.fn()

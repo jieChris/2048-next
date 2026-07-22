@@ -47,4 +47,10 @@
 	handle {
 		file_server
 	}
+
+	handle_errors {
+		@not_found expression {err.status_code} == 404
+		rewrite @not_found /404.html
+		file_server
+	}
 }

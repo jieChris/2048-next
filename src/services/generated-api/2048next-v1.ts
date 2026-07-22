@@ -2450,7 +2450,7 @@ export interface components {
         };
         AchievementEventRequest: {
             /** @enum {string} */
-            event_id: "breakout_easter_egg_discovered";
+            event_id: "breakout_easter_egg_discovered" | "lost_page_visited";
         };
         AchievementCreateRequest: {
             series_id?: string;
