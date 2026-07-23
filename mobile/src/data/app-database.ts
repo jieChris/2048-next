@@ -1771,7 +1771,8 @@ export class AppDatabase {
       }
       if (
         input.modeKey === "classic_4x4_pow2_undo" &&
-        normalizedSave.save.lifecycle !== "pending_terminal"
+        normalizedSave.save.lifecycle !== "pending_terminal" &&
+        input.record.finalSnapshot.state.undoStack.length > 0
       ) {
         throw new AppDatabaseError("pending_terminal_required");
       }
