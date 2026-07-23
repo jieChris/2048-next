@@ -32,6 +32,68 @@ function sortedUnique(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
+function stripJavaComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//gu, "")
+    .replace(/(^|[^:])\/\/.*$/gmu, "$1");
+}
+
+function assertSecureStorageSource({
+  mainActivity,
+  secureStorage,
+  secureStoragePlugin
+}) {
+  const activityCode = stripJavaComments(mainActivity);
+  const storageCode = stripJavaComments(secureStorage);
+  const pluginCode = stripJavaComments(secureStoragePlugin);
+
+  invariant(
+    /\bregisterPlugin\s*\(\s*Next2048SecureStoragePlugin\.class\s*\)\s*;/u.test(activityCode),
+    "the native secure-storage plugin must be registered explicitly"
+  );
+  const requiredStoragePatterns = [
+    /KEYSTORE_PROVIDER\s*=\s*"AndroidKeyStore"\s*;/u,
+    /CIPHER_TRANSFORMATION\s*=\s*"AES\/GCM\/NoPadding"\s*;/u,
+    /getSharedPreferences\s*\(\s*PREFERENCES_NAME\s*,\s*Context\.MODE_PRIVATE\s*\)/u,
+    /KeyGenerator\.getInstance\s*\(\s*KeyProperties\.KEY_ALGORITHM_AES\s*,\s*KEYSTORE_PROVIDER\s*\)/u,
+    /Cipher\.getInstance\s*\(\s*CIPHER_TRANSFORMATION\s*\)/u,
+    /setRandomizedEncryptionRequired\s*\(\s*true\s*\)/u,
+    /setKeySize\s*\(\s*AES_KEY_BITS\s*\)/u
+  ];
+  for (const pattern of requiredStoragePatterns) {
+    invariant(
+      pattern.test(storageCode),
+      `secure-storage implementation is missing ${pattern}`
+    );
+  }
+  invariant(
+    (storageCode.match(/cipher\.updateAAD\s*\(\s*aadFor\s*\(\s*key\s*\)\s*\)\s*;/gu) ?? []).length >= 2,
+    "secure storage must bind both encryption and decryption to the logical key with AAD"
+  );
+
+  const requiredPluginPatterns = [
+    /@CapacitorPlugin\s*\(\s*name\s*=\s*"Next2048SecureStorage"\s*\)/u,
+    /storage\s*=\s*new\s+SecureStorage\s*\(\s*getContext\s*\(\s*\)\s*\)\s*;/u,
+    /storage\.get\s*\(\s*call\.getString\s*\(\s*"key"\s*\)\s*\)/u,
+    /storage\.set\s*\(\s*call\.getString\s*\(\s*"key"\s*\)\s*,\s*call\.getString\s*\(\s*"value"\s*\)\s*\)/u,
+    /storage\.delete\s*\(\s*call\.getString\s*\(\s*"key"\s*\)\s*\)/u
+  ];
+  for (const pattern of requiredPluginPatterns) {
+    invariant(
+      pattern.test(pluginCode),
+      `secure-storage plugin is missing ${pattern}`
+    );
+  }
+  invariant(
+    (pluginCode.match(/@PluginMethod\b/gu) ?? []).length === 3,
+    "secure-storage plugin must expose exactly get/set/delete"
+  );
+  invariant(
+    !/\b(?:SharedPreferences|getSharedPreferences|Log\.)\b/u.test(pluginCode),
+    "secure-storage plugin must delegate persistence without a plaintext side channel"
+  );
+}
+
 function assertExactValues(actual, expected, label) {
   const normalizedActual = sortedUnique(actual);
   const normalizedExpected = sortedUnique(expected);
@@ -149,6 +211,10 @@ async function auditAndroidProject({
     "generated config must keep the legacy bridge disabled"
   );
   invariant(
+    generatedConfig.android?.loggingBehavior === "none",
+    "generated config must disable Capacitor logging so plugin arguments cannot reach logcat"
+  );
+  invariant(
     generatedConfig.plugins?.SystemBars?.insetsHandling === "css",
     "generated config must keep SystemBars CSS inset handling enabled"
   );
@@ -165,6 +231,24 @@ async function auditAndroidProject({
     APPROVED_PLUGINS,
     "Capacitor plugin set"
   );
+
+  const mainActivity = await readFile(
+    path.join(rootDir, "android", "app", "src", "main", "java", "cn", "next2048", "app", "MainActivity.java"),
+    "utf8"
+  );
+  const secureStorage = await readFile(
+    path.join(rootDir, "android", "app", "src", "main", "java", "cn", "next2048", "app", "SecureStorage.java"),
+    "utf8"
+  );
+  const secureStoragePlugin = await readFile(
+    path.join(rootDir, "android", "app", "src", "main", "java", "cn", "next2048", "app", "Next2048SecureStoragePlugin.java"),
+    "utf8"
+  );
+  assertSecureStorageSource({
+    mainActivity,
+    secureStorage,
+    secureStoragePlugin
+  });
 
   const copiedWebAudit = await auditMobileBoundary({
     mobileDir: path.join(rootDir, "mobile"),
@@ -329,8 +413,10 @@ export {
   DYNAMIC_RECEIVER_PERMISSION_SUFFIX,
   assertExactValues,
   assertPermissionBoundary,
+  assertSecureStorageSource,
   auditAndroidProject,
   resolveApkAnalyzer,
   runAndroidProjectAudit,
-  sortedUnique
+  sortedUnique,
+  stripJavaComments
 };

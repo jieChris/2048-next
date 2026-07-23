@@ -73,7 +73,8 @@ describe("mobile Capacitor configuration", () => {
       webDir: "dist-app",
       android: {
         allowMixedContent: false,
-        useLegacyBridge: false
+        useLegacyBridge: false,
+        loggingBehavior: "none"
       },
       plugins: {
         SystemBars: {

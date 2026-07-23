@@ -2,8 +2,28 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertPermissionBoundary,
+  assertSecureStorageSource,
   DYNAMIC_RECEIVER_PERMISSION_SUFFIX
 } from "../../scripts/android-project-audit.mjs";
+
+const validSecureStorageSource = `
+  KEYSTORE_PROVIDER = "AndroidKeyStore";
+  CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
+  getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
+  KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
+  Cipher.getInstance(CIPHER_TRANSFORMATION);
+  setRandomizedEncryptionRequired(true);
+  setKeySize(AES_KEY_BITS);
+  cipher.updateAAD(aadFor(key));
+  cipher.updateAAD(aadFor(key));
+`;
+const validSecureStoragePluginSource = `
+  @CapacitorPlugin(name = "Next2048SecureStorage")
+  storage = new SecureStorage(getContext());
+  @PluginMethod storage.get(call.getString("key"));
+  @PluginMethod storage.set(call.getString("key"), call.getString("value"));
+  @PluginMethod storage.delete(call.getString("key"));
+`;
 
 function mergedManifest(options: {
   applicationId?: string;
@@ -71,5 +91,49 @@ describe("Android merged-permission audit", () => {
       applicationId: "cn.next2048.app.debug",
       label: "fixture"
     })).toThrow(/signature protected/u);
+  });
+});
+describe("Android secure-storage source audit", () => {
+  it("requires executable registration, AES-GCM/AAD, and a delegating bridge", () => {
+    expect(() => assertSecureStorageSource({
+      mainActivity: "registerPlugin(Next2048SecureStoragePlugin.class);",
+      secureStorage: validSecureStorageSource,
+      secureStoragePlugin: validSecureStoragePluginSource
+    })).not.toThrow();
+  });
+
+  it("does not accept security markers that exist only in comments", () => {
+    expect(() => assertSecureStorageSource({
+      mainActivity: "// registerPlugin(Next2048SecureStoragePlugin.class);",
+      secureStorage: validSecureStorageSource,
+      secureStoragePlugin: validSecureStoragePluginSource
+    })).toThrow(/registered explicitly/u);
+    expect(() => assertSecureStorageSource({
+      mainActivity: "registerPlugin(Next2048SecureStoragePlugin.class);",
+      secureStorage: `/* ${validSecureStorageSource} */`,
+      secureStoragePlugin: validSecureStoragePluginSource
+    })).toThrow(/implementation is missing/u);
+  });
+
+  it("rejects encryption code that does not bind both directions with AAD", () => {
+    expect(() => assertSecureStorageSource({
+      mainActivity: "registerPlugin(Next2048SecureStoragePlugin.class);",
+      secureStorage: validSecureStorageSource.replace(
+        "cipher.updateAAD(aadFor(key));\n  cipher.updateAAD(aadFor(key));",
+        "cipher.updateAAD(aadFor(key));"
+      ),
+      secureStoragePlugin: validSecureStoragePluginSource
+    })).toThrow(/both encryption and decryption/u);
+  });
+
+  it("rejects a bridge that does not delegate all operations to SecureStorage", () => {
+    expect(() => assertSecureStorageSource({
+      mainActivity: "registerPlugin(Next2048SecureStoragePlugin.class);",
+      secureStorage: validSecureStorageSource,
+      secureStoragePlugin: validSecureStoragePluginSource.replace(
+        'storage.set(call.getString("key"), call.getString("value"));',
+        'getSharedPreferences("plaintext", 0).edit();'
+      )
+    })).toThrow(/secure-storage plugin/u);
   });
 });

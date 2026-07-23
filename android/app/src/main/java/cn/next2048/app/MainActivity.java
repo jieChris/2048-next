@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         configureInsetsPolicy();
+        registerPlugin(Next2048SecureStoragePlugin.class);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         super.onCreate(savedInstanceState);
     }

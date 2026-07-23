@@ -1,6 +1,6 @@
 # Android App 实施计划
 
-> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1、2.1、3.1、3.2 已完成，当前并行执行阶段 2 与 3。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
+> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1、2.1、3.1、3.2、3.3 已完成，当前继续阶段 2 与 4。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
 
 ## 执行原则
 
@@ -168,9 +168,9 @@ npm run test:node
 
 ### 3.3 Keystore bridge
 
-- [ ] 只实现 `get/set/delete`，使用 Android Keystore AES-GCM 与应用私有 SharedPreferences。
-- [ ] 增加 Kotlin 单元/仪器测试：写入读取、覆盖、删除、密文不可等于明文、key invalidation 错误。
-- [ ] 浏览器测试 adapter 只在测试/本地预览使用；release 不允许降级到 localStorage。
+- [x] 只实现 `get/set/delete`，使用 Android Keystore AES-GCM 与应用私有 SharedPreferences。
+- [x] 增加 Android 原生仪器测试：写入读取、覆盖、删除、随机密文、AAD 键绑定、不可导出和 key invalidation 错误。
+- [x] 浏览器测试 adapter 只在测试/本地预览使用；release 不允许降级到 localStorage 或内存实现。
 
 验证：
 

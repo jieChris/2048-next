@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: "dist-app",
   android: {
     allowMixedContent: false,
-    useLegacyBridge: false
+    useLegacyBridge: false,
+    loggingBehavior: "none"
   },
   plugins: {
     SystemBars: {

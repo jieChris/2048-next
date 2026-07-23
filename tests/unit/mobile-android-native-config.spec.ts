@@ -196,7 +196,10 @@ describe("Android native foundation", () => {
       "android-project-audit.mjs"
     );
     expect(packageManifest.scripts?.["android:check"]).toMatch(
-      /lint.*testDebugUnitTest.*assembleDebug.*processReleaseMainManifest/u
+      /:app:lintDebug.*:app:testDebugUnitTest.*:app:assembleDebug.*:app:assembleDebugAndroidTest.*:app:processReleaseMainManifest/u
+    );
+    expect(packageManifest.scripts?.["android:test:instrumented"]).toContain(
+      ":app:connectedDebugAndroidTest"
     );
     expect(packageManifest.scripts?.["android:check"]).toContain(
       "audit:android:release-signing"
