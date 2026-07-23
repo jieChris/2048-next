@@ -13,6 +13,7 @@ import type { SecureStorage } from "../platform/secure-storage";
 export const ACCOUNT_SESSION_SECURE_KEY = "account.session.v1";
 
 type MaybePromise = void | Promise<void>;
+type AccountOwnerKey = Exclude<AppOwnerKey, "guest">;
 type ConfirmedCleanupDatabase = Pick<
   AppDatabase,
   "beginOwnerClear" | "listPendingOwnerClears" | "completeOwnerClear"
@@ -27,8 +28,7 @@ export interface ClearConfirmedOwnerInput {
   createdAt: number;
   database: ConfirmedCleanupDatabase;
   secureStorage: Pick<SecureStorage, "delete">;
-  stopOwner(ownerKey: AppOwnerKey): MaybePromise;
-  resumeOwner(ownerKey: AppOwnerKey): MaybePromise;
+  workGate: OwnerCleanupWorkGate;
   clearMemoryAuth(ownerKey: AppOwnerKey): MaybePromise;
 }
 
@@ -41,19 +41,73 @@ export interface RestoreOwnerCleanupAtStartupInput {
   secureStorage: Pick<SecureStorage, "get" | "delete">;
 }
 
-function assertAccountOwner(ownerKey: AppOwnerKey): void {
+function assertAccountOwner(
+  ownerKey: AppOwnerKey,
+): asserts ownerKey is AccountOwnerKey {
   if (ownerKey === "guest") {
     throw new AppDatabaseError("guest_clear_forbidden");
   }
 }
 
+/**
+ * All account-scoped persistence and outbox work must enter through `run`.
+ * Cleanup closes the gate synchronously, drains registered work, and keeps it
+ * closed after success so removing the IndexedDB marker cannot revive an owner.
+ */
+export class OwnerCleanupWorkGate {
+  readonly #stopped = new Set<AccountOwnerKey>();
+  readonly #pending = new Map<AccountOwnerKey, Set<Promise<unknown>>>();
+
+  run<T>(ownerKey: AccountOwnerKey, work: () => T | Promise<T>): Promise<T> {
+    assertAccountOwner(ownerKey);
+    if (this.#stopped.has(ownerKey)) {
+      return Promise.reject(new AppDatabaseError("owner_work_stopped"));
+    }
+
+    const operation = Promise.resolve().then(work);
+    let pending = this.#pending.get(ownerKey);
+    if (!pending) {
+      pending = new Set();
+      this.#pending.set(ownerKey, pending);
+    }
+    pending.add(operation);
+    const release = (): void => {
+      const current = this.#pending.get(ownerKey);
+      current?.delete(operation);
+      if (current?.size === 0) this.#pending.delete(ownerKey);
+    };
+    void operation.then(release, release);
+    return operation;
+  }
+
+  async stopAndDrain(ownerKey: AccountOwnerKey): Promise<void> {
+    assertAccountOwner(ownerKey);
+    this.#stopped.add(ownerKey);
+    const pending = this.#pending.get(ownerKey);
+    if (pending?.size) await Promise.allSettled([...pending]);
+  }
+
+  resume(ownerKey: AccountOwnerKey): void {
+    assertAccountOwner(ownerKey);
+    if (this.#pending.get(ownerKey)?.size) {
+      throw new AppDatabaseError("owner_work_not_drained");
+    }
+    this.#stopped.delete(ownerKey);
+  }
+
+  isStopped(ownerKey: AccountOwnerKey): boolean {
+    assertAccountOwner(ownerKey);
+    return this.#stopped.has(ownerKey);
+  }
+}
+
 async function recoverBeforeMarker(
-  ownerKey: AppOwnerKey,
-  resumeOwner: ClearConfirmedOwnerInput["resumeOwner"],
+  ownerKey: AccountOwnerKey,
+  workGate: OwnerCleanupWorkGate,
   originalError: unknown,
 ): Promise<never> {
   try {
-    await resumeOwner(ownerKey);
+    workGate.resume(ownerKey);
   } catch (resumeError) {
     throw new AggregateError(
       [originalError, resumeError],
@@ -67,10 +121,11 @@ export async function clearConfirmedOwner(
   input: ClearConfirmedOwnerInput,
 ): Promise<void> {
   assertAccountOwner(input.ownerKey);
+  const ownerKey = input.ownerKey;
   try {
-    await input.stopOwner(input.ownerKey);
+    await input.workGate.stopAndDrain(ownerKey);
   } catch (error) {
-    await recoverBeforeMarker(input.ownerKey, input.resumeOwner, error);
+    await recoverBeforeMarker(ownerKey, input.workGate, error);
   }
   try {
     await input.database.beginOwnerClear(input.ownerKey, input.createdAt);
@@ -85,7 +140,7 @@ export async function clearConfirmedOwner(
       );
     }
     if (pendingOwners.includes(input.ownerKey)) throw error;
-    await recoverBeforeMarker(input.ownerKey, input.resumeOwner, error);
+    await recoverBeforeMarker(ownerKey, input.workGate, error);
   }
 
   await input.clearMemoryAuth(input.ownerKey);

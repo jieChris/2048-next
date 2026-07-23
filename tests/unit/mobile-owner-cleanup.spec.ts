@@ -14,6 +14,7 @@ import {
 import {
   ACCOUNT_SESSION_SECURE_KEY,
   clearConfirmedOwner,
+  OwnerCleanupWorkGate,
   restoreOwnerCleanupAtStartup,
 } from "../../mobile/src/data/owner-cleanup";
 import {
@@ -241,22 +242,26 @@ function recordingStorage(
   };
 }
 
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
 function confirmedCleanupInput(
   harness: DatabaseHarness,
   secureStorage: SecureStorage,
   ownerKey: AppOwnerKey = "user:1",
 ) {
+  const workGate = new OwnerCleanupWorkGate();
   return {
     ownerKey,
     createdAt: 123,
     database: harness.database,
     secureStorage,
-    stopOwner: vi.fn(async (owner: AppOwnerKey) => {
-      harness.events.push(`owner.stop:${owner}`);
-    }),
-    resumeOwner: vi.fn(async (owner: AppOwnerKey) => {
-      harness.events.push(`owner.resume:${owner}`);
-    }),
+    workGate,
     clearMemoryAuth: vi.fn(async (owner: AppOwnerKey) => {
       harness.events.push(`auth.clear:${owner}`);
     }),
@@ -278,7 +283,6 @@ describe("mobile owner cleanup", () => {
     );
 
     expect(harness.events).toEqual([
-      "owner.stop:user:1",
       "db.begin:user:1:123",
       "auth.clear:user:1",
       `secure.delete:${ACCOUNT_SESSION_SECURE_KEY}`,
@@ -298,14 +302,10 @@ describe("mobile owner cleanup", () => {
     const input = confirmedCleanupInput(harness, storage);
 
     await expect(clearConfirmedOwner(input)).rejects.toThrow("begin_failed");
-    expect(harness.events).toEqual([
-      "owner.stop:user:1",
-      "db.begin:user:1:123",
-      "db.list",
-      "owner.resume:user:1",
-    ]);
+    expect(harness.events).toEqual(["db.begin:user:1:123", "db.list"]);
     expect(input.clearMemoryAuth).not.toHaveBeenCalled();
     expect(harness.markers.size).toBe(0);
+    expect(input.workGate.isStopped("user:1")).toBe(false);
   });
 
   it("stays stopped when begin reports failure after committing the marker", async () => {
@@ -320,13 +320,9 @@ describe("mobile owner cleanup", () => {
     await expect(clearConfirmedOwner(input)).rejects.toThrow(
       "begin_result_unknown",
     );
-    expect(harness.events).toEqual([
-      "owner.stop:user:1",
-      "db.begin:user:1:123",
-      "db.list",
-    ]);
+    expect(harness.events).toEqual(["db.begin:user:1:123", "db.list"]);
     expect(harness.markers).toEqual(new Set(["user:1"]));
-    expect(input.resumeOwner).not.toHaveBeenCalled();
+    expect(input.workGate.isStopped("user:1")).toBe(true);
     expect(input.clearMemoryAuth).not.toHaveBeenCalled();
   });
 
@@ -343,33 +339,42 @@ describe("mobile owner cleanup", () => {
     await expect(clearConfirmedOwner(input)).rejects.toThrow(
       "owner_cleanup_marker_state_unknown",
     );
-    expect(harness.events).toEqual([
-      "owner.stop:user:1",
-      "db.begin:user:1:123",
-      "db.list",
-    ]);
-    expect(input.resumeOwner).not.toHaveBeenCalled();
+    expect(harness.events).toEqual(["db.begin:user:1:123", "db.list"]);
+    expect(input.workGate.isStopped("user:1")).toBe(true);
     expect(input.clearMemoryAuth).not.toHaveBeenCalled();
   });
 
-  it("also attempts recovery when stopOwner fails before the marker", async () => {
+  it("gates new work and drains held work before writing the marker", async () => {
     const harness = createDatabaseHarness();
     const storage = recordingStorage(
       createMemorySecureStorage(),
       harness.events,
     );
     const input = confirmedCleanupInput(harness, storage);
-    input.stopOwner.mockImplementationOnce(async (owner) => {
-      harness.events.push(`owner.stop:${owner}`);
-      throw new Error("stop_failed");
+    const hold = deferred();
+    const oldWork = input.workGate.run("user:1", async () => {
+      await hold.promise;
+      harness.events.push("owner.work:done");
     });
+    const cleanup = clearConfirmedOwner(input);
 
-    await expect(clearConfirmedOwner(input)).rejects.toThrow("stop_failed");
+    await Promise.resolve();
+    expect(input.workGate.isStopped("user:1")).toBe(true);
+    expect(harness.events).toEqual([]);
+    await expect(
+      input.workGate.run("user:1", async () => undefined),
+    ).rejects.toMatchObject({ code: "owner_work_stopped" });
+
+    hold.resolve();
+    await oldWork;
+    await cleanup;
     expect(harness.events).toEqual([
-      "owner.stop:user:1",
-      "owner.resume:user:1",
+      "owner.work:done",
+      "db.begin:user:1:123",
+      "auth.clear:user:1",
+      `secure.delete:${ACCOUNT_SESSION_SECURE_KEY}`,
+      "db.complete:user:1",
     ]);
-    expect(harness.markers.size).toBe(0);
   });
 
   it("keeps the marker and stays fail-closed after an in-memory failure", async () => {
@@ -388,12 +393,11 @@ describe("mobile owner cleanup", () => {
       "memory_clear_failed",
     );
     expect(harness.events).toEqual([
-      "owner.stop:user:1",
       "db.begin:user:1:123",
       "auth.clear:user:1",
     ]);
     expect(harness.markers).toEqual(new Set(["user:1"]));
-    expect(input.resumeOwner).not.toHaveBeenCalled();
+    expect(input.workGate.isStopped("user:1")).toBe(true);
   });
 
   it("treats write_failed as unknown and never removes the marker", async () => {
@@ -415,7 +419,6 @@ describe("mobile owner cleanup", () => {
       code: "write_failed",
     });
     expect(harness.events).toEqual([
-      "owner.stop:user:1",
       "db.begin:user:1:123",
       "auth.clear:user:1",
       `secure.delete:${ACCOUNT_SESSION_SECURE_KEY}`,
@@ -424,7 +427,7 @@ describe("mobile owner cleanup", () => {
     await expect(
       baseStorage.get(ACCOUNT_SESSION_SECURE_KEY),
     ).resolves.toBeNull();
-    expect(input.resumeOwner).not.toHaveBeenCalled();
+    expect(input.workGate.isStopped("user:1")).toBe(true);
   });
 
   it("keeps the marker after complete fails and can retry idempotently", async () => {
@@ -440,13 +443,12 @@ describe("mobile owner cleanup", () => {
       "complete_failed:user:1",
     );
     expect(harness.markers).toEqual(new Set(["user:1"]));
-    expect(input.resumeOwner).not.toHaveBeenCalled();
+    expect(input.workGate.isStopped("user:1")).toBe(true);
 
     harness.failCompleteOwner = undefined;
     harness.events.length = 0;
     await expect(clearConfirmedOwner(input)).resolves.toBeUndefined();
     expect(harness.events).toEqual([
-      "owner.stop:user:1",
       "db.begin:user:1:123",
       "auth.clear:user:1",
       `secure.delete:${ACCOUNT_SESSION_SECURE_KEY}`,
@@ -467,7 +469,7 @@ describe("mobile owner cleanup", () => {
       code: "guest_clear_forbidden",
     });
     expect(harness.events).toEqual([]);
-    expect(input.stopOwner).not.toHaveBeenCalled();
+    expect(input.workGate.isStopped("user:1")).toBe(false);
   });
 
   it("boots in strict order and reads auth only after all pending owners clear", async () => {
@@ -601,6 +603,98 @@ describe("mobile owner cleanup", () => {
     expect(harness.events).toEqual(["db.open", "db.list"]);
   });
 
+  it("drains held persistence and outbox work before clearing all five stores", async () => {
+    const factory = new IDBFactory();
+    const ownerKey = "user:31" as const;
+    const database = new AppDatabase({
+      factory,
+      keyRange: IDBKeyRange,
+      name: "owner-cleanup-held-work",
+    });
+    await seedOwnerAcrossStores(database, ownerKey, "held");
+    const active = await database.getSave(ownerKey, "board_3x3_pow2_no_undo");
+    if (active.status !== "ok") throw new Error("held save missing");
+    const lateSave = structuredClone(active.save);
+    lateSave.revision += 1;
+    lateSave.lastClosedAt = 600;
+    lateSave.snapshot.savedAtMs = 600;
+    const lateOutbox: StoredOutboxItem = {
+      schemaVersion: APP_DATABASE_SCHEMA_VERSION,
+      operationId: "late-abandon",
+      ownerKey,
+      kind: "ranked.abandon",
+      clientRecordId: null,
+      payload: { challengeId: "held-challenge" },
+      attemptCount: 0,
+      nextAttemptAt: 0,
+      lastErrorCode: null,
+      createdAt: 600,
+      updatedAt: 600,
+    };
+    const persistenceHold = deferred();
+    const outboxHold = deferred();
+    const workGate = new OwnerCleanupWorkGate();
+    const persistenceWork = workGate.run(ownerKey, async () => {
+      await persistenceHold.promise;
+      await database.putSave(lateSave);
+    });
+    const outboxWork = workGate.run(ownerKey, async () => {
+      await outboxHold.promise;
+      await database.enqueueOutbox(lateOutbox);
+    });
+    const secureStorage = createMemorySecureStorage();
+    await secureStorage.set(ACCOUNT_SESSION_SECURE_KEY, "held-envelope");
+    let cleanupSettled = false;
+    const cleanup = clearConfirmedOwner({
+      ownerKey,
+      createdAt: 700,
+      database,
+      secureStorage,
+      workGate,
+      clearMemoryAuth: vi.fn(),
+    });
+    void cleanup.then(
+      () => {
+        cleanupSettled = true;
+      },
+      () => {
+        cleanupSettled = true;
+      },
+    );
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(workGate.isStopped(ownerKey)).toBe(true);
+    expect(cleanupSettled).toBe(false);
+    expect(await database.listPendingOwnerClears()).toEqual([]);
+    let lateWorkStarted = false;
+    await expect(
+      workGate.run(ownerKey, async () => {
+        lateWorkStarted = true;
+        await database.putSave(lateSave);
+      }),
+    ).rejects.toMatchObject({ code: "owner_work_stopped" });
+    expect(lateWorkStarted).toBe(false);
+
+    persistenceHold.resolve();
+    outboxHold.resolve();
+    await Promise.all([persistenceWork, outboxWork]);
+    await cleanup;
+
+    expect(cleanupSettled).toBe(true);
+    expect(workGate.isStopped(ownerKey)).toBe(true);
+    expect(await database.listPendingOwnerClears()).toEqual([]);
+    expect(await database.listSaves(ownerKey)).toEqual([]);
+    expect(await database.listRecords(ownerKey)).toEqual([]);
+    expect(await database.listOutbox(ownerKey)).toEqual([]);
+    expect(await database.getCache("held-history", ownerKey, 800)).toBeNull();
+    expect(await database.listDiagnostics(ownerKey)).toEqual([]);
+    await expect(
+      workGate.run(ownerKey, () => database.enqueueOutbox(lateOutbox)),
+    ).rejects.toMatchObject({ code: "owner_work_stopped" });
+    expect(await database.listOutbox(ownerKey)).toEqual([]);
+  });
+
   it("recovers a real five-store cleanup after Keystore deletion and an IDB fault", async () => {
     const factory = new IDBFactory();
     const name = "owner-cleanup-integration";
@@ -629,8 +723,7 @@ describe("mobile owner cleanup", () => {
         createdAt: 20,
         database,
         secureStorage,
-        stopOwner: vi.fn(),
-        resumeOwner: vi.fn(),
+        workGate: new OwnerCleanupWorkGate(),
         clearMemoryAuth: vi.fn(),
       }),
     ).rejects.toThrow("clear.after_records");
