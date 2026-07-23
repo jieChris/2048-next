@@ -1,6 +1,6 @@
 # Android App 实施计划
 
-> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1、2.1、3.1 已完成，当前并行执行阶段 2 与 3。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
+> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1、2.1、3.1、3.2 已完成，当前并行执行阶段 2 与 3。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
 
 ## 执行原则
 
@@ -159,12 +159,12 @@ npm run test:node
 
 ### 3.2 Capacitor 与 Android
 
-- [ ] 精确锁定同一 Capacitor 8 稳定版本线和 App/StatusBar/Haptics/Filesystem/Share 官方插件。
-- [ ] 创建 `capacitor.config.ts` 并执行一次 `cap add android`；提交 Gradle Wrapper、Android manifest 和受控原生工程。
-- [ ] 更新 `.gitignore`：忽略 `dist-app`、`local.properties`、Gradle/build 目录、keystore 和签名属性。
-- [ ] 配置 release `cn.next2048.app`、debug `.debug` 后缀和 `2048 NEXT Dev` 名称。
-- [ ] 设置 min 29、target/compile 36、竖屏、硬件加速、release 禁止明文和 WebView 调试。
-- [ ] release 缺少签名配置时明确失败，不回退 debug key。
+- [x] 精确锁定同一 Capacitor 8 稳定版本线和 App/StatusBar/Haptics/Filesystem/Share 官方插件。
+- [x] 创建 `capacitor.config.ts` 并执行一次 `cap add android`；提交 Gradle Wrapper、Android manifest 和受控原生工程。
+- [x] 更新 `.gitignore`：忽略 `dist-app`、`local.properties`、Gradle/build 目录、keystore 和签名属性。
+- [x] 配置 release `cn.next2048.app`、debug `.debug` 后缀和 `2048 NEXT Dev` 名称。
+- [x] 设置 min 29、target/compile 36、竖屏、硬件加速、release 禁止明文和 WebView 调试。
+- [x] release 缺少签名配置时明确失败，不回退 debug key。
 
 ### 3.3 Keystore bridge
 

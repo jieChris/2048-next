@@ -101,6 +101,7 @@
 - 阶段 2.1 已完成并拆分固化：前端 `98dd6f9b` 提供保留 Web 兼容入口的结构化 HTTP 结果，`c8e15021` 对齐 refresh、排行榜周期与历史字段；后端 `6f2d380` 保护 `deleted/all` 历史筛选并补齐分页/记录字段，`058bd24` 将 Capacitor release/debug origin 收紧为精确白名单。后端 `6ec8635`/`a996031` 另完成成就客户端/模式元数据与隐藏成就目录可见性规则。
 - 阶段 3.1 已固化为前端提交 `bb05eef8`：`mobile/` 单入口、独立 Vite/TypeScript 配置与 `dist-app` 不加载 legacy；最小壳含集中式中英文、浅/深色 token、安全区和未批准隐私草案预览。`audit:mobile-boundary --release-candidate` 会因 `unapproved-draft` 主动失败，防止草案进入候选包。
 - 2026-07-23 12:00 CST，阶段 2.2A 固化为后端提交 `d60f67d`。迁移 `0020` 只增加 nullable canonical 时间字段与成对约束，不回填、不切换榜单读取、不创建普通索引；`schema_migrations.applied_at` 冻结 legacy fallback 截止点。只读审计在同一已 checkout 连接的 `REPEATABLE READ READ ONLY` 快照中校验可信 session 链、分别计数/抽样 trusted begin、server receive fallback、anomaly，输出仓库外 0600、SHA-256 且拒绝覆盖的证据文件。未连接真实数据库；score/speed 四周期基线、回填、并发索引、榜单重建和绝对 rank 明确保留到 2.2B 及后续门禁。
+- 阶段 3.2 已固化为前端提交 `79236d00`：精确锁定 Capacitor 8.4.2 核心/Android/CLI 及五个官方插件，提交 Gradle 8.14.3 Wrapper、AGP 8.13.0、JDK 21、min 29/compile-target 36 的单 module 原生工程；debug 使用 `cn.next2048.app.debug` / `2048 NEXT Dev`，release 使用永久身份 `cn.next2048.app`。主清单锁竖屏、关闭备份和明文、启用硬件加速，debug overlay 才放开本地 HTTP；WebView 调试由 `BuildConfig.DEBUG` 控制。文件分享只暴露 `cache/replay-share/`，无 Google Services/Firebase 接线，release 缺四项签名属性会在构建前明确失败。
 
 ## 验证记录
 
@@ -122,3 +123,4 @@
 - 2026-07-23 阶段 1 后端最终门禁（Node 22.22.2）：黄金/ext8 定向测试 `16/16`、Node `22` 文件 `159/159`、`npm run typecheck` 与 `git diff --check` 通过；黄金测试同时断言 `modeKey/ruleset/undoEnabled/bestTile/terminal`。
 - 2026-07-23 阶段 3.1 门禁（Node 22.22.2）：移动单测 `35/35`、移动 Smoke `3/3`、320dp/浅深色/中英文检查通过；`dist-app` JS 约 6.95KB、CSS 约 8.08KB、两份本地 Clear Sans 字体合计约 54KB，业务请求为 0。
 - 2026-07-23 阶段 2.2A 最终门禁（Node 22.22.2）：canonical audit 定向 `6/6`；后端 Node `24` 文件 `179/179`；`npm run typecheck`、`git diff --check` 与 CLI `--help` 通过。两轮只读复审确认历史 cutoff、session 完整性、PostgreSQL CHECK 三值逻辑、三类抽样、同连接事务和仓库外证据写入无剩余提交阻塞；真实 PostgreSQL 迁移/分类执行尚未宣称完成。
+- 2026-07-23 阶段 3.2 最终门禁（Node 22.22.2、JBR 21.0.10、SDK/Build Tools 36）：App unit `7` 文件、`54/54`；`build:app`、`cap sync` 五插件、Gradle `lint testDebugUnitTest assembleDebug :app:processReleaseMainManifest` 共 `396` tasks、原生权限/配置审计和 unsigned release 拒绝门禁全部通过。debug APK 约 10MB，SHA-256 `c53ecb1a8e03a12121bc37150509b201fc1de17f8a73dcf07ff86bf1d15897e8`。API 29 ARM64 AVD 在 Wi-Fi/移动数据关闭时安装成功，首次清数据冷启动 `819ms`，选择仅离线后本地主页正常；再次强停冷启动 `513ms` 并保留离线选择，logcat 无 App/WebView 致命错误。该证据仅为 debug/API29 基底，不替代后续真机、release、高刷或正式签名门禁。
