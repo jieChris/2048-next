@@ -80,6 +80,7 @@ paths:
     post:
       tags: [Auth]
       summary: Complete registration with verification code.
+      description: The password hash and nickname were frozen by /register/start; verification resends only the email and one-time code.
       security: []
       requestBody:
         required: true
@@ -203,16 +204,16 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [email, code, password]
+              required: [email, code, new_password]
               properties:
                 email:
                   type: string
                   format: email
                 code:
                   type: string
-                password:
+                new_password:
                   type: string
-                  minLength: 6
+                  minLength: 10
       responses:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
@@ -1378,13 +1379,14 @@ components:
         application/json:
           schema:
             allOf:
-              - $ref: "#/components/schemas/ApiEnvelope"
+              - $ref: "#/components/schemas/AuthRefreshResponse"
               - type: object
+                required: [userId, nickname]
                 properties:
-                  token:
+                  userId:
+                    type: integer
+                  nickname:
                     type: string
-                  user:
-                    $ref: "#/components/schemas/User"
     UserResponse:
       description: User profile result.
       content:
@@ -1427,6 +1429,7 @@ components:
     User:
       type: object
       additionalProperties: true
+      required: [id, email, nickname, role]
       properties:
         id:
           type: integer
@@ -1437,6 +1440,8 @@ components:
         email:
           type: string
           format: email
+        role:
+          type: string
         created_at:
           type: string
           format: date-time
@@ -1471,37 +1476,29 @@ components:
           format: email
         password:
           type: string
-          minLength: 6
+          minLength: 10
 
     RegisterVerifyRequest:
       type: object
       additionalProperties: false
-      required: [nickname, email, password, code]
+      required: [email, code]
       properties:
-        nickname:
-          type: string
         email:
           type: string
           format: email
-        password:
-          type: string
-          minLength: 6
         code:
           type: string
+          pattern: '^\d{6}$'
 
     LoginRequest:
       type: object
       additionalProperties: true
-      required: [password]
+      required: [email, password]
       properties:
-        nickname:
-          type: string
         email:
           type: string
           format: email
         password:
-          type: string
-        captcha:
           type: string
 
     AuthRefreshRequest:

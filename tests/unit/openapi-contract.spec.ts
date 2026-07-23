@@ -147,6 +147,55 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).not.toContain('"/auth/refresh-token"');
   });
 
+  it("matches the Node registration and password-reset verification payloads", () => {
+    const spec = readSpec();
+    const generated = readGeneratedTypes();
+    const registerVerify = readSchema(spec, "RegisterVerifyRequest");
+    const resetVerifyPath = readPathItem(spec, "/password/reset/verify");
+    const authResponse = spec.slice(
+      spec.indexOf("    AuthResponse:\n"),
+      spec.indexOf("    UserResponse:\n"),
+    );
+
+    expect(registerVerify).toContain("required: [email, code]");
+    expect(registerVerify).not.toContain("nickname:");
+    expect(registerVerify).not.toContain("password:");
+    expect(registerVerify).toContain("pattern: '^\\d{6}$'");
+    expect(resetVerifyPath).toContain("required: [email, code, new_password]");
+    expect(resetVerifyPath).toMatch(/new_password:\n\s+type: string\n\s+minLength: 10/u);
+    expect(generated).toContain('RegisterVerifyRequest: {\n            /** Format: email */\n            email: string;\n            code: string;');
+    expect(generated).toContain("new_password: string;");
+    expect(authResponse).toContain(
+      '$ref: "#/components/schemas/AuthRefreshResponse"',
+    );
+    expect(generated).toContain("expiresAt: number;");
+    expect(generated).toContain("ttl: number;");
+  });
+
+  it("freezes the Node email-login identity response", () => {
+    const spec = readSpec();
+    const generated = readGeneratedTypes();
+    const login = readSchema(spec, "LoginRequest");
+    const user = readSchema(spec, "User");
+    const authResponse = spec.slice(
+      spec.indexOf("    AuthResponse:\n"),
+      spec.indexOf("    UserResponse:\n"),
+    );
+
+    expect(login).toContain("required: [email, password]");
+    expect(login).not.toContain("nickname:");
+    expect(user).toContain("required: [id, email, nickname, role]");
+    expect(user).toMatch(/role:\n\s+type: string/u);
+    expect(authResponse).toContain("required: [userId, nickname]");
+    expect(authResponse).toContain(
+      '$ref: "#/components/schemas/AuthRefreshResponse"',
+    );
+    expect(generated).toContain("email: string;\n            password: string;");
+    expect(generated).not.toContain("nickname?: string;\n            /** Format: email */\n            email");
+    expect(generated).toContain("userId: number;\n                    nickname: string;");
+    expect(generated).toContain("role: string;");
+  });
+
   it("uses the Node leaderboard period vocabulary in the contract and generated types", () => {
     const leaderboardPath = readPathItem(readSpec(), "/leaderboard");
     const generatedLeaderboardPath = readGeneratedPathItem(readGeneratedTypes(), "/leaderboard");

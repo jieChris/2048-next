@@ -118,7 +118,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Complete registration with verification code. */
+        /**
+         * Complete registration with verification code.
+         * @description The password hash and nickname were frozen by /register/start; verification resends only the email and one-time code.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -351,7 +354,7 @@ export interface paths {
                         /** Format: email */
                         email: string;
                         code: string;
-                        password: string;
+                        new_password: string;
                     };
                 };
             };
@@ -2309,11 +2312,12 @@ export interface components {
             [key: string]: unknown;
         };
         User: {
-            id?: number;
+            id: number;
             user_id?: number;
-            nickname?: string;
+            nickname: string;
             /** Format: email */
-            email?: string;
+            email: string;
+            role: string;
             /** Format: date-time */
             created_at?: string;
             admin?: boolean;
@@ -2336,18 +2340,14 @@ export interface components {
             password: string;
         };
         RegisterVerifyRequest: {
-            nickname: string;
             /** Format: email */
             email: string;
-            password: string;
             code: string;
         };
         LoginRequest: {
-            nickname?: string;
             /** Format: email */
-            email?: string;
+            email: string;
             password: string;
-            captcha?: string;
         } & {
             [key: string]: unknown;
         };
@@ -2739,9 +2739,9 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["ApiEnvelope"] & {
-                    token?: string;
-                    user?: components["schemas"]["User"];
+                "application/json": components["schemas"]["AuthRefreshResponse"] & {
+                    userId: number;
+                    nickname: string;
                 };
             };
         };
