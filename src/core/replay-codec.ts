@@ -113,14 +113,16 @@ const CRC32_TABLE: Uint32Array = (() => {
   for (let i = 0; i < 256; i += 1) {
     let crc = i;
     for (let j = 0; j < 8; j += 1) {
-      crc = (crc & 1) !== 0 ? (0xedb88320 ^ (crc >>> 1)) : (crc >>> 1);
+      crc = (crc & 1) !== 0 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
     }
     table[i] = crc >>> 0;
   }
   return table;
 })();
 
-function toUint8Array(data: ArrayBuffer | ArrayLike<number> | Uint8Array): Uint8Array {
+function toUint8Array(
+  data: ArrayBuffer | ArrayLike<number> | Uint8Array,
+): Uint8Array {
   if (data instanceof Uint8Array) return data;
   if (data instanceof ArrayBuffer) return new Uint8Array(data);
   return new Uint8Array(data);
@@ -143,7 +145,12 @@ function concatByteChunks(chunks: number[][]): Uint8Array {
   return out;
 }
 
-function assertIntegerRange(value: number, min: number, max: number, message: string): number {
+function assertIntegerRange(
+  value: number,
+  min: number,
+  max: number,
+  message: string,
+): number {
   if (!Number.isInteger(value) || value < min || value > max) throw message;
   return value;
 }
@@ -157,38 +164,59 @@ function isReplayV1Pow2ExactSpawnValue(value: number): boolean {
   return value === 8 || value === 16 || value === 32 || value === 64;
 }
 
-export function createReplayV1MoveRecords(input: ReplayV1MoveInput): ReplayV1Record[] {
-  const dir = assertIntegerRange(Number(input.dir), 0, 7, "Invalid replay v1 move direction");
+export function createReplayV1MoveRecords(
+  input: ReplayV1MoveInput,
+): ReplayV1Record[] {
+  const dir = assertIntegerRange(
+    Number(input.dir),
+    0,
+    7,
+    "Invalid replay v1 move direction",
+  );
   const spawnIndex = assertIntegerRange(
     Number(input.spawnIndex),
     0,
     0x7fffffff,
-    "Invalid replay v1 spawn index"
+    "Invalid replay v1 spawn index",
   );
-  const deltaMs = clampNonNegativeInt(Number(input.deltaMs), "Invalid replay v1 move delta");
+  const deltaMs = clampNonNegativeInt(
+    Number(input.deltaMs),
+    "Invalid replay v1 move delta",
+  );
   const spawnValue = Number(input.spawnValue);
   const ruleset = input.ruleset || "pow2";
   let spawnValueBit: 0 | 1;
 
   if (ruleset === "fibonacci") {
-    if (spawnValue !== 1 && spawnValue !== 2) throw "Invalid replay v1 fibonacci spawn value";
+    if (spawnValue !== 1 && spawnValue !== 2)
+      throw "Invalid replay v1 fibonacci spawn value";
     spawnValueBit = spawnValue === 2 ? 1 : 0;
   } else {
-    if (spawnValue !== 2 && spawnValue !== 4 && !isReplayV1Pow2ExactSpawnValue(spawnValue)) {
+    if (
+      spawnValue !== 2 &&
+      spawnValue !== 4 &&
+      !isReplayV1Pow2ExactSpawnValue(spawnValue)
+    ) {
       throw "Invalid replay v1 pow2 spawn value";
     }
     spawnValueBit = spawnValue === 4 ? 1 : 0;
   }
 
-  const move: ReplayV1MoveRecord = { kind: "move", dir, spawnIndex, spawnValueBit, deltaMs };
+  const move: ReplayV1MoveRecord = {
+    kind: "move",
+    dir,
+    spawnIndex,
+    spawnValueBit,
+    deltaMs,
+  };
   if (ruleset === "pow2" && isReplayV1Pow2ExactSpawnValue(spawnValue)) {
     return [
       {
         kind: "ext",
         extType: REPLAY_V1_EXT_POW2_EXACT_SPAWN,
-        payload: new Uint8Array([spawnValue])
+        payload: new Uint8Array([spawnValue]),
       },
-      move
+      move,
     ];
   }
   return [move];
@@ -211,7 +239,10 @@ export function encodeUleb128(value: number): number[] {
   return out;
 }
 
-export function decodeUleb128(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array, offset: number): {
+export function decodeUleb128(
+  bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array,
+  offset: number,
+): {
   value: number;
   nextOffset: number;
 } {
@@ -226,7 +257,7 @@ export function decodeUleb128(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8
     if ((byte & 0x80) === 0) {
       return {
         value: Math.floor(value),
-        nextOffset: cursor
+        nextOffset: cursor,
       };
     }
     shift += 7;
@@ -235,7 +266,9 @@ export function decodeUleb128(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8
   throw "Unexpected EOF while decoding ULEB128";
 }
 
-export function computeCrc32(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array): number {
+export function computeCrc32(
+  bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array,
+): number {
   const bytes = toUint8Array(bytesLike);
   let crc = 0xffffffff;
   for (let i = 0; i < bytes.length; i += 1) {
@@ -244,7 +277,11 @@ export function computeCrc32(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8A
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function encodeReplayV1PackedBoardCodes(width: number, height: number, boardCodes: number[]): number[] {
+function encodeReplayV1PackedBoardCodes(
+  width: number,
+  height: number,
+  boardCodes: number[],
+): number[] {
   const cellCount = width * height;
   if (!Array.isArray(boardCodes) || boardCodes.length !== cellCount) {
     throw "Invalid replay v1 checkpoint board codes";
@@ -254,7 +291,12 @@ function encodeReplayV1PackedBoardCodes(width: number, height: number, boardCode
   const out = new Uint8Array(totalBytes);
   let bitCursor = 0;
   for (let i = 0; i < boardCodes.length; i += 1) {
-    const code = assertIntegerRange(Number(boardCodes[i]), 0, 31, "Invalid replay v1 checkpoint board code");
+    const code = assertIntegerRange(
+      Number(boardCodes[i]),
+      0,
+      31,
+      "Invalid replay v1 checkpoint board code",
+    );
     for (let bit = 0; bit < 5; bit += 1) {
       if (((code >> bit) & 1) === 0) continue;
       const targetBit = bitCursor + bit;
@@ -267,11 +309,16 @@ function encodeReplayV1PackedBoardCodes(width: number, height: number, boardCode
   return Array.from(out);
 }
 
-function decodeReplayV1PackedBoardCodes(width: number, height: number, payload: Uint8Array): number[] {
+function decodeReplayV1PackedBoardCodes(
+  width: number,
+  height: number,
+  payload: Uint8Array,
+): number[] {
   const cellCount = width * height;
   const totalBits = cellCount * 5;
   const totalBytes = Math.ceil(totalBits / 8);
-  if (payload.length !== totalBytes) throw "Invalid replay v1 checkpoint payload length";
+  if (payload.length !== totalBytes)
+    throw "Invalid replay v1 checkpoint payload length";
   const out: number[] = [];
   let bitCursor = 0;
   for (let i = 0; i < cellCount; i += 1) {
@@ -289,15 +336,35 @@ function decodeReplayV1PackedBoardCodes(width: number, height: number, payload: 
   return out;
 }
 
-function encodeReplayV1Record(width: number, height: number, record: ReplayV1Record): number[] {
+function encodeReplayV1Record(
+  width: number,
+  height: number,
+  record: ReplayV1Record,
+): number[] {
   if (!record || typeof record !== "object") throw "Invalid replay v1 record";
   if (record.kind === "move") {
-    const dir = assertIntegerRange(record.dir, 0, 7, "Invalid replay v1 move direction");
-    const spawnIndex = assertIntegerRange(record.spawnIndex, 0, width * height - 1, "Invalid replay v1 spawn index");
-    const spawnValueBit = assertIntegerRange(record.spawnValueBit, 0, 1, "Invalid replay v1 spawn value bit");
+    const dir = assertIntegerRange(
+      record.dir,
+      0,
+      7,
+      "Invalid replay v1 move direction",
+    );
+    const spawnIndex = assertIntegerRange(
+      record.spawnIndex,
+      0,
+      width * height - 1,
+      "Invalid replay v1 spawn index",
+    );
+    const spawnValueBit = assertIntegerRange(
+      record.spawnValueBit,
+      0,
+      1,
+      "Invalid replay v1 spawn value bit",
+    );
     const delta = encodeUleb128(record.deltaMs);
     if (dir <= 3 && spawnIndex <= 15) {
-      const byte0 = (dir & 0x03) | ((spawnIndex & 0x0f) << 2) | ((spawnValueBit & 1) << 6);
+      const byte0 =
+        (dir & 0x03) | ((spawnIndex & 0x0f) << 2) | ((spawnValueBit & 1) << 6);
       return [byte0, ...delta];
     }
     return [
@@ -305,7 +372,7 @@ function encodeReplayV1Record(width: number, height: number, record: ReplayV1Rec
       dir & 0xff,
       ...encodeUleb128(spawnIndex),
       spawnValueBit & 1,
-      ...delta
+      ...delta,
     ];
   }
 
@@ -314,19 +381,42 @@ function encodeReplayV1Record(width: number, height: number, record: ReplayV1Rec
   }
 
   if (record.kind === "undon") {
-    const undoCount = assertIntegerRange(record.undoCount, 1, 0x7fffffff, "Invalid replay v1 undo count");
-    return [REPLAY_V1_RECORD_UNDON, ...encodeUleb128(undoCount), ...encodeUleb128(record.deltaMs)];
+    const undoCount = assertIntegerRange(
+      record.undoCount,
+      1,
+      0x7fffffff,
+      "Invalid replay v1 undo count",
+    );
+    return [
+      REPLAY_V1_RECORD_UNDON,
+      ...encodeUleb128(undoCount),
+      ...encodeUleb128(record.deltaMs),
+    ];
   }
 
   if (record.kind === "checkpoint") {
-    const packed = encodeReplayV1PackedBoardCodes(width, height, record.boardCodes);
+    const packed = encodeReplayV1PackedBoardCodes(
+      width,
+      height,
+      record.boardCodes,
+    );
     return [REPLAY_V1_RECORD_CHECKPOINT, ...packed];
   }
 
   if (record.kind === "ext") {
-    const extType = assertIntegerRange(record.extType, 0, 0x7fffffff, "Invalid replay v1 ext type");
+    const extType = assertIntegerRange(
+      record.extType,
+      0,
+      0x7fffffff,
+      "Invalid replay v1 ext type",
+    );
     const payload = Array.from(toUint8Array(record.payload || []));
-    return [REPLAY_V1_RECORD_EXT, ...encodeUleb128(extType), ...encodeUleb128(payload.length), ...payload];
+    return [
+      REPLAY_V1_RECORD_EXT,
+      ...encodeUleb128(extType),
+      ...encodeUleb128(payload.length),
+      ...payload,
+    ];
   }
 
   if (record.kind === "end") {
@@ -337,12 +427,26 @@ function encodeReplayV1Record(width: number, height: number, record: ReplayV1Rec
 }
 
 export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
-  const width = assertIntegerRange(Number(input.width), 1, 15, "Invalid replay v1 board width");
-  const height = assertIntegerRange(Number(input.height), 1, 15, "Invalid replay v1 board height");
+  const width = assertIntegerRange(
+    Number(input.width),
+    1,
+    15,
+    "Invalid replay v1 board width",
+  );
+  const height = assertIntegerRange(
+    Number(input.height),
+    1,
+    15,
+    "Invalid replay v1 board height",
+  );
   const initTiles = Array.isArray(input.initTiles) ? input.initTiles : [];
   const records = Array.isArray(input.records) ? input.records : [];
-  const hasStartUnixMs = Number.isFinite(input.startUnixMs) && Number(input.startUnixMs) >= 0;
-  const rawFlags = typeof input.flags === "number" && Number.isInteger(input.flags) ? input.flags : 0;
+  const hasStartUnixMs =
+    Number.isFinite(input.startUnixMs) && Number(input.startUnixMs) >= 0;
+  const rawFlags =
+    typeof input.flags === "number" && Number.isInteger(input.flags)
+      ? input.flags
+      : 0;
   let flags = rawFlags & 0xff;
   if (hasStartUnixMs) {
     flags |= REPLAY_V1_FLAG_HAS_START_UNIX_MS;
@@ -371,7 +475,14 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
   appendBytes(chunks, [82, 80, 76, 49]); // RPL1
   appendBytes(chunks, [(width & 0x0f) | ((height & 0x0f) << 4)]);
   appendBytes(chunks, [flags & 0xff]);
-  appendBytes(chunks, [assertIntegerRange(initTiles.length, 0, 255, "Too many replay v1 init tiles")]);
+  appendBytes(chunks, [
+    assertIntegerRange(
+      initTiles.length,
+      0,
+      255,
+      "Too many replay v1 init tiles",
+    ),
+  ]);
 
   if (hasStartUnixMs) {
     appendBytes(chunks, encodeUleb128(Number(input.startUnixMs)));
@@ -383,9 +494,14 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
       Number(tile && tile.cellIndex),
       0,
       width * height - 1,
-      "Invalid replay v1 init tile cell index"
+      "Invalid replay v1 init tile cell index",
     );
-    const valueBit = assertIntegerRange(Number(tile && tile.valueBit), 0, 1, "Invalid replay v1 init tile value bit");
+    const valueBit = assertIntegerRange(
+      Number(tile && tile.valueBit),
+      0,
+      1,
+      "Invalid replay v1 init tile value bit",
+    );
     if ((flags & REPLAY_V1_FLAG_EXTENDED_INIT_TILES) !== 0) {
       appendBytes(chunks, encodeUleb128((cellIndex << 1) | (valueBit & 1)));
     } else {
@@ -409,31 +525,97 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
 }
 
 function encodeReplayV1BytesAsBase64(bytes: Uint8Array): string {
-  const btoaLike = (globalThis as unknown as { btoa?: (value: string) => string }).btoa;
+  const btoaLike = (
+    globalThis as unknown as { btoa?: (value: string) => string }
+  ).btoa;
   if (typeof btoaLike === "function") {
     let binary = "";
     const chunkSize = 0x8000;
     for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+      binary += String.fromCharCode(
+        ...bytes.subarray(offset, offset + chunkSize),
+      );
     }
     return btoaLike(binary);
   }
-  const BufferLike = (globalThis as unknown as {
-    Buffer?: { from: (value: Uint8Array) => { toString: (encoding: string) => string } };
-  }).Buffer;
+  const BufferLike = (
+    globalThis as unknown as {
+      Buffer?: {
+        from: (value: Uint8Array) => { toString: (encoding: string) => string };
+      };
+    }
+  ).Buffer;
   if (BufferLike) return BufferLike.from(bytes).toString("base64");
   throw "Base64 encoder is unavailable";
 }
 
-export function encodeReplayV1Base64(input: ReplayV1EncodeInput): string {
-  return REPLAY_V1_BASE64_PREFIX + encodeReplayV1BytesAsBase64(encodeReplayV1Rpl(input));
+function decodeReplayV1Base64Bytes(encoded: string): Uint8Array {
+  const atobLike = (
+    globalThis as unknown as { atob?: (value: string) => string }
+  ).atob;
+  if (typeof atobLike === "function") {
+    const binary = atobLike(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index) & 0xff;
+    }
+    return bytes;
+  }
+  const BufferLike = (
+    globalThis as unknown as {
+      Buffer?: { from: (value: string, encoding: string) => Uint8Array };
+    }
+  ).Buffer;
+  if (BufferLike) return new Uint8Array(BufferLike.from(encoded, "base64"));
+  throw "Base64 decoder is unavailable";
 }
 
-export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array): ReplayV1DecodedFile {
+export function encodeReplayV1Base64(input: ReplayV1EncodeInput): string {
+  return (
+    REPLAY_V1_BASE64_PREFIX +
+    encodeReplayV1BytesAsBase64(encodeReplayV1Rpl(input))
+  );
+}
+
+export function decodeReplayV1Base64(
+  replayString: string,
+): ReplayV1DecodedFile {
+  if (
+    typeof replayString !== "string" ||
+    !replayString.startsWith(REPLAY_V1_BASE64_PREFIX)
+  ) {
+    throw new Error("Invalid replay v1 base64 envelope");
+  }
+  const encoded = replayString.slice(REPLAY_V1_BASE64_PREFIX.length);
+  const canonicalBase64 =
+    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
+  if (!encoded || !canonicalBase64.test(encoded)) {
+    throw new Error("Invalid replay v1 base64 payload");
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = decodeReplayV1Base64Bytes(encoded);
+  } catch (_error) {
+    throw new Error("Invalid replay v1 base64 payload");
+  }
+  if (encodeReplayV1BytesAsBase64(bytes) !== encoded) {
+    throw new Error("Invalid replay v1 base64 payload");
+  }
+  return decodeReplayV1Rpl(bytes);
+}
+
+export function decodeReplayV1Rpl(
+  bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array,
+): ReplayV1DecodedFile {
   const bytes = toUint8Array(bytesLike);
   if (bytes.length < 11) throw "Invalid replay v1 payload length";
 
-  if (bytes[0] !== 82 || bytes[1] !== 80 || bytes[2] !== 76 || bytes[3] !== 49) {
+  if (
+    bytes[0] !== 82 ||
+    bytes[1] !== 80 ||
+    bytes[2] !== 76 ||
+    bytes[3] !== 49
+  ) {
     throw "Invalid replay v1 magic";
   }
 
@@ -452,7 +634,8 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
     ((bytes[crcOffset + 2] & 0xff) << 16) |
     ((bytes[crcOffset + 3] & 0xff) << 24);
   const computedCrc32 = computeCrc32(bytes.subarray(0, crcOffset));
-  if ((expectedCrc32 >>> 0) !== (computedCrc32 >>> 0)) throw "Replay v1 CRC32 mismatch";
+  if (expectedCrc32 >>> 0 !== computedCrc32 >>> 0)
+    throw "Replay v1 CRC32 mismatch";
 
   let offset = 7;
   let startUnixMs: number | null = null;
@@ -470,20 +653,25 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
       const encodedTile = decoded.value;
       const cellIndex = encodedTile >>> 1;
       const valueBit = (encodedTile & 1) as 0 | 1;
-      if (!Number.isInteger(cellIndex) || cellIndex < 0 || cellIndex >= width * height) {
+      if (
+        !Number.isInteger(cellIndex) ||
+        cellIndex < 0 ||
+        cellIndex >= width * height
+      ) {
         throw "Invalid replay v1 init tile cell index";
       }
       initTiles.push({
         cellIndex,
-        valueBit
+        valueBit,
       });
     } else {
-      if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 init tiles";
+      if (offset >= crcOffset)
+        throw "Unexpected EOF while decoding replay v1 init tiles";
       const token = bytes[offset];
       offset += 1;
       initTiles.push({
         cellIndex: token & 0x0f,
-        valueBit: ((token >> 4) & 1) as 0 | 1
+        valueBit: ((token >> 4) & 1) as 0 | 1,
       });
     }
   }
@@ -501,7 +689,7 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
         dir: tag & 0x03,
         spawnIndex: (tag >> 2) & 0x0f,
         spawnValueBit: ((tag >> 6) & 1) as 0 | 1,
-        deltaMs: deltaDecoded.value
+        deltaMs: deltaDecoded.value,
       });
       continue;
     }
@@ -512,7 +700,7 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
       offset = deltaDecoded.nextOffset;
       records.push({
         kind: "undo1",
-        deltaMs: deltaDecoded.value
+        deltaMs: deltaDecoded.value,
       });
       continue;
     }
@@ -525,7 +713,7 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
       records.push({
         kind: "undon",
         undoCount: undoCountDecoded.value,
-        deltaMs: deltaDecoded.value
+        deltaMs: deltaDecoded.value,
       });
       continue;
     }
@@ -533,12 +721,13 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
     if (tag === REPLAY_V1_RECORD_CHECKPOINT) {
       offset += 1;
       const payloadEnd = offset + checkpointBytes;
-      if (payloadEnd > crcOffset) throw "Unexpected EOF while decoding replay v1 checkpoint";
+      if (payloadEnd > crcOffset)
+        throw "Unexpected EOF while decoding replay v1 checkpoint";
       const payload = bytes.subarray(offset, payloadEnd);
       offset = payloadEnd;
       records.push({
         kind: "checkpoint",
-        boardCodes: decodeReplayV1PackedBoardCodes(width, height, payload)
+        boardCodes: decodeReplayV1PackedBoardCodes(width, height, payload),
       });
       continue;
     }
@@ -549,13 +738,14 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
       const extLenDecoded = decodeUleb128(bytes, extTypeDecoded.nextOffset);
       offset = extLenDecoded.nextOffset;
       const payloadEnd = offset + extLenDecoded.value;
-      if (payloadEnd > crcOffset) throw "Unexpected EOF while decoding replay v1 ext payload";
+      if (payloadEnd > crcOffset)
+        throw "Unexpected EOF while decoding replay v1 ext payload";
       const payload = bytes.subarray(offset, payloadEnd);
       offset = payloadEnd;
       records.push({
         kind: "ext",
         extType: extTypeDecoded.value,
-        payload: payload.slice()
+        payload: payload.slice(),
       });
       continue;
     }
@@ -568,20 +758,28 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
 
     if (tag === REPLAY_V1_RECORD_MOVE8) {
       offset += 1;
-      if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 move8";
+      if (offset >= crcOffset)
+        throw "Unexpected EOF while decoding replay v1 move8";
       const dir = bytes[offset] & 0xff;
       offset += 1;
-      if (!Number.isInteger(dir) || dir < 0 || dir > 7) throw "Invalid replay v1 move8 direction";
+      if (!Number.isInteger(dir) || dir < 0 || dir > 7)
+        throw "Invalid replay v1 move8 direction";
       const spawnIndexDecoded = decodeUleb128(bytes, offset);
       offset = spawnIndexDecoded.nextOffset;
       const spawnIndex = spawnIndexDecoded.value;
-      if (!Number.isInteger(spawnIndex) || spawnIndex < 0 || spawnIndex >= width * height) {
+      if (
+        !Number.isInteger(spawnIndex) ||
+        spawnIndex < 0 ||
+        spawnIndex >= width * height
+      ) {
         throw "Invalid replay v1 move8 spawn index";
       }
-      if (offset >= crcOffset) throw "Unexpected EOF while decoding replay v1 move8 value bit";
+      if (offset >= crcOffset)
+        throw "Unexpected EOF while decoding replay v1 move8 value bit";
       const spawnValueBit = bytes[offset] & 0xff;
       offset += 1;
-      if (spawnValueBit !== 0 && spawnValueBit !== 1) throw "Invalid replay v1 move8 spawn value bit";
+      if (spawnValueBit !== 0 && spawnValueBit !== 1)
+        throw "Invalid replay v1 move8 spawn value bit";
       const deltaDecoded = decodeUleb128(bytes, offset);
       offset = deltaDecoded.nextOffset;
       records.push({
@@ -589,7 +787,7 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
         dir,
         spawnIndex,
         spawnValueBit: spawnValueBit as 0 | 1,
-        deltaMs: deltaDecoded.value
+        deltaMs: deltaDecoded.value,
       });
       continue;
     }
@@ -606,7 +804,7 @@ export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | U
     startUnixMs,
     records,
     expectedCrc32: expectedCrc32 >>> 0,
-    computedCrc32: computedCrc32 >>> 0
+    computedCrc32: computedCrc32 >>> 0,
   };
 }
 
@@ -614,7 +812,7 @@ export function replayV1InitTilesToBoard(
   width: number,
   height: number,
   initTiles: ReplayV1InitTile[],
-  ruleset: ReplayV1Ruleset = "pow2"
+  ruleset: ReplayV1Ruleset = "pow2",
 ): number[][] {
   const out: number[][] = [];
   for (let y = 0; y < height; y += 1) {
@@ -627,7 +825,12 @@ export function replayV1InitTilesToBoard(
   for (let i = 0; i < tiles.length; i += 1) {
     const tile = tiles[i];
     const cellIndex = Number(tile && tile.cellIndex);
-    if (!Number.isInteger(cellIndex) || cellIndex < 0 || cellIndex >= width * height) continue;
+    if (
+      !Number.isInteger(cellIndex) ||
+      cellIndex < 0 ||
+      cellIndex >= width * height
+    )
+      continue;
     const valueBit = Number(tile && tile.valueBit);
     const value = fib ? (valueBit === 1 ? 2 : 1) : valueBit === 1 ? 4 : 2;
     const x = cellIndex % width;
@@ -641,25 +844,28 @@ export function replayV1BoardToInitTiles(
   width: number,
   height: number,
   board: number[][],
-  ruleset: ReplayV1Ruleset = "pow2"
+  ruleset: ReplayV1Ruleset = "pow2",
 ): ReplayV1InitTile[] {
-  if (!Array.isArray(board) || board.length !== height) throw "Invalid replay v1 board";
+  if (!Array.isArray(board) || board.length !== height)
+    throw "Invalid replay v1 board";
   const initTiles: ReplayV1InitTile[] = [];
   const fib = ruleset === "fibonacci";
   for (let y = 0; y < height; y += 1) {
     const row = board[y];
-    if (!Array.isArray(row) || row.length !== width) throw "Invalid replay v1 board row";
+    if (!Array.isArray(row) || row.length !== width)
+      throw "Invalid replay v1 board row";
     for (let x = 0; x < width; x += 1) {
       const value = Number(row[x]);
       if (value === 0) continue;
       if (fib) {
-        if (value !== 1 && value !== 2) throw "Replay v1 init tile only supports value 1/2 in fibonacci mode";
+        if (value !== 1 && value !== 2)
+          throw "Replay v1 init tile only supports value 1/2 in fibonacci mode";
       } else if (value !== 2 && value !== 4) {
         throw "Replay v1 init tile only supports value 2/4";
       }
       initTiles.push({
         cellIndex: y * width + x,
-        valueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0
+        valueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0,
       });
     }
   }
@@ -669,21 +875,27 @@ export function replayV1BoardToInitTiles(
 export function replayV1RecordsToReplayActions(
   records: ReplayV1Record[],
   width: number,
-  ruleset: ReplayV1Ruleset = "pow2"
+  ruleset: ReplayV1Ruleset = "pow2",
 ): ReplayV1DecodedActions {
   const replayMoves: Array<number | unknown[]> = [];
-  const replaySpawns: Array<{ x: number; y: number; value: number } | null> = [];
+  const replaySpawns: Array<{ x: number; y: number; value: number } | null> =
+    [];
   const source = Array.isArray(records) ? records : [];
   const fib = ruleset === "fibonacci";
   let exactSpawnValue: number | null = null;
   for (let i = 0; i < source.length; i += 1) {
     const record = source[i];
     if (!record) {
-      if (exactSpawnValue !== null) throw "Replay v1 exact spawn extension crossed a record";
+      if (exactSpawnValue !== null)
+        throw "Replay v1 exact spawn extension crossed a record";
       continue;
     }
-    if (record.kind === "ext" && record.extType === REPLAY_V1_EXT_POW2_EXACT_SPAWN) {
-      if (exactSpawnValue !== null) throw "Duplicate replay v1 exact spawn extension";
+    if (
+      record.kind === "ext" &&
+      record.extType === REPLAY_V1_EXT_POW2_EXACT_SPAWN
+    ) {
+      if (exactSpawnValue !== null)
+        throw "Duplicate replay v1 exact spawn extension";
       if (fib) throw "Replay v1 exact spawn extension requires pow2 rules";
       const payload = toUint8Array(record.payload || []);
       if (payload.length !== 1 || !isReplayV1Pow2ExactSpawnValue(payload[0])) {
@@ -712,7 +924,7 @@ export function replayV1RecordsToReplayActions(
                 : 1
               : record.spawnValueBit === 1
                 ? 4
-                : 2
+                : 2,
       });
       exactSpawnValue = null;
       continue;
@@ -729,7 +941,8 @@ export function replayV1RecordsToReplayActions(
       }
     }
   }
-  if (exactSpawnValue !== null) throw "Dangling replay v1 exact spawn extension";
+  if (exactSpawnValue !== null)
+    throw "Dangling replay v1 exact spawn extension";
   return { replayMoves, replaySpawns };
 }
 
@@ -740,13 +953,18 @@ export function encodeReplay128(code: number): string {
   if (code < REPLAY128_ASCII_COUNT) {
     return String.fromCharCode(REPLAY128_ASCII_START + code);
   }
-  return String.fromCharCode(REPLAY128_EXTRA_CODES[code - REPLAY128_ASCII_COUNT]);
+  return String.fromCharCode(
+    REPLAY128_EXTRA_CODES[code - REPLAY128_ASCII_COUNT],
+  );
 }
 
 export function decodeReplay128(char: string): number {
   if (!char || char.length !== 1) throw "Invalid replay char";
   const code = char.charCodeAt(0);
-  if (code >= REPLAY128_ASCII_START && code < REPLAY128_ASCII_START + REPLAY128_ASCII_COUNT) {
+  if (
+    code >= REPLAY128_ASCII_START &&
+    code < REPLAY128_ASCII_START + REPLAY128_ASCII_COUNT
+  ) {
     return code - REPLAY128_ASCII_START;
   }
   const extraIndex = REPLAY128_EXTRA_CODES.indexOf(code);
@@ -755,20 +973,24 @@ export function decodeReplay128(char: string): number {
 }
 
 export function encodeBoardV4(board: number[][]): string {
-  if (!Array.isArray(board) || board.length !== 4) throw "Invalid initial board";
+  if (!Array.isArray(board) || board.length !== 4)
+    throw "Invalid initial board";
   let out = "";
   for (let y = 0; y < 4; y += 1) {
-    if (!Array.isArray(board[y]) || board[y].length !== 4) throw "Invalid initial board row";
+    if (!Array.isArray(board[y]) || board[y].length !== 4)
+      throw "Invalid initial board row";
     for (let x = 0; x < 4; x += 1) {
       const value = board[y][x];
-      if (!Number.isInteger(value) || value < 0) throw "Invalid board tile value";
+      if (!Number.isInteger(value) || value < 0)
+        throw "Invalid board tile value";
       let exp = 0;
       if (value > 0) {
         const lg = Math.log(value) / Math.log(2);
         if (Math.floor(lg) !== lg) throw "Board tile is not power of two";
         exp = lg;
       }
-      if (exp < 0 || exp >= REPLAY128_TOTAL) throw "Board tile exponent too large";
+      if (exp < 0 || exp >= REPLAY128_TOTAL)
+        throw "Board tile exponent too large";
       out += encodeReplay128(exp);
     }
   }
@@ -776,7 +998,8 @@ export function encodeBoardV4(board: number[][]): string {
 }
 
 export function decodeBoardV4(encoded: string): number[][] {
-  if (typeof encoded !== "string" || encoded.length !== 16) throw "Invalid encoded board";
+  if (typeof encoded !== "string" || encoded.length !== 16)
+    throw "Invalid encoded board";
   const rows: number[][] = [];
   let idx = 0;
   for (let y = 0; y < 4; y += 1) {
@@ -791,10 +1014,14 @@ export function decodeBoardV4(encoded: string): number[][] {
   return rows;
 }
 
-export function appendCompactMoveCode(input: { log?: unknown; rawCode?: unknown }): string {
+export function appendCompactMoveCode(input: {
+  log?: unknown;
+  rawCode?: unknown;
+}): string {
   const source = input || {};
   const rawCode = Number(source.rawCode);
-  if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127) throw "Invalid move code";
+  if (!Number.isInteger(rawCode) || rawCode < 0 || rawCode > 127)
+    throw "Invalid move code";
   const baseLog = typeof source.log === "string" ? source.log : "";
   if (rawCode < 127) return baseLog + encodeReplay128(rawCode);
   return baseLog + encodeReplay128(127) + encodeReplay128(0);
@@ -816,11 +1043,19 @@ export function appendCompactPracticeAction(input: {
   const source = input || {};
   const width = Number(source.width);
   const height = Number(source.height);
-  if (width !== 4 || height !== 4) throw "Compact practice replay only supports 4x4";
+  if (width !== 4 || height !== 4)
+    throw "Compact practice replay only supports 4x4";
 
   const x = Number(source.x);
   const y = Number(source.y);
-  if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 3) {
+  if (
+    !Number.isInteger(x) ||
+    !Number.isInteger(y) ||
+    x < 0 ||
+    x > 3 ||
+    y < 0 ||
+    y > 3
+  ) {
     throw "Invalid practice coords";
   }
 

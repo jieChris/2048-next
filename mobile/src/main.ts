@@ -1,27 +1,35 @@
+import { App } from "@capacitor/app";
+
 import "./styles/app-shell.css";
 
+import {
+  createAppController,
+  type AppController,
+  type AppNetworkMode,
+} from "./app/app-controller";
+import { bootstrapGuestAppRuntime } from "./app/app-runtime";
+import { renderAppTemplate } from "./app/templates";
+import { AppDatabase } from "./data/app-database";
 import { createTranslator, resolveSystemLocale } from "./i18n";
+import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
+import { createPlatformSecureStorage } from "./platform/secure-storage";
 import {
   createPreviewPrivacyRecord,
   parsePreviewPrivacyRecord,
-  PREVIEW_PRIVACY_STORAGE_KEY
+  PREVIEW_PRIVACY_STORAGE_KEY,
 } from "./privacy";
 import {
   resolveTheme,
   resolveThemePreference,
   THEME_STORAGE_KEY,
-  type ResolvedTheme
+  type ResolvedTheme,
 } from "./theme";
-
-type NetworkMode = "undecided" | "offline" | "online";
 
 function requireAppRoot(): HTMLDivElement {
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) throw new Error("Missing #app mount point");
   return root;
 }
-
-const appRoot = requireAppRoot();
 
 function safeRead(key: string): string | null {
   try {
@@ -39,7 +47,7 @@ function safeWrite(key: string, value: string): void {
   }
 }
 
-function resolveNetworkMode(value: string | null): NetworkMode {
+function resolveNetworkMode(value: string | null): AppNetworkMode {
   return value === "offline" || value === "online" ? value : "undecided";
 }
 
@@ -47,6 +55,7 @@ function themeColor(theme: ResolvedTheme): string {
   return theme === "dark" ? "#0e2025" : "#f3ede1";
 }
 
+const appRoot = requireAppRoot();
 const themePreference = resolveThemePreference(safeRead(THEME_STORAGE_KEY));
 const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -63,99 +72,78 @@ darkMedia.addEventListener("change", syncTheme);
 
 const locale = resolveSystemLocale(window.navigator.languages);
 const t = createTranslator(locale);
-let networkMode = resolveNetworkMode(
-  parsePreviewPrivacyRecord(safeRead(PREVIEW_PRIVACY_STORAGE_KEY))?.choice ?? null
+const initialNetworkMode = resolveNetworkMode(
+  parsePreviewPrivacyRecord(safeRead(PREVIEW_PRIVACY_STORAGE_KEY))?.choice ??
+    null,
 );
-
 document.documentElement.lang = locale;
+appRoot.innerHTML = renderAppTemplate(t);
+appRoot.setAttribute("aria-busy", "true");
 
-function brandBoard(): string {
-  return `
-    <div class="brand-board" aria-hidden="true">
-      <span>2</span><span>0</span><span>4</span><span>8</span>
-    </div>
-  `;
+function showBootView(route: "privacy" | "home"): void {
+  for (const view of appRoot.querySelectorAll<HTMLElement>("[data-app-view]")) {
+    view.hidden = view.dataset.appView !== route;
+  }
+  const shell = appRoot.querySelector<HTMLElement>("[data-app-shell]");
+  if (shell) {
+    shell.dataset.networkMode = initialNetworkMode;
+    shell.dataset.appRoute = route;
+  }
 }
 
-function renderPrivacy(): string {
-  return `
-    <section class="app-view privacy-view" data-app-view="privacy" aria-labelledby="privacy-title">
-      <div class="brand-lockup">
-        ${brandBoard()}
-        <div>
-          <p class="eyebrow">${t("privacy.eyebrow")}</p>
-          <h1 id="privacy-title">${t("privacy.title")}</h1>
-        </div>
-      </div>
-      <p class="preview-badge" role="note">${t("privacy.previewBadge")}</p>
-      <p class="privacy-copy">${t("privacy.body")}</p>
-      <aside class="privacy-notice">
-        <strong>${t("privacy.noticeTitle")}</strong>
-        <p>${t("privacy.noticeBody")}</p>
-      </aside>
-      <div class="privacy-actions">
-        <button class="action-button action-button--primary" type="button" data-consent="online">
-          ${t("privacy.onlineAction")}
-        </button>
-        <button class="action-button action-button--secondary" type="button" data-consent="offline">
-          ${t("privacy.offlineAction")}
-        </button>
-      </div>
-    </section>
-  `;
+showBootView(initialNetworkMode === "undecided" ? "privacy" : "home");
+
+let controller: AppController | null = null;
+
+function showBootstrapFailure(error: unknown): void {
+  const status = appRoot.querySelector<HTMLElement>("[data-app-status]");
+  if (!status) return;
+  status.hidden = false;
+  status.dataset.tone = "error";
+  status.dataset.errorCode =
+    error instanceof Error ? error.message.slice(0, 128) : "app_boot_failed";
+  status.textContent = t("status.storageError");
 }
 
-function renderHome(): string {
-  const networkLabel =
-    networkMode === "offline" ? t("home.offlineState") : t("home.onlineState");
-  return `
-    <section class="app-view home-view" data-app-view="home" aria-labelledby="home-title">
-      <main class="home-main">
-        <header class="home-header">
-          <div>
-            <p class="eyebrow">${t("home.eyebrow")}</p>
-            <h1 id="home-title">${t("home.title")}</h1>
-          </div>
-          <span class="network-chip">${networkLabel}</span>
-        </header>
-        <section class="empty-home" aria-labelledby="empty-home-title">
-          <div class="empty-board" aria-hidden="true">
-            <span>2</span><span>4</span><span>8</span><span>16</span>
-          </div>
-          <p class="eyebrow">${t("home.emptyLabel")}</p>
-          <h2 id="empty-home-title">${t("home.emptyTitle")}</h2>
-          <p>${t("home.emptyBody")}</p>
-        </section>
-      </main>
-      <nav class="bottom-nav" data-app-bottom-nav aria-label="${t("app.name")}">
-        <button type="button" aria-current="page">${t("nav.home")}</button>
-        <button type="button" disabled>${t("nav.modes")}</button>
-        <button type="button" disabled>${t("nav.records")}</button>
-        <button type="button" disabled>${t("nav.me")}</button>
-      </nav>
-    </section>
-  `;
-}
-
-function render(): void {
-  appRoot.innerHTML = `
-    <div class="app-shell" data-app-shell data-network-mode="${networkMode}">
-      ${networkMode === "undecided" ? renderPrivacy() : renderHome()}
-    </div>
-  `;
-
-  appRoot.querySelectorAll<HTMLButtonElement>("[data-consent]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const selection = button.dataset.consent;
-      if (selection !== "offline" && selection !== "online") return;
-      networkMode = selection;
-      safeWrite(
-        PREVIEW_PRIVACY_STORAGE_KEY,
-        JSON.stringify(createPreviewPrivacyRecord(selection, Date.now()))
-      );
-      render();
+async function start(): Promise<void> {
+  try {
+    const runtime = await bootstrapGuestAppRuntime({
+      database: new AppDatabase(),
+      secureStorage: createPlatformSecureStorage(),
     });
-  });
+    controller = createAppController({
+      root: appRoot,
+      runtime,
+      t,
+      locale,
+      networkMode: initialNetworkMode,
+      onNetworkModeChange(mode) {
+        safeWrite(
+          PREVIEW_PRIVACY_STORAGE_KEY,
+          JSON.stringify(createPreviewPrivacyRecord(mode, Date.now())),
+        );
+      },
+    });
+    appRoot.removeAttribute("aria-busy");
+
+    await bindAndroidAppLifecycle({
+      async onPause() {
+        await controller?.pause();
+      },
+      onResume() {
+        controller?.resume();
+      },
+      async onBackButton() {
+        if (!(await controller?.handleBack())) await App.exitApp();
+      },
+      onError({ error }) {
+        controller?.showFatal(error);
+      },
+    });
+  } catch (error) {
+    appRoot.removeAttribute("aria-busy");
+    showBootstrapFailure(error);
+  }
 }
 
-render();
+void start();

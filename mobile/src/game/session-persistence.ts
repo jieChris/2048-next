@@ -102,6 +102,10 @@ export class GameSessionPersistence {
     return this.#idle;
   }
 
+  get ownershipLost(): boolean {
+    return this.#ownershipLost;
+  }
+
   saveAction(
     logicalAtMs: number,
     wallClockAtMs: number,

@@ -1,0 +1,376 @@
+import type { Translator } from "../i18n";
+
+function brandBoard(): string {
+  return `
+    <div class="brand-board" aria-hidden="true">
+      <span>2</span><span>0</span><span>4</span><span>8</span>
+    </div>
+  `;
+}
+
+function bottomNavigation(t: Translator): string {
+  return `
+    <nav class="bottom-nav" data-app-bottom-nav aria-label="${t("app.name")}" hidden>
+      <button type="button" data-nav="home" aria-current="page">
+        <span class="bottom-nav__index" aria-hidden="true">01</span>
+        <span>${t("nav.home")}</span>
+      </button>
+      <button type="button" data-nav="modes">
+        <span class="bottom-nav__index" aria-hidden="true">02</span>
+        <span>${t("nav.modes")}</span>
+      </button>
+      <button type="button" data-nav="records">
+        <span class="bottom-nav__index" aria-hidden="true">03</span>
+        <span>${t("nav.records")}</span>
+      </button>
+      <button type="button" data-nav="me">
+        <span class="bottom-nav__index" aria-hidden="true">04</span>
+        <span>${t("nav.me")}</span>
+      </button>
+    </nav>
+  `;
+}
+
+export function renderAppTemplate(t: Translator): string {
+  return `
+    <div class="app-shell app-shell--precision" data-app-shell data-app-template="precision-v1" data-network-mode="undecided">
+      <div class="app-stage" data-app-stage>
+        <section class="app-view privacy-view" data-app-view="privacy" aria-labelledby="privacy-title">
+          <div class="privacy-view__rail" aria-hidden="true"><span>LOCAL</span><span>V1</span></div>
+          <div class="brand-lockup">
+            ${brandBoard()}
+            <div>
+              <p class="eyebrow">${t("privacy.eyebrow")}</p>
+              <h1 id="privacy-title">${t("privacy.title")}</h1>
+            </div>
+          </div>
+          <p class="preview-badge" role="note">${t("privacy.previewBadge")}</p>
+          <p class="privacy-copy">${t("privacy.body")}</p>
+          <aside class="privacy-notice instrument-card">
+            <strong>${t("privacy.noticeTitle")}</strong>
+            <p>${t("privacy.noticeBody")}</p>
+          </aside>
+          <div class="privacy-actions">
+            <button class="action-button action-button--primary" type="button" data-consent="online">
+              ${t("privacy.onlineAction")}
+            </button>
+            <button class="action-button action-button--secondary" type="button" data-consent="offline">
+              ${t("privacy.offlineAction")}
+            </button>
+            <button class="text-button" type="button" data-action="show-privacy-notes">
+              ${t("privacy.policyAction")}
+            </button>
+          </div>
+        </section>
+
+        <section class="app-view app-view--top home-view" data-app-view="home" data-top-level="true" aria-labelledby="home-title" hidden>
+          <main class="home-main">
+            <header class="app-bar home-header">
+              <div>
+                <p class="eyebrow">${t("home.eyebrow")}</p>
+                <h1 id="home-title">${t("home.title")}</h1>
+              </div>
+              <span class="network-chip" data-connectivity>${t("home.offlineState")}</span>
+            </header>
+
+            <section class="hero-console" aria-labelledby="quick-start-title">
+              <div class="hero-console__number" aria-hidden="true">01</div>
+              <p class="section-kicker">${t("home.modeSection")}</p>
+              <h2 id="quick-start-title" data-home-mode-title>${t("home.standardTitle")}</h2>
+              <p class="hero-console__meta" data-home-mode-meta>${t("home.standardMeta")}</p>
+              <p class="save-readout" data-home-save-copy hidden></p>
+              <button class="action-button action-button--primary" type="button" data-action="enter-standard" data-home-primary>
+                ${t("home.startAction")}
+              </button>
+            </section>
+
+            <section class="home-section" aria-labelledby="home-recent-title">
+              <div class="section-heading">
+                <div>
+                  <p class="section-kicker">${t("home.archiveKicker")}</p>
+                  <h2 id="home-recent-title">${t("home.recentTitle")}</h2>
+                </div>
+                <button class="text-button" type="button" data-nav="records">${t("nav.records")}</button>
+              </div>
+              <div class="record-list" data-home-recent-records></div>
+              <div class="empty-state compact-empty" data-home-recent-empty>
+                <span class="empty-state__mark" aria-hidden="true">◇</span>
+                <strong>${t("home.recentEmptyTitle")}</strong>
+                <p>${t("home.recentEmptyBody")}</p>
+              </div>
+            </section>
+          </main>
+        </section>
+
+        <section class="app-view app-view--top modes-view" data-app-view="modes" data-top-level="true" aria-labelledby="modes-title" hidden>
+          <header class="app-bar">
+            <div>
+              <p class="eyebrow">${t("modes.eyebrow")}</p>
+              <h1 id="modes-title">${t("modes.title")}</h1>
+            </div>
+            <span class="identity-chip">${t("records.guestOwner")}</span>
+          </header>
+          <p class="view-intro">${t("modes.body")}</p>
+          <div class="mode-list">
+            <button class="mode-card mode-card--available" type="button" data-mode-card data-mode="standard_4x4_pow2_no_undo" data-requires-auth="false">
+              <span class="mode-card__index" aria-hidden="true">01</span>
+              <span class="mode-card__copy">
+                <strong>${t("modes.standardTitle")}</strong>
+                <small>${t("modes.standardMeta")}</small>
+              </span>
+              <span class="mode-card__state" data-mode-state>${t("modes.standardState")}</span>
+            </button>
+            <button class="mode-card" type="button" data-mode-card data-mode="classic_4x4_pow2_undo" data-requires-auth="true" aria-describedby="classic-mode-lock">
+              <span class="mode-card__index" aria-hidden="true">02</span>
+              <span class="mode-card__copy">
+                <strong>${t("modes.classicTitle")}</strong>
+                <small>${t("modes.classicMeta")}</small>
+              </span>
+              <span class="mode-card__state mode-card__state--locked" id="classic-mode-lock">${t("modes.lockedState")}</span>
+            </button>
+            <button class="mode-card" type="button" data-mode-card data-mode="board_3x3_pow2_no_undo" data-requires-auth="true" aria-describedby="compact-mode-lock">
+              <span class="mode-card__index" aria-hidden="true">03</span>
+              <span class="mode-card__copy">
+                <strong>${t("modes.compactTitle")}</strong>
+                <small>${t("modes.compactMeta")}</small>
+              </span>
+              <span class="mode-card__state mode-card__state--locked" id="compact-mode-lock">${t("modes.lockedState")}</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="app-view app-view--top records-view" data-app-view="records" data-top-level="true" aria-labelledby="records-title" hidden>
+          <header class="app-bar">
+            <div>
+              <p class="eyebrow">${t("records.eyebrow")}</p>
+              <h1 id="records-title">${t("records.title")}</h1>
+            </div>
+            <button class="icon-button" type="button" data-action="open-leaderboard" aria-label="${t("records.leaderboardAction")}">
+              <span aria-hidden="true">#</span>
+            </button>
+          </header>
+          <div class="filter-deck" aria-label="${t("records.title")}">
+            <label>
+              <span>${t("records.ownerLabel")}</span>
+              <select data-record-owner>
+                <option value="guest">${t("records.guestOwner")}</option>
+              </select>
+            </label>
+            <label>
+              <span>${t("records.sortLabel")}</span>
+              <select data-record-sort>
+                <option value="time">${t("records.sortTime")}</option>
+                <option value="score">${t("records.sortScore")}</option>
+                <option value="boardSum">${t("records.sortBoardSum")}</option>
+              </select>
+            </label>
+          </div>
+          <div class="record-list" data-record-list></div>
+          <div class="empty-state" data-record-empty>
+            <span class="empty-state__mark" aria-hidden="true">□</span>
+            <strong>${t("records.emptyTitle")}</strong>
+            <p>${t("records.emptyBody")}</p>
+          </div>
+        </section>
+
+        <section class="app-view app-view--top me-view" data-app-view="me" data-top-level="true" aria-labelledby="me-title" hidden>
+          <header class="app-bar">
+            <div>
+              <p class="eyebrow">${t("me.eyebrow")}</p>
+              <h1 id="me-title">${t("me.title")}</h1>
+            </div>
+            <span class="identity-chip">${t("me.guestBadge")}</span>
+          </header>
+          <section class="account-plate instrument-card">
+            <span class="account-plate__avatar" aria-hidden="true">2</span>
+            <div>
+              <h2>${t("me.guestTitle")}</h2>
+              <p>${t("me.guestBody")}</p>
+            </div>
+            <button class="action-button action-button--secondary" type="button" data-action="open-auth-gate">${t("me.loginAction")}</button>
+          </section>
+          <div class="settings-list">
+            <button class="setting-link" type="button" data-action="open-achievements-gate">
+              <span class="setting-link__code" aria-hidden="true">A1</span>
+              <span><strong>${t("me.achievementsTitle")}</strong><small>${t("me.achievementsBody")}</small></span>
+              <span aria-hidden="true">→</span>
+            </button>
+            <div class="setting-link setting-link--static">
+              <span class="setting-link__code" aria-hidden="true">S1</span>
+              <span><strong>${t("me.appearanceTitle")}</strong><small>${t("me.settingsBody")}</small></span>
+              <output>${t("me.systemValue")}</output>
+            </div>
+            <div class="setting-link setting-link--static">
+              <span class="setting-link__code" aria-hidden="true">S2</span>
+              <span><strong>${t("me.languageTitle")}</strong><small>${t("me.settingsTitle")}</small></span>
+              <output data-language-value>简 / EN</output>
+            </div>
+            <div class="setting-link setting-link--static">
+              <span class="setting-link__code" aria-hidden="true">S3</span>
+              <span><strong>${t("me.soundTitle")}</strong><small>${t("me.hapticsTitle")}</small></span>
+              <output>${t("me.onValue")}</output>
+            </div>
+          </div>
+        </section>
+
+        <section class="app-view task-view game-view" data-app-view="game" aria-labelledby="game-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="leave-game" aria-label="${t("game.backLabel")}">←</button>
+            <div>
+              <p class="eyebrow" data-game-status>${t("game.status")}</p>
+              <h1 id="game-title">${t("game.title")}</h1>
+            </div>
+            <button class="icon-button" type="button" data-action="open-leaderboard" aria-label="${t("game.leaderboardLabel")}"><span aria-hidden="true">#</span></button>
+          </header>
+          <div class="game-readouts" aria-label="${t("game.title")}">
+            <div class="readout"><span>${t("game.score")}</span><strong data-game-score>0</strong></div>
+            <div class="readout"><span>${t("game.best")}</span><strong data-game-best>0</strong></div>
+            <div class="readout"><span>${t("game.time")}</span><strong data-game-time>00:00</strong></div>
+          </div>
+          <div class="game-board-frame">
+            <span class="frame-corner frame-corner--a" aria-hidden="true"></span>
+            <span class="frame-corner frame-corner--b" aria-hidden="true"></span>
+            <div data-game-board-root aria-label="${t("game.boardLabel")}"></div>
+          </div>
+          <p class="milestone-toast" data-game-milestone role="status" hidden>${t("game.milestone")}</p>
+          <div class="game-actions">
+            <button class="action-button action-button--secondary" type="button" data-action="restart-game">${t("game.restart")}</button>
+            <button class="text-button" type="button" data-action="open-leaderboard">${t("game.leaderboardAction")}</button>
+          </div>
+        </section>
+
+        <section class="app-view task-view result-view" data-app-view="result" aria-labelledby="result-title" hidden>
+          <header class="app-bar">
+            <div>
+              <p class="eyebrow">${t("result.eyebrow")}</p>
+              <h1 id="result-title">${t("result.title")}</h1>
+            </div>
+            <span class="local-state">${t("result.savedLocal")}</span>
+          </header>
+          <section class="result-score instrument-card">
+            <span>${t("result.finalScore")}</span>
+            <strong data-result-score>0</strong>
+          </section>
+          <div class="result-grid">
+            <div class="readout"><span>${t("result.bestTile")}</span><strong data-result-best-tile>0</strong></div>
+            <div class="readout"><span>${t("result.time")}</span><strong data-result-time>00:00</strong></div>
+            <div class="readout"><span>${t("result.steps")}</span><strong data-result-steps>0</strong></div>
+          </div>
+          <p class="local-note">${t("detail.localRecord")}</p>
+          <div class="result-actions">
+            <button class="action-button action-button--primary" type="button" data-action="result-again">${t("result.again")}</button>
+            <button class="action-button action-button--secondary" type="button" data-action="result-replay">${t("result.replay")}</button>
+            <button class="text-button" type="button" data-action="result-home">${t("result.home")}</button>
+          </div>
+        </section>
+
+        <section class="app-view task-view detail-view" data-app-view="detail" aria-labelledby="detail-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="close-detail" aria-label="${t("detail.backLabel")}">←</button>
+            <div>
+              <p class="eyebrow">${t("detail.eyebrow")}</p>
+              <h1 id="detail-title">${t("detail.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <section class="result-score result-score--compact instrument-card">
+            <span>${t("detail.localRecord")}</span>
+            <strong data-detail-score>0</strong>
+          </section>
+          <div class="result-grid result-grid--two">
+            <div class="readout"><span>${t("detail.bestTile")}</span><strong data-detail-best-tile>0</strong></div>
+            <div class="readout"><span>${t("detail.boardSum")}</span><strong data-detail-board-sum>0</strong></div>
+            <div class="readout"><span>${t("detail.time")}</span><strong data-detail-time>00:00</strong></div>
+            <div class="readout"><span>${t("detail.steps")}</span><strong data-detail-steps>0</strong></div>
+          </div>
+          <div class="detail-actions">
+            <button class="action-button action-button--primary" type="button" data-action="open-replay">${t("detail.replay")}</button>
+            <button class="danger-button" type="button" data-action="delete-record">${t("detail.delete")}</button>
+          </div>
+        </section>
+
+        <section class="app-view task-view replay-view" data-app-view="replay" aria-labelledby="replay-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="close-replay" aria-label="${t("replay.backLabel")}">←</button>
+            <div>
+              <p class="eyebrow">${t("replay.eyebrow")}</p>
+              <h1 id="replay-title">${t("replay.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <div class="game-board-frame replay-board-frame">
+            <span class="frame-corner frame-corner--a" aria-hidden="true"></span>
+            <span class="frame-corner frame-corner--b" aria-hidden="true"></span>
+            <div data-replay-board-root aria-label="${t("replay.boardLabel")}"></div>
+          </div>
+          <div class="replay-meter">
+            <label for="replay-progress">${t("replay.progressLabel")}</label>
+            <input id="replay-progress" type="range" min="0" max="0" value="0" data-replay-progress>
+            <output data-replay-progress-copy>0 / 0 · 00:00 / 00:00</output>
+          </div>
+          <div class="replay-controls">
+            <button class="action-button action-button--secondary" type="button" data-action="replay-previous">${t("replay.previous")}</button>
+            <button class="action-button action-button--primary" type="button" data-action="replay-play" aria-pressed="false">${t("replay.play")}</button>
+            <button class="action-button action-button--secondary" type="button" data-action="replay-next">${t("replay.next")}</button>
+          </div>
+          <button class="text-button replay-share" type="button" data-action="share-replay">${t("replay.share")}</button>
+        </section>
+      </div>
+
+      ${bottomNavigation(t)}
+
+      <div class="app-status" data-app-status role="status" aria-live="polite" aria-atomic="true" hidden>
+        <span data-app-status-copy></span>
+        <button type="button" data-action="dismiss-status" aria-label="${t("status.dismiss")}">×</button>
+      </div>
+
+      <dialog class="app-dialog" data-offline-gate aria-labelledby="offline-gate-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("gate.eyebrow")}</p>
+          <h2 id="offline-gate-title">${t("gate.title")}</h2>
+          <p>${t("gate.body")}</p>
+          <div class="dialog-actions">
+            <button class="action-button action-button--primary" type="button" data-action="close-offline-gate">${t("gate.stayOffline")}</button>
+            <button class="text-button" type="button" data-action="show-privacy-notes">${t("gate.reviewPrivacy")}</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="app-dialog" data-auth-gate aria-labelledby="auth-gate-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("authGate.eyebrow")}</p>
+          <h2 id="auth-gate-title">${t("authGate.title")}</h2>
+          <p>${t("authGate.body")}</p>
+          <div class="dialog-actions">
+            <button class="action-button action-button--primary" type="button" data-action="close-auth-gate">${t("authGate.action")}</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="app-dialog app-dialog--compact" data-restart-dialog aria-labelledby="restart-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("game.title")}</p>
+          <h2 id="restart-title">${t("restart.title")}</h2>
+          <p>${t("restart.body")}</p>
+          <div class="dialog-actions dialog-actions--split">
+            <button class="action-button action-button--secondary" type="button" data-action="cancel-restart">${t("restart.cancel")}</button>
+            <button class="action-button action-button--primary" type="button" data-action="confirm-restart">${t("restart.confirm")}</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="app-dialog app-dialog--compact" data-delete-dialog aria-labelledby="delete-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("delete.eyebrow")}</p>
+          <h2 id="delete-title">${t("delete.title")}</h2>
+          <p>${t("delete.body")}</p>
+          <div class="dialog-actions dialog-actions--split">
+            <button class="action-button action-button--secondary" type="button" data-action="cancel-delete">${t("delete.cancel")}</button>
+            <button class="danger-button" type="button" data-action="confirm-delete">${t("delete.confirm")}</button>
+          </div>
+        </div>
+      </dialog>
+
+    </div>
+  `;
+}
