@@ -148,6 +148,14 @@ async function auditAndroidProject({
     generatedConfig.android?.useLegacyBridge === false,
     "generated config must keep the legacy bridge disabled"
   );
+  invariant(
+    generatedConfig.plugins?.SystemBars?.insetsHandling === "css",
+    "generated config must keep SystemBars CSS inset handling enabled"
+  );
+  invariant(
+    generatedConfig.plugins?.StatusBar?.overlaysWebView === false,
+    "generated config must keep the legacy status bar outside the WebView"
+  );
 
   const generatedPlugins = await readJson(
     path.join(generatedAssets, "capacitor.plugins.json")

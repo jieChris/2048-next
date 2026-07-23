@@ -104,6 +104,19 @@ describe("Android native foundation", () => {
     );
   });
 
+  it("uses fitted insets before Android 15 and CSS insets from Android 15", () => {
+    const activity = compact(
+      readProjectFile("android/app/src/main/java/cn/next2048/app/MainActivity.java")
+    );
+
+    expect(activity).toMatch(
+      /if \(Build\.VERSION\.SDK_INT >= Build\.VERSION_CODES\.VANILLA_ICE_CREAM\) \{ return; \} try \{ config .*getPluginConfiguration\("SystemBars"\).*put\("insetsHandling", "disable"\)/u
+    );
+    expect(activity.indexOf("configureInsetsPolicy();")).toBeLessThan(
+      activity.indexOf("super.onCreate(savedInstanceState);")
+    );
+  });
+
   it("declares only internet and vibration permissions", () => {
     const manifests = [
       readProjectFile("android/app/src/main/AndroidManifest.xml"),

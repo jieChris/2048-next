@@ -12,6 +12,10 @@ interface PackageManifest {
 const packageManifest = JSON.parse(
   readFileSync(resolve(process.cwd(), "package.json"), "utf8")
 ) as PackageManifest;
+const mobileTokens = readFileSync(
+  resolve(process.cwd(), "mobile/src/styles/tokens.css"),
+  "utf8"
+);
 
 const approvedCapacitorPackages = [
   "@capacitor/android",
@@ -70,8 +74,24 @@ describe("mobile Capacitor configuration", () => {
       android: {
         allowMixedContent: false,
         useLegacyBridge: false
+      },
+      plugins: {
+        SystemBars: {
+          insetsHandling: "css"
+        },
+        StatusBar: {
+          overlaysWebView: false
+        }
       }
     });
+  });
+
+  it("consumes Capacitor safe-area values with browser env fallbacks", () => {
+    for (const edge of ["top", "right", "bottom", "left"]) {
+      expect(mobileTokens).toContain(
+        `--safe-area-${edge}: var(--safe-area-inset-${edge}, env(safe-area-inset-${edge}, 0px));`
+      );
+    }
   });
 
   it("cannot load a remote site as the application shell", () => {

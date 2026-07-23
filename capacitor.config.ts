@@ -7,6 +7,14 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     useLegacyBridge: false
+  },
+  plugins: {
+    SystemBars: {
+      insetsHandling: "css"
+    },
+    StatusBar: {
+      overlaysWebView: false
+    }
   }
 };
 
