@@ -320,13 +320,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 mode_bucket: "standard_no_undo",
                 mode_key: "standard_4x4_pow2_no_undo",
                 score: 512,
+                board_sum: 126,
                 best_tile: 64,
-                final_board: [
-                  [64, 32, 16, 8],
-                  [4, 2, 0, 0],
-                  [0, 0, 0, 0],
-                  [0, 0, 0, 0]
-                ],
                 duration_ms: 6000,
                 ended_at: "2026-03-14T10:00:00.000Z",
                 created_at: "2026-03-14 10:01:02"
@@ -360,10 +355,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
       "href",
-      "style/user_profile_page.css?v=20260721-record-sort-v10"
+      "style/user_profile_page.css?v=20260723-history-fixes-v11"
     );
 
-    await expect(page.locator(".user-record-mode").first()).toHaveText("经典4x4");
+    await expect(page.locator(".user-record-mode").first()).toHaveText("4x4（不可撤回）");
     await expect(page.locator("#user-col-board-sum")).toHaveText("盘面和");
     await expect(page.locator(".user-record-board-sum").first()).toHaveText("126");
     await expect(page.locator("#user-col-best-tile")).toHaveText("最大方块");
@@ -414,9 +409,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileWidth = await page.evaluate(() => ({
       client: document.documentElement.clientWidth,
-      scroll: document.documentElement.scrollWidth
+      scroll: document.documentElement.scrollWidth,
+      listMaxHeight: getComputedStyle(document.querySelector(".user-record-list")!).maxHeight,
+      listOverflowY: getComputedStyle(document.querySelector(".user-record-list")!).overflowY
     }));
     expect(mobileWidth.scroll).toBeLessThanOrEqual(mobileWidth.client);
+    expect(mobileWidth.listMaxHeight).toBe("none");
+    expect(mobileWidth.listOverflowY).toBe("visible");
   });
 
   test("user profile supports mode filter and expandable record detail", async ({ page }) => {
@@ -1032,6 +1031,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("own profile status filter requests deleted records and renders restore action", async ({ page }) => {
     const recordRequests: string[] = [];
+    let replayRequests = 0;
 
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-deleted-records");
@@ -1071,11 +1071,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 duration_ms: 18000,
                 ended_at: "2026-03-15T08:00:00.000Z",
                 created_at: "2026-03-15 08:00:00",
-                deleted_at: "2026-03-16 08:00:00",
-                replay_string: "replay_(!盲fC"
+                deleted_at: "2026-03-16 08:00:00"
               }
             ] : []
           })
+        });
+        return;
+      }
+      if (url.includes("/records/rec-deleted-1/replay")) {
+        replayRequests += 1;
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ success: false, error: "record not found" })
         });
         return;
       }
@@ -1103,7 +1111,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.locator(".user-record-row").first().click();
 
     await expect(page.locator(".user-record-score").first()).toHaveText("8192");
+    await expect(page.locator(".user-record-detail-error")).toHaveText("已删除记录需恢复后才能查看回放");
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
+    expect(replayRequests).toBe(0);
     expect(recordRequests.some((url) => new URL(url).searchParams.get("status") === "deleted")).toBeTruthy();
 
     await page.selectOption("#user-record-visibility", "all");
