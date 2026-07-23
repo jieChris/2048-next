@@ -87,12 +87,12 @@ npm run verify:refactor:ci
 
 - [x] 2.2A expand/audit：增加 nullable canonical 时间字段和成对约束，冻结迁移时间作为历史 fallback 截止点，并提供单一只读快照审计；不回填、不切读、不创建生产索引。score/speed 四周期基线、真实 PostgreSQL 执行、回填、重建和 rank 仍属于 2.2B 及后续硬门禁。
 
-- [ ] 后端为分数/竞速总、日、周、月榜返回绝对 `rank`。
-- [ ] 每用户最佳选择和全局顺序都落实已确认 tie-break；移除 duration/steps/updated_at 隐式裁决。
+- [x] 后端为分数/竞速总、日、周、月榜返回绝对 `rank`。
+- [x] 每用户最佳选择和全局顺序都落实已确认 tie-break；移除 duration/steps/updated_at 隐式裁决。
 - [ ] 以加法迁移为 ranked 记录增加冻结的 `canonical_ended_at` 与 `canonical_time_source`；版本化 ranked session start 接受稳定 `operation_id`，第一次处理原子创建并冻结 `started_at/seed/token`，同一 operation 在响应丢失后重试仍返回同一冻结结果，并在每次响应提供 `server_now` 或等价同步 checkpoint。App 的 ranked 计时/replay 从服务端逻辑锚点开始，不信任设备绝对墙钟。未来 ranked 写入只使用 `started_at + verifier duration` 并校验不晚于 `consumed_at`；新记录缺少锚点时返回可诊断完整性错误并拒绝入榜，不允许使用历史 fallback 或静默改成 normal。客户端 `ended_at` 不得控制榜单。
 - [ ] 迁移前只读盘点全部现有 ranked 记录与 session 关联：可信 begin、仅服务端接收时间、缺失/异常三类分别计数并抽样。按同一优先级回填并记录来源；无法关联 session 的历史行使用服务端 `verified_at/created_at`，不得猜测或继续信任客户端时间。
 - [ ] 保存回填前旧榜快照、记录/用户最佳基线与异常报告；在事务/可回退派生步骤中全量重建 `leaderboard_best`，核对行数、每用户最佳、周期边界和来源分布。不一致则恢复旧派生榜并停止部署，原始 records 不做破坏性回退。
-- [ ] 完全相同成绩和时间用稳定 user ID 形成唯一连续排名。
+- [x] 完全相同成绩和时间用稳定 user ID 形成唯一连续排名。
 - [ ] Web 与 App 都只渲染后端 rank；补同分、分页、重建和乱序上传测试。
 - [ ] 云记录软删除后在同一可靠流程中退出榜单/派生统计，恢复后重新计算；账号到期彻底清理后按剩余记录重建。补删除、恢复、清理失败重试和分页名次回归测试。
 
@@ -206,7 +206,7 @@ npm run android:check
 
 - [x] 多模式并行存档与 `last_closed_at` 选择。
 - [x] 重新开始只覆盖当前模式且无历史。
-- [ ] pending terminal 强杀恢复、撤回继续、确认后只一条记录。
+- [x] pending terminal 强杀恢复、撤回继续、确认后只一条记录。
 - [x] 终局事务各步骤模拟失败后可恢复且不重复。
 - [ ] 退出取消保持完整，确认退出清除账号 owner 并保留 guest。
 
