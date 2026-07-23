@@ -576,7 +576,7 @@ paths:
   /ranked-session/start:
     post:
       tags: [Ranked]
-      summary: Issue a ranked session seed and token.
+      summary: Idempotently issue a ranked session seed, token, and server clock anchor.
       requestBody:
         required: true
         content:
@@ -589,12 +589,31 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiEnvelope"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/RankedSession"
+                $ref: "#/components/schemas/RankedSessionStartResponse"
+        "400":
+          description: The mode or supplied operation ID is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankedSessionStartBadRequestError"
+        "401":
+          description: The auth token is missing, invalid, expired, or revoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankedSessionStartUnauthorizedError"
+        "409":
+          description: The operation ID is already bound to another ranked mode.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankedSessionStartConflictError"
+        "500":
+          description: The session could not be created or replayed safely.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RankedSessionStartServerError"
 
   /ranked-checkpoint:
     get:
@@ -1702,6 +1721,12 @@ components:
       additionalProperties: true
       required: [mode_key]
       properties:
+        operation_id:
+          type: string
+          minLength: 16
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$'
+          description: Stable client operation ID. Reusing it for the same user and mode replays the frozen session.
         mode_key:
           type: string
         mode:
@@ -1717,21 +1742,150 @@ components:
 
     RankedSession:
       type: object
-      additionalProperties: true
+      additionalProperties: false
+      required:
+        - ranked_session_id
+        - internal_id
+        - operation_id
+        - mode_key
+        - mode_bucket
+        - challenge_id
+        - seed
+        - ranked_session_token
+        - issued_at
+        - started_at
+        - started_at_ms
+        - server_now_ms
+        - expired_at
+        - expires_at
+        - exp
+        - status
       properties:
-        id:
+        ranked_session_id:
+          type: string
+          pattern: '^rch_[a-f0-9]{32}$'
+          description: Public ranked session ID; currently equal to challenge_id.
+        internal_id:
+          type: string
+          description: Opaque internal ranked session row ID.
+        operation_id:
+          type:
+            - string
+            - "null"
+          minLength: 16
+          maxLength: 128
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$'
+        mode_key:
+          type: string
+        mode_bucket:
           type: string
         challenge_id:
           type: string
+          pattern: '^rch_[a-f0-9]{32}$'
         seed:
-          type: string
+          type: integer
+          minimum: 0
+          maximum: 4294967295
         ranked_session_token:
           type: string
-        mode_key:
-          type: string
         issued_at:
+          type: integer
+          minimum: 0
+          description: Token issue time in Unix epoch seconds.
+        started_at:
+          type: integer
+          minimum: 0
+          description: Compatibility projection of started_at_ms in Unix epoch seconds.
+        started_at_ms:
+          type: integer
+          minimum: 0
+          description: Frozen server start anchor in Unix epoch milliseconds.
+        server_now_ms:
+          type: integer
+          minimum: 0
+          description: Server clock checkpoint for this response in Unix epoch milliseconds.
+        expired_at:
+          type: integer
+          minimum: 0
+          description: Session expiry in Unix epoch seconds.
+        expires_at:
+          type: integer
+          minimum: 0
+          description: Compatibility alias of expired_at.
+        exp:
+          type: integer
+          minimum: 0
+          description: Token expiry compatibility alias of expired_at.
+        status:
           type: string
-          format: date-time
+          enum: [started, consumed, expired, abandoned]
+
+    RankedSessionStartResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/RankedSession"
+
+    RankedSessionStartBadRequestError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+        code:
+          type: string
+          enum: [UNSUPPORTED_MODE, INVALID_OPERATION_ID]
+
+    RankedSessionStartUnauthorizedError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+        code:
+          type: string
+          enum: [UNAUTHORIZED, TOKEN_REVOKED]
+
+    RankedSessionStartConflictError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+        code:
+          type: string
+          enum: [RANKED_SESSION_OPERATION_CONFLICT]
+
+    RankedSessionStartServerError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+        code:
+          type: string
+          enum: [RANKED_SESSION_OPERATION_INTEGRITY_ERROR, RANKED_SESSION_START_FAILED]
 
     RankedCheckpoint:
       type: object

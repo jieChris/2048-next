@@ -928,7 +928,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Issue a ranked session seed and token. */
+        /** Idempotently issue a ranked session seed, token, and server clock anchor. */
         post: {
             parameters: {
                 query?: never;
@@ -948,9 +948,43 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiEnvelope"] & {
-                            data?: components["schemas"]["RankedSession"];
-                        };
+                        "application/json": components["schemas"]["RankedSessionStartResponse"];
+                    };
+                };
+                /** @description The mode or supplied operation ID is invalid. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RankedSessionStartBadRequestError"];
+                    };
+                };
+                /** @description The auth token is missing, invalid, expired, or revoked. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RankedSessionStartUnauthorizedError"];
+                    };
+                };
+                /** @description The operation ID is already bound to another ranked mode. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RankedSessionStartConflictError"];
+                    };
+                };
+                /** @description The session could not be created or replayed safely. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RankedSessionStartServerError"];
                     };
                 };
             };
@@ -2433,6 +2467,8 @@ export interface components {
             [key: string]: unknown;
         };
         RankedSessionStartRequest: {
+            /** @description Stable client operation ID. Reusing it for the same user and mode replays the frozen session. */
+            operation_id?: string;
             mode_key: string;
             mode?: string;
             mode_bucket?: string;
@@ -2443,15 +2479,65 @@ export interface components {
             [key: string]: unknown;
         };
         RankedSession: {
-            id?: string;
-            challenge_id?: string;
-            seed?: string;
-            ranked_session_token?: string;
-            mode_key?: string;
-            /** Format: date-time */
-            issued_at?: string;
-        } & {
-            [key: string]: unknown;
+            /** @description Public ranked session ID; currently equal to challenge_id. */
+            ranked_session_id: string;
+            /** @description Opaque internal ranked session row ID. */
+            internal_id: string;
+            operation_id: string | null;
+            mode_key: string;
+            mode_bucket: string;
+            challenge_id: string;
+            seed: number;
+            ranked_session_token: string;
+            /** @description Token issue time in Unix epoch seconds. */
+            issued_at: number;
+            /** @description Compatibility projection of started_at_ms in Unix epoch seconds. */
+            started_at: number;
+            /** @description Frozen server start anchor in Unix epoch milliseconds. */
+            started_at_ms: number;
+            /** @description Server clock checkpoint for this response in Unix epoch milliseconds. */
+            server_now_ms: number;
+            /** @description Session expiry in Unix epoch seconds. */
+            expired_at: number;
+            /** @description Compatibility alias of expired_at. */
+            expires_at: number;
+            /** @description Token expiry compatibility alias of expired_at. */
+            exp: number;
+            /** @enum {string} */
+            status: "started" | "consumed" | "expired" | "abandoned";
+        };
+        RankedSessionStartResponse: {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["RankedSession"];
+        };
+        RankedSessionStartBadRequestError: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @enum {string} */
+            code: "UNSUPPORTED_MODE" | "INVALID_OPERATION_ID";
+        };
+        RankedSessionStartUnauthorizedError: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @enum {string} */
+            code: "UNAUTHORIZED" | "TOKEN_REVOKED";
+        };
+        RankedSessionStartConflictError: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @enum {string} */
+            code: "RANKED_SESSION_OPERATION_CONFLICT";
+        };
+        RankedSessionStartServerError: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @enum {string} */
+            code: "RANKED_SESSION_OPERATION_INTEGRITY_ERROR" | "RANKED_SESSION_START_FAILED";
         };
         RankedCheckpoint: {
             mode_key: string;

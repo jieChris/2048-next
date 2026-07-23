@@ -204,6 +204,68 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).toContain("end_reason?: string;");
   });
 
+  it("freezes the idempotent ranked session start and clock-anchor contract", () => {
+    const spec = readSpec();
+    const rankedStartPath = readPathItem(spec, "/ranked-session/start");
+    const request = readSchema(spec, "RankedSessionStartRequest");
+    const session = readSchema(spec, "RankedSession");
+    const generatedPath = readGeneratedPathItem(readGeneratedTypes(), "/ranked-session/start");
+    const generated = readGeneratedTypes();
+
+    expect(request).toMatch(/operation_id:\n\s+type: string\n\s+minLength: 16\n\s+maxLength: 128/u);
+    expect(request).toContain("pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$'");
+    expect(session).toContain("additionalProperties: false");
+    [
+      "ranked_session_id",
+      "internal_id",
+      "operation_id",
+      "mode_key",
+      "mode_bucket",
+      "challenge_id",
+      "seed",
+      "ranked_session_token",
+      "issued_at",
+      "started_at",
+      "started_at_ms",
+      "server_now_ms",
+      "expired_at",
+      "expires_at",
+      "exp",
+      "status"
+    ].forEach((field) => {
+      expect(session).toContain(`- ${field}`);
+    });
+    expect(session).toMatch(/operation_id:\n\s+type:\n\s+- string\n\s+- "null"/u);
+    expect(session).toMatch(/seed:\n\s+type: integer\n\s+minimum: 0\n\s+maximum: 4294967295/u);
+    expect(session).toMatch(/status:\n\s+type: string\n\s+enum: \[started, consumed, expired, abandoned\]/u);
+    expect(session).not.toMatch(/\n\s+id:\n/u);
+
+    ["200", "400", "401", "409", "500"].forEach((status) => {
+      expect(rankedStartPath).toContain(`        "${status}":`);
+      expect(generatedPath).toContain(`${status}:`);
+    });
+    [
+      "UNSUPPORTED_MODE",
+      "INVALID_OPERATION_ID",
+      "UNAUTHORIZED",
+      "TOKEN_REVOKED",
+      "RANKED_SESSION_OPERATION_CONFLICT",
+      "RANKED_SESSION_OPERATION_INTEGRITY_ERROR",
+      "RANKED_SESSION_START_FAILED"
+    ].forEach((code) => {
+      expect(spec).toContain(code);
+      expect(generated).toContain(code);
+    });
+
+    expect(generated).toContain("operation_id?: string;");
+    expect(generated).toContain("operation_id: string | null;");
+    expect(generated).toContain("ranked_session_id: string;");
+    expect(generated).toContain("seed: number;");
+    expect(generated).toContain("started_at_ms: number;");
+    expect(generated).toContain("server_now_ms: number;");
+    expect(generated).toContain('status: "started" | "consumed" | "expired" | "abandoned";');
+  });
+
   it("keeps generated API types under an explicit drift check", () => {
     const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
       scripts?: Record<string, string>;
