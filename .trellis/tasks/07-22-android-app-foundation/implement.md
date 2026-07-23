@@ -89,7 +89,7 @@ npm run verify:refactor:ci
 
 - [ ] 后端为分数/竞速总、日、周、月榜返回绝对 `rank`。
 - [ ] 每用户最佳选择和全局顺序都落实已确认 tie-break；移除 duration/steps/updated_at 隐式裁决。
-- [ ] 以加法迁移为 ranked 记录增加冻结的 `canonical_ended_at` 与 `canonical_time_source`；版本化 ranked session start 接受稳定 `operation_id`，第一次处理原子创建并冻结 `started_at/seed/token`，同一 operation 在响应丢失后重试仍返回同一结果。App 的 ranked 计时/replay 从该锚点开始。未来 ranked 写入只使用 `started_at + verifier duration` 并校验不晚于 `consumed_at`；新记录缺少锚点时返回可诊断完整性错误并拒绝入榜，不允许使用历史 fallback 或静默改成 normal。客户端 `ended_at` 不得控制榜单。
+- [ ] 以加法迁移为 ranked 记录增加冻结的 `canonical_ended_at` 与 `canonical_time_source`；版本化 ranked session start 接受稳定 `operation_id`，第一次处理原子创建并冻结 `started_at/seed/token`，同一 operation 在响应丢失后重试仍返回同一冻结结果，并在每次响应提供 `server_now` 或等价同步 checkpoint。App 的 ranked 计时/replay 从服务端逻辑锚点开始，不信任设备绝对墙钟。未来 ranked 写入只使用 `started_at + verifier duration` 并校验不晚于 `consumed_at`；新记录缺少锚点时返回可诊断完整性错误并拒绝入榜，不允许使用历史 fallback 或静默改成 normal。客户端 `ended_at` 不得控制榜单。
 - [ ] 迁移前只读盘点全部现有 ranked 记录与 session 关联：可信 begin、仅服务端接收时间、缺失/异常三类分别计数并抽样。按同一优先级回填并记录来源；无法关联 session 的历史行使用服务端 `verified_at/created_at`，不得猜测或继续信任客户端时间。
 - [ ] 保存回填前旧榜快照、记录/用户最佳基线与异常报告；在事务/可回退派生步骤中全量重建 `leaderboard_best`，核对行数、每用户最佳、周期边界和来源分布。不一致则恢复旧派生榜并停止部署，原始 records 不做破坏性回退。
 - [ ] 完全相同成绩和时间用稳定 user ID 形成唯一连续排名。
@@ -200,6 +200,8 @@ npm run android:check
 - [ ] 绑定 Capacitor App 生命周期：每次有效移动已保存，pause/back 再 flush；进程恢复不依赖最后回调。
 - [ ] 计时采用单调时钟 + 墙钟锚点，后台/首页/排行榜时间连续且不可回拨。
 
+> 2026-07-23 编排模块状态：owner 五步清理/启动续清函数、逻辑时钟与设备墙钟 checkpoint 分离、per-session 串行持久化、所有权丢失熔断以及 pause/resume/back 总序 adapter 已完成并通过单元与 fake-indexeddb 集成测试。由于 `main.ts`、正式对局页和 Online Sync 尚不存在生产接线，上述 owner 清理、生命周期与计时交付项继续保持未勾选；只有阶段 5/6 的真实运行时和 Android 强杀测试闭合后才能勾选。
+
 最小测试：
 
 - [x] 多模式并行存档与 `last_closed_at` 选择。
@@ -243,7 +245,7 @@ npm run build:app
 - [ ] 曾登录且未主动退出的身份在断网或 Token 过期时仍可进入三个模式，但只能创建 normal 局；从未登录/已退出游客仍只开放标准 4×4。
 - [ ] 登录后从原目标模式继续；开放经典 4×4 可撤回和标准 3×3。
 - [ ] 经典模式实现 pending terminal 的“撤回继续 / 结束并结算”。
-- [ ] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 并安全保存后才创建、展示 ranked 棋盘，计时从服务端锚点连续计算。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
+- [ ] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 及 `server_now`（或等价同步 checkpoint）并安全保存后才创建、展示 ranked 棋盘，计时从服务端逻辑锚点连续计算，不把设备绝对墙钟偏差计入 duration。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
 - [ ] 排位 Token 以 challenge 安全保存；普通离开保留，重开/清除生成幂等 abandon。
 - [ ] 实现 records outbox、错误分类、退避、手动重试和上传状态。
 - [ ] normal 离线记录上传后只显示云历史，不进入榜单/排位成就。

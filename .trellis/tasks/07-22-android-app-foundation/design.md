@@ -1,6 +1,6 @@
 # Android App 技术设计
 
-> 状态：用户已于 2026-07-23 明确批准规划与低保真线框；阶段 1、2.1、3.1、3.2 已完成，阶段 2 与 3 并行推进，尚未进入正式移动业务页面实现。
+> 状态：用户已于 2026-07-23 明确批准规划与低保真线框；阶段 1、2.1、3.1–3.3 已完成，阶段 2 与 4 继续推进，尚未进入正式移动业务页面实现。
 
 ## 1. 设计结论
 
@@ -185,6 +185,8 @@ restoreGame(snapshot): GameState
 
 `saves` 至少保存 schema version、owner、mode、`active | pending_terminal` 生命周期、`ranked | normal` 对局类别、revision、`last_closed_at`、完整 GameState、计时锚点、撤回栈和回放状态。
 
+`last_closed_at` 是设备墙钟 checkpoint，只用于本机最近存档排序和跨进程计算非负墙钟增量；`GameSnapshot.savedAtMs` 属于对局逻辑时钟。两者不得复用同一语义或直接比较大小。设备墙钟恒定偏差不得被直接加到 ranked 的服务端 `started_at` 上。
+
 - 每次有效移动后串行异步保存最新 revision；旧 revision 不得覆盖新状态。
 - 进入后台、Android 返回和关闭对局时再执行一次强制 flush，但可靠性不能只依赖最后一次生命周期回调。
 - normal/游客局由第一次有效移动启动计时；ranked 局在棋盘展示前由幂等 session start 冻结服务端 `started_at`，App 收到并安全保存后才展示棋盘，显示时间从该锚点连续计算。两类计时在首页、排行榜和后台继续，使用进程内单调时钟与跨进程墙钟锚点组合；恢复时不允许时钟回拨减少已经累计的时间。
@@ -251,6 +253,7 @@ App 固定使用构建时注入的一个基址：release 为 Node/PostgreSQL HTT
 
 - 有本地存档：严格延续原 `ranked | normal` 类别，中途不切换。
 - 无存档且已同意联网、账号 Token 有效时，在展示棋盘前以稳定 `operation_id` 调用版本化 ranked session start。服务端第一次处理时原子创建 session 并冻结 `started_at/seed/token`，同一 operation 重试只返回原结果；App 安全保存成功后才构造并展示 ranked 棋盘。请求、重试或安全存储在有界等待内失败时不展示 ranked 棋盘，清理/让服务端 session 到期并直接创建 normal 局。棋盘一旦可操作，类别不再改变且所有滑动纯本地执行。
+- ranked session start 响应还必须提供 `server_now` 或等价的服务端同步 checkpoint，使 App 在不信任设备绝对墙钟的前提下建立当前逻辑时刻；该字段和本地请求单调时钟的使用方式须在阶段 6 合同测试中冻结。只返回 `started_at` 但随后与 `Date.now()` 取最大值不符合计时合同。
 - 曾登录且未主动退出但当前离线或 Token 无法 refresh 时，允许进入三个首版模式并立即创建 normal 局；从未登录或已主动退出的游客仍只能进入标准 4×4。
 - 其他情况立即创建 normal 局并明确标记，不等待无限重试。
 - 普通终局恢复联网后可提交 `/records`，但不带排位 Token，只形成云历史，不进入榜单或排位成就。

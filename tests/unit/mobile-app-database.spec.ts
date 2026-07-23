@@ -357,6 +357,27 @@ async function createLegacyV1Database(
 }
 
 describe("mobile AppDatabase", () => {
+  it("distinguishes an idempotent save from a genuinely older save", async () => {
+    const { database } = createDatabase("save-write-result");
+    const owner = "user:99" as const;
+    const modeKey = "standard_4x4_pow2_no_undo" as const;
+    const save = activeSave(owner, modeKey, 1, 100);
+
+    await expect(database.putSave(save)).resolves.toBe("written");
+    await expect(database.putSave(structuredClone(save))).resolves.toBe(
+      "unchanged",
+    );
+
+    const laterLogicalCheckpoint = structuredClone(save);
+    laterLogicalCheckpoint.snapshot.savedAtMs = 120;
+    await expect(database.putSave(laterLogicalCheckpoint)).resolves.toBe(
+      "written",
+    );
+    await expect(database.putSave(structuredClone(save))).resolves.toBe(
+      "stale",
+    );
+  });
+
   it("keeps one revisioned save per mode and selects the most recently closed mode", async () => {
     const { database } = createDatabase("multi-save");
     const owner = "user:1" as const;

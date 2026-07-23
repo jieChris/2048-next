@@ -60,8 +60,10 @@ export interface StoredGameSave {
   lifecycle: SaveLifecycle;
   gameKind: GameKind;
   revision: number;
+  /** Device wall-clock checkpoint used for recency and cross-process elapsed time. */
   lastClosedAt: number;
   rankedSessionId: string | null;
+  /** `savedAtMs` inside the snapshot belongs to the session's logical clock. */
   snapshot: GameSnapshot;
 }
 
@@ -1356,7 +1358,9 @@ export class AppDatabase {
     if (pending) (await pending).close();
   }
 
-  async putSave(save: StoredGameSave): Promise<"written" | "stale"> {
+  async putSave(
+    save: StoredGameSave,
+  ): Promise<"written" | "unchanged" | "stale"> {
     assertValidSave(save);
     const database = await this.#database();
     const transaction = database.transaction(
@@ -1417,7 +1421,19 @@ export class AppDatabase {
           ) {
             throw new AppDatabaseError("save_revision_conflict");
           }
-          if (normalizedExisting.save.lastClosedAt >= save.lastClosedAt) {
+          const sameWallCheckpoint =
+            normalizedExisting.save.lastClosedAt === save.lastClosedAt;
+          const sameLogicalCheckpoint =
+            normalizedExisting.save.snapshot.savedAtMs ===
+            save.snapshot.savedAtMs;
+          if (sameWallCheckpoint && sameLogicalCheckpoint) {
+            await completion;
+            return "unchanged";
+          }
+          if (
+            normalizedExisting.save.lastClosedAt > save.lastClosedAt ||
+            normalizedExisting.save.snapshot.savedAtMs > save.snapshot.savedAtMs
+          ) {
             await completion;
             return "stale";
           }
