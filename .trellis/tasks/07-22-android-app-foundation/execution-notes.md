@@ -5,6 +5,7 @@
 - 仓库存在 `.trellis/spec` 与 `.trellis/tasks`，但缺少技能约定的 `.trellis/scripts/task.py`，无法执行标准任务创建命令。采用最保守回退：按现有 `MM-DD-slug` 目录格式手工创建本规划任务；未启动实现，也未修改产品代码。
 - `trellis-before-dev` 约定的两仓库 `.trellis/scripts/get_context.py` 与 `.trellis/spec/guides/index.md` 均不存在。采用最保守回退：手工枚举并完整阅读前端现有三份 spec、后端现有两份 spec 与两仓库 `AGENTS.md`；未跳过任何已存在规范。
 - 已批准设计原写为“撤回恢复 RNG 步号、计时和回放游标”，但冻结既有 Web 行为与服务端 verifier 时确认 RPL1 将撤回视为动作：有效局面回退，已经经过的时间与动作流不回拨，并消耗一个 RNG action step。为避免破坏既有回放、排位验证和跨端确定性，采用最保守兼容规则并以共享黄金 fixture 固化；影响仅是撤回后的下一次出块不会复用被撤销分支的 RNG 位置，产品可见棋盘/分数/步数等状态仍正确恢复。
+- 已批准 Android 权限基线预期合并清单只有 `INTERNET` 与 `VIBRATE`，但 Capacitor 8.4.2 使用的 AndroidX Core 1.17.0 会为 `ContextCompat` 的非导出动态广播自动合并 `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`，并以 `protectionLevel=signature` 声明/自用。真实 debug APK 的 `apkanalyzer` 已确认该来源；强行通过 manifest removal 删除会破坏 API 29 兼容并削弱同签名隔离。采用最保守回退：允许且仅允许 `INTERNET`、`VIBRATE` 以及与当前 debug/release application ID 完全匹配、保护级别严格为 signature 的这一项自有权限；审计继续拒绝通知、存储及任何其他权限。影响是原“只有两项”的字面计数变为两项平台权限加一项应用私有签名权限，不扩大对系统或其他应用的数据访问能力。
 
 ## 调查记录
 
