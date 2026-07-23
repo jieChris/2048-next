@@ -210,6 +210,7 @@
       restoreOk: "记录已恢复",
       restoreFail: "恢复记录失败",
       deletedHint: "已删除，保留 3 天可恢复",
+      restoreReplayHint: "已删除记录需恢复后才能查看回放",
       colMode: "模式",
       colScore: "分数",
       colBoardSum: "盘面和",
@@ -304,6 +305,7 @@
       restoreOk: "Record restored",
       restoreFail: "Failed to restore record",
       deletedHint: "Deleted (recoverable within 3 days)",
+      restoreReplayHint: "Restore this deleted record to view its replay.",
       colMode: "Mode",
       colScore: "Score",
       colBoardSum: "Board Sum",
@@ -1058,7 +1060,7 @@
     var modeBucket = toText(source.mode_bucket).trim();
     if (currentLang !== "en") {
       if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
-        return "\u7ecf\u51784x4";
+        return "4x4\uff08\u4e0d\u53ef\u64a4\u56de\uff09";
       }
       if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
         return "4x4\u53ef\u64a4\u56de";
@@ -1066,7 +1068,7 @@
     }
     if (currentLang === "en") {
       if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
-        return "Classic 4x4";
+        return "4x4 (No Undo)";
       }
       if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
         return "4x4 Undo";
@@ -1249,6 +1251,7 @@
       candidate.mode = toText(fallback.mode || fallback.mode_bucket).trim();
       candidate.mode_key = toText(fallback.mode_key).trim();
       candidate.board_width = fallback.board_width;
+      candidate.board_sum = fallback.board_sum;
       candidate.board_height = fallback.board_height;
       candidate.score = fallback.score;
       candidate.best_tile = fallback.best_tile;
@@ -1265,6 +1268,7 @@
     }
     if (source.mode_key != null) candidate.mode_key = toText(source.mode_key).trim();
     if (source.board_width != null) candidate.board_width = source.board_width;
+    if (source.board_sum != null) candidate.board_sum = source.board_sum;
     if (source.board_height != null) candidate.board_height = source.board_height;
     if (source.score != null) candidate.score = source.score;
     if (source.best_tile != null) candidate.best_tile = source.best_tile;
@@ -1620,6 +1624,12 @@
     if (!recordId) return { error: "invalid record id" };
 
     var cached = recordDetailCache[recordId];
+    if (isDeletedRecord(record)) {
+      var deletedDetail = Object.assign({ loading: false }, normalizeRecordDetailPayload(record, record));
+      recordDetailCache[recordId] = deletedDetail;
+      return deletedDetail;
+    }
+
     if (cached && !cached.loading) return cached;
 
     var eagerLocalDetail = buildLocalRecordDetailFallback(record);
@@ -1838,27 +1848,29 @@
     var actions = global.document.createElement("div");
     actions.className = "user-record-detail-actions";
 
-    var replayBtn = global.document.createElement("button");
-    replayBtn.type = "button";
-    replayBtn.className = "replay-button user-replay-btn";
-    replayBtn.textContent = currentLang === "en" ? "Watch Replay" : "\u67e5\u770b\u56de\u653e";
-    replayBtn.addEventListener("click", function (eventLike) {
-      if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
-      openReplayByRecord(record, detail).catch(function (error) {
-        setTip(toText(error && error.message) || (currentLang === "en" ? "Replay open failed" : "\u6253\u5f00\u56de\u653e\u5931\u8d25"), "err");
+    if (!isDeletedRecord(record)) {
+      var replayBtn = global.document.createElement("button");
+      replayBtn.type = "button";
+      replayBtn.className = "replay-button user-replay-btn";
+      replayBtn.textContent = currentLang === "en" ? "Watch Replay" : "\u67e5\u770b\u56de\u653e";
+      replayBtn.addEventListener("click", function (eventLike) {
+        if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+        openReplayByRecord(record, detail).catch(function (error) {
+          setTip(toText(error && error.message) || (currentLang === "en" ? "Replay open failed" : "\u6253\u5f00\u56de\u653e\u5931\u8d25"), "err");
+        });
       });
-    });
-    actions.appendChild(replayBtn);
+      actions.appendChild(replayBtn);
 
-    var exportReplayBtn = global.document.createElement("button");
-    exportReplayBtn.type = "button";
-    exportReplayBtn.className = "replay-button user-replay-export-btn";
-    exportReplayBtn.textContent = t("exportReplayBtn");
-    exportReplayBtn.addEventListener("click", function (eventLike) {
-      if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
-      exportReplayByRecord(record, detail);
-    });
-    actions.appendChild(exportReplayBtn);
+      var exportReplayBtn = global.document.createElement("button");
+      exportReplayBtn.type = "button";
+      exportReplayBtn.className = "replay-button user-replay-export-btn";
+      exportReplayBtn.textContent = t("exportReplayBtn");
+      exportReplayBtn.addEventListener("click", function (eventLike) {
+        if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+        exportReplayByRecord(record, detail);
+      });
+      actions.appendChild(exportReplayBtn);
+    }
 
     if (isOwnProfile) {
       if (isDeletedRecord(record)) {
@@ -1909,6 +1921,13 @@
 
     meta.appendChild(actions);
     card.appendChild(meta);
+    if (isDeletedRecord(record)) {
+      var deletedReplayHint = global.document.createElement("div");
+      deletedReplayHint.className = "user-record-detail-error";
+      deletedReplayHint.textContent = t("restoreReplayHint");
+      card.appendChild(deletedReplayHint);
+      return detailHost;
+    }
     card.appendChild(createBoardGridNode(detail.final_board));
     return detailHost;
   }
