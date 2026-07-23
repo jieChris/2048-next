@@ -33,8 +33,21 @@ export interface JsonApiClientOptions {
   timeoutMs?: number;
 }
 
+export interface JsonApiResult {
+  ok: boolean;
+  status: number | null;
+  body: JsonRecord | null;
+  networkError: string | null;
+}
+
 export interface JsonApiClient {
   request: (path: string, options?: RequestInit) => Promise<JsonRecord>;
+  requestResult: (path: string, options?: RequestInit) => Promise<JsonApiResult>;
+}
+
+interface JsonApiExecution {
+  result: JsonApiResult;
+  legacyError: string | null;
 }
 
 const DEFAULT_REMOTE_API_BASE = "https://2048next.cn/api";
@@ -91,12 +104,95 @@ async function fetchWithTimeout(
     return fetchLike(url, init);
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   try {
     return await fetchLike(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw new Error("request_timeout");
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function normalizeHttpStatus(value: unknown): number | null {
+  const status = Number(value);
+  return Number.isInteger(status) && status >= 0 ? status : null;
+}
+
+function isSuccessfulHttpStatus(status: number | null): boolean {
+  return status === null || (status >= 200 && status < 300);
+}
+
+function createRequestHeaders(requestOptions: RequestInit, token?: string): Headers {
+  const headers = new Headers(requestOptions.headers || {});
+  if (token) headers.set("Authorization", "Bearer " + token);
+  if (shouldUseJsonContentType(requestOptions.body) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
+
+function createNetworkFailure(message: string): JsonApiExecution {
+  return {
+    result: { ok: false, status: null, body: null, networkError: message },
+    legacyError: message
+  };
+}
+
+async function executeJsonRequest(
+  bases: string[],
+  fetchLike: FetchLike | null,
+  token: string | undefined,
+  timeoutMs: number | undefined,
+  path: string,
+  requestOptions: RequestInit
+): Promise<JsonApiExecution> {
+  if (!fetchLike) return createNetworkFailure("fetch_unavailable");
+  let lastExecution = createNetworkFailure("api_unavailable");
+  for (const base of bases) {
+    const headers = createRequestHeaders(requestOptions, token);
+    const allowFallback = canTryNextApiBase(requestOptions, headers);
+    try {
+      const response = await fetchWithTimeout(
+        fetchLike,
+        base + path,
+        { ...requestOptions, headers },
+        timeoutMs
+      );
+      const status = normalizeHttpStatus(response.status);
+      const data = (await response.json().catch(() => null)) as JsonRecord | null;
+      if (data) {
+        const proxyUnavailable = isUnavailableProxyPayload(data);
+        lastExecution = {
+          result: {
+            ok: isSuccessfulHttpStatus(status),
+            status,
+            body: data,
+            networkError: null
+          },
+          legacyError: proxyUnavailable ? "api_unavailable" : null
+        };
+        if (proxyUnavailable && allowFallback) continue;
+        return lastExecution;
+      }
+      const responseError = toText(response.statusText || response.status);
+      lastExecution = {
+        result: { ok: isSuccessfulHttpStatus(status), status, body: null, networkError: null },
+        legacyError: responseError
+      };
+      if (!allowFallback) return lastExecution;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      lastExecution = createNetworkFailure(message);
+      if (!allowFallback) return lastExecution;
+    }
+  }
+  return lastExecution;
 }
 
 export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClient {
@@ -107,37 +203,29 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
 
   return {
     async request(path: string, requestOptions: RequestInit = {}) {
-      if (!fetchLike) {
-        return { success: false, error: "fetch_unavailable" };
+      const execution = await executeJsonRequest(
+        bases,
+        fetchLike,
+        options.token,
+        options.timeoutMs,
+        path,
+        requestOptions
+      );
+      if (execution.legacyError !== null) {
+        return { success: false, error: execution.legacyError };
       }
-      let lastError = "api_unavailable";
-      for (const base of bases) {
-        try {
-          const headers = new Headers(requestOptions.headers || {});
-          if (options.token) headers.set("Authorization", "Bearer " + options.token);
-          if (shouldUseJsonContentType(requestOptions.body) && !headers.has("Content-Type")) {
-            headers.set("Content-Type", "application/json");
-          }
-          const allowFallback = canTryNextApiBase(requestOptions, headers);
-          const response = await fetchWithTimeout(fetchLike, base + path, { ...requestOptions, headers }, options.timeoutMs);
-          const data = (await response.json().catch(() => null)) as JsonRecord | null;
-          if (data) {
-            if (isUnavailableProxyPayload(data)) {
-              lastError = "api_unavailable";
-              if (allowFallback) continue;
-            }
-            return data;
-          }
-          lastError = toText(response.statusText || response.status);
-          if (!allowFallback) break;
-        } catch (error) {
-          lastError = error instanceof Error ? error.message : String(error);
-          const headers = new Headers(requestOptions.headers || {});
-          if (options.token) headers.set("Authorization", "Bearer " + options.token);
-          if (!canTryNextApiBase(requestOptions, headers)) break;
-        }
-      }
-      return { success: false, error: lastError };
+      return execution.result.body || { success: false, error: "invalid_json_response" };
+    },
+    async requestResult(path: string, requestOptions: RequestInit = {}) {
+      const execution = await executeJsonRequest(
+        bases,
+        fetchLike,
+        options.token,
+        options.timeoutMs,
+        path,
+        requestOptions
+      );
+      return execution.result;
     }
   };
 }
