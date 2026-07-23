@@ -28,7 +28,7 @@
     "test:smoke:runtime-contract": "playwright test --config=playwright.config.ts tests/smoke/pages-runtime-contract.smoke.spec.ts",
     "test:smoke:replay-runtime": "playwright test --config=playwright.config.ts tests/smoke/pages-replay-runtime.smoke.spec.ts",
     "test:smoke:history-load": "playwright test --config=playwright.config.ts --workers=1 \"tests/smoke/history-records-.*\\.smoke\\.spec\\.ts\"",
-    "test:smoke:play-replay": "playwright test --config=playwright.config.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-replay-runtime.smoke.spec.ts",
+    "test:smoke:play-replay": "playwright test --config=playwright.config.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-replay-runtime.smoke.spec.ts tests/smoke/pages-game-session-parity.smoke.spec.ts",
     "test:smoke:recent-regression": "playwright test --config=playwright.config.ts tests/smoke/pages-play-modes.smoke.spec.ts tests/smoke/pages-replay-runtime.smoke.spec.ts \"tests/smoke/history-records-.*\\.smoke\\.spec\\.ts\"",
     "test:smoke:headed": "playwright test --config=playwright.config.ts --headed",
     "test:refactor-contract": "playwright test --config=playwright.refactor-contract.config.ts --workers=1",

@@ -321,6 +321,72 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     vi.useRealTimers();
   });
 
+  it.each([8, 16, 32, 64])("records exact pow2 spawn %i as ext type 8 plus one move", (value) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_456);
+    const manager = {
+      width: 4,
+      height: 4,
+      replayMode: false,
+      sessionReplayV1: {
+        supported: true,
+        last_event_at_ms: 1_000,
+        records: [] as unknown[]
+      }
+    };
+
+    recordSessionReplayV1Move(manager, 1, { x: 2, y: 1, value });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      { kind: "ext", extType: 8, payload: new Uint8Array([value]) },
+      { kind: "move", dir: 1, spawnIndex: 6, spawnValueBit: 0, deltaMs: 456 }
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("preserves safe integer replay start milliseconds and rejects invalid values", () => {
+    const serializeStart = (startUnixMs: unknown) => {
+      const manager = {
+        width: 2,
+        height: 2,
+        modeKey: "board_2x2_pow2_no_undo",
+        sessionReplayV1: {
+          supported: true,
+          board_width: 2,
+          board_height: 2,
+          init_tiles: [],
+          records: [],
+          start_unix_ms: startUnixMs,
+          ruleset: "pow2"
+        },
+        getWindowLike: () => ({
+          btoa(value: string) {
+            return Buffer.from(value, "binary").toString("base64");
+          }
+        })
+      };
+      const replayText = serializeReplay(manager);
+      return decodeReplayV1Rpl(
+        Uint8Array.from(Buffer.from(replayText.slice("REPLAY_v1RPL_B64_".length), "base64"))
+      ).startUnixMs;
+    };
+
+    expect(serializeStart(1_720_000_000_123)).toBe(1_720_000_000_123);
+    for (const invalid of [
+      0,
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+      NaN,
+      Infinity,
+      true,
+      "1720000000123",
+      "invalid"
+    ]) {
+      expect(serializeStart(invalid)).toBeNull();
+    }
+  });
+
   it("serializes diagonal sessions with structured seed, mode key, and actions for cloud replay", () => {
     const manager = {
       width: 4,

@@ -1,13 +1,22 @@
 import { describe, expect, it } from "vitest";
 
+import gameSessionGolden from "../fixtures/game-session-golden-v1.json";
+
 import {
+  APP_GAME_CONTRACT_VERSION,
+  APP_MODE_KEYS,
   CORE_CONTRACT_COVERAGE_MATRIX,
   CONTRACT_SCHEMA_VERSION,
+  GAME_SNAPSHOT_REQUIRED_KEYS,
+  GAME_STATE_REQUIRED_KEYS,
+  GAME_TRANSITION_REQUIRED_KEYS,
+  GAME_UNDO_FRAME_REQUIRED_KEYS,
   HISTORY_DIAGNOSTICS_INDEX_ENTRY_REQUIRED_KEYS,
   HISTORY_EXPORT_ENVELOPE_REQUIRED_KEYS,
   HISTORY_OWNER_META_REQUIRED_KEYS,
   HISTORY_RECORD_REQUIRED_KEYS,
   REPLAY_IMPORT_EXPORT_CONTRACT_MATRIX,
+  REPLAY_RPL1_RECORD_REQUIRED_KEYS,
   REPLAY_RECORD_REQUIRED_KEYS,
   SAVED_GAME_STATE_PAYLOAD_REQUIRED_KEYS,
   SESSION_INIT_PAYLOAD_REQUIRED_KEYS,
@@ -15,6 +24,11 @@ import {
   calculateHistoryBoardSum,
   createEmptyReplayRecord,
   createSessionSnapshot,
+  isAppModeKey,
+  isGameSnapshotLike,
+  isGameStateLike,
+  isGameTransitionLike,
+  isGameUndoFrameLike,
   isHistoryExportEnvelopeLike,
   isHistoryDiagnosticsIndexEntryLike,
   isHistoryOwnerMetaLike,
@@ -28,6 +42,7 @@ import {
   normalizeHistoryRecordLike
 } from "../../src/contracts";
 import type {
+  GameState,
   HistoryRecord,
   HistoryExportEnvelope,
   SubmitPayload,
@@ -44,10 +59,53 @@ import type {
   UserRecordEntry
 } from "../../src/contracts";
 
+const VALID_GAME_STATE: GameState = {
+  version: APP_GAME_CONTRACT_VERSION,
+  modeKey: "standard_4x4_pow2_no_undo",
+  width: 4,
+  height: 4,
+  ruleset: "pow2",
+  undoEnabled: false,
+  seed: 424242,
+  challengeId: null,
+  board: [
+    [2, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 2, 0],
+    [0, 0, 0, 0]
+  ],
+  score: 0,
+  steps: 1,
+  gameOver: false,
+  won: false,
+  milestone2048Reached: false,
+  undoUsed: 0,
+  comboStreak: 0,
+  startedAtMs: 1700000000000,
+  lastEventAtMs: 1700000000100,
+  durationMs: 100,
+  rngStep: 1,
+  initialTiles: [
+    { cellIndex: 0, value: 2 },
+    { cellIndex: 10, value: 2 }
+  ],
+  replayRecords: [
+    {
+      kind: "move",
+      direction: 3,
+      spawnIndex: 11,
+      spawnValue: 2,
+      deltaMs: 100,
+      rngStep: 0
+    }
+  ],
+  undoStack: []
+};
+
 describe("contracts: schema version", () => {
   it("CONTRACT_SCHEMA_VERSION is a positive integer", () => {
     expect(Number.isInteger(CONTRACT_SCHEMA_VERSION)).toBe(true);
-    expect(CONTRACT_SCHEMA_VERSION).toBeGreaterThan(0);
+    expect(CONTRACT_SCHEMA_VERSION).toBe(1);
   });
 });
 
@@ -60,6 +118,7 @@ describe("contracts: ReplayRecord", () => {
     expect(record.initialBoardEncoded).toBe("");
     expect(record.actionsEncoded).toBe("");
     expect(record.replayString).toBe("");
+    expect(isReplayRecordLike(record)).toBe(true);
   });
 
   it("isReplayRecordLike validates required keys", () => {
@@ -73,6 +132,162 @@ describe("contracts: ReplayRecord", () => {
     };
     expect(isReplayRecordLike(valid)).toBe(true);
     expect(isReplayRecordLike({ modeKey: "x" })).toBe(false);
+  });
+
+  it("accepts the minimal rpl1 branch without v4c-only fields", () => {
+    const record: ReplayRecord = {
+      version: APP_GAME_CONTRACT_VERSION,
+      kind: "rpl1",
+      modeKey: "board_3x3_pow2_no_undo",
+      replayString: "REPLAY_v1RPL_B64_UlBMMQ=="
+    };
+
+    expect(isReplayRecordLike(record)).toBe(true);
+    expect(isReplayRecordLike({ ...record, version: 2 })).toBe(false);
+    expect(isReplayRecordLike({ ...record, modeKey: "practice" })).toBe(false);
+    expect(isReplayRecordLike({ ...record, replayString: "RPL1" })).toBe(false);
+  });
+});
+
+describe("contracts: App game session", () => {
+  it("uses its own version and fixed first-release mode union", () => {
+    expect(APP_GAME_CONTRACT_VERSION).toBe(1);
+    expect(APP_MODE_KEYS).toEqual([
+      "standard_4x4_pow2_no_undo",
+      "classic_4x4_pow2_undo",
+      "board_3x3_pow2_no_undo"
+    ]);
+    expect(isAppModeKey("classic_4x4_pow2_undo")).toBe(true);
+    expect(isAppModeKey("practice")).toBe(false);
+  });
+
+  it("validates complete state and rejects unsafe persisted values", () => {
+    expect(isGameStateLike(VALID_GAME_STATE)).toBe(true);
+    expect(isGameStateLike({ ...VALID_GAME_STATE, version: 2 })).toBe(false);
+    expect(isGameStateLike({ ...VALID_GAME_STATE, board: [[2]] })).toBe(false);
+    expect(isGameStateLike({ ...VALID_GAME_STATE, undoEnabled: true })).toBe(false);
+    expect(
+      isGameStateLike({
+        ...VALID_GAME_STATE,
+        replayRecords: [{ ...VALID_GAME_STATE.replayRecords[0], direction: 4 }]
+      })
+    ).toBe(false);
+  });
+
+  it("validates undo frames without coupling them to timer/rng/replay state", () => {
+    const frame = {
+      board: VALID_GAME_STATE.board,
+      score: 0,
+      steps: 0,
+      gameOver: false,
+      won: false,
+      milestone2048Reached: false,
+      comboStreak: 0,
+      undoUsed: 0
+    };
+
+    expect(isGameUndoFrameLike(frame)).toBe(true);
+    expect(isGameUndoFrameLike({ ...frame, undoUsed: -1 })).toBe(false);
+  });
+
+  it("validates snapshots and transition effects", () => {
+    const snapshot = {
+      version: APP_GAME_CONTRACT_VERSION,
+      savedAtMs: 1700000000200,
+      state: VALID_GAME_STATE
+    };
+    const transition = {
+      state: VALID_GAME_STATE,
+      moved: true,
+      scoreDelta: 4,
+      motions: [{ from: { x: 1, y: 0 }, to: { x: 0, y: 0 }, value: 2 }],
+      merges: [
+        {
+          from: [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 }
+          ],
+          to: { x: 0, y: 0 },
+          value: 4
+        }
+      ],
+      spawn: { x: 3, y: 2, spawnIndex: 11, value: 2, rngStep: 0 },
+      milestone2048: false,
+      gameOver: false
+    };
+
+    expect(isGameSnapshotLike(snapshot)).toBe(true);
+    expect(isGameSnapshotLike({ ...snapshot, savedAtMs: -1 })).toBe(false);
+    expect(isGameTransitionLike(transition)).toBe(true);
+    expect(isGameTransitionLike({ ...transition, gameOver: true })).toBe(false);
+    expect(
+      isGameTransitionLike({
+        ...transition,
+        spawn: { ...transition.spawn, value: 0 }
+      })
+    ).toBe(false);
+  });
+
+  it("exposes stable persisted and transition key sets", () => {
+    expect(GAME_UNDO_FRAME_REQUIRED_KEYS).toHaveLength(8);
+    expect(GAME_STATE_REQUIRED_KEYS).toHaveLength(23);
+    expect(GAME_TRANSITION_REQUIRED_KEYS).toEqual([
+      "state",
+      "moved",
+      "scoreDelta",
+      "motions",
+      "merges",
+      "spawn",
+      "milestone2048",
+      "gameOver"
+    ]);
+    expect(GAME_SNAPSHOT_REQUIRED_KEYS).toEqual(["version", "savedAtMs", "state"]);
+    expect(REPLAY_RPL1_RECORD_REQUIRED_KEYS).toEqual([
+      "version",
+      "kind",
+      "modeKey",
+      "replayString"
+    ]);
+  });
+});
+
+describe("contracts: game-session golden fixture", () => {
+  it("freezes the three modes, backend buckets and replay strings", () => {
+    expect(gameSessionGolden.version).toBe(APP_GAME_CONTRACT_VERSION);
+    expect(gameSessionGolden.vectors.map((vector) => vector.mode_key)).toEqual(APP_MODE_KEYS);
+    expect(gameSessionGolden.vectors.map((vector) => vector.backend_bucket)).toEqual([
+      "standard_no_undo",
+      "standard_undo",
+      "pow2_3x3"
+    ]);
+
+    for (const vector of gameSessionGolden.vectors) {
+      expect(vector.challenge_id).toBeNull();
+      expect(vector.expected.step_results).toHaveLength(vector.actions.length);
+      expect(vector.expected.replay_string).toMatch(/^REPLAY_v1RPL_B64_/);
+    }
+  });
+
+  it("records undo/rng progression and excludes an invalid move from replay", () => {
+    const classic = gameSessionGolden.vectors[1];
+    const threeByThree = gameSessionGolden.vectors[2];
+
+    expect(classic.actions[3]).toEqual({ kind: "undo", offset_ms: 1000 });
+    expect(classic.expected.step_results[3]).toMatchObject({
+      moved: true,
+      rng_step: 3,
+      spawn: null,
+      replay_recorded: true
+    });
+    expect(classic.expected.undo_used).toBe(1);
+    expect(threeByThree.expected.step_results[2]).toEqual({
+      action_index: 2,
+      moved: false,
+      rng_step: null,
+      spawn: null,
+      replay_recorded: false
+    });
+    expect(threeByThree.expected.steps).toBe(7);
   });
 });
 

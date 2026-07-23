@@ -4,6 +4,7 @@
 
 - 仓库存在 `.trellis/spec` 与 `.trellis/tasks`，但缺少技能约定的 `.trellis/scripts/task.py`，无法执行标准任务创建命令。采用最保守回退：按现有 `MM-DD-slug` 目录格式手工创建本规划任务；未启动实现，也未修改产品代码。
 - `trellis-before-dev` 约定的两仓库 `.trellis/scripts/get_context.py` 与 `.trellis/spec/guides/index.md` 均不存在。采用最保守回退：手工枚举并完整阅读前端现有三份 spec、后端现有两份 spec 与两仓库 `AGENTS.md`；未跳过任何已存在规范。
+- 已批准设计原写为“撤回恢复 RNG 步号、计时和回放游标”，但冻结既有 Web 行为与服务端 verifier 时确认 RPL1 将撤回视为动作：有效局面回退，已经经过的时间与动作流不回拨，并消耗一个 RNG action step。为避免破坏既有回放、排位验证和跨端确定性，采用最保守兼容规则并以共享黄金 fixture 固化；影响仅是撤回后的下一次出块不会复用被撤销分支的 RNG 位置，产品可见棋盘/分数/步数等状态仍正确恢复。
 
 ## 调查记录
 
@@ -91,6 +92,11 @@
 - 已按 ADR Gate 新建单一合并 ADR：`docs/adr/0001-android-app-foundation.md`；未增加模板、ADR 索引或第二份后端 ADR。
 - 阶段 0 当前低保真审阅候选为 `android-app-wireframe.html`（SHA-256 `3c302a08d880cd342c11accc45830ec7de9bcd484f089b584e588415de0e7274`），页面清单为 `docs/ui-page-inventory.csv`（SHA-256 `c6862e1cb39b915dfb624c0e1b31a5998dee2a6a3371cfffe51c9970515d5ae5`），专项 Smoke 为 `tests/smoke/pages-android-app-wireframe.smoke.spec.ts`（SHA-256 `284b61a64318e489adda5075f4bad05408cef90adb129688cbd9602031f208aa`）。线框为 source-only 单文件，没有创建 `mobile/`、增加依赖或修改 Vite/package 配置。
 - 线框审批状态：`approved`。2026-07-23 09:35 CST，用户明确回复“批准当前低保真线框”，批准对象为 SHA-256 `3c302a08d880cd342c11accc45830ec7de9bcd484f089b584e588415de0e7274`。阶段 0 门禁完成，允许进入阶段 1。配色、字体、图标和动效仍按计划留到正式移动视觉实现，不改变已批准的信息架构、入口和返回关系。
+- 阶段 0 已固化为前端隔离分支提交 `66dd4003`。阶段 1 建立 `GameState`、`GameTransition`、`GameSnapshot`、`UndoFrame` 和 `v4c | rpl1` 回放合同；`src/core/engine.ts` 已能独立完成三模式移动、合并、计分、确定性出块、终局、撤回、计时、快照和 RPL1，且审计确认没有 DOM、storage 或隐式 `Date.now()` 依赖。
+- 前后端共享黄金 fixture SHA-256 为 `392ec48bab2071801d87d15607560a6641eaa9211775ada3af2c2a5da99c07ab`。普通局与排位局统一 seed/hash 通道；经典模式覆盖 131072/262144 高位概率表及精确 15 格强制 8/16。
+- RPL1 为 8/16/32/64 特殊出块增加 extType 8，格式固定为 `[ext8, move]`，payload 是字面单字节值且 move bit 为 0；既有 2/4 编码字节不变。`startUnixMs` 统一保持毫秒合同。
+- Web 的标准 4×4、经典 4×4、标准 3×3 实时方向输入已通过窄 adapter 消费共享 Game Session transition；其他模式与 replayMode 继续既有路径。高位 Smoke 最初暴露 `restartWithBoard` 在线 hook 安装竞态，测试改用直接构造 Grid/Tile 的确定性盘面注入并显式断言兼容错误为零，没有改变产品运行时。独立审查又发现多 motion 中途异常可造成半写棋盘；兼容层现于应用前捕获 manager/回放/Grid/Tile 事务快照，完整成功后才发布 transition/count，失败则原位恢复、记录 marker 并重新抛出，绝不在半写状态回落 legacy。
+- 后端 verifier 阶段 1 已固化为隔离分支提交 `4799f1a`，`verificationVersion` 升至 3；支持 ext8 严格配对、经典高位逻辑值、ranked 精确 spawn 校验和 normal 合法值校验，未修改路由、数据库或 OpenAPI。
 
 ## 验证记录
 
@@ -108,3 +114,5 @@
 - 真实浏览器人工路径通过：首次选择仅离线 → 游客首页 → 模式；游客点击经典 4×4 先进入隐私门，拒绝后回模式且不遗留目标，同意后进入认证，登录后继续经典模式；对局排行榜显示时 `data-input-locked=true` 且计时增长，关闭后恢复同一棋盘并解锁；待结算两分支、结算 → 回放 → 结算/首页、首页/记录来源详情、经典云记录详情、成就与设置均按来源返回。
 - 320×720、390×844、480×960 视口下活动页面横向溢出均为 0；排行榜分别精确覆盖 `320×720`、`390×844`、`480×960` 视口。320×568 短屏下产品手机壳高度为 568、底栏位于壳体底部，页面只在内部滚动；审阅工具本身不属于产品界面。最终新加载会话控制台为 0 error、0 warning。
 - 当前审阅截图：`output/playwright/wireframe-320-settings.png`（视口 320×720，元素截图 320×721）、`output/playwright/wireframe-390-game.png`（390×844）、`output/playwright/wireframe-390-leaderboard.png`（390×844）、`output/playwright/wireframe-480-leaderboard.png`（480×960）。截图仅用于信息架构/任务流批准，颜色、字体、图标和动效仍属于阶段 3/5 的正式视觉实现。
+- 2026-07-23 阶段 1 前端最终门禁（Node 22.22.2）：三模式及经典高位 parity Smoke `4/4`；核心单测 `98` 文件、`687` 项；play/replay Smoke `43/43`；`audit:engine` 通过；`verify:refactor:ci` `10/10` 步骤通过，其中完整单测 `299` 文件、`1901` 项、Critical Smoke `41/41`、生产构建通过；`npx tsc --noEmit` 与 `git diff --check` 通过。所有 parity 用例显式断言 `compatFailures=[]`，日志和产物中的 `[game-session-compat] shared move failed` 数量为 0；故障注入另确认第二个 motion 失败时棋盘、Tile、分数、步数、move history、嵌套回放和发布字段全部回滚。
+- 2026-07-23 阶段 1 后端最终门禁（Node 22.22.2）：黄金/ext8 定向测试 `16/16`、Node `22` 文件 `159/159`、`npm run typecheck` 与 `git diff --check` 通过；黄金测试同时断言 `modeKey/ruleset/undoEnabled/bestTile/terminal`。

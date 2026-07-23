@@ -1,5 +1,6 @@
 import type { Ruleset } from "./engine";
 import { randomUnitFloat } from "../utils/crypto-random";
+import { getAvailableCells } from "./grid-scan";
 
 export interface SpawnTableItem {
   value: number;
@@ -21,9 +22,56 @@ export interface SpawnValueUpdateResult {
   spawnFours: number;
 }
 
+export interface SpawnPolicy {
+  table: SpawnTableItem[];
+  forcedValue: number | null;
+  allowedValues: number[];
+  pick(roll: number): number;
+}
+
+export interface DeterministicSpawnInput {
+  modeKey: string;
+  ruleset: Ruleset;
+  spawnTable: SpawnTableItem[] | null | undefined;
+  board: number[][];
+  seed: number;
+  stepCount: number;
+}
+
+export interface DeterministicSpawnResult {
+  stepCount: number;
+  spawnIndex: number;
+  x: number;
+  y: number;
+  value: number;
+  spawnValueBit: 0 | 1;
+  availableCellCount: number;
+  valueRoll: number;
+  cellRoll: number;
+}
+
 const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181];
 const FIRST_TIMER_SLOT_VALUE = 32;
 const MAX_SAFE_TIMER_SLOT_VALUE = 4503599627370496;
+const CLASSIC_UNDO_MODE_KEY = "classic_4x4_pow2_undo";
+const CLASSIC_UNDO_STAGE_ONE_FORCE_VALUES = [
+  131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8
+];
+const CLASSIC_UNDO_STAGE_TWO_FORCE_VALUES = [
+  262144, 131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16
+];
+const CLASSIC_UNDO_STAGE_ONE_SPAWN_TABLE = [
+  { value: 2, weight: 87 },
+  { value: 4, weight: 10 },
+  { value: 8, weight: 3 }
+];
+const CLASSIC_UNDO_STAGE_TWO_SPAWN_TABLE = [
+  { value: 2, weight: 84 },
+  { value: 4, weight: 10 },
+  { value: 16, weight: 3 },
+  { value: 32, weight: 2 },
+  { value: 64, weight: 1 }
+];
 
 export function normalizeSpawnTable(
   spawnTable: SpawnTableItem[] | null | undefined,
@@ -43,6 +91,170 @@ export function normalizeSpawnTable(
     return [{ value: 1, weight: 90 }, { value: 2, weight: 10 }];
   }
   return [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
+}
+
+function pickSpawnValueByRoll(
+  spawnTable: SpawnTableItem[],
+  ruleset: Ruleset,
+  rawRoll: number
+): number {
+  const table = normalizeSpawnTable(spawnTable, ruleset);
+  let totalWeight = 0;
+  for (const item of table) totalWeight += Math.max(0, Math.floor(Number(item.weight) || 0));
+  const fallbackValue = ruleset === "fibonacci" ? 1 : 2;
+  if (!(totalWeight > 0)) return fallbackValue;
+
+  const normalizedRoll = Number.isFinite(rawRoll)
+    ? Math.max(0, Math.min(Number(rawRoll), 0.9999999999999999))
+    : 0;
+  const cursor = normalizedRoll * totalWeight;
+  let running = 0;
+  for (const item of table) {
+    running += Math.max(0, Math.floor(Number(item.weight) || 0));
+    if (cursor < running) {
+      const value = Math.floor(Number(item.value) || 0);
+      return value > 0 ? value : fallbackValue;
+    }
+  }
+  const value = Math.floor(Number(table.at(-1)?.value) || 0);
+  return value > 0 ? value : fallbackValue;
+}
+
+function collectBoardValueCounts(board: number[][]): {
+  counts: Map<number, number>;
+  filled: number;
+  maxValue: number;
+} {
+  const counts = new Map<number, number>();
+  let filled = 0;
+  let maxValue = 0;
+  for (const row of board) {
+    for (const rawValue of row) {
+      const value = Number(rawValue);
+      if (!Number.isInteger(value) || value <= 0) continue;
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+      filled += 1;
+      if (value > maxValue) maxValue = value;
+    }
+  }
+  return { counts, filled, maxValue };
+}
+
+function hasExactBoardValues(
+  stats: ReturnType<typeof collectBoardValueCounts>,
+  expectedValues: number[]
+): boolean {
+  if (stats.filled !== expectedValues.length || stats.counts.size !== expectedValues.length) {
+    return false;
+  }
+  return expectedValues.every((value) => stats.counts.get(value) === 1);
+}
+
+export function resolveSpawnPolicyForBoard(
+  modeKey: string,
+  ruleset: Ruleset,
+  board: number[][],
+  spawnTable: SpawnTableItem[] | null | undefined
+): SpawnPolicy {
+  const defaultTable = normalizeSpawnTable(spawnTable, ruleset);
+  let table = defaultTable;
+  let forcedValue: number | null = null;
+
+  if (modeKey === CLASSIC_UNDO_MODE_KEY && ruleset === "pow2") {
+    const stats = collectBoardValueCounts(board);
+    if (hasExactBoardValues(stats, CLASSIC_UNDO_STAGE_TWO_FORCE_VALUES)) {
+      forcedValue = 16;
+    } else if (hasExactBoardValues(stats, CLASSIC_UNDO_STAGE_ONE_FORCE_VALUES)) {
+      forcedValue = 8;
+    } else if (stats.maxValue >= 262144) {
+      table = CLASSIC_UNDO_STAGE_TWO_SPAWN_TABLE.map((item) => ({ ...item }));
+    } else if (stats.maxValue >= 131072) {
+      table = CLASSIC_UNDO_STAGE_ONE_SPAWN_TABLE.map((item) => ({ ...item }));
+    }
+  }
+
+  const allowedValues = forcedValue === null ? table.map((item) => item.value) : [forcedValue];
+  return {
+    table,
+    forcedValue,
+    allowedValues,
+    pick(roll) {
+      return forcedValue ?? pickSpawnValueByRoll(table, ruleset, roll);
+    }
+  };
+}
+
+export function createDeterministicSpawnHash(
+  rawSeed: number,
+  rawStepCount: number,
+  channel: string
+): number {
+  const seed = Number(rawSeed);
+  const stepCount = Number(rawStepCount);
+  if (!Number.isSafeInteger(seed) || seed < 0) {
+    throw new Error("deterministic spawn seed must be a non-negative safe integer");
+  }
+  if (!Number.isSafeInteger(stepCount) || stepCount < 0) {
+    throw new Error("deterministic spawn step must be a non-negative safe integer");
+  }
+  const text = `${Math.floor(seed)}|${Math.floor(stepCount)}|${String(channel || "")}`;
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  return hash >>> 0;
+}
+
+export function resolveDeterministicSpawnUnitFloat(
+  seed: number,
+  stepCount: number,
+  channel: string
+): number {
+  return createDeterministicSpawnHash(seed, stepCount, channel) / 0x100000000;
+}
+
+export function resolveDeterministicSpawn(input: DeterministicSpawnInput): DeterministicSpawnResult {
+  const height = input.board.length;
+  const width = height > 0 && Array.isArray(input.board[0]) ? input.board[0].length : 0;
+  if (width <= 0 || input.board.some((row) => !Array.isArray(row) || row.length !== width)) {
+    throw new Error("deterministic spawn board must be a non-empty rectangle");
+  }
+  const available = getAvailableCells(
+    width,
+    height,
+    () => false,
+    ({ x, y }) => Number(input.board[y][x]) === 0
+  );
+  if (available.length === 0) throw new Error("deterministic spawn has no available spawn cell");
+
+  const stepCount = Math.floor(Number(input.stepCount));
+  const valueRoll = resolveDeterministicSpawnUnitFloat(input.seed, stepCount, "spawn:value");
+  const cellRoll = resolveDeterministicSpawnUnitFloat(input.seed, stepCount, "spawn:cell");
+  const policy = resolveSpawnPolicyForBoard(
+    input.modeKey,
+    input.ruleset,
+    input.board,
+    input.spawnTable
+  );
+  const value = policy.pick(valueRoll);
+  const cell = available[Math.min(available.length - 1, Math.floor(cellRoll * available.length))];
+  return {
+    stepCount,
+    spawnIndex: cell.y * width + cell.x,
+    x: cell.x,
+    y: cell.y,
+    value,
+    spawnValueBit: (input.ruleset === "fibonacci" ? value === 2 : value === 4) ? 1 : 0,
+    availableCellCount: available.length,
+    valueRoll,
+    cellRoll
+  };
 }
 
 export function getTheoreticalMaxTile(width: number, height: number, ruleset: Ruleset): number | null {
@@ -153,7 +365,7 @@ export function pickSpawnValue(
   let running = 0;
   for (let i = 0; i < table.length; i++) {
     running += Number(table[i].weight) || 0;
-    if (pick <= running) return table[i].value;
+    if (pick < running) return table[i].value;
   }
   return table[table.length - 1].value;
 }
@@ -308,6 +520,9 @@ export function getTimerMilestoneSlotByValue(
 
 export interface RulesRuntime {
   normalizeSpawnTable: typeof normalizeSpawnTable;
+  createDeterministicSpawnHash: typeof createDeterministicSpawnHash;
+  resolveDeterministicSpawn: typeof resolveDeterministicSpawn;
+  resolveSpawnPolicyForBoard: typeof resolveSpawnPolicyForBoard;
   getTheoreticalMaxTile: typeof getTheoreticalMaxTile;
   pickSpawnValue: typeof pickSpawnValue;
   getSpawnStatPair: typeof getSpawnStatPair;
@@ -333,6 +548,9 @@ export interface RulesRuntimeInstallOptions {
 export function createRulesRuntime(): RulesRuntime {
   return {
     normalizeSpawnTable,
+    createDeterministicSpawnHash,
+    resolveDeterministicSpawn,
+    resolveSpawnPolicyForBoard,
     getTheoreticalMaxTile,
     pickSpawnValue,
     getSpawnStatPair,

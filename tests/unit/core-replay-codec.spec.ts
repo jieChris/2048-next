@@ -4,9 +4,11 @@ import {
   appendCompactMoveCode,
   appendCompactPracticeAction,
   appendCompactUndo,
+  createReplayV1MoveRecords,
   decodeReplayV1Rpl,
   decodeBoardV4,
   decodeUleb128,
+  encodeReplayV1Base64,
   encodeReplayV1Rpl,
   decodeReplay128,
   encodeBoardV4,
@@ -14,7 +16,8 @@ import {
   encodeUleb128,
   replayV1BoardToInitTiles,
   replayV1InitTilesToBoard,
-  replayV1RecordsToReplayActions
+  replayV1RecordsToReplayActions,
+  type ReplayV1Record
 } from "../../src/core/replay-codec";
 
 describe("core replay codec", () => {
@@ -171,6 +174,95 @@ describe("core replay codec", () => {
       kind: "ext",
       extType: 7
     });
+  });
+
+  it("encodes replay v1 as the canonical base64 envelope", () => {
+    const encoded = encodeReplayV1Base64({
+      width: 4,
+      height: 4,
+      initTiles: [],
+      records: [{ kind: "move", dir: 1, spawnIndex: 6, spawnValueBit: 0, deltaMs: 400 }]
+    });
+    expect(encoded.startsWith("REPLAY_v1RPL_B64_")).toBe(true);
+    expect(
+      decodeReplayV1Rpl(
+        Uint8Array.from(Buffer.from(encoded.slice("REPLAY_v1RPL_B64_".length), "base64"))
+      ).records
+    ).toEqual([{ kind: "move", dir: 1, spawnIndex: 6, spawnValueBit: 0, deltaMs: 400 }]);
+  });
+
+  it("keeps ordinary pow2 spawn bytes unchanged", () => {
+    const encodeMove = (spawnValue: 2 | 4) =>
+      Array.from(
+        encodeReplayV1Rpl({
+          width: 4,
+          height: 4,
+          initTiles: [],
+          records: createReplayV1MoveRecords({
+            dir: 1,
+            spawnIndex: 6,
+            spawnValue,
+            deltaMs: 400
+          })
+        })
+      );
+
+    expect(encodeMove(2)).toEqual([82, 80, 76, 49, 68, 0, 0, 25, 144, 3, 20, 13, 105, 51]);
+    expect(encodeMove(4)).toEqual([82, 80, 76, 49, 68, 0, 0, 89, 144, 3, 212, 128, 243, 67]);
+  });
+
+  it.each([8, 16, 32, 64])("round trips exact pow2 spawn %i through ext type 8", (value) => {
+    const decoded = decodeReplayV1Rpl(
+      encodeReplayV1Rpl({
+        width: 4,
+        height: 4,
+        initTiles: [],
+        records: createReplayV1MoveRecords({
+          dir: 2,
+          spawnIndex: 6,
+          spawnValue: value,
+          deltaMs: 100
+        })
+      })
+    );
+
+    expect(replayV1RecordsToReplayActions(decoded.records, 4).replaySpawns).toEqual([
+      { x: 2, y: 1, value }
+    ]);
+  });
+
+  it("rejects malformed exact pow2 spawn extension pairs", () => {
+    const move: ReplayV1Record = {
+      kind: "move",
+      dir: 2,
+      spawnIndex: 6,
+      spawnValueBit: 0,
+      deltaMs: 100
+    };
+    const ext = (payload: number[]): ReplayV1Record => ({
+      kind: "ext",
+      extType: 8,
+      payload: new Uint8Array(payload)
+    });
+    const invalidCases: Array<{ records: ReplayV1Record[]; ruleset?: "pow2" | "fibonacci" }> = [
+      { records: [ext([]), move] },
+      { records: [ext([8, 16]), move] },
+      { records: [ext([4]), move] },
+      { records: [ext([128]), move] },
+      { records: [ext([8])] },
+      { records: [ext([8]), ext([16]), move] },
+      { records: [ext([8]), { kind: "undo1", deltaMs: 1 }, move] },
+      {
+        records: [ext([8]), { ...move, spawnValueBit: 1 }]
+      },
+      { records: [ext([8]), move], ruleset: "fibonacci" }
+    ];
+
+    for (const testCase of invalidCases) {
+      expect(() =>
+        replayV1RecordsToReplayActions(testCase.records, 4, testCase.ruleset || "pow2")
+      ).toThrow();
+    }
   });
 
   it("encodes and decodes replay v1 diagonal move direction", () => {

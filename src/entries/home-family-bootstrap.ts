@@ -18,6 +18,7 @@ import { installGameManagerReplayHelperGlobals } from "../bootstrap/game-manager
 import { installGameManagerRuntimeAccessorHelpersRuntime } from "../bootstrap/game-manager-runtime-accessor-helpers-runtime";
 import { installGameManagerRuntimeCallHelpersRuntime } from "../bootstrap/game-manager-runtime-call-helpers-runtime";
 import { installGameSettingsStorageRuntime } from "../bootstrap/game-settings-storage-runtime";
+import { installGameSessionRuntime } from "../bootstrap/game-session-runtime";
 import { installGridScanRuntime } from "../bootstrap/grid-scan-runtime";
 import { installHomeModeRuntime } from "../bootstrap/home-mode";
 import { installHomePageHostRuntime } from "../bootstrap/home-page-host";
@@ -341,6 +342,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   registerEngineFacade(
     typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
   );
+  installGameSessionRuntime();
   installCryptoRandomRuntime();
   installGameManagerClientRecordIdRuntime();
   installCustomSecondaryTimerRuntime();

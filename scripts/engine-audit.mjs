@@ -15,6 +15,11 @@ async function readEngineSource() {
   return readFile(filePath, "utf8");
 }
 
+async function readLegacyMoveSource() {
+  const filePath = path.resolve(repoRoot, "js/core_game_manager_move_input_helpers_runtime.js");
+  return readFile(filePath, "utf8");
+}
+
 function countMatches(source, regex) {
   return Array.from(source.matchAll(regex)).length;
 }
@@ -23,6 +28,13 @@ function ensureExactlyOne(source, label, regex) {
   const count = countMatches(source, regex);
   if (count !== 1) {
     fail(`${label} declaration count expected 1 but got ${String(count)}`);
+  }
+}
+
+function ensureNoMatches(source, label, regex) {
+  const count = countMatches(source, regex);
+  if (count !== 0) {
+    fail(`${label} forbidden match count expected 0 but got ${String(count)}`);
   }
 }
 
@@ -36,22 +48,57 @@ const ENGINE_AUDIT_RULES = [
     regex: /export\s+function\s+createEngineSession\s*\(/g
   },
   {
-    label: "UndoSnapshotLike",
-    regex: /type\s+UndoSnapshotLike\s*=/g
+    label: "APP_MODE_SPECS",
+    regex: /const\s+APP_MODE_SPECS\s*:/g
   }
 ];
 
-function validateEngineSource(source, rules = ENGINE_AUDIT_RULES) {
+const ENGINE_FORBIDDEN_PATTERNS = [
+  { label: "precomputed score input", regex: /input\.scoreAfterMerge/g },
+  { label: "precomputed moves-available input", regex: /input\.hasMovesAvailable/g },
+  { label: "wall-clock read", regex: /Date\.now\s*\(/g },
+  { label: "DOM or browser storage dependency", regex: /\b(?:window|document|localStorage|sessionStorage)\b/g }
+];
+
+const LEGACY_MOVE_AUDIT_RULES = [
+  {
+    label: "shared Game Session compatibility seam",
+    regex: /function\s+tryMoveWithSharedGameSession\s*\(/g
+  },
+  {
+    label: "shared Game Session live-move gateway",
+    regex: /if\s*\(tryMoveWithSharedGameSession\(manager,\s*direction,\s*Date\.now\(\)\)\)\s*return;/g
+  }
+];
+
+function validateEngineSource(
+  source,
+  rules = ENGINE_AUDIT_RULES,
+  forbiddenPatterns = ENGINE_FORBIDDEN_PATTERNS
+) {
+  for (const { label, regex } of rules) {
+    ensureExactlyOne(source, label, regex);
+  }
+  for (const { label, regex } of forbiddenPatterns) {
+    ensureNoMatches(source, label, regex);
+  }
+}
+
+function validateLegacyMoveSource(source, rules = LEGACY_MOVE_AUDIT_RULES) {
   for (const { label, regex } of rules) {
     ensureExactlyOne(source, label, regex);
   }
 }
 
 async function runEngineAudit() {
-  const source = await readEngineSource();
+  const [source, legacyMoveSource] = await Promise.all([
+    readEngineSource(),
+    readLegacyMoveSource()
+  ]);
   validateEngineSource(source);
+  validateLegacyMoveSource(legacyMoveSource);
 
-  console.log("[engine-audit] PASS: engine exports and helper type are single-defined");
+  console.log("[engine-audit] PASS: single Game Session owns rules without DOM or precomputed move inputs");
 }
 
 function isDirectCliExecution() {
@@ -67,9 +114,13 @@ if (isDirectCliExecution()) {
 
 export {
   ENGINE_AUDIT_RULES,
+  ENGINE_FORBIDDEN_PATTERNS,
+  LEGACY_MOVE_AUDIT_RULES,
   countMatches,
   ensureExactlyOne,
+  ensureNoMatches,
   isDirectCliExecution,
   runEngineAudit,
-  validateEngineSource
+  validateEngineSource,
+  validateLegacyMoveSource
 };

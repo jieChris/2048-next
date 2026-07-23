@@ -51,6 +51,7 @@ var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
 var REPLAY_V1_EXT_SEED = 4;
 var REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
+var REPLAY_V1_EXT_POW2_EXACT_SPAWN = 8;
 var LEGACY_VRS_VARIANT_CONFIG_MAP = {
   "2x4": { key: "2x4", width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
   "3x3": { key: "3x3", width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
@@ -134,23 +135,39 @@ function canRecordSessionReplayV1(manager, session) {
   return !(Array.isArray(manager.replayMoves) && manager.replayMoves.length > 0);
 }
 
+function classifySessionReplayV1Spawn(manager, value) {
+  var fib = !!(manager && typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode());
+  if (fib) return value === 1 || value === 2 ? { fib: true, exactPow2: false } : null;
+  if (value === 2 || value === 4) return { fib: false, exactPow2: false };
+  if (value === 8 || value === 16 || value === 32 || value === 64) {
+    return { fib: false, exactPow2: true };
+  }
+  return null;
+}
+
+function appendSessionReplayV1MoveRecords(session, manager, direction, spawn, spawnKind, nowMs) {
+  if (spawnKind.exactPow2) {
+    session.records.push({
+      kind: "ext", extType: REPLAY_V1_EXT_POW2_EXACT_SPAWN,
+      payload: new Uint8Array([spawn.value])
+    });
+  }
+  session.records.push({
+    kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
+    spawnValueBit: spawnKind.fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0),
+    deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs)
+  });
+}
+
 function recordSessionReplayV1Move(manager, direction, spawn) {
   var session = manager && manager.sessionReplayV1;
   if (!canRecordSessionReplayV1(manager, session)) return;
   if (!Number.isInteger(direction) || direction < 0 || direction > 7) return;
   if (!(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) return;
-  var fib = !!(manager && typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode());
-  if (fib) {
-    if (spawn.value !== 1 && spawn.value !== 2) return;
-  } else if (spawn.value !== 2 && spawn.value !== 4) {
-    return;
-  }
+  var spawnKind = classifySessionReplayV1Spawn(manager, spawn.value);
+  if (!spawnKind) return;
   if (spawn.x < 0 || spawn.x >= manager.width || spawn.y < 0 || spawn.y >= manager.height) return;
-  var nowMs = Date.now();
-  session.records.push({
-    kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
-    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs)
-  });
+  appendSessionReplayV1MoveRecords(session, manager, direction, spawn, spawnKind, Date.now());
 }
 
 function recordSessionReplayV1Undo(manager, undoCount) {
@@ -3450,14 +3467,9 @@ function createReplayV1SerializeInput(session) {
 }
 
 function normalizeReplayV1SerializedStartUnixMs(rawStartUnixMs) {
-  var parsed = Math.floor(Number(rawStartUnixMs));
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  if (parsed <= 4294967295) return parsed;
-  var seconds = Math.floor(parsed / 1000);
-  if (Number.isFinite(seconds) && seconds > 0 && seconds <= 4294967295) {
-    return seconds;
-  }
-  return null;
+  return typeof rawStartUnixMs === "number" && Number.isSafeInteger(rawStartUnixMs) && rawStartUnixMs > 0
+    ? rawStartUnixMs
+    : null;
 }
 
 function shouldSerializeReplayAsFibVerse(manager) {

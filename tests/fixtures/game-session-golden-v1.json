@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "vectors": [
+    {
+      "id": "standard-4x4-seed-424242",
+      "mode_key": "standard_4x4_pow2_no_undo",
+      "backend_bucket": "standard_no_undo",
+      "challenge_id": null,
+      "seed": 424242,
+      "started_at_ms": 1700000000000,
+      "actions": [
+        { "kind": "move", "direction": 3, "offset_ms": 100 },
+        { "kind": "move", "direction": 0, "offset_ms": 300 },
+        { "kind": "move", "direction": 1, "offset_ms": 650 },
+        { "kind": "move", "direction": 2, "offset_ms": 900 },
+        { "kind": "move", "direction": 3, "offset_ms": 1300 },
+        { "kind": "move", "direction": 0, "offset_ms": 1600 },
+        { "kind": "move", "direction": 1, "offset_ms": 2000 },
+        { "kind": "move", "direction": 2, "offset_ms": 2600 }
+      ],
+      "expected": {
+        "initial_board": [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 2],
+          [2, 0, 0, 0]
+        ],
+        "step_results": [
+          { "action_index": 0, "moved": true, "rng_step": 0, "spawn": { "x": 3, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 1, "moved": true, "rng_step": 1, "spawn": { "x": 0, "y": 3, "value": 2 }, "replay_recorded": true },
+          { "action_index": 2, "moved": true, "rng_step": 2, "spawn": { "x": 1, "y": 3, "value": 2 }, "replay_recorded": true },
+          { "action_index": 3, "moved": true, "rng_step": 3, "spawn": { "x": 2, "y": 2, "value": 4 }, "replay_recorded": true },
+          { "action_index": 4, "moved": true, "rng_step": 4, "spawn": { "x": 2, "y": 3, "value": 4 }, "replay_recorded": true },
+          { "action_index": 5, "moved": true, "rng_step": 5, "spawn": { "x": 1, "y": 3, "value": 2 }, "replay_recorded": true },
+          { "action_index": 6, "moved": true, "rng_step": 6, "spawn": { "x": 0, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 7, "moved": true, "rng_step": 7, "spawn": { "x": 1, "y": 1, "value": 2 }, "replay_recorded": true }
+        ],
+        "final_board": [
+          [0, 0, 0, 0],
+          [0, 2, 0, 0],
+          [0, 0, 0, 4],
+          [2, 4, 8, 4]
+        ],
+        "score": 20,
+        "steps": 8,
+        "duration_ms": 2600,
+        "undo_used": 0,
+        "replay_string": "REPLAY_v1RPL_B64_UlBMMUQBAoDQlf+8MQsMgwEZc3RhbmRhcmRfNHg0X3BvdzJfbm9fdW5kb4MCBHBvdzKDBAY0MjQyNDIvZDDIATXeAmr6AXuQAzSsAiGQAxbYBDxsXsI="
+      }
+    },
+    {
+      "id": "classic-4x4-seed-987654321",
+      "mode_key": "classic_4x4_pow2_undo",
+      "backend_bucket": "standard_undo",
+      "challenge_id": null,
+      "seed": 987654321,
+      "started_at_ms": 1700000100000,
+      "actions": [
+        { "kind": "move", "direction": 3, "offset_ms": 120 },
+        { "kind": "move", "direction": 0, "offset_ms": 400 },
+        { "kind": "move", "direction": 1, "offset_ms": 750 },
+        { "kind": "undo", "offset_ms": 1000 },
+        { "kind": "move", "direction": 2, "offset_ms": 1300 },
+        { "kind": "move", "direction": 3, "offset_ms": 1800 },
+        { "kind": "move", "direction": 1, "offset_ms": 2200 },
+        { "kind": "move", "direction": 0, "offset_ms": 2700 }
+      ],
+      "expected": {
+        "initial_board": [
+          [0, 0, 2, 0],
+          [0, 0, 0, 2],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        "step_results": [
+          { "action_index": 0, "moved": true, "rng_step": 0, "spawn": { "x": 3, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 1, "moved": true, "rng_step": 1, "spawn": { "x": 2, "y": 1, "value": 2 }, "replay_recorded": true },
+          { "action_index": 2, "moved": true, "rng_step": 2, "spawn": { "x": 2, "y": 3, "value": 2 }, "replay_recorded": true },
+          { "action_index": 3, "moved": true, "rng_step": 3, "spawn": null, "replay_recorded": true },
+          { "action_index": 4, "moved": true, "rng_step": 4, "spawn": { "x": 1, "y": 1, "value": 2 }, "replay_recorded": true },
+          { "action_index": 5, "moved": true, "rng_step": 5, "spawn": { "x": 0, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 6, "moved": true, "rng_step": 6, "spawn": { "x": 0, "y": 3, "value": 2 }, "replay_recorded": true },
+          { "action_index": 7, "moved": true, "rng_step": 7, "spawn": { "x": 2, "y": 0, "value": 2 }, "replay_recorded": true }
+        ],
+        "final_board": [
+          [2, 0, 2, 4],
+          [0, 0, 0, 8],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0]
+        ],
+        "score": 20,
+        "steps": 6,
+        "duration_ms": 2700,
+        "undo_used": 1,
+        "replay_string": "REPLAY_v1RPL_B64_UlBMMUQDAqDdm/+8MQIHgwEVY2xhc3NpY180eDRfcG93Ml91bmRvgwIEcG93MoMECTk4NzY1NDMyMS94GJgCOd4CgPoBFqwCI/QDMZADCPQDuY7+fg=="
+      }
+    },
+    {
+      "id": "board-3x3-seed-20260723",
+      "mode_key": "board_3x3_pow2_no_undo",
+      "backend_bucket": "pow2_3x3",
+      "challenge_id": null,
+      "seed": 20260723,
+      "started_at_ms": 1700000200000,
+      "actions": [
+        { "kind": "move", "direction": 0, "offset_ms": 50 },
+        { "kind": "move", "direction": 3, "offset_ms": 200 },
+        { "kind": "move", "direction": 2, "offset_ms": 300 },
+        { "kind": "move", "direction": 1, "offset_ms": 550 },
+        { "kind": "move", "direction": 0, "offset_ms": 900 },
+        { "kind": "move", "direction": 3, "offset_ms": 1200 },
+        { "kind": "move", "direction": 2, "offset_ms": 1500 },
+        { "kind": "move", "direction": 1, "offset_ms": 1900 }
+      ],
+      "expected": {
+        "initial_board": [
+          [0, 0, 4],
+          [0, 0, 0],
+          [0, 0, 2]
+        ],
+        "step_results": [
+          { "action_index": 0, "moved": true, "rng_step": 0, "spawn": { "x": 1, "y": 2, "value": 4 }, "replay_recorded": true },
+          { "action_index": 1, "moved": true, "rng_step": 1, "spawn": { "x": 2, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 2, "moved": false, "rng_step": null, "spawn": null, "replay_recorded": false },
+          { "action_index": 3, "moved": true, "rng_step": 2, "spawn": { "x": 0, "y": 1, "value": 2 }, "replay_recorded": true },
+          { "action_index": 4, "moved": true, "rng_step": 3, "spawn": { "x": 0, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 5, "moved": true, "rng_step": 4, "spawn": { "x": 1, "y": 2, "value": 2 }, "replay_recorded": true },
+          { "action_index": 6, "moved": true, "rng_step": 5, "spawn": { "x": 2, "y": 1, "value": 2 }, "replay_recorded": true },
+          { "action_index": 7, "moved": true, "rng_step": 6, "spawn": { "x": 1, "y": 0, "value": 2 }, "replay_recorded": true }
+        ],
+        "final_board": [
+          [0, 2, 2],
+          [4, 8, 2],
+          [0, 0, 4]
+        ],
+        "score": 16,
+        "steps": 7,
+        "duration_ms": 1900,
+        "undo_used": 0,
+        "replay_string": "REPLAY_v1RPL_B64_UlBMMTMBAsDqof+8MRIIgwEWYm9hcmRfM3gzX3BvdzJfbm9fdW5kb4MCBHBvdzKDBAgyMDI2MDcyM1wyI5YBDd4CGN4CH6wCFqwCBZADjqLOBA=="
+      }
+    }
+  ]
+}

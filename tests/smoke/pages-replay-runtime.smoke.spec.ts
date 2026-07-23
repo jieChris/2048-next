@@ -864,7 +864,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await replayPage.close();
   });
 
-  test("live v1 replay serialization keeps start timestamp within backend-safe integer range", async ({
+  test("live v1 replay serialization preserves the millisecond start timestamp", async ({
     browser
   }) => {
     const cases = [
@@ -931,10 +931,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
       expect(snapshot.modeKey).toBe(testCase.expectedModeKey);
       expect(snapshot.replayTextHead).toContain("REPLAY_v1RPL_B64_");
-      expect(
-        snapshot.startUnixMs === null ||
-          (Number.isInteger(snapshot.startUnixMs) && Number(snapshot.startUnixMs) > 0 && Number(snapshot.startUnixMs) <= 0xffffffff)
-      ).toBe(true);
+      expect(Number.isSafeInteger(snapshot.startUnixMs)).toBe(true);
+      expect(Number(snapshot.startUnixMs)).toBeGreaterThan(1_000_000_000_000);
 
       await page.close();
     }

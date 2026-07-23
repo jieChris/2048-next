@@ -2,6 +2,7 @@ export const REPLAY128_ASCII_START = 33;
 export const REPLAY128_ASCII_COUNT = 94;
 export const REPLAY128_TOTAL = 128;
 export const REPLAY_V1_MAGIC = "RPL1";
+export const REPLAY_V1_BASE64_PREFIX = "REPLAY_v1RPL_B64_";
 
 export const REPLAY_V1_FLAG_HAS_START_UNIX_MS = 1 << 0;
 export const REPLAY_V1_FLAG_CONTAINS_UNDO_RECORDS = 1 << 1;
@@ -14,6 +15,7 @@ export const REPLAY_V1_RECORD_CHECKPOINT = 0x82;
 export const REPLAY_V1_RECORD_EXT = 0x83;
 export const REPLAY_V1_RECORD_END = 0x84;
 export const REPLAY_V1_RECORD_MOVE8 = 0x85;
+export const REPLAY_V1_EXT_POW2_EXACT_SPAWN = 8;
 
 export const REPLAY128_EXTRA_CODES: number[] = (() => {
   const codes: number[] = [];
@@ -79,6 +81,14 @@ export interface ReplayV1EncodeInput {
   flags?: number;
 }
 
+export interface ReplayV1MoveInput {
+  dir: number;
+  spawnIndex: number;
+  spawnValue: number;
+  deltaMs: number;
+  ruleset?: ReplayV1Ruleset;
+}
+
 export interface ReplayV1DecodedFile {
   magic: "RPL1";
   width: number;
@@ -141,6 +151,47 @@ function assertIntegerRange(value: number, min: number, max: number, message: st
 function clampNonNegativeInt(value: number, message: string): number {
   if (!Number.isFinite(value) || value < 0) throw message;
   return Math.floor(value);
+}
+
+function isReplayV1Pow2ExactSpawnValue(value: number): boolean {
+  return value === 8 || value === 16 || value === 32 || value === 64;
+}
+
+export function createReplayV1MoveRecords(input: ReplayV1MoveInput): ReplayV1Record[] {
+  const dir = assertIntegerRange(Number(input.dir), 0, 7, "Invalid replay v1 move direction");
+  const spawnIndex = assertIntegerRange(
+    Number(input.spawnIndex),
+    0,
+    0x7fffffff,
+    "Invalid replay v1 spawn index"
+  );
+  const deltaMs = clampNonNegativeInt(Number(input.deltaMs), "Invalid replay v1 move delta");
+  const spawnValue = Number(input.spawnValue);
+  const ruleset = input.ruleset || "pow2";
+  let spawnValueBit: 0 | 1;
+
+  if (ruleset === "fibonacci") {
+    if (spawnValue !== 1 && spawnValue !== 2) throw "Invalid replay v1 fibonacci spawn value";
+    spawnValueBit = spawnValue === 2 ? 1 : 0;
+  } else {
+    if (spawnValue !== 2 && spawnValue !== 4 && !isReplayV1Pow2ExactSpawnValue(spawnValue)) {
+      throw "Invalid replay v1 pow2 spawn value";
+    }
+    spawnValueBit = spawnValue === 4 ? 1 : 0;
+  }
+
+  const move: ReplayV1MoveRecord = { kind: "move", dir, spawnIndex, spawnValueBit, deltaMs };
+  if (ruleset === "pow2" && isReplayV1Pow2ExactSpawnValue(spawnValue)) {
+    return [
+      {
+        kind: "ext",
+        extType: REPLAY_V1_EXT_POW2_EXACT_SPAWN,
+        payload: new Uint8Array([spawnValue])
+      },
+      move
+    ];
+  }
+  return [move];
 }
 
 export function encodeUleb128(value: number): number[] {
@@ -355,6 +406,27 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
   withCrc[payload.length + 2] = (crc >>> 16) & 0xff;
   withCrc[payload.length + 3] = (crc >>> 24) & 0xff;
   return withCrc;
+}
+
+function encodeReplayV1BytesAsBase64(bytes: Uint8Array): string {
+  const btoaLike = (globalThis as unknown as { btoa?: (value: string) => string }).btoa;
+  if (typeof btoaLike === "function") {
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoaLike(binary);
+  }
+  const BufferLike = (globalThis as unknown as {
+    Buffer?: { from: (value: Uint8Array) => { toString: (encoding: string) => string } };
+  }).Buffer;
+  if (BufferLike) return BufferLike.from(bytes).toString("base64");
+  throw "Base64 encoder is unavailable";
+}
+
+export function encodeReplayV1Base64(input: ReplayV1EncodeInput): string {
+  return REPLAY_V1_BASE64_PREFIX + encodeReplayV1BytesAsBase64(encodeReplayV1Rpl(input));
 }
 
 export function decodeReplayV1Rpl(bytesLike: ArrayBuffer | ArrayLike<number> | Uint8Array): ReplayV1DecodedFile {
@@ -603,16 +675,46 @@ export function replayV1RecordsToReplayActions(
   const replaySpawns: Array<{ x: number; y: number; value: number } | null> = [];
   const source = Array.isArray(records) ? records : [];
   const fib = ruleset === "fibonacci";
+  let exactSpawnValue: number | null = null;
   for (let i = 0; i < source.length; i += 1) {
     const record = source[i];
-    if (!record) continue;
+    if (!record) {
+      if (exactSpawnValue !== null) throw "Replay v1 exact spawn extension crossed a record";
+      continue;
+    }
+    if (record.kind === "ext" && record.extType === REPLAY_V1_EXT_POW2_EXACT_SPAWN) {
+      if (exactSpawnValue !== null) throw "Duplicate replay v1 exact spawn extension";
+      if (fib) throw "Replay v1 exact spawn extension requires pow2 rules";
+      const payload = toUint8Array(record.payload || []);
+      if (payload.length !== 1 || !isReplayV1Pow2ExactSpawnValue(payload[0])) {
+        throw "Invalid replay v1 exact spawn extension";
+      }
+      exactSpawnValue = payload[0];
+      continue;
+    }
+    if (exactSpawnValue !== null && record.kind !== "move") {
+      throw "Replay v1 exact spawn extension crossed a record";
+    }
     if (record.kind === "move") {
+      if (exactSpawnValue !== null && record.spawnValueBit !== 0) {
+        throw "Replay v1 exact spawn move value bit must be zero";
+      }
       replayMoves.push(record.dir);
       replaySpawns.push({
         x: record.spawnIndex % width,
         y: Math.floor(record.spawnIndex / width),
-        value: fib ? (record.spawnValueBit === 1 ? 2 : 1) : record.spawnValueBit === 1 ? 4 : 2
+        value:
+          exactSpawnValue !== null
+            ? exactSpawnValue
+            : fib
+              ? record.spawnValueBit === 1
+                ? 2
+                : 1
+              : record.spawnValueBit === 1
+                ? 4
+                : 2
       });
+      exactSpawnValue = null;
       continue;
     }
     if (record.kind === "undo1") {
@@ -627,6 +729,7 @@ export function replayV1RecordsToReplayActions(
       }
     }
   }
+  if (exactSpawnValue !== null) throw "Dangling replay v1 exact spawn extension";
   return { replayMoves, replaySpawns };
 }
 

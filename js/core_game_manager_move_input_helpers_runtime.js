@@ -442,8 +442,389 @@ function shouldAbortMoveBeforePlanning(manager, direction) {
   return false;
 }
 
+function resolveSharedGameSessionRuntime() {
+  if (typeof CoreGameSessionRuntime !== "undefined" && CoreGameSessionRuntime) {
+    return CoreGameSessionRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameSessionRuntime) {
+    return window.CoreGameSessionRuntime;
+  }
+  return null;
+}
+
+function resolveSharedGameSessionSeed(manager) {
+  var initialSeed = Math.floor(Number(manager && manager.initialSeed));
+  if (Number.isSafeInteger(initialSeed) && initialSeed >= 0) return initialSeed;
+  var fallbackSeed = Math.floor(Number(manager && manager.seed));
+  return Number.isSafeInteger(fallbackSeed) && fallbackSeed >= 0 ? fallbackSeed : null;
+}
+
+function readSharedGameSessionBoard(manager) {
+  if (!(manager && manager.grid)) return [];
+  var board = [];
+  for (var y = 0; y < manager.height; y++) {
+    var row = [];
+    for (var x = 0; x < manager.width; x++) {
+      var tile = typeof manager.grid.cellContent === "function"
+        ? manager.grid.cellContent({ x: x, y: y })
+        : manager.grid.cells && manager.grid.cells[x]
+          ? manager.grid.cells[x][y]
+          : null;
+      row.push(tile && Number.isFinite(Number(tile.value)) ? Number(tile.value) : 0);
+    }
+    board.push(row);
+  }
+  return board;
+}
+
+function resolveSharedGameSessionDurationMs(manager) {
+  if (manager && typeof manager.getDurationMs === "function") {
+    var duration = Math.floor(Number(manager.getDurationMs()));
+    if (Number.isSafeInteger(duration) && duration >= 0) return duration;
+  }
+  var fallback = Math.floor(Number(manager && manager.time));
+  return Number.isSafeInteger(fallback) && fallback >= 0 ? fallback : 0;
+}
+
+function resolveSharedGameSessionStartedAtMs(manager) {
+  if (!(manager && manager.timerStatus === 1)) return null;
+  if (manager.startTime && typeof manager.startTime.getTime === "function") {
+    var startedAt = Math.floor(Number(manager.startTime.getTime()));
+    if (Number.isSafeInteger(startedAt) && startedAt >= 0) return startedAt;
+  }
+  var fallback = Math.floor(Number(manager.timerStartedAtMs));
+  return Number.isSafeInteger(fallback) && fallback >= 0 ? fallback : null;
+}
+
+function resolveSharedGameSessionChallengeId(manager) {
+  var candidates = [
+    manager && manager.rankedChallengeId,
+    manager && manager.challengeId,
+    manager && manager.sessionReplayV1 && manager.sessionReplayV1.challenge_id
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    if (typeof candidates[i] === "string" && candidates[i].trim()) return candidates[i].trim();
+  }
+  return null;
+}
+
+function normalizeSharedGameSessionCounter(value) {
+  var normalized = Math.floor(Number(value));
+  return Number.isSafeInteger(normalized) && normalized >= 0 ? normalized : 0;
+}
+
+function captureSharedGameSessionArrayState(value) {
+  return Array.isArray(value) ? { target: value, items: value.slice() } : null;
+}
+
+function restoreSharedGameSessionArrayState(snapshot) {
+  if (!(snapshot && Array.isArray(snapshot.target))) return;
+  snapshot.target.length = 0;
+  Array.prototype.push.apply(snapshot.target, snapshot.items);
+}
+
+function captureSharedGameSessionRecordState(target) {
+  if (!(target && typeof target === "object")) return null;
+  var keys = Object.keys(target);
+  var values = {};
+  var arrays = [];
+  for (var i = 0; i < keys.length; i++) {
+    values[keys[i]] = target[keys[i]];
+    var arrayState = captureSharedGameSessionArrayState(target[keys[i]]);
+    if (arrayState) arrays.push(arrayState);
+  }
+  return { target: target, keys: keys, values: values, arrays: arrays };
+}
+
+function restoreSharedGameSessionRecordState(snapshot) {
+  if (!(snapshot && snapshot.target)) return;
+  var allowed = {};
+  for (var i = 0; i < snapshot.keys.length; i++) allowed[snapshot.keys[i]] = true;
+  var currentKeys = Object.keys(snapshot.target);
+  for (var j = 0; j < currentKeys.length; j++) {
+    if (!allowed[currentKeys[j]]) delete snapshot.target[currentKeys[j]];
+  }
+  for (var k = 0; k < snapshot.keys.length; k++) {
+    snapshot.target[snapshot.keys[k]] = snapshot.values[snapshot.keys[k]];
+  }
+  for (var a = 0; a < snapshot.arrays.length; a++) {
+    restoreSharedGameSessionArrayState(snapshot.arrays[a]);
+  }
+}
+
+function isSharedGameSessionPlainRecord(value) {
+  if (!(value && typeof value === "object") || Array.isArray(value)) return false;
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function captureSharedGameSessionNestedStates(manager, grid) {
+  var states = [];
+  var keys = Object.keys(manager || {});
+  for (var i = 0; i < keys.length; i++) {
+    var value = manager[keys[i]];
+    if (value === grid || !isSharedGameSessionPlainRecord(value)) continue;
+    states.push(captureSharedGameSessionRecordState(value));
+  }
+  return states;
+}
+
+function hasSharedGameSessionSnapshotTarget(states, target) {
+  for (var i = 0; i < states.length; i++) {
+    if (states[i] && states[i].target === target) return true;
+  }
+  return false;
+}
+
+function appendSharedGameSessionGridColumnState(state, column) {
+  var columnState = captureSharedGameSessionArrayState(column);
+  if (!columnState) return;
+  state.columns.push(columnState);
+  for (var i = 0; i < column.length; i++) {
+    var tile = column[i];
+    if (!(tile && typeof tile === "object")) continue;
+    if (hasSharedGameSessionSnapshotTarget(state.tiles, tile)) continue;
+    state.tiles.push(captureSharedGameSessionRecordState(tile));
+  }
+}
+
+function captureSharedGameSessionGridState(grid) {
+  if (!(grid && Array.isArray(grid.cells))) return null;
+  var state = { record: captureSharedGameSessionRecordState(grid), columns: [], tiles: [] };
+  for (var i = 0; i < grid.cells.length; i++) {
+    appendSharedGameSessionGridColumnState(state, grid.cells[i]);
+  }
+  return state;
+}
+
+function restoreSharedGameSessionGridState(snapshot) {
+  if (!snapshot) return;
+  restoreSharedGameSessionRecordState(snapshot.record);
+  for (var i = 0; i < snapshot.columns.length; i++) {
+    restoreSharedGameSessionArrayState(snapshot.columns[i]);
+  }
+  for (var j = 0; j < snapshot.tiles.length; j++) {
+    restoreSharedGameSessionRecordState(snapshot.tiles[j]);
+  }
+}
+
+function captureSharedGameSessionTransaction(manager) {
+  var grid = manager && manager.grid;
+  return {
+    manager: captureSharedGameSessionRecordState(manager),
+    nested: captureSharedGameSessionNestedStates(manager, grid),
+    grid: captureSharedGameSessionGridState(grid)
+  };
+}
+
+function restoreSharedGameSessionTransaction(snapshot) {
+  if (!snapshot) return;
+  restoreSharedGameSessionRecordState(snapshot.manager);
+  for (var i = 0; i < snapshot.nested.length; i++) {
+    restoreSharedGameSessionRecordState(snapshot.nested[i]);
+  }
+  restoreSharedGameSessionGridState(snapshot.grid);
+}
+
+function createSharedGameSessionStatePatch(manager, startedAtMs, durationMs) {
+  return {
+    board: readSharedGameSessionBoard(manager),
+    score: Math.max(0, Math.floor(Number(manager && manager.score) || 0)),
+    steps: normalizeSharedGameSessionCounter(manager && manager.successfulMoveCount),
+    gameOver: !!(manager && manager.over),
+    won: !!(manager && manager.won),
+    milestone2048Reached: !!(manager && manager.won),
+    undoUsed: normalizeSharedGameSessionCounter(manager && manager.undoUsed),
+    comboStreak: normalizeSharedGameSessionCounter(manager && manager.comboStreak),
+    startedAtMs: startedAtMs,
+    lastEventAtMs: startedAtMs === null ? null : startedAtMs + durationMs,
+    durationMs: durationMs,
+    rngStep: Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0
+  };
+}
+
+function createSharedGameSessionTransition(manager, direction, atMs) {
+  var runtime = resolveSharedGameSessionRuntime();
+  if (!(runtime && typeof runtime.supportsMode === "function" && typeof runtime.createSession === "function")) {
+    return null;
+  }
+  var modeKey = String(manager && (manager.modeKey || manager.mode) || "");
+  if (!runtime.supportsMode(modeKey) || (manager && manager.replayMode)) return null;
+  var seed = resolveSharedGameSessionSeed(manager);
+  if (seed === null) throw new Error("Shared Game Session requires a deterministic seed");
+  var durationMs = resolveSharedGameSessionDurationMs(manager);
+  var startedAtMs = resolveSharedGameSessionStartedAtMs(manager);
+  var session = runtime.createSession({ modeKey: modeKey, seed: seed, startedAtMs: startedAtMs,
+    challengeId: resolveSharedGameSessionChallengeId(manager) });
+  session.init(createSharedGameSessionStatePatch(manager, startedAtMs, durationMs));
+  return session.move({ direction: direction, atMs: atMs });
+}
+
+function buildSharedGameSessionMotionTargets(transition) {
+  var targets = {};
+  var motions = transition && Array.isArray(transition.motions) ? transition.motions : [];
+  for (var i = 0; i < motions.length; i++) {
+    var motion = motions[i];
+    if (!(motion && motion.from && motion.to)) continue;
+    targets[String(motion.from.x) + ":" + String(motion.from.y)] = {
+      x: motion.to.x,
+      y: motion.to.y
+    };
+  }
+  return targets;
+}
+
+function captureSharedGameSessionUndoTiles(manager, movePlan, transition) {
+  if (!(manager && movePlan && movePlan.undo && manager.grid && typeof manager.grid.eachCell === "function")) {
+    return;
+  }
+  var targets = buildSharedGameSessionMotionTargets(transition);
+  manager.grid.eachCell(function (x, y, tile) {
+    if (!tile) return;
+    var target = targets[String(x) + ":" + String(y)] || { x: x, y: y };
+    var snapshot = manager.createUndoTileSnapshot(tile, target);
+    if (snapshot) movePlan.undo.tiles.push(snapshot);
+  });
+}
+
+function findSharedGameSessionMergeForMotion(transition, motion) {
+  var merges = transition && Array.isArray(transition.merges) ? transition.merges : [];
+  for (var i = 0; i < merges.length; i++) {
+    var merge = merges[i];
+    var source = merge && Array.isArray(merge.from) ? merge.from[0] : null;
+    if (!source || !merge.to || !motion || !motion.from || !motion.to) continue;
+    if (
+      source.x === motion.from.x && source.y === motion.from.y &&
+      merge.to.x === motion.to.x && merge.to.y === motion.to.y
+    ) {
+      return merge;
+    }
+  }
+  return null;
+}
+
+function applySharedGameSessionMergeMotion(manager, motion, merge, tile) {
+  var next = manager.grid.cellContent(motion.to);
+  if (!next) throw new Error("Shared Game Session merge target is missing");
+  var merged = new Tile(motion.to, merge.value);
+  merged.mergedFrom = [tile, next];
+  manager.grid.insertTile(merged);
+  manager.grid.removeTile(tile);
+  tile.updatePosition(motion.to);
+  applyMergedTileEffects(manager, merge.value, manager.pretty(manager.time));
+}
+
+function applySharedGameSessionMotion(manager, transition, motion) {
+  if (!(manager && manager.grid && motion && motion.from && motion.to)) return;
+  var tile = manager.grid.cellContent(motion.from);
+  if (!tile) throw new Error("Shared Game Session motion source is missing");
+  var merge = findSharedGameSessionMergeForMotion(transition, motion);
+  if (merge) {
+    applySharedGameSessionMergeMotion(manager, motion, merge, tile);
+    return;
+  }
+  clearRuntimeGridCellForMove(manager, motion.from.x, motion.from.y);
+  writeRuntimeGridCellForMove(manager, motion.to.x, motion.to.y, tile);
+  tile.updatePosition(motion.to);
+}
+
+function applySharedGameSessionTransitionToGrid(manager, movePlan, transition) {
+  resetGridMergeStateBeforeMove(manager);
+  captureSharedGameSessionUndoTiles(manager, movePlan, transition);
+  var motions = Array.isArray(transition.motions) ? transition.motions : [];
+  for (var i = 0; i < motions.length; i++) {
+    applySharedGameSessionMotion(manager, transition, motions[i]);
+  }
+  if (transition.spawn) {
+    var spawn = transition.spawn;
+    var spawnTile = new Tile({ x: spawn.x, y: spawn.y }, spawn.value);
+    manager.grid.insertTile(spawnTile);
+    manager.lastSpawn = { x: spawn.x, y: spawn.y, value: spawn.value };
+    recordSpawnValue(manager, spawn.value);
+  }
+  setRuntimeScoreForMove(manager, transition.state.score);
+  manager.comboStreak = transition.state.comboStreak;
+  manager.won = !!transition.state.won;
+}
+
+function applySharedGameSessionPreLifecycleEffects(manager, atMs) {
+  updateIpsInputCountAfterMove(manager);
+  resetMoveTimeoutDeadline(manager, atMs);
+  processItemModeAfterSuccessfulMove(manager);
+  if (typeof stampCustomSecondaryTimersForBoard === "function") {
+    stampCustomSecondaryTimersForBoard(manager, manager.pretty(manager.time));
+  }
+}
+
+function finalizeSharedGameSessionMove(manager, movePlan, direction, transition, atMs) {
+  applySharedGameSessionPreLifecycleEffects(manager, atMs);
+  var postMoveLifecycle = resolvePostMoveLifecycle(manager, !transition.gameOver, false);
+  manager.successfulMoveCount = transition.state.steps;
+  manager.over = !!transition.gameOver;
+  if (shouldCaptureUndoHistoryForMove(manager)) {
+    pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
+  } else {
+    clearRuntimeUndoStackForMove(manager);
+  }
+  clearRuntimeRedoStackForMove(manager);
+  appendPostMoveRecordArtifacts(manager, direction);
+  applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
+}
+
+function applySharedGameSessionMoveResult(manager, direction, atMs, transition) {
+  if (!transition) return;
+  if (!transition.moved) {
+    if (transition.gameOver) {
+      manager.over = true;
+      manager.stopTimer();
+      writePostMoveEndTimerText(manager);
+      actuate(manager);
+    }
+    return;
+  }
+  var movePlan = buildMovePlan(manager, direction);
+  if (!(movePlan && movePlan.vector)) return;
+  applySharedGameSessionTransitionToGrid(manager, movePlan, transition);
+  finalizeSharedGameSessionMove(manager, movePlan, direction, transition, atMs);
+}
+
+function reportSharedGameSessionFailure(error) {
+  if (typeof console !== "undefined" && console && typeof console.error === "function") {
+    console.error("[game-session-compat] shared move failed", error);
+  }
+}
+
+function publishSharedGameSessionTransition(manager, transition) {
+  manager.__sharedGameSessionLastTransition = transition;
+  manager.__sharedGameSessionMoveCount = Number(manager.__sharedGameSessionMoveCount || 0) + 1;
+}
+
+function rethrowSharedGameSessionFailure(manager, snapshot, error) {
+  restoreSharedGameSessionTransaction(snapshot);
+  reportSharedGameSessionFailure(error);
+  throw error;
+}
+
+function tryMoveWithSharedGameSession(manager, direction, atMs) {
+  var runtime = resolveSharedGameSessionRuntime();
+  var modeKey = String(manager && (manager.modeKey || manager.mode) || "");
+  if (!(runtime && typeof runtime.supportsMode === "function" && runtime.supportsMode(modeKey))) return false;
+  if (manager && manager.replayMode) return false;
+  var snapshot = null;
+  try {
+    var transition = createSharedGameSessionTransition(manager, direction, atMs);
+    if (!transition) return true;
+    snapshot = captureSharedGameSessionTransaction(manager);
+    applySharedGameSessionMoveResult(manager, direction, atMs, transition);
+    publishSharedGameSessionTransition(manager, transition);
+    return true;
+  } catch (error) {
+    rethrowSharedGameSessionFailure(manager, snapshot, error);
+  }
+}
+
 function move(manager, direction) {
   if (shouldAbortMoveBeforePlanning(manager, direction)) return;
+  if (tryMoveWithSharedGameSession(manager, direction, Date.now())) return;
   var movePlan = buildMovePlan(manager, direction);
   if (!(movePlan && movePlan.vector)) return;
   var traversals = buildTraversals(manager, movePlan.vector);

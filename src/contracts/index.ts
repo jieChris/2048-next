@@ -29,7 +29,7 @@ function hasRequiredObjectKeys(
 // Replay contracts
 // ---------------------------------------------------------------------------
 
-export interface ReplayRecord {
+export interface ReplayRecordV4c {
   version: number;
   kind: "v4c";
   modeKey: string;
@@ -37,6 +37,15 @@ export interface ReplayRecord {
   actionsEncoded: string;
   replayString: string;
 }
+
+export interface ReplayRecordRpl1 {
+  version: typeof APP_GAME_CONTRACT_VERSION;
+  kind: "rpl1";
+  modeKey: AppModeKey;
+  replayString: string;
+}
+
+export type ReplayRecord = ReplayRecordV4c | ReplayRecordRpl1;
 
 export const REPLAY_RECORD_REQUIRED_KEYS = [
   "version",
@@ -47,11 +56,36 @@ export const REPLAY_RECORD_REQUIRED_KEYS = [
   "replayString"
 ] as const;
 
+export const REPLAY_RPL1_RECORD_REQUIRED_KEYS = [
+  "version",
+  "kind",
+  "modeKey",
+  "replayString"
+] as const;
+
 export function isReplayRecordLike(value: unknown): value is ReplayRecord {
-  return hasRequiredObjectKeys(value, REPLAY_RECORD_REQUIRED_KEYS);
+  if (!isNonArrayObject(value)) return false;
+  if (value.kind === "rpl1") {
+    return (
+      hasRequiredObjectKeys(value, REPLAY_RPL1_RECORD_REQUIRED_KEYS) &&
+      value.version === APP_GAME_CONTRACT_VERSION &&
+      isAppModeKey(value.modeKey) &&
+      typeof value.replayString === "string" &&
+      value.replayString.startsWith("REPLAY_v1RPL_B64_")
+    );
+  }
+  return (
+    value.kind === "v4c" &&
+    hasRequiredObjectKeys(value, REPLAY_RECORD_REQUIRED_KEYS) &&
+    Number.isInteger(value.version) &&
+    typeof value.modeKey === "string" &&
+    typeof value.initialBoardEncoded === "string" &&
+    typeof value.actionsEncoded === "string" &&
+    typeof value.replayString === "string"
+  );
 }
 
-export function createEmptyReplayRecord(modeKey: string): ReplayRecord {
+export function createEmptyReplayRecord(modeKey: string): ReplayRecordV4c {
   return {
     version: CONTRACT_SCHEMA_VERSION,
     kind: "v4c",
@@ -60,6 +94,335 @@ export function createEmptyReplayRecord(modeKey: string): ReplayRecord {
     actionsEncoded: "",
     replayString: ""
   };
+}
+
+// ---------------------------------------------------------------------------
+// App game-session contracts (versioned independently from legacy payloads)
+// ---------------------------------------------------------------------------
+
+export const APP_GAME_CONTRACT_VERSION = 1 as const;
+
+export const APP_MODE_KEYS = [
+  "standard_4x4_pow2_no_undo",
+  "classic_4x4_pow2_undo",
+  "board_3x3_pow2_no_undo"
+] as const;
+
+export type AppModeKey = (typeof APP_MODE_KEYS)[number];
+export type GameDirection = 0 | 1 | 2 | 3;
+
+export interface GameCell {
+  x: number;
+  y: number;
+}
+
+export interface GameInitialTile {
+  cellIndex: number;
+  value: number;
+}
+
+export interface GameMoveReplayRecord {
+  kind: "move";
+  direction: GameDirection;
+  spawnIndex: number;
+  spawnValue: number;
+  deltaMs: number;
+  rngStep: number;
+}
+
+export interface GameUndoReplayRecord {
+  kind: "undo";
+  deltaMs: number;
+}
+
+export type GameReplayRecord = GameMoveReplayRecord | GameUndoReplayRecord;
+
+export interface GameUndoFrame {
+  board: number[][];
+  score: number;
+  steps: number;
+  gameOver: boolean;
+  won: boolean;
+  milestone2048Reached: boolean;
+  comboStreak: number;
+  undoUsed: number;
+}
+
+export interface GameState {
+  version: typeof APP_GAME_CONTRACT_VERSION;
+  modeKey: AppModeKey;
+  width: number;
+  height: number;
+  ruleset: "pow2";
+  undoEnabled: boolean;
+  seed: number;
+  challengeId: string | null;
+  board: number[][];
+  score: number;
+  steps: number;
+  gameOver: boolean;
+  won: boolean;
+  milestone2048Reached: boolean;
+  undoUsed: number;
+  comboStreak: number;
+  startedAtMs: number | null;
+  lastEventAtMs: number | null;
+  durationMs: number;
+  rngStep: number;
+  initialTiles: GameInitialTile[];
+  replayRecords: GameReplayRecord[];
+  undoStack: GameUndoFrame[];
+}
+
+export interface GameMotionEffect {
+  from: GameCell;
+  to: GameCell;
+  value: number;
+}
+
+export interface GameMergeEffect {
+  from: [GameCell, GameCell];
+  to: GameCell;
+  value: number;
+}
+
+export interface GameSpawnEffect extends GameCell {
+  spawnIndex: number;
+  value: number;
+  rngStep: number;
+}
+
+export interface GameTransition {
+  state: GameState;
+  moved: boolean;
+  scoreDelta: number;
+  motions: GameMotionEffect[];
+  merges: GameMergeEffect[];
+  spawn: GameSpawnEffect | null;
+  milestone2048: boolean;
+  gameOver: boolean;
+}
+
+export interface GameSnapshot {
+  version: typeof APP_GAME_CONTRACT_VERSION;
+  savedAtMs: number;
+  state: GameState;
+}
+
+export const GAME_UNDO_FRAME_REQUIRED_KEYS = [
+  "board",
+  "score",
+  "steps",
+  "gameOver",
+  "won",
+  "milestone2048Reached",
+  "comboStreak",
+  "undoUsed"
+] as const;
+
+export const GAME_STATE_REQUIRED_KEYS = [
+  "version",
+  "modeKey",
+  "width",
+  "height",
+  "ruleset",
+  "undoEnabled",
+  "seed",
+  "challengeId",
+  "board",
+  "score",
+  "steps",
+  "gameOver",
+  "won",
+  "milestone2048Reached",
+  "undoUsed",
+  "comboStreak",
+  "startedAtMs",
+  "lastEventAtMs",
+  "durationMs",
+  "rngStep",
+  "initialTiles",
+  "replayRecords",
+  "undoStack"
+] as const;
+
+export const GAME_TRANSITION_REQUIRED_KEYS = [
+  "state",
+  "moved",
+  "scoreDelta",
+  "motions",
+  "merges",
+  "spawn",
+  "milestone2048",
+  "gameOver"
+] as const;
+
+export const GAME_SNAPSHOT_REQUIRED_KEYS = ["version", "savedAtMs", "state"] as const;
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0;
+}
+
+function isGameBoardLike(value: unknown, width?: number, height?: number): value is number[][] {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  if (height !== undefined && value.length !== height) return false;
+  const rowWidth = width ?? (Array.isArray(value[0]) ? value[0].length : 0);
+  if (rowWidth <= 0) return false;
+  return value.every(
+    (row) =>
+      Array.isArray(row) &&
+      row.length === rowWidth &&
+      row.every((cell) => isNonNegativeSafeInteger(cell))
+  );
+}
+
+function isGameCellLike(value: unknown): value is GameCell {
+  return (
+    isNonArrayObject(value) &&
+    isNonNegativeSafeInteger(value.x) &&
+    isNonNegativeSafeInteger(value.y)
+  );
+}
+
+function isGameInitialTileLike(value: unknown, cellCount: number): value is GameInitialTile {
+  return (
+    isNonArrayObject(value) &&
+    isNonNegativeSafeInteger(value.cellIndex) &&
+    Number(value.cellIndex) < cellCount &&
+    isNonNegativeSafeInteger(value.value) &&
+    Number(value.value) > 0
+  );
+}
+
+function isGameReplayRecordLike(value: unknown, cellCount: number): value is GameReplayRecord {
+  if (!isNonArrayObject(value) || !isNonNegativeSafeInteger(value.deltaMs)) return false;
+  if (value.kind === "undo") return true;
+  return (
+    value.kind === "move" &&
+    (value.direction === 0 || value.direction === 1 || value.direction === 2 || value.direction === 3) &&
+    isNonNegativeSafeInteger(value.spawnIndex) &&
+    Number(value.spawnIndex) < cellCount &&
+    isNonNegativeSafeInteger(value.spawnValue) &&
+    Number(value.spawnValue) > 0 &&
+    isNonNegativeSafeInteger(value.rngStep)
+  );
+}
+
+export function isAppModeKey(value: unknown): value is AppModeKey {
+  return typeof value === "string" && APP_MODE_KEYS.includes(value as AppModeKey);
+}
+
+export function isGameUndoFrameLike(value: unknown): value is GameUndoFrame {
+  if (!hasRequiredObjectKeys(value, GAME_UNDO_FRAME_REQUIRED_KEYS)) return false;
+  return (
+    isGameBoardLike(value.board) &&
+    isNonNegativeSafeInteger(value.score) &&
+    isNonNegativeSafeInteger(value.steps) &&
+    typeof value.gameOver === "boolean" &&
+    typeof value.won === "boolean" &&
+    typeof value.milestone2048Reached === "boolean" &&
+    isNonNegativeSafeInteger(value.comboStreak) &&
+    isNonNegativeSafeInteger(value.undoUsed)
+  );
+}
+
+export function isGameStateLike(value: unknown): value is GameState {
+  if (!hasRequiredObjectKeys(value, GAME_STATE_REQUIRED_KEYS)) return false;
+  const width = Number(value.width);
+  const height = Number(value.height);
+  const cellCount = width * height;
+  const expectedSize = value.modeKey === "board_3x3_pow2_no_undo" ? 3 : 4;
+  const expectedUndoEnabled = value.modeKey === "classic_4x4_pow2_undo";
+  return (
+    value.version === APP_GAME_CONTRACT_VERSION &&
+    isAppModeKey(value.modeKey) &&
+    isNonNegativeSafeInteger(width) &&
+    width === expectedSize &&
+    isNonNegativeSafeInteger(height) &&
+    height === expectedSize &&
+    value.ruleset === "pow2" &&
+    value.undoEnabled === expectedUndoEnabled &&
+    isNonNegativeSafeInteger(value.seed) &&
+    (value.challengeId === null || typeof value.challengeId === "string") &&
+    isGameBoardLike(value.board, width, height) &&
+    isNonNegativeSafeInteger(value.score) &&
+    isNonNegativeSafeInteger(value.steps) &&
+    typeof value.gameOver === "boolean" &&
+    typeof value.won === "boolean" &&
+    typeof value.milestone2048Reached === "boolean" &&
+    isNonNegativeSafeInteger(value.undoUsed) &&
+    isNonNegativeSafeInteger(value.comboStreak) &&
+    (value.startedAtMs === null || isNonNegativeSafeInteger(value.startedAtMs)) &&
+    (value.lastEventAtMs === null || isNonNegativeSafeInteger(value.lastEventAtMs)) &&
+    isNonNegativeSafeInteger(value.durationMs) &&
+    isNonNegativeSafeInteger(value.rngStep) &&
+    Array.isArray(value.initialTiles) &&
+    value.initialTiles.every((tile) => isGameInitialTileLike(tile, cellCount)) &&
+    Array.isArray(value.replayRecords) &&
+    value.replayRecords.every((record) => isGameReplayRecordLike(record, cellCount)) &&
+    Array.isArray(value.undoStack) &&
+    value.undoStack.every(
+      (frame) => isGameUndoFrameLike(frame) && isGameBoardLike(frame.board, width, height)
+    )
+  );
+}
+
+function isGameMotionEffectLike(value: unknown): value is GameMotionEffect {
+  return (
+    isNonArrayObject(value) &&
+    isGameCellLike(value.from) &&
+    isGameCellLike(value.to) &&
+    isNonNegativeSafeInteger(value.value) &&
+    Number(value.value) > 0
+  );
+}
+
+function isGameMergeEffectLike(value: unknown): value is GameMergeEffect {
+  return (
+    isNonArrayObject(value) &&
+    Array.isArray(value.from) &&
+    value.from.length === 2 &&
+    value.from.every(isGameCellLike) &&
+    isGameCellLike(value.to) &&
+    isNonNegativeSafeInteger(value.value) &&
+    Number(value.value) > 0
+  );
+}
+
+function isGameSpawnEffectLike(value: unknown): value is GameSpawnEffect {
+  if (!isNonArrayObject(value) || !isGameCellLike(value)) return false;
+  return (
+    isNonNegativeSafeInteger(value.spawnIndex) &&
+    isNonNegativeSafeInteger(value.value) &&
+    Number(value.value) > 0 &&
+    isNonNegativeSafeInteger(value.rngStep)
+  );
+}
+
+export function isGameTransitionLike(value: unknown): value is GameTransition {
+  if (!hasRequiredObjectKeys(value, GAME_TRANSITION_REQUIRED_KEYS)) return false;
+  return (
+    isGameStateLike(value.state) &&
+    typeof value.moved === "boolean" &&
+    Number.isSafeInteger(value.scoreDelta) &&
+    Array.isArray(value.motions) &&
+    value.motions.every(isGameMotionEffectLike) &&
+    Array.isArray(value.merges) &&
+    value.merges.every(isGameMergeEffectLike) &&
+    (value.spawn === null || isGameSpawnEffectLike(value.spawn)) &&
+    typeof value.milestone2048 === "boolean" &&
+    typeof value.gameOver === "boolean" &&
+    value.gameOver === value.state.gameOver
+  );
+}
+
+export function isGameSnapshotLike(value: unknown): value is GameSnapshot {
+  return (
+    hasRequiredObjectKeys(value, GAME_SNAPSHOT_REQUIRED_KEYS) &&
+    value.version === APP_GAME_CONTRACT_VERSION &&
+    isNonNegativeSafeInteger(value.savedAtMs) &&
+    isGameStateLike(value.state)
+  );
 }
 
 // ---------------------------------------------------------------------------

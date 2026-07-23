@@ -1,6 +1,6 @@
 # Android App 实施计划
 
-> 用户已于 2026-07-23 明确批准本规划与低保真线框，当前执行阶段 1。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
+> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1 已完成，当前执行阶段 2。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
 
 ## 执行原则
 
@@ -35,27 +35,27 @@
 
 ### 1.1 先建立行为合同
 
-- [ ] 在 `src/contracts` 补齐 GameState、GameTransition、持久化 snapshot 和版本化 ReplayRecord 所需字段。
-- [ ] 新增三模式固定 seed/action 黄金向量，覆盖最终棋盘、每步 spawn、score、steps、duration、undo 和 RPL1。
-- [ ] 增加边界用例：无效移动、`[2,2,2,2]`、满盘终局、首次 2048 后继续、撤回、进程恢复。
-- [ ] 从 legacy 提取经典 4×4 高位特殊出块用例，覆盖 131072/262144 后概率和满盘强制 8/16 分支。
-- [ ] 在 `2048-game-api` verifier 侧消费相同黄金输入并断言服务端结果。
+- [x] 在 `src/contracts` 补齐 GameState、GameTransition、持久化 snapshot 和版本化 ReplayRecord 所需字段。
+- [x] 新增三模式固定 seed/action 黄金向量，覆盖最终棋盘、每步 spawn、score、steps、duration、undo 和 RPL1。
+- [x] 增加边界用例：无效移动、`[2,2,2,2]`、满盘终局、首次 2048 后继续、撤回、进程恢复。
+- [x] 从 legacy 提取经典 4×4 高位特殊出块用例，覆盖 131072/262144 后概率和满盘强制 8/16 分支。
+- [x] 在 `2048-game-api` verifier 侧消费相同黄金输入并断言服务端结果。
 
 ### 1.2 加深现有 engine
 
-- [ ] 直接改造 `src/core/engine.ts`，不新建 `mobile-engine`。
-- [ ] 复用 `move-path.ts`、`move-scan.ts`、`rules.ts`、`scoring.ts`、undo 与 replay codec；只迁移缺失的棋盘变更和确定性 spawn 实现。
-- [ ] 核心只接受 mode/seed/time/direction，不接收预先计算的 score 或 movesAvailable。
-- [ ] 输出 UI 所需 motions、merges、spawn 和 milestone effects，但不引用 DOM。
-- [ ] 撤回恢复 RNG 步号、计时、回放游标和完整状态。
-- [ ] 首版模式表只含三个已确认模式；不迁移特殊模式框架。
+- [x] 直接改造 `src/core/engine.ts`，不新建 `mobile-engine`。
+- [x] 复用 `move-path.ts`、`move-scan.ts`、`rules.ts`、`scoring.ts`、undo 与 replay codec；只迁移缺失的棋盘变更和确定性 spawn 实现。
+- [x] 核心只接受 mode/seed/time/direction，不接收预先计算的 score 或 movesAvailable。
+- [x] 输出 UI 所需 motions、merges、spawn 和 milestone effects，但不引用 DOM。
+- [x] 撤回恢复有效局面状态；遵循 RPL1/verifier 既有动作语义保持计时连续、追加 undo 记录并消耗一个 RNG action step，详见执行记录的 Route Deviation。
+- [x] 首版模式表只含三个已确认模式；不迁移特殊模式框架。
 
 ### 1.3 Web 兼容迁移
 
-- [ ] 先让旧 Web 三个共享模式在测试中以现有 runtime 作为提取 oracle，所有黄金向量一致后冻结 legacy 规则改动。
-- [ ] 为 Web 三个共享模式建立最窄兼容 adapter，使它们消费同一 Game Session transition；DOM/Actuator 可暂时保留。
-- [ ] 其他未进入 App 的模式继续 legacy 路径，不为它们扩展新核心。
-- [ ] 增加审计：共享三模式不得新增绕过 Game Session 的规则分支。
+- [x] 先让旧 Web 三个共享模式在测试中以现有 runtime 作为提取 oracle，所有黄金向量一致后冻结 legacy 规则改动。
+- [x] 为 Web 三个共享模式建立最窄兼容 adapter，使它们消费同一 Game Session transition；DOM/Actuator 可暂时保留。
+- [x] 其他未进入 App 的模式继续 legacy 路径，不为它们扩展新核心。
+- [x] 增加审计：共享三模式不得新增绕过 Game Session 的规则分支。
 
 验证：
 

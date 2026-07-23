@@ -2,6 +2,7 @@ import {
   appendCompactMoveCode as appendCompactMoveCodeCore,
   appendCompactPracticeAction as appendCompactPracticeActionCore,
   appendCompactUndo as appendCompactUndoCore,
+  createReplayV1MoveRecords,
   decodeReplay128 as decodeReplay128Core,
   decodeReplayV1Rpl,
   encodeReplay128 as encodeReplay128Core,
@@ -249,14 +250,9 @@ function encodeReplayV1Utf8Text(text: unknown): Uint8Array {
 }
 
 function normalizeReplayV1SerializedStartUnixMs(rawStartUnixMs: unknown): number | null {
-  const parsed = Math.floor(Number(rawStartUnixMs));
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  if (parsed <= 4_294_967_295) return parsed;
-  const seconds = Math.floor(parsed / 1000);
-  if (Number.isFinite(seconds) && seconds > 0 && seconds <= 4_294_967_295) {
-    return seconds;
-  }
-  return null;
+  return typeof rawStartUnixMs === "number" && Number.isSafeInteger(rawStartUnixMs) && rawStartUnixMs > 0
+    ? rawStartUnixMs
+    : null;
 }
 
 function appendReplayV1ExtRecord(
@@ -995,16 +991,21 @@ export function recordSessionReplayV1Move(
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= width || y >= height) return;
   const isFibonacciMode = asFunction<() => unknown>(manager.isFibonacciMode);
   const fib = !!(isFibonacciMode && isFibonacciMode.call(manager));
-  if (fib ? value !== 1 && value !== 2 : value !== 2 && value !== 4) return;
   const records = Array.isArray(session.records) ? session.records : [];
   session.records = records;
-  records.push({
-    kind: "move",
-    dir: numericDirection,
-    spawnIndex: y * width + x,
-    spawnValueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0),
-    deltaMs: resolveSessionReplayV1DeltaMs(session, Date.now())
-  });
+  try {
+    records.push(
+      ...createReplayV1MoveRecords({
+        dir: numericDirection,
+        spawnIndex: y * width + x,
+        spawnValue: value,
+        deltaMs: resolveSessionReplayV1DeltaMs(session, Date.now()),
+        ruleset: fib ? "fibonacci" : "pow2"
+      })
+    );
+  } catch (_error) {
+    return;
+  }
 }
 
 export function refreshSpawnRateDisplay(manager: ManagerLike): void {

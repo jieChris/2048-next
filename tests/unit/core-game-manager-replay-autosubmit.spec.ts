@@ -34,9 +34,95 @@ function loadReplayHelpersRuntime() {
   };
   vm.runInNewContext(script, context);
   return context as typeof context & {
+    recordSessionReplayV1Move: (
+      manager: Record<string, unknown>,
+      direction: number,
+      spawn: { x: number; y: number; value: number }
+    ) => void;
+    serializeReplay: (manager: Record<string, unknown>) => string;
     tryAutoSubmitOnGameOver: (manager: Record<string, unknown>) => void;
   };
 }
+
+describe("legacy core game manager replay writer", () => {
+  it.each([8, 16, 32, 64])("records exact pow2 spawn %i without dropping the move", (value) => {
+    const runtime = loadReplayHelpersRuntime();
+    const manager = {
+      width: 4,
+      height: 4,
+      replayMode: false,
+      sessionReplayV1: {
+        supported: true,
+        last_event_at_ms: Date.now(),
+        records: [] as unknown[]
+      }
+    };
+
+    runtime.recordSessionReplayV1Move(manager, 1, { x: 2, y: 1, value });
+
+    expect(manager.sessionReplayV1.records).toHaveLength(2);
+    expect(manager.sessionReplayV1.records[0]).toEqual({
+      kind: "ext",
+      extType: 8,
+      payload: new Uint8Array([value])
+    });
+    expect(manager.sessionReplayV1.records[1]).toMatchObject({
+      kind: "move",
+      dir: 1,
+      spawnIndex: 6,
+      spawnValueBit: 0
+    });
+  });
+
+  it("preserves safe integer replay start milliseconds and rejects invalid values", () => {
+    const runtime = loadReplayHelpersRuntime();
+    const serializeStart = (startUnixMs: unknown) => {
+      let capturedInput: Record<string, unknown> | null = null;
+      const windowLike = {
+        CoreReplayCodecRuntime: {
+          encodeReplayV1Rpl(input: Record<string, unknown>) {
+            capturedInput = input;
+            return new Uint8Array([1]);
+          }
+        },
+        btoa() {
+          return "AQ==";
+        }
+      };
+      runtime.serializeReplay({
+        width: 4,
+        height: 4,
+        modeKey: "classic_4x4_pow2_undo",
+        sessionReplayV1: {
+          supported: true,
+          board_width: 4,
+          board_height: 4,
+          init_tiles: [],
+          records: [],
+          start_unix_ms: startUnixMs,
+          ruleset: "pow2"
+        },
+        getWindowLike: () => windowLike
+      });
+      return capturedInput?.startUnixMs;
+    };
+
+    expect(serializeStart(1_720_000_000_123)).toBe(1_720_000_000_123);
+    for (const invalid of [
+      0,
+      -1,
+      1.5,
+      Number.MAX_SAFE_INTEGER + 1,
+      NaN,
+      Infinity,
+      true,
+      "1720000000123",
+      "invalid"
+    ]) {
+      expect(serializeStart(invalid)).toBeNull();
+    }
+  });
+});
 
 describe("core game manager replay auto submit", () => {
   it("saves recovered games with rescue replay fallback when live serialization is unavailable", () => {

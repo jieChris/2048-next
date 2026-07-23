@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applySpawnValueCount,
+  createDeterministicSpawnHash,
   createRulesRuntime,
   getActualSecondaryRateText,
   getMergedValue,
@@ -16,6 +17,8 @@ import {
   nextFibonacci,
   normalizeSpawnTable,
   pickSpawnValue,
+  resolveDeterministicSpawn,
+  resolveSpawnPolicyForBoard,
   type RulesRuntime
 } from "../../src/core/rules";
 
@@ -24,6 +27,9 @@ describe("core rules runtime installer", () => {
     const runtime = createRulesRuntime();
 
     expect(runtime.normalizeSpawnTable).toBe(normalizeSpawnTable);
+    expect(runtime.createDeterministicSpawnHash).toBe(createDeterministicSpawnHash);
+    expect(runtime.resolveDeterministicSpawn).toBe(resolveDeterministicSpawn);
+    expect(runtime.resolveSpawnPolicyForBoard).toBe(resolveSpawnPolicyForBoard);
     expect(runtime.getTheoreticalMaxTile).toBe(getTheoreticalMaxTile);
     expect(runtime.pickSpawnValue).toBe(pickSpawnValue);
     expect(runtime.getSpawnStatPair).toBe(getSpawnStatPair);
@@ -163,6 +169,7 @@ describe("core rules: pickSpawnValue", () => {
     ];
     expect(pickSpawnValue(table, () => 0)).toBe(2);
     expect(pickSpawnValue(table, () => 0.8999)).toBe(2);
+    expect(pickSpawnValue(table, () => 0.9)).toBe(4);
     expect(pickSpawnValue(table, () => 0.9999)).toBe(4);
   });
 
@@ -176,6 +183,135 @@ describe("core rules: pickSpawnValue", () => {
         () => 0.5
       )
     ).toBe(7);
+  });
+});
+
+describe("core rules: deterministic spawn", () => {
+  const baseInput = {
+    modeKey: "standard_4x4_pow2_no_undo",
+    ruleset: "pow2" as const,
+    spawnTable: [
+      { value: 2, weight: 90 },
+      { value: 4, weight: 10 }
+    ],
+    seed: 424242,
+    stepCount: 0
+  };
+
+  it("matches the frozen x-major ranked hash channels", () => {
+    const spawn = resolveDeterministicSpawn({
+      ...baseInput,
+      board: [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+    });
+
+    expect(createDeterministicSpawnHash(424242, 0, "spawn:value")).toBe(1390591520);
+    expect(spawn).toMatchObject({
+      stepCount: 0,
+      spawnIndex: 11,
+      x: 3,
+      y: 2,
+      value: 2,
+      spawnValueBit: 0,
+      availableCellCount: 16
+    });
+  });
+
+  it("selects classic stage-one values at exact probability boundaries", () => {
+    const board = [
+      [131072, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0]
+    ];
+    const policy = resolveSpawnPolicyForBoard(
+      "classic_4x4_pow2_undo",
+      "pow2",
+      board,
+      baseInput.spawnTable
+    );
+
+    expect(policy.forcedValue).toBeNull();
+    expect(policy.table).toEqual([
+      { value: 2, weight: 87 },
+      { value: 4, weight: 10 },
+      { value: 8, weight: 3 }
+    ]);
+    expect(policy.pick(0.869999)).toBe(2);
+    expect(policy.pick(0.87)).toBe(4);
+    expect(policy.pick(0.97)).toBe(8);
+  });
+
+  it("selects classic stage-two values at exact probability boundaries", () => {
+    const policy = resolveSpawnPolicyForBoard(
+      "classic_4x4_pow2_undo",
+      "pow2",
+      [
+        [262144, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ],
+      baseInput.spawnTable
+    );
+
+    expect(policy.table).toEqual([
+      { value: 2, weight: 84 },
+      { value: 4, weight: 10 },
+      { value: 16, weight: 3 },
+      { value: 32, weight: 2 },
+      { value: 64, weight: 1 }
+    ]);
+    expect(policy.pick(0.839999)).toBe(2);
+    expect(policy.pick(0.84)).toBe(4);
+    expect(policy.pick(0.94)).toBe(16);
+    expect(policy.pick(0.97)).toBe(32);
+    expect(policy.pick(0.99)).toBe(64);
+  });
+
+  it("forces 8 and 16 for the two exact fifteen-tile boards", () => {
+    const stageOne = [
+      [131072, 65536, 32768, 16384],
+      [8192, 4096, 2048, 1024],
+      [512, 256, 128, 64],
+      [32, 16, 8, 0]
+    ];
+    const stageTwo = [
+      [262144, 131072, 65536, 32768],
+      [16384, 8192, 4096, 2048],
+      [1024, 512, 256, 128],
+      [64, 32, 16, 0]
+    ];
+
+    expect(
+      resolveSpawnPolicyForBoard(
+        "classic_4x4_pow2_undo",
+        "pow2",
+        stageOne,
+        baseInput.spawnTable
+      ).forcedValue
+    ).toBe(8);
+    expect(
+      resolveSpawnPolicyForBoard(
+        "classic_4x4_pow2_undo",
+        "pow2",
+        stageTwo,
+        baseInput.spawnTable
+      ).forcedValue
+    ).toBe(16);
+  });
+
+  it("rejects a deterministic spawn when no empty cell remains", () => {
+    expect(() =>
+      resolveDeterministicSpawn({
+        ...baseInput,
+        board: Array.from({ length: 4 }, () => [2, 4, 2, 4])
+      })
+    ).toThrow(/no available spawn cell/);
   });
 });
 
