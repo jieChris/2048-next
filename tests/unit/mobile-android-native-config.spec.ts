@@ -177,6 +177,25 @@ describe("Android native foundation", () => {
     );
   });
 
+  it("rejects non-production mobile assets from every release packaging graph", () => {
+    const appGradle = compact(readProjectFile("android/app/build.gradle"));
+
+    expect(appGradle).toContain("groovy.json.JsonSlurper");
+    expect(appGradle).toContain("mobile-build-flags.json");
+    expect(appGradle).toContain("https://2048next.cn/api");
+    expect(appGradle).toContain("Release packaging requires production mobile assets");
+    expect(appGradle).toContain("verifyReleaseMobileAssets");
+    expect(appGradle).toMatch(
+      /releasePackagingRequested[^}]*verifyReleaseMobileAssets\(\)/u
+    );
+    expect(packageManifest.scripts?.["audit:android:release-assets"]).toContain(
+      "android-release-assets-gate.mjs"
+    );
+    expect(packageManifest.scripts?.["android:check"]).toContain(
+      "audit:android:release-assets"
+    );
+  });
+
   it("ignores local SDK, build and signing material without ignoring the wrapper", () => {
     const rootIgnore = readProjectFile(".gitignore");
     const androidIgnore = readProjectFile("android/.gitignore");
@@ -191,7 +210,9 @@ describe("Android native foundation", () => {
   });
 
   it("provides repeatable sync, native audit and Android check commands", () => {
-    expect(packageManifest.scripts?.["android:sync"]).toContain("cap sync android");
+    expect(packageManifest.scripts?.["android:sync"]).toBeUndefined();
+    expect(packageManifest.scripts?.["android:sync:debug"]).toContain("cap sync android");
+    expect(packageManifest.scripts?.["android:sync:release"]).toContain("cap sync android");
     expect(packageManifest.scripts?.["audit:android"]).toContain(
       "android-project-audit.mjs"
     );
@@ -203,6 +224,15 @@ describe("Android native foundation", () => {
     );
     expect(packageManifest.scripts?.["android:check"]).toContain(
       "audit:android:release-signing"
+    );
+    expect(packageManifest.scripts?.["android:check"]).toContain(
+      "android:sync:debug"
+    );
+    expect(packageManifest.scripts?.["android:check"]).toContain(
+      "android:sync:release"
+    );
+    expect(packageManifest.scripts?.["android:check"]).toContain(
+      "test:unit:app:production"
     );
   });
 });

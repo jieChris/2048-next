@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import capacitorConfig from "../../capacitor.config";
+import {
+  MOBILE_PRODUCTION_API_BASE,
+  resolveMobileBuildFlags,
+} from "../../mobile/src/app/build-flags-contract";
 
 interface PackageManifest {
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 }
@@ -97,5 +102,27 @@ describe("mobile Capacitor configuration", () => {
 
   it("cannot load a remote site as the application shell", () => {
     expect(capacitorConfig).not.toHaveProperty("server");
+  });
+
+  it("keeps loopback HTTP out of the production-like App build mode", () => {
+    expect(packageManifest.scripts?.["build:app"]).not.toContain(
+      "--mode android-debug",
+    );
+    expect(packageManifest.scripts?.["build:app:android-debug"]).toContain(
+      "--mode android-debug",
+    );
+    expect(packageManifest.scripts?.["android:sync"]).toBeUndefined();
+    expect(packageManifest.scripts?.["android:sync:debug"]).toContain(
+      "android-build-mode-audit.mjs android-debug",
+    );
+    expect(packageManifest.scripts?.["android:sync:release"]).toContain(
+      "android-build-mode-audit.mjs production",
+    );
+    expect(resolveMobileBuildFlags("production")).toEqual({
+      apiBase: MOBILE_PRODUCTION_API_BASE,
+      allowApiBaseOverride: false,
+      allowDebugLoopbackHttp: false,
+      allowUnapprovedPolicyOnline: false,
+    });
   });
 });

@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 apply plugin: 'com.android.application'
 
 def releaseSigningPropertyNames = [
@@ -19,6 +21,43 @@ def releasePackagingTaskNames = [
     'signReleaseBundle'
 ] as Set
 def appProject = project
+def releaseMobileBuildFlagsFile = file('src/main/assets/public/mobile-build-flags.json')
+def releaseMobileBuildFlagKeys = [
+    'schema',
+    'mode',
+    'policyVersion',
+    'apiBase',
+    'allowApiBaseOverride',
+    'allowDebugLoopbackHttp',
+    'allowUnapprovedPolicyOnline'
+] as Set
+def verifyReleaseMobileAssets = {
+    def failurePrefix = 'Release packaging requires production mobile assets'
+    if (!releaseMobileBuildFlagsFile.isFile()) {
+        throw new GradleException("${failurePrefix}: mobile-build-flags.json is missing")
+    }
+
+    def flags
+    try {
+        flags = new JsonSlurper().parse(releaseMobileBuildFlagsFile)
+    } catch (Exception error) {
+        throw new GradleException("${failurePrefix}: mobile-build-flags.json is invalid", error)
+    }
+    def actualKeys = flags instanceof Map ? flags.keySet() as Set : [] as Set
+    def valid = actualKeys == releaseMobileBuildFlagKeys &&
+        flags.schema == 2 &&
+        flags.mode == 'production' &&
+        flags.policyVersion == 'unapproved-draft' &&
+        flags.apiBase == 'https://2048next.cn/api' &&
+        flags.allowApiBaseOverride == false &&
+        flags.allowDebugLoopbackHttp == false &&
+        flags.allowUnapprovedPolicyOnline == false
+    if (!valid) {
+        throw new GradleException(
+            "${failurePrefix}: expected mode=production, apiBase=https://2048next.cn/api, and all release override flags disabled"
+        )
+    }
+}
 
 gradle.taskGraph.whenReady { taskGraph ->
     def releasePackagingRequested = taskGraph.allTasks.any { task ->
@@ -28,10 +67,13 @@ gradle.taskGraph.whenReady { taskGraph ->
         )
     }
 
-    if (releasePackagingRequested && !missingReleaseSigningProperties.isEmpty()) {
-        throw new GradleException(
-            "Release signing configuration is required. Missing Gradle properties: ${missingReleaseSigningProperties.join(', ')}"
-        )
+    if (releasePackagingRequested) {
+        verifyReleaseMobileAssets()
+        if (!missingReleaseSigningProperties.isEmpty()) {
+            throw new GradleException(
+                "Release signing configuration is required. Missing Gradle properties: ${missingReleaseSigningProperties.join(', ')}"
+            )
+        }
     }
 }
 
