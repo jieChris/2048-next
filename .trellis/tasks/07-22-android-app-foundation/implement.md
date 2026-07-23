@@ -1,6 +1,6 @@
 # Android App 实施计划
 
-> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1 已完成，当前执行阶段 2。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
+> 用户已于 2026-07-23 明确批准本规划与低保真线框；阶段 1、2.1、3.1 已完成，当前并行执行阶段 2 与 3。该批准不包含生产部署、生产迁移、Play 上传或公开发布授权。
 
 ## 执行原则
 
@@ -76,14 +76,16 @@ npm run verify:refactor:ci
 
 ### 2.1 现有合同对齐
 
-- [ ] OpenAPI 增加 `/auth/refresh`。
-- [ ] leaderboard period 统一为 `all/day/week/month`，Node、OpenAPI、生成类型和 Web 调用一致。
-- [ ] 历史筛选统一 `status`，`deleted/all` 强制本人鉴权。
-- [ ] 历史响应补 `source`、`steps`、`client_record_id` 和必要分页字段。
-- [ ] HTTP client 增加结构化 `{ok,status,body,networkError}` 结果，保留旧 Web 兼容入口。
-- [ ] 添加 Capacitor release/debug 精确 CORS 配置测试。
+- [x] OpenAPI 增加 `/auth/refresh`。
+- [x] leaderboard period 统一为 `all/day/week/month`，Node、OpenAPI、生成类型和 Web 调用一致。
+- [x] 历史筛选统一 `status`，`deleted/all` 强制本人鉴权。
+- [x] 历史响应补 `source`、`steps`、`client_record_id` 和必要分页字段。
+- [x] HTTP client 增加结构化 `{ok,status,body,networkError}` 结果，保留旧 Web 兼容入口。
+- [x] 添加 Capacitor release/debug 精确 CORS 配置测试。
 
 ### 2.2 权威排行榜
+
+- [x] 2.2A expand/audit：增加 nullable canonical 时间字段和成对约束，冻结迁移时间作为历史 fallback 截止点，并提供单一只读快照审计；不回填、不切读、不创建生产索引。score/speed 四周期基线、真实 PostgreSQL 执行、回填、重建和 rank 仍属于 2.2B 及后续硬门禁。
 
 - [ ] 后端为分数/竞速总、日、周、月榜返回绝对 `rank`。
 - [ ] 每用户最佳选择和全局顺序都落实已确认 tie-break；移除 duration/steps/updated_at 隐式裁决。
@@ -96,7 +98,7 @@ npm run verify:refactor:ci
 
 ### 2.3 成就、删除账号与诊断
 
-- [ ] 下一号 PostgreSQL 加法迁移增加 achievement client/mode 元数据。
+- [x] 下一号 PostgreSQL 加法迁移增加 achievement client/mode 元数据。
 - [ ] 增加账号 `deletion_requested_at`、`deletion_due_at`、`auth_version`。
 - [ ] Auth token 携带并校验 version；待删除账号的普通 auth/refresh 全部拒绝。
 - [ ] 兼容旧 Web Token：缺少 version 时按 0 处理；正常账号继续使用，账号 version 一旦递增立即拒绝。补旧 Token、删除态、多实例/缓存绕过测试。
@@ -144,16 +146,16 @@ npm run test:node
 
 ### 3.1 移动 Web 构建
 
-- [ ] 新建 `mobile/index.html`、`mobile/src/main.ts`、`vite.app.config.ts`、`tsconfig.app.json`。
-- [ ] 新增 package scripts：
+- [x] 新建 `mobile/index.html`、`mobile/src/main.ts`、`vite.app.config.ts`、`tsconfig.app.json`。
+- [x] 新增 package scripts：
   - `dev:app`
   - `build:app`
   - `test:unit:app`
   - `test:smoke:app`
   - `verify:app`
-- [ ] 新增 `mobile-boundary-audit`，扫描源码 import 与 `dist-app` 禁止 legacy/Web 页面资产。
-- [ ] 建立最小 shell、集中式中英文字典、浅/深色 token 和安全区布局。
-- [ ] 浏览器预览可在断网下进入隐私选择与空首页，不请求业务网络。
+- [x] 新增 `mobile-boundary-audit`，扫描源码 import 与 `dist-app` 禁止 legacy/Web 页面资产。
+- [x] 建立最小 shell、集中式中英文字典、浅/深色 token 和安全区布局。
+- [x] 浏览器预览可在断网下进入隐私选择与空首页，不请求业务网络。
 
 ### 3.2 Capacitor 与 Android
 

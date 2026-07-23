@@ -97,6 +97,9 @@
 - RPL1 为 8/16/32/64 特殊出块增加 extType 8，格式固定为 `[ext8, move]`，payload 是字面单字节值且 move bit 为 0；既有 2/4 编码字节不变。`startUnixMs` 统一保持毫秒合同。
 - Web 的标准 4×4、经典 4×4、标准 3×3 实时方向输入已通过窄 adapter 消费共享 Game Session transition；其他模式与 replayMode 继续既有路径。高位 Smoke 最初暴露 `restartWithBoard` 在线 hook 安装竞态，测试改用直接构造 Grid/Tile 的确定性盘面注入并显式断言兼容错误为零，没有改变产品运行时。独立审查又发现多 motion 中途异常可造成半写棋盘；兼容层现于应用前捕获 manager/回放/Grid/Tile 事务快照，完整成功后才发布 transition/count，失败则原位恢复、记录 marker 并重新抛出，绝不在半写状态回落 legacy。
 - 后端 verifier 阶段 1 已固化为隔离分支提交 `4799f1a`，`verificationVersion` 升至 3；支持 ext8 严格配对、经典高位逻辑值、ranked 精确 spawn 校验和 normal 合法值校验，未修改路由、数据库或 OpenAPI。
+- 阶段 2.1 已完成并拆分固化：前端 `98dd6f9b` 提供保留 Web 兼容入口的结构化 HTTP 结果，`c8e15021` 对齐 refresh、排行榜周期与历史字段；后端 `6f2d380` 保护 `deleted/all` 历史筛选并补齐分页/记录字段，`058bd24` 将 Capacitor release/debug origin 收紧为精确白名单。后端 `6ec8635`/`a996031` 另完成成就客户端/模式元数据与隐藏成就目录可见性规则。
+- 阶段 3.1 已固化为前端提交 `bb05eef8`：`mobile/` 单入口、独立 Vite/TypeScript 配置与 `dist-app` 不加载 legacy；最小壳含集中式中英文、浅/深色 token、安全区和未批准隐私草案预览。`audit:mobile-boundary --release-candidate` 会因 `unapproved-draft` 主动失败，防止草案进入候选包。
+- 2026-07-23 12:00 CST，阶段 2.2A 固化为后端提交 `d60f67d`。迁移 `0020` 只增加 nullable canonical 时间字段与成对约束，不回填、不切换榜单读取、不创建普通索引；`schema_migrations.applied_at` 冻结 legacy fallback 截止点。只读审计在同一已 checkout 连接的 `REPEATABLE READ READ ONLY` 快照中校验可信 session 链、分别计数/抽样 trusted begin、server receive fallback、anomaly，输出仓库外 0600、SHA-256 且拒绝覆盖的证据文件。未连接真实数据库；score/speed 四周期基线、回填、并发索引、榜单重建和绝对 rank 明确保留到 2.2B 及后续门禁。
 
 ## 验证记录
 
@@ -116,3 +119,5 @@
 - 当前审阅截图：`output/playwright/wireframe-320-settings.png`（视口 320×720，元素截图 320×721）、`output/playwright/wireframe-390-game.png`（390×844）、`output/playwright/wireframe-390-leaderboard.png`（390×844）、`output/playwright/wireframe-480-leaderboard.png`（480×960）。截图仅用于信息架构/任务流批准，颜色、字体、图标和动效仍属于阶段 3/5 的正式视觉实现。
 - 2026-07-23 阶段 1 前端最终门禁（Node 22.22.2）：三模式及经典高位 parity Smoke `4/4`；核心单测 `98` 文件、`687` 项；play/replay Smoke `43/43`；`audit:engine` 通过；`verify:refactor:ci` `10/10` 步骤通过，其中完整单测 `299` 文件、`1901` 项、Critical Smoke `41/41`、生产构建通过；`npx tsc --noEmit` 与 `git diff --check` 通过。所有 parity 用例显式断言 `compatFailures=[]`，日志和产物中的 `[game-session-compat] shared move failed` 数量为 0；故障注入另确认第二个 motion 失败时棋盘、Tile、分数、步数、move history、嵌套回放和发布字段全部回滚。
 - 2026-07-23 阶段 1 后端最终门禁（Node 22.22.2）：黄金/ext8 定向测试 `16/16`、Node `22` 文件 `159/159`、`npm run typecheck` 与 `git diff --check` 通过；黄金测试同时断言 `modeKey/ruleset/undoEnabled/bestTile/terminal`。
+- 2026-07-23 阶段 3.1 门禁（Node 22.22.2）：移动单测 `35/35`、移动 Smoke `3/3`、320dp/浅深色/中英文检查通过；`dist-app` JS 约 6.95KB、CSS 约 8.08KB、两份本地 Clear Sans 字体合计约 54KB，业务请求为 0。
+- 2026-07-23 阶段 2.2A 最终门禁（Node 22.22.2）：canonical audit 定向 `6/6`；后端 Node `24` 文件 `179/179`；`npm run typecheck`、`git diff --check` 与 CLI `--help` 通过。两轮只读复审确认历史 cutoff、session 完整性、PostgreSQL CHECK 三值逻辑、三类抽样、同连接事务和仓库外证据写入无剩余提交阻塞；真实 PostgreSQL 迁移/分类执行尚未宣称完成。
