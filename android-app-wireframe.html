@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>2048 NEXT Android App 低保真线框</title>
+  <style>
+    :root {
+      color: #202020;
+      background: #dededb;
+      font-family: "Clear Sans", "Noto Sans SC", sans-serif;
+      font-synthesis: none;
+      --paper: #f8f8f5;
+      --surface: #ffffff;
+      --soft: #ededeb;
+      --line: #b8b8b4;
+      --ink: #202020;
+      --muted: #676764;
+      --strong: #353533;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(320px, 390px);
+      justify-content: center;
+      align-items: start;
+      gap: 24px;
+      background-image:
+        linear-gradient(rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    button,
+    input,
+    select { font: inherit; }
+
+    button,
+    select,
+    input[type="checkbox"] { cursor: pointer; }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid #202020;
+      outline-offset: 2px;
+    }
+
+    .review-panel {
+      position: sticky;
+      top: 20px;
+      padding: 18px;
+      border: 1px dashed #777;
+      background: rgba(248, 248, 245, 0.96);
+      box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    .review-panel summary {
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .review-panel p {
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .review-label {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 3px 7px;
+      border: 1px solid var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .review-jumps {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .review-jumps button {
+      min-height: 40px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .phone {
+      width: min(390px, 100%);
+      height: min(820px, calc(100vh - 40px));
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid #242424;
+      border-radius: 28px;
+      background: var(--paper);
+      box-shadow: 10px 12px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .device-status {
+      flex: 0 0 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .screen-stack {
+      min-height: 0;
+      flex: 1;
+      position: relative;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 18px 18px 32px;
+      background: var(--paper);
+      scrollbar-width: thin;
+    }
+
+    .screen[data-top-level="true"] { padding-bottom: 24px; }
+
+    .app-bar,
+    .section-heading,
+    .row,
+    .result-actions,
+    .auth-tabs,
+    .dialog-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-bar {
+      min-height: 46px;
+      margin: -6px 0 16px;
+    }
+
+    .app-bar h1,
+    .app-bar h2 {
+      margin: 0;
+      flex: 1;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .icon-button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p { margin-top: 0; }
+
+    h1 { font-size: 28px; line-height: 1.12; }
+    h2 { font-size: 20px; }
+    h3 { margin-bottom: 6px; font-size: 15px; }
+
+    .lede,
+    .muted,
+    .card p,
+    .list-item p,
+    .mode-card p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .brand-lockup {
+      margin: 44px 0 34px;
+      display: grid;
+      justify-items: start;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+      padding: 5px;
+      border: 2px solid var(--ink);
+      transform: rotate(-2deg);
+    }
+
+    .brand-mark span { border: 1px solid var(--ink); background: var(--soft); }
+    .brand-mark span:last-child { background: var(--ink); }
+
+    .card,
+    .mode-card,
+    .list-item,
+    .stat,
+    .notice,
+    .setting-row,
+    .achievement {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+
+    .card,
+    .notice { padding: 15px; }
+    .card + .card,
+    .notice + .card { margin-top: 12px; }
+
+    .primary-button,
+    .secondary-button,
+    .text-button,
+    .mode-card,
+    .list-item {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-weight: 800;
+    }
+
+    .primary-button {
+      border: 1px solid var(--ink);
+      background: var(--strong);
+      color: #fff;
+    }
+
+    .secondary-button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    .text-button {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .button-stack { display: grid; gap: 10px; }
+    .section-heading { justify-content: space-between; margin: 22px 0 10px; }
+    .section-heading h2 { margin: 0; }
+
+    .chip,
+    .mode-state,
+    .sync-state {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .quick-start {
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 4px 4px 0 var(--line);
+    }
+
+    .quick-start strong { display: block; margin-bottom: 5px; font-size: 21px; }
+    .quick-start .primary-button { margin-top: 14px; }
+
+    .mode-list,
+    .history-list,
+    .achievement-list,
+    .settings-list { display: grid; gap: 10px; }
+
+    .mode-card,
+    .list-item {
+      display: block;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .mode-card strong,
+    .list-item strong { display: block; margin-bottom: 5px; }
+    .mode-card p,
+    .list-item p { margin-bottom: 9px; }
+    .mode-card[data-locked="true"] { border-style: dashed; background: var(--soft); }
+
+    .bottom-nav {
+      flex: 0 0 70px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 7px 8px max(7px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .bottom-nav button {
+      min-width: 0;
+      min-height: 48px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .bottom-nav button[aria-current="page"] {
+      background: var(--soft);
+      color: var(--ink);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .game-summary {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat { padding: 10px; }
+    .stat small { display: block; color: var(--muted); font-size: 10px; }
+    .stat strong { display: block; margin-top: 3px; font-size: 17px; }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      aspect-ratio: 1;
+      padding: 8px;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      background: #d7d7d3;
+    }
+
+    .board[data-size="3"] { grid-template-columns: repeat(3, 1fr); }
+    .board[data-size="3"] .tile:nth-child(n + 10) { display: none; }
+
+    .tile {
+      display: grid;
+      place-items: center;
+      border: 1px solid #8d8d89;
+      border-radius: 7px;
+      background: #f7f7f4;
+      font-size: clamp(14px, 4vw, 22px);
+      font-weight: 900;
+    }
+
+    .tile[data-value="0"] { color: transparent; background: #c8c8c4; }
+    .tile[data-value="128"],
+    .tile[data-value="256"] { background: #777; color: #fff; }
+
+    .game-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .game-actions .wide { grid-column: 1 / -1; }
+
+    .terminal-sheet {
+      margin-top: 14px;
+      padding: 16px;
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .terminal-sheet .button-stack { margin-top: 14px; }
+
+    .result-score {
+      margin: 16px 0;
+      padding: 20px;
+      border: 2px solid var(--ink);
+      background: var(--surface);
+      text-align: center;
+    }
+
+    .result-score strong { display: block; font-size: 38px; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .result-actions { flex-wrap: wrap; margin-top: 16px; }
+    .result-actions .primary-button { flex: 1 0 100%; }
+    .result-actions .secondary-button { flex: 1; }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    select,
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      min-height: 46px;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    form { display: grid; gap: 12px; }
+
+    .replay-progress {
+      height: 8px;
+      margin: 14px 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: var(--soft);
+    }
+
+    .replay-progress span { display: block; width: 42%; height: 100%; background: var(--ink); }
+
+    .achievement,
+    .setting-row {
+      padding: 13px;
+    }
+
+    .achievement { display: grid; grid-template-columns: 42px 1fr; gap: 12px; }
+    .achievement-badge { display: grid; place-items: center; border: 1px solid var(--ink); border-radius: 50%; }
+    .achievement h3,
+    .achievement p { margin-bottom: 3px; }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .setting-row span { flex: 1; }
+    .setting-row small { display: block; margin-top: 2px; color: var(--muted); }
+
+    .setting-row-select select {
+      width: min(190px, 62%);
+      flex: 0 1 190px;
+    }
+
+    dialog {
+      color: var(--ink);
+      background: var(--paper);
+      font: inherit;
+    }
+
+    dialog::backdrop { background: rgba(0, 0, 0, 0.48); }
+
+    .leaderboard-dialog {
+      width: min(390px, 100vw);
+      height: min(820px, 100dvh);
+      max-width: none;
+      max-height: none;
+      margin: auto;
+      padding: 18px;
+      overflow-y: auto;
+      border: 2px solid var(--ink);
+      border-radius: 26px;
+    }
+
+    .speed-target { margin-bottom: 12px; }
+
+    .dialog-bar { justify-content: space-between; }
+    .dialog-bar h2 { margin: 0; }
+
+    .segments {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      margin: 16px 0;
+    }
+
+    .segments button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .segments button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+    .rank-row {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 9px;
+      padding: 12px 2px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .restart-dialog {
+      width: min(330px, calc(100vw - 32px));
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+    }
+
+    .restart-dialog .button-stack { margin-top: 16px; }
+
+    .auth-tabs button {
+      flex: 1;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .auth-tabs button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+    @media (max-width: 760px) {
+      body {
+        display: block;
+        padding: 0;
+        background: var(--paper);
+      }
+
+      .review-panel {
+        position: static;
+        width: 100%;
+        border-width: 0 0 1px;
+        box-shadow: none;
+      }
+
+      .review-jumps { grid-template-columns: repeat(2, 1fr); }
+
+      .phone {
+        width: 100%;
+        height: 100dvh;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .leaderboard-dialog {
+        width: 100vw;
+        height: 100dvh;
+        margin: 0;
+        padding: 18px;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .setting-row-select {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .setting-row-select select {
+        width: 100%;
+        flex: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <details class="review-panel" open data-review-tools>
+    <summary>Android App 低保真审阅</summary>
+    <p><span class="review-label">非产品界面</span></p>
+    <p>灰阶线框只验证信息层级、入口和返回关系。下列按钮是审阅跳转，不会进入正式 App。</p>
+    <div class="review-jumps" aria-label="审阅路径">
+      <button type="button" data-review="privacy">01 · 首次隐私</button>
+      <button type="button" data-review="guest-home">02 · 游客首页</button>
+      <button type="button" data-review="signed-modes">03 · 登录后模式</button>
+      <button type="button" data-review="pending">04 · 可撤回终局</button>
+      <button type="button" data-review="result">05 · 最小结算</button>
+      <button type="button" data-review="records">06 · 记录与回放</button>
+      <button type="button" data-review="me">07 · 我的与设置</button>
+    </div>
+    <p>约束：模式卡只有“进入”动作；无教程；排行榜为全屏模态；所有数据均为本地静态示例。</p>
+    <p>政策、分享、删除和诊断等非关键路径按钮仅确认入口位置，不执行真实操作。</p>
+  </details>
+
+  <main class="phone" data-wireframe data-authenticated="false" data-input-locked="false" aria-label="2048 NEXT Android App 线框">
+    <div class="device-status" aria-hidden="true"><span>09:41</span><span>低保真 · 竖屏</span><span>●●●</span></div>
+    <div class="screen-stack">
+      <section class="screen" data-screen="privacy" aria-labelledby="privacy-title">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">2048 NEXT</p>
+            <h1 id="privacy-title">开始之前</h1>
+          </div>
+        </div>
+        <p class="lede">联网功能用于账号、云记录、排行榜与成就。游客标准 4×4 可完全离线游玩。</p>
+        <div class="notice">
+          <strong>你的选择随时可改</strong>
+          <p>未同意联网前，不发起业务请求，也不发送诊断信息。</p>
+        </div>
+        <div class="button-stack" style="margin-top: 22px">
+          <button class="primary-button" type="button" data-action="consent-online">同意并继续</button>
+          <button class="secondary-button" type="button" data-action="consent-offline" data-consent-offline>仅离线体验</button>
+          <button class="text-button" type="button">查看隐私政策</button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="home" data-top-level="true" aria-labelledby="home-title" hidden>
+        <header class="app-bar">
+          <div>
+            <p class="eyebrow">2048 NEXT</p>
+            <h1 id="home-title">今天继续一局</h1>
+          </div>
+          <span class="chip" data-connectivity>仅离线</span>
+        </header>
+        <div class="quick-start">
+          <p class="eyebrow">最近关闭</p>
+          <strong data-continue-mode>标准 4×4</strong>
+          <p class="muted" data-continue-copy>8,432 分 · 01:15 · 本机存档</p>
+          <button class="primary-button" type="button" data-action="continue">继续游戏</button>
+        </div>
+        <div class="section-heading"><h2>三个首发模式</h2><button class="text-button" type="button" data-nav="modes">查看全部</button></div>
+        <div class="card">
+          <strong>标准 4×4 · 不可撤回</strong>
+          <p>游客可玩；登录在线时默认尝试排位。</p>
+        </div>
+        <div class="section-heading"><h2>最近记录</h2></div>
+        <button class="list-item" type="button" data-open-detail data-record-mode="标准 4×4" data-record-score="32,768" data-record-kind="本机游客记录" data-record-max="2048" data-record-sum="8,144" data-record-duration="08:14" data-record-steps="512">
+          <strong>标准 4×4 · 32,768 分</strong>
+          <p>最大方块 2048 · 08:14 · 本机游客记录</p>
+          <span class="mode-state">查看详情</span>
+        </button>
+      </section>
+
+      <section class="screen" data-screen="modes" data-top-level="true" aria-labelledby="modes-title" hidden>
+        <header class="app-bar"><div><p class="eyebrow">玩法</p><h1 id="modes-title">选择模式</h1></div><span class="chip" data-auth-chip>游客</span></header>
+        <p class="lede">点击整张卡片直接进入：有存档就恢复，没有存档就开始新局。</p>
+        <div class="mode-list">
+          <button class="mode-card" type="button" data-mode-card data-mode="standard_4x4_pow2_no_undo" data-requires-auth="false" data-has-save="true">
+            <strong>标准 4×4</strong><p>不可撤回 · 游客可玩</p><span class="mode-state" data-mode-state>本机有进度 · 8,432 分</span>
+          </button>
+          <button class="mode-card" type="button" data-mode-card data-mode="classic_4x4_pow2_undo" data-requires-auth="true" data-has-save="true">
+            <strong>经典 4×4</strong><p>可撤回 · 需要登录</p><span class="mode-state" data-mode-state>需登录</span>
+          </button>
+          <button class="mode-card" type="button" data-mode-card data-mode="board_3x3_pow2_no_undo" data-requires-auth="true" data-has-save="false">
+            <strong>标准 3×3</strong><p>不可撤回 · 需要登录</p><span class="mode-state" data-mode-state>需登录</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="game" aria-labelledby="game-title" hidden>
+        <header class="app-bar">
+          <button class="icon-button" type="button" data-target="home" aria-label="保存并返回首页">←</button>
+          <div><p class="eyebrow" data-game-status>离线对局</p><h1 id="game-title" data-game-title>标准 4×4</h1></div>
+          <button class="icon-button" type="button" data-action="open-leaderboard" aria-label="打开排行榜">榜</button>
+        </header>
+        <p class="muted" data-game-entry>已恢复本机进度</p>
+        <div class="game-summary">
+          <div class="stat"><small>分数</small><strong data-game-score>8,432</strong></div>
+          <div class="stat"><small>最佳</small><strong>32,768</strong></div>
+          <div class="stat"><small>时间</small><strong id="game-timer" data-elapsed-ms="75400">01:15</strong></div>
+        </div>
+        <div class="board" data-game-board data-size="4" aria-label="示例棋盘">
+          <span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span><span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span>
+          <span class="tile" data-value="32">32</span><span class="tile" data-value="64">64</span><span class="tile" data-value="128">128</span><span class="tile" data-value="0">0</span>
+          <span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span><span class="tile" data-value="32">32</span><span class="tile" data-value="0">0</span>
+          <span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span><span class="tile" data-value="0">0</span><span class="tile" data-value="0">0</span>
+        </div>
+        <div class="game-actions">
+          <button class="secondary-button" type="button" data-action="restart">重新开始</button>
+          <button class="secondary-button" type="button" data-action="undo" data-undo hidden>撤回</button>
+          <button class="secondary-button wide" type="button" data-action="open-leaderboard">查看排行榜</button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="pending" aria-labelledby="pending-title" hidden>
+        <header class="app-bar"><div><p class="eyebrow">经典 4×4 · 待结算</p><h1 id="pending-title">当前无可移动方块</h1></div></header>
+        <div class="board" aria-label="无可移动方块示例棋盘">
+          <span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span><span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span>
+          <span class="tile" data-value="4">4</span><span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span><span class="tile" data-value="2">2</span>
+          <span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span><span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span>
+          <span class="tile" data-value="16">16</span><span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span><span class="tile" data-value="8">8</span>
+        </div>
+        <div class="terminal-sheet">
+          <h2>还可以撤回一步</h2>
+          <p class="muted">在你确认结束前，不会生成历史、排行榜记录或上传任务。</p>
+          <div class="button-stack">
+            <button class="primary-button" type="button" data-action="pending-undo">撤回继续</button>
+            <button class="secondary-button" type="button" data-action="pending-finish">结束并结算</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="result" aria-labelledby="result-title" hidden>
+        <header class="app-bar"><div><p class="eyebrow">对局已结算</p><h1 id="result-title">经典 4×4</h1></div><span class="sync-state">等待同步</span></header>
+        <div class="result-score"><small>最终分数</small><strong>48,216</strong><span class="chip">个人最佳 +5,120</span></div>
+        <div class="stat-grid">
+          <div class="stat"><small>最大方块</small><strong>4096</strong></div>
+          <div class="stat"><small>用时</small><strong>12:48</strong></div>
+          <div class="stat"><small>步数</small><strong>684</strong></div>
+          <div class="stat"><small>成就</small><strong>+1</strong></div>
+        </div>
+        <div class="notice" style="margin-top: 12px"><strong>解锁：更远一步</strong><p>已先保存在本机，上传不会阻塞离开。</p></div>
+        <div class="result-actions">
+          <button class="primary-button" type="button" data-action="result-again">再来一局</button>
+          <button class="secondary-button" type="button" data-action="result-replay">查看回放</button>
+          <button class="secondary-button" type="button" data-action="result-home">返回首页</button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="records" data-top-level="true" aria-labelledby="records-title" hidden>
+        <header class="app-bar"><div><p class="eyebrow">记录</p><h1 id="records-title">历史对局</h1></div><button class="icon-button" type="button" data-action="open-leaderboard" aria-label="打开排行榜">榜</button></header>
+        <div class="filter-row">
+          <select aria-label="记录归属" data-record-owner><option value="all" data-account-option>全部记录</option><option value="account" data-account-option>账号云记录</option><option value="guest">本机游客记录</option></select>
+          <select aria-label="记录排序"><option>时间排序</option><option>分数排序</option><option>盘面和排序</option></select>
+        </div>
+        <div class="history-list">
+          <button class="list-item" type="button" data-open-detail data-record-mode="标准 4×4" data-record-score="32,768" data-record-kind="本机游客记录" data-record-max="2048" data-record-sum="8,144" data-record-duration="08:14" data-record-steps="512"><strong>标准 4×4 · 32,768 分</strong><p>最大 2048 · 08:14 · 本机游客</p><span class="mode-state">今天 09:16</span></button>
+          <button class="list-item" type="button" data-open-detail data-account-record data-record-mode="经典 4×4" data-record-score="48,216" data-record-kind="账号云记录 · 已同步" data-record-max="4096" data-record-sum="12,288" data-record-duration="12:48" data-record-steps="684"><strong>经典 4×4 · 48,216 分</strong><p>最大 4096 · 12:48 · 已同步</p><span class="mode-state">昨天 22:40</span></button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="detail" aria-labelledby="detail-title" hidden>
+        <header class="app-bar"><button class="icon-button" type="button" data-action="close-detail" data-detail-back aria-label="返回记录">←</button><h1 id="detail-title">历史详情</h1></header>
+        <div class="result-score"><small data-detail-mode>标准 4×4</small><strong data-detail-score>32,768</strong><span class="chip" data-detail-kind>本机游客记录</span></div>
+        <div class="stat-grid">
+          <div class="stat"><small>最大方块</small><strong data-detail-max>2048</strong></div><div class="stat"><small>盘面和</small><strong data-detail-sum>8,144</strong></div>
+          <div class="stat"><small>用时</small><strong data-detail-duration>08:14</strong></div><div class="stat"><small>步数</small><strong data-detail-steps>512</strong></div>
+        </div>
+        <div class="button-stack" style="margin-top: 16px">
+          <button class="primary-button" type="button" data-open-replay>查看回放</button>
+          <button class="secondary-button" type="button">分享 / 保存回放文件</button>
+          <button class="text-button" type="button" data-detail-delete>永久删除本机记录</button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="replay" aria-labelledby="replay-title" hidden>
+        <header class="app-bar"><button class="icon-button" type="button" data-replay-back data-target="detail" aria-label="返回详情">←</button><div><p class="eyebrow" data-replay-mode>标准 4×4</p><h1 id="replay-title">回放</h1></div><button class="icon-button" type="button" aria-label="分享回放">享</button></header>
+        <div class="board" aria-label="回放棋盘">
+          <span class="tile" data-value="0">0</span><span class="tile" data-value="2">2</span><span class="tile" data-value="4">4</span><span class="tile" data-value="8">8</span>
+          <span class="tile" data-value="0">0</span><span class="tile" data-value="4">4</span><span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span>
+          <span class="tile" data-value="2">2</span><span class="tile" data-value="8">8</span><span class="tile" data-value="16">16</span><span class="tile" data-value="32">32</span>
+          <span class="tile" data-value="4">4</span><span class="tile" data-value="16">16</span><span class="tile" data-value="32">32</span><span class="tile" data-value="128">128</span>
+        </div>
+        <div class="replay-progress"><span></span></div>
+        <p class="muted" data-replay-copy>第 214 / 512 步 · 03:18 / 08:14</p>
+        <div class="game-actions">
+          <button class="secondary-button" type="button">上一步</button><button class="primary-button" type="button">播放</button>
+          <button class="secondary-button wide" type="button">分享 / 保存回放文件</button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="auth" aria-labelledby="auth-title" hidden>
+        <header class="app-bar"><button class="icon-button" type="button" data-action="cancel-auth" data-auth-back aria-label="返回模式">←</button><h1 id="auth-title">登录账号</h1></header>
+        <p class="lede" data-auth-copy>登录后继续你刚才选择的模式。没有内测资格或受邀邮箱限制。</p>
+        <div class="auth-tabs" role="group" aria-label="账号操作">
+          <button type="button" aria-pressed="true" data-auth-tab="login">登录</button>
+          <button type="button" aria-pressed="false" data-auth-tab="register">注册</button>
+        </div>
+        <form data-auth-form>
+          <label>邮箱<input type="email" value="player@example.com" autocomplete="email" required></label>
+          <label data-register-only hidden>昵称<input type="text" value="Next 玩家" autocomplete="nickname" data-auth-nickname></label>
+          <label>密码<input type="password" value="wireframe-only" autocomplete="current-password" required data-auth-password></label>
+          <label data-register-only hidden>邮箱验证码<input type="text" value="204826" autocomplete="one-time-code" data-auth-code></label>
+          <button class="primary-button" type="submit" data-auth-submit>登录并继续</button>
+        </form>
+        <button class="text-button" type="button">忘记密码</button>
+      </section>
+
+      <section class="screen" data-screen="me" data-top-level="true" aria-labelledby="me-title" hidden>
+        <header class="app-bar"><div><p class="eyebrow">我的</p><h1 id="me-title">账号与偏好</h1></div></header>
+        <div class="card">
+          <strong data-account-name>游客</strong>
+          <p data-account-copy>登录后同步已结束记录、排行榜和成就。</p>
+          <button class="primary-button" type="button" data-account-login data-action="open-auth">登录 / 注册</button>
+        </div>
+        <div class="history-list" style="margin-top: 14px">
+          <button class="list-item" type="button" data-action="open-achievements"><strong>成就</strong><p>已获得跨端展示；只列 App 可挑战项</p></button>
+          <button class="list-item" type="button" data-target="settings"><strong>设置</strong><p>外观、语言、声音、触觉与隐私</p></button>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="achievements" aria-labelledby="achievements-title" hidden>
+        <header class="app-bar"><button class="icon-button" type="button" data-target="me" aria-label="返回我的">←</button><h1 id="achievements-title">成就</h1></header>
+        <p class="lede">已获得成就跨端完整显示；未获得列表仅显示当前 App 可完成项。</p>
+        <div class="achievement-list">
+          <article class="achievement"><span class="achievement-badge">✓</span><div><h3>初见 2048</h3><p class="muted">已获得 · 来自 Web</p></div></article>
+          <article class="achievement"><span class="achievement-badge">✓</span><div><h3>更远一步</h3><p class="muted">已获得 · 来自 App</p></div></article>
+          <article class="achievement"><span class="achievement-badge">○</span><div><h3>稳定发挥</h3><p class="muted">App 可挑战 · 标准 4×4</p></div></article>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="settings" aria-labelledby="settings-title" hidden>
+        <header class="app-bar"><button class="icon-button" type="button" data-target="me" aria-label="返回我的">←</button><h1 id="settings-title">设置</h1></header>
+        <div class="settings-list">
+          <label class="setting-row setting-row-select"><span>外观<small>默认跟随 Android 系统</small></span><select aria-label="外观"><option>跟随系统</option><option>浅色</option><option>深色</option></select></label>
+          <label class="setting-row setting-row-select"><span>语言<small>首次跟随系统</small></span><select aria-label="语言"><option>简体中文</option><option>English</option></select></label>
+          <label class="setting-row"><span>短音效</span><input type="checkbox" checked></label>
+          <label class="setting-row"><span>触觉反馈</span><input type="checkbox" checked></label>
+          <label class="setting-row"><span>背景音乐<small>默认关闭</small></span><input type="checkbox"></label>
+          <label class="setting-row"><span>自动发送脱敏诊断</span><input type="checkbox" checked></label>
+          <button class="list-item" type="button"><strong>隐私政策与用户协议</strong><p>包内可读 · 查看当前版本</p></button>
+          <button class="list-item" type="button"><strong>导出本地诊断</strong><p>不包含账号凭据、棋盘或动作</p></button>
+          <button class="list-item" type="button" data-account-setting><strong>删除账号</strong><p>申请后有 3 天冷静期；期间密码登录可取消</p></button>
+        </div>
+      </section>
+    </div>
+
+    <nav class="bottom-nav" data-bottom-nav aria-label="主导航" hidden>
+      <button type="button" data-nav="home">首页</button>
+      <button type="button" data-nav="modes">模式</button>
+      <button type="button" data-nav="records">记录</button>
+      <button type="button" data-nav="me">我的</button>
+    </nav>
+  </main>
+
+  <dialog class="leaderboard-dialog" data-leaderboard-dialog aria-labelledby="leaderboard-title">
+    <header class="dialog-bar"><div><p class="eyebrow">2048 NEXT</p><h2 id="leaderboard-title">排行榜</h2></div><button class="icon-button" type="button" data-action="close-leaderboard" aria-label="关闭排行榜">×</button></header>
+    <div class="filter-row" style="margin-top: 14px">
+      <select aria-label="排行榜模式" data-leaderboard-mode><option value="standard_4x4_pow2_no_undo">标准 4×4</option><option value="classic_4x4_pow2_undo">经典 4×4</option><option value="board_3x3_pow2_no_undo">标准 3×3</option></select>
+      <select aria-label="排行榜指标" data-leaderboard-metric><option value="score">分数</option><option value="speed" data-speed-option>竞速</option></select>
+    </div>
+    <select class="speed-target" aria-label="竞速目标方块" data-speed-target hidden><option>2048</option><option>4096</option><option>8192</option><option>16384</option><option>32768</option></select>
+    <div class="segments" aria-label="排行榜周期">
+      <button type="button" aria-pressed="true" data-period="all">总榜</button><button type="button" aria-pressed="false" data-period="day">日榜</button><button type="button" aria-pressed="false" data-period="week">周榜</button><button type="button" aria-pressed="false" data-period="month">月榜</button>
+    </div>
+    <p class="muted">名次由服务端返回；同成绩时更早取得者在前。</p>
+    <div aria-label="排行榜示例">
+      <div class="rank-row"><strong>1</strong><span>NorthStar</span><strong>982,144</strong></div>
+      <div class="rank-row"><strong>2</strong><span>青金玩家</span><strong>811,920</strong></div>
+      <div class="rank-row"><strong>3</strong><span>EarlyBird</span><strong>811,920</strong></div>
+      <div class="rank-row"><strong>4</strong><span>Next2048</span><strong>720,188</strong></div>
+    </div>
+  </dialog>
+
+  <dialog class="restart-dialog" data-restart-dialog aria-labelledby="restart-title">
+    <h2 id="restart-title">重新开始当前模式？</h2>
+    <p class="muted">只清除当前模式的未结束进度，不生成历史，也不影响其他模式存档。</p>
+    <div class="button-stack">
+      <button class="secondary-button" type="button" data-action="cancel-restart">取消</button>
+      <button class="primary-button" type="button" data-action="confirm-restart">确认重新开始</button>
+    </div>
+  </dialog>
+
+  <script>
+    (function () {
+      var app = document.querySelector("[data-wireframe]");
+      var screens = Array.from(document.querySelectorAll("[data-screen]"));
+      var bottomNav = document.querySelector("[data-bottom-nav]");
+      var leaderboardDialog = document.querySelector("[data-leaderboard-dialog]");
+      var restartDialog = document.querySelector("[data-restart-dialog]");
+      var timer = document.querySelector("#game-timer");
+      var state = {
+        authenticated: false,
+        privacy: "undecided",
+        screen: "privacy",
+        currentMode: "standard_4x4_pow2_no_undo",
+        pendingMode: null,
+        pendingOnlineIntent: null,
+        onlineIntentReturnScreen: "home",
+        authReturnScreen: "modes",
+        postAuthScreen: null,
+        detailReturnScreen: "records",
+        detailMode: "标准 4×4",
+        hasEffectiveMove: false,
+        timerBase: 75400,
+        timerStartedAt: 0,
+        timerRunning: false
+      };
+
+      var modes = {
+        standard_4x4_pow2_no_undo: { title: "标准 4×4", size: 4, undo: false },
+        classic_4x4_pow2_undo: { title: "经典 4×4", size: 4, undo: true },
+        board_3x3_pow2_no_undo: { title: "标准 3×3", size: 3, undo: false }
+      };
+
+      function isTopLevel(name) {
+        return ["home", "modes", "records", "me"].indexOf(name) >= 0;
+      }
+
+      function syncBottomNav() {
+        var modalOpen = leaderboardDialog.open || restartDialog.open;
+        bottomNav.hidden = !isTopLevel(state.screen) || modalOpen;
+        bottomNav.querySelectorAll("button").forEach(function (button) {
+          if (button.dataset.nav === state.screen) button.setAttribute("aria-current", "page");
+          else button.removeAttribute("aria-current");
+        });
+      }
+
+      function showScreen(name) {
+        state.screen = name;
+        screens.forEach(function (screen) { screen.hidden = screen.dataset.screen !== name; });
+        app.dataset.currentScreen = name;
+        syncBottomNav();
+        var heading = document.querySelector('[data-screen="' + name + '"] h1');
+        if (heading) {
+          heading.setAttribute("tabindex", "-1");
+          heading.focus({ preventScroll: true });
+        }
+      }
+
+      function syncAuth() {
+        app.dataset.authenticated = state.authenticated ? "true" : "false";
+        document.querySelector("[data-auth-chip]").textContent = state.authenticated ? "已登录" : "游客";
+        document.querySelector("[data-account-name]").textContent = state.authenticated ? "青金玩家" : "游客";
+        document.querySelector("[data-account-copy]").textContent = state.authenticated
+          ? "云记录与成就已同步；未结束对局仍只保存在本机。"
+          : "登录后同步已结束记录、排行榜和成就。";
+        document.querySelector("[data-account-login]").hidden = state.authenticated;
+        document.querySelector("[data-account-setting]").hidden = !state.authenticated;
+        document.querySelectorAll("[data-account-record]").forEach(function (record) {
+          record.hidden = !state.authenticated;
+        });
+        document.querySelectorAll("[data-account-option]").forEach(function (option) {
+          option.hidden = !state.authenticated;
+          option.disabled = !state.authenticated;
+        });
+        if (!state.authenticated) document.querySelector("[data-record-owner]").value = "guest";
+        document.querySelectorAll("[data-mode-card]").forEach(function (card) {
+          var locked = card.dataset.requiresAuth === "true" && !state.authenticated;
+          card.dataset.locked = locked ? "true" : "false";
+          var stateLabel = card.querySelector("[data-mode-state]");
+          if (locked) stateLabel.textContent = "需登录";
+          else if (card.dataset.hasSave === "true") stateLabel.textContent = "本机有进度 · 进入即恢复";
+          else stateLabel.textContent = "尚无进度 · 进入即开始";
+        });
+        var lastMode = state.authenticated ? "经典 4×4" : "标准 4×4";
+        document.querySelector("[data-continue-mode]").textContent = lastMode;
+      }
+
+      function startTimer(base) {
+        state.timerBase = base;
+        state.timerStartedAt = Date.now();
+        state.timerRunning = true;
+        renderTimer();
+      }
+
+      function elapsedMs() {
+        return state.timerBase + (state.timerRunning ? Date.now() - state.timerStartedAt : 0);
+      }
+
+      function stopTimer() {
+        state.timerBase = elapsedMs();
+        state.timerRunning = false;
+        renderTimer();
+      }
+
+      function renderTimer() {
+        var elapsed = Math.max(0, Math.floor(elapsedMs()));
+        var seconds = Math.floor(elapsed / 1000);
+        var minutes = Math.floor(seconds / 60);
+        timer.dataset.elapsedMs = String(elapsed);
+        timer.textContent = String(minutes).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+      }
+
+      function renderGame(modeKey, hasSave, entryCopy) {
+        var definition = modes[modeKey];
+        state.currentMode = modeKey;
+        state.hasEffectiveMove = hasSave;
+        document.querySelector("[data-game-title]").textContent = definition.title;
+        document.querySelector("[data-game-board]").dataset.size = String(definition.size);
+        document.querySelector("[data-undo]").hidden = !definition.undo;
+        document.querySelector("[data-game-entry]").textContent = entryCopy || (hasSave ? "已恢复本机进度" : "已创建新对局");
+        document.querySelector("[data-game-score]").textContent = hasSave ? "8,432" : "0";
+        document.querySelector("[data-game-status]").textContent = state.authenticated && state.privacy === "online" ? "排位" : "离线对局";
+      }
+
+      function enterMode(modeKey, hasSave) {
+        var requiresAuth = modeKey !== "standard_4x4_pow2_no_undo";
+        if (requiresAuth && !state.authenticated) {
+          state.pendingMode = modeKey;
+          requestAuth("modes");
+          return;
+        }
+        renderGame(modeKey, hasSave);
+        startTimer(hasSave ? 75400 : 0);
+        showScreen("game");
+      }
+
+      function setAuthTab(tab) {
+        var isRegister = tab === "register";
+        document.querySelector("#auth-title").textContent = isRegister ? "注册账号" : "登录账号";
+        document.querySelectorAll("[data-auth-tab]").forEach(function (button) {
+          button.setAttribute("aria-pressed", button.dataset.authTab === tab ? "true" : "false");
+        });
+        document.querySelectorAll("[data-register-only]").forEach(function (field) { field.hidden = !isRegister; });
+        document.querySelector("[data-auth-nickname]").required = isRegister;
+        document.querySelector("[data-auth-code]").required = isRegister;
+        document.querySelector("[data-auth-password]").autocomplete = isRegister ? "new-password" : "current-password";
+        document.querySelector("[data-auth-submit]").textContent = isRegister ? "注册并继续" : "登录并继续";
+      }
+
+      function resetPrivacyPrompt() {
+        document.querySelector("[data-consent-offline]").textContent = "仅离线体验";
+      }
+
+      function openAuth(returnScreen) {
+        state.authReturnScreen = returnScreen;
+        var backButton = document.querySelector("[data-auth-back]");
+        var fromModes = returnScreen === "modes";
+        backButton.setAttribute("aria-label", fromModes ? "返回模式" : "返回我的");
+        document.querySelector("[data-auth-copy]").textContent = fromModes
+          ? "登录后继续你刚才选择的模式。没有内测资格或受邀邮箱限制。"
+          : "登录后同步已结束记录、排行榜和成就。没有内测资格或受邀邮箱限制。";
+        showScreen("auth");
+      }
+
+      function continueOnlineIntent(intent, returnScreen) {
+        if (intent === "auth") {
+          openAuth(returnScreen);
+        } else if (intent === "leaderboard") {
+          showScreen(returnScreen);
+          openLeaderboard();
+        } else if (intent === "achievements") {
+          showScreen("achievements");
+        }
+      }
+
+      function requestOnline(intent, returnScreen) {
+        if (state.privacy === "online") {
+          continueOnlineIntent(intent, returnScreen);
+          return;
+        }
+        state.pendingOnlineIntent = intent;
+        state.onlineIntentReturnScreen = returnScreen;
+        document.querySelector("[data-consent-offline]").textContent = "暂不联网";
+        showScreen("privacy");
+      }
+
+      function requestAuth(returnScreen) {
+        if (state.privacy !== "online") {
+          requestOnline("auth", returnScreen);
+          return;
+        }
+        openAuth(returnScreen);
+      }
+
+      function requestAchievements() {
+        if (!state.authenticated) {
+          state.postAuthScreen = "achievements";
+          requestAuth("me");
+          return;
+        }
+        requestOnline("achievements", "me");
+      }
+
+      function syncLeaderboardFilters() {
+        var mode = document.querySelector("[data-leaderboard-mode]");
+        var metric = document.querySelector("[data-leaderboard-metric]");
+        var speedOption = document.querySelector("[data-speed-option]");
+        var speedTarget = document.querySelector("[data-speed-target]");
+        var supportsSpeed = mode.value === "standard_4x4_pow2_no_undo";
+        speedOption.hidden = !supportsSpeed;
+        speedOption.disabled = !supportsSpeed;
+        if (!supportsSpeed && metric.value === "speed") metric.value = "score";
+        speedTarget.hidden = metric.value !== "speed";
+      }
+
+      function openLeaderboard() {
+        if (state.privacy !== "online") {
+          requestOnline("leaderboard", state.screen);
+          return;
+        }
+        document.querySelector("[data-leaderboard-mode]").value = state.currentMode;
+        syncLeaderboardFilters();
+        app.dataset.inputLocked = state.screen === "game" ? "true" : "false";
+        leaderboardDialog.showModal();
+        syncBottomNav();
+      }
+
+      function closeLeaderboard() {
+        leaderboardDialog.close();
+        app.dataset.inputLocked = "false";
+        syncBottomNav();
+      }
+
+      function restartCurrentMode() {
+        renderGame(state.currentMode, false, "已创建新对局 · 其他模式存档不变");
+        startTimer(0);
+        syncBottomNav();
+      }
+
+      function openReplay(source) {
+        var backButton = document.querySelector("[data-replay-back]");
+        var fromResult = source === "result";
+        backButton.dataset.target = source;
+        backButton.setAttribute("aria-label", fromResult ? "返回结算" : "返回详情");
+        document.querySelector("[data-replay-mode]").textContent = fromResult
+          ? modes[state.currentMode].title
+          : state.detailMode;
+        var replayMode = fromResult ? modes[state.currentMode].title : state.detailMode;
+        document.querySelector("[data-replay-copy]").textContent = replayMode === "经典 4×4"
+          ? "第 286 / 684 步 · 05:24 / 12:48"
+          : "第 214 / 512 步 · 03:18 / 08:14";
+        showScreen("replay");
+      }
+
+      function openDetail(source, recordButton) {
+        state.detailReturnScreen = source;
+        state.detailMode = recordButton.dataset.recordMode;
+        var fromHome = source === "home";
+        var backButton = document.querySelector("[data-detail-back]");
+        backButton.setAttribute("aria-label", fromHome ? "返回首页" : "返回记录");
+        document.querySelector("[data-detail-mode]").textContent = recordButton.dataset.recordMode;
+        document.querySelector("[data-detail-score]").textContent = recordButton.dataset.recordScore;
+        document.querySelector("[data-detail-kind]").textContent = recordButton.dataset.recordKind;
+        document.querySelector("[data-detail-max]").textContent = recordButton.dataset.recordMax;
+        document.querySelector("[data-detail-sum]").textContent = recordButton.dataset.recordSum;
+        document.querySelector("[data-detail-duration]").textContent = recordButton.dataset.recordDuration;
+        document.querySelector("[data-detail-steps]").textContent = recordButton.dataset.recordSteps;
+        document.querySelector("[data-detail-delete]").textContent = recordButton.hasAttribute("data-account-record")
+          ? "删除到最近删除（3 天内可恢复）"
+          : "永久删除本机记录";
+        showScreen("detail");
+      }
+
+      function reviewJump(target) {
+        if (target === "privacy") {
+          state.authenticated = false;
+          state.privacy = "undecided";
+          state.pendingMode = null;
+          state.postAuthScreen = null;
+          state.pendingOnlineIntent = null;
+          resetPrivacyPrompt();
+          syncAuth();
+          showScreen("privacy");
+        } else if (target === "guest-home") {
+          state.authenticated = false;
+          state.privacy = "offline";
+          state.pendingMode = null;
+          state.postAuthScreen = null;
+          state.pendingOnlineIntent = null;
+          resetPrivacyPrompt();
+          syncAuth();
+          document.querySelector("[data-connectivity]").textContent = "仅离线";
+          showScreen("home");
+        } else if (target === "signed-modes") {
+          state.authenticated = true;
+          state.privacy = "online";
+          state.pendingMode = null;
+          state.postAuthScreen = null;
+          state.pendingOnlineIntent = null;
+          resetPrivacyPrompt();
+          syncAuth();
+          document.querySelector("[data-connectivity]").textContent = "联网已同意";
+          showScreen("modes");
+        } else if (target === "pending") {
+          state.authenticated = true;
+          state.privacy = "online";
+          state.currentMode = "classic_4x4_pow2_undo";
+          syncAuth();
+          document.querySelector("[data-connectivity]").textContent = "联网已同意";
+          startTimer(768000);
+          showScreen("pending");
+        } else if (target === "result") {
+          stopTimer();
+          showScreen("result");
+        } else if (target === "records" || target === "me") {
+          showScreen(target);
+        }
+      }
+
+      document.addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+
+        if (button.dataset.review) {
+          reviewJump(button.dataset.review);
+          return;
+        }
+        if (button.dataset.nav) {
+          showScreen(button.dataset.nav);
+          return;
+        }
+        if (button.dataset.target) {
+          showScreen(button.dataset.target);
+          return;
+        }
+        if (button.hasAttribute("data-open-detail")) {
+          openDetail(state.screen, button);
+          return;
+        }
+        if (button.hasAttribute("data-open-replay")) {
+          openReplay("detail");
+          return;
+        }
+        if (button.hasAttribute("data-mode-card")) {
+          enterMode(button.dataset.mode, button.dataset.hasSave === "true");
+          return;
+        }
+        if (button.dataset.authTab) {
+          setAuthTab(button.dataset.authTab);
+          return;
+        }
+        if (button.dataset.period) {
+          document.querySelectorAll("[data-period]").forEach(function (periodButton) {
+            periodButton.setAttribute("aria-pressed", periodButton === button ? "true" : "false");
+          });
+          return;
+        }
+
+        switch (button.dataset.action) {
+          case "consent-online":
+            state.privacy = "online";
+            document.querySelector("[data-connectivity]").textContent = "联网已同意";
+            var acceptedIntent = state.pendingOnlineIntent;
+            var acceptedReturnScreen = state.onlineIntentReturnScreen;
+            state.pendingOnlineIntent = null;
+            resetPrivacyPrompt();
+            if (acceptedIntent) continueOnlineIntent(acceptedIntent, acceptedReturnScreen);
+            else showScreen("home");
+            break;
+          case "consent-offline":
+            state.privacy = "offline";
+            document.querySelector("[data-connectivity]").textContent = "仅离线";
+            var declinedIntent = state.pendingOnlineIntent;
+            var declinedReturnScreen = state.onlineIntentReturnScreen;
+            state.pendingOnlineIntent = null;
+            resetPrivacyPrompt();
+            if (declinedIntent === "auth") {
+              state.pendingMode = null;
+              state.postAuthScreen = null;
+            }
+            showScreen(declinedIntent ? declinedReturnScreen : "home");
+            break;
+          case "open-auth":
+            state.pendingMode = null;
+            state.postAuthScreen = null;
+            requestAuth("me");
+            break;
+          case "cancel-auth":
+            state.pendingMode = null;
+            state.postAuthScreen = null;
+            showScreen(state.authReturnScreen);
+            break;
+          case "open-achievements":
+            requestAchievements();
+            break;
+          case "close-detail":
+            showScreen(state.detailReturnScreen);
+            break;
+          case "continue":
+            enterMode(state.authenticated ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo", true);
+            break;
+          case "open-leaderboard":
+            openLeaderboard();
+            break;
+          case "close-leaderboard":
+            closeLeaderboard();
+            break;
+          case "restart":
+            if (state.hasEffectiveMove) {
+              restartDialog.showModal();
+              syncBottomNav();
+            } else {
+              restartCurrentMode();
+            }
+            break;
+          case "cancel-restart":
+            restartDialog.close();
+            syncBottomNav();
+            break;
+          case "confirm-restart":
+            restartDialog.close();
+            restartCurrentMode();
+            break;
+          case "pending-undo":
+            renderGame("classic_4x4_pow2_undo", true, "已撤回，继续当前对局");
+            showScreen("game");
+            break;
+          case "pending-finish":
+            stopTimer();
+            showScreen("result");
+            break;
+          case "result-again":
+            enterMode(state.currentMode, false);
+            break;
+          case "result-replay":
+            openReplay("result");
+            break;
+          case "result-home":
+            showScreen("home");
+            break;
+        }
+      });
+
+      document.querySelector("[data-auth-form]").addEventListener("submit", function (event) {
+        event.preventDefault();
+        state.authenticated = true;
+        syncAuth();
+        var targetMode = state.pendingMode;
+        var postAuthScreen = state.postAuthScreen;
+        state.pendingMode = null;
+        state.postAuthScreen = null;
+        if (targetMode) enterMode(targetMode, targetMode !== "board_3x3_pow2_no_undo");
+        else if (postAuthScreen) showScreen(postAuthScreen);
+        else showScreen(state.authReturnScreen);
+      });
+
+      document.querySelector("[data-leaderboard-mode]").addEventListener("change", syncLeaderboardFilters);
+      document.querySelector("[data-leaderboard-metric]").addEventListener("change", syncLeaderboardFilters);
+
+      leaderboardDialog.addEventListener("cancel", function (event) {
+        event.preventDefault();
+        closeLeaderboard();
+      });
+      restartDialog.addEventListener("cancel", function () { syncBottomNav(); });
+      setInterval(renderTimer, 100);
+      syncAuth();
+      syncLeaderboardFilters();
+      showScreen("privacy");
+    })();
+  </script>
+</body>
+</html>

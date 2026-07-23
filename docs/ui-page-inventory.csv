@@ -23,6 +23,7 @@ independent_page,source_html,2K 封顶成绩监测,/stone_2k_monitor.html,monito
 independent_page,source_html,API 文档,/api-docs.html,docs_page,api-docs.html,production_build,接口文档
 independent_page,source_html,缓存修复,/cache-reset.html,utility_page,cache-reset.html,production_build,清缓存跳转页
 independent_page,source_html,Favicon Preview,/favicon-preview.html,preview_page,favicon-preview.html,source_only_not_vite_build,图标预览（含大源图，开发查看）
+independent_page,source_html,Android App 低保真线框,/android-app-wireframe.html,preview_page,android-app-wireframe.html,source_only_not_vite_build,阶段 0 信息架构与任务流审阅（非正式产品页面）
 independent_page,source_html,UI 预览工作台,/ui-preview.html,preview_page,ui-preview.html,production_build,UI 预览
 independent_page,source_html,Breakout Easter Egg,/easter-eggs/breakout/index.html,easter_egg_page,public/easter-eggs/breakout/index.html,static_public_asset,彩蛋页
 independent_page,source_html,Ranked Seed Validator,/ranked_seed_validator.html,dev_tool_page,ranked_seed_validator.html,source_only_not_vite_build,源码存在但未纳入当前 Vite build
