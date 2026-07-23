@@ -16,6 +16,43 @@ function readSpec(): string {
   return readFileSync(specPath, "utf8");
 }
 
+function readGeneratedTypes(): string {
+  return readFileSync(generatedTypesPath, "utf8");
+}
+
+function readPathItem(source: string, path: string): string {
+  const marker = `  ${path}:\n`;
+  const start = source.indexOf(marker);
+  expect(start, `${path} should be documented`).toBeGreaterThanOrEqual(0);
+  const followingPathOffset = source.slice(start + marker.length).search(/\n  \/[^\n]+:\n/u);
+  const end = followingPathOffset < 0
+    ? source.length
+    : start + marker.length + followingPathOffset;
+  return source.slice(start, end);
+}
+
+function readGeneratedPathItem(source: string, path: string): string {
+  const marker = `    "${path}": {\n`;
+  const start = source.indexOf(marker);
+  expect(start, `${path} should have generated types`).toBeGreaterThanOrEqual(0);
+  const followingPathOffset = source.slice(start + marker.length).search(/\n    "\/[^\n]+": \{/u);
+  const end = followingPathOffset < 0
+    ? source.length
+    : start + marker.length + followingPathOffset;
+  return source.slice(start, end);
+}
+
+function readSchema(source: string, schema: string): string {
+  const marker = `    ${schema}:\n`;
+  const start = source.indexOf(marker);
+  expect(start, `${schema} schema should be documented`).toBeGreaterThanOrEqual(0);
+  const followingSchemaOffset = source.slice(start + marker.length).search(/\n    [A-Za-z][A-Za-z0-9]*:\n/u);
+  const end = followingSchemaOffset < 0
+    ? source.length
+    : start + marker.length + followingSchemaOffset;
+  return source.slice(start, end);
+}
+
 describe("OpenAPI contract", () => {
   it("publishes a versioned OpenAPI contract for core and upcoming achievement APIs", () => {
     const spec = readSpec();
@@ -83,6 +120,88 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).toContain("\"/user/me/achievement-events\"");
     expect(generatedTypes).toContain("AchievementShowcase");
     expect(generatedTypes).toContain("AchievementEventRequest");
+  });
+
+  it("documents the existing token refresh contract without inventing a refresh-token route", () => {
+    const spec = readSpec();
+    const generatedTypes = readGeneratedTypes();
+    const refreshPath = readPathItem(spec, "/auth/refresh");
+    const generatedRefreshPath = readGeneratedPathItem(generatedTypes, "/auth/refresh");
+    const refreshRequest = readSchema(spec, "AuthRefreshRequest");
+    const refreshResponse = readSchema(spec, "AuthRefreshResponse");
+    const refreshError = readSchema(spec, "AuthRefreshError");
+
+    expect(refreshPath).toContain("- bearerAuth: []");
+    expect(refreshPath).toContain("- {}");
+    expect(refreshPath).toContain('$ref: "#/components/schemas/AuthRefreshRequest"');
+    expect(refreshPath).toContain('$ref: "#/components/schemas/AuthRefreshResponse"');
+    expect(refreshPath).toContain('$ref: "#/components/schemas/AuthRefreshError"');
+    expect(refreshRequest).toMatch(/\n        token:\n          type: string\n/u);
+    expect(refreshRequest).not.toContain("required: [token]");
+    expect(refreshResponse).toContain("required: [success, token, expiresAt, ttl, user]");
+    expect(refreshResponse).toMatch(/expiresAt:\n\s+type: integer\n\s+format: int64/u);
+    expect(refreshResponse).toMatch(/ttl:\n\s+type: integer/u);
+    expect(refreshError).toContain("enum: [INVALID_TOKEN, TOKEN_REVOKED, UNAUTHORIZED]");
+    expect(generatedRefreshPath).toContain('components["schemas"]["AuthRefreshRequest"]');
+    expect(generatedRefreshPath).toContain('components["schemas"]["AuthRefreshResponse"]');
+    expect(generatedTypes).not.toContain('"/auth/refresh-token"');
+  });
+
+  it("uses the Node leaderboard period vocabulary in the contract and generated types", () => {
+    const leaderboardPath = readPathItem(readSpec(), "/leaderboard");
+    const generatedLeaderboardPath = readGeneratedPathItem(readGeneratedTypes(), "/leaderboard");
+
+    expect(leaderboardPath).toContain("enum: [all, day, week, month]");
+    expect(leaderboardPath).not.toMatch(/\b(?:daily|weekly|monthly)\b/u);
+    expect(generatedLeaderboardPath).toContain('period?: "all" | "day" | "week" | "month";');
+  });
+
+  it("documents public active history and owner-only deleted history with the actual response shape", () => {
+    const recordsPath = readPathItem(readSpec(), "/user/{userId}/records");
+    const generatedRecordsPath = readGeneratedPathItem(readGeneratedTypes(), "/user/{userId}/records");
+
+    expect(recordsPath).toContain("Active records are public");
+    expect(recordsPath).toContain("deleted or all requires Bearer authentication for the same user ID");
+    expect(recordsPath).toContain("- bearerAuth: []");
+    expect(recordsPath).toContain("- {}");
+    expect(recordsPath).toMatch(/- name: status[\s\S]*?enum: \[active, deleted, all\][\s\S]*?default: active/u);
+    expect(recordsPath).toContain("- name: mode_key");
+    expect(recordsPath).not.toContain("- name: visibility");
+    expect(recordsPath).toContain('"401":');
+    expect(recordsPath).toContain('"403":');
+    expect(recordsPath).toContain("required: [data, page, limit, total, total_pages, has_prev, has_next, pagination, status, sort_by, order]");
+    expect(recordsPath).toContain("data:");
+    expect(recordsPath).toContain("records:");
+    expect(recordsPath).toContain("pagination:");
+    expect(recordsPath).toContain("total_pages:");
+    expect(recordsPath).toContain("has_prev:");
+    expect(recordsPath).toContain("has_next:");
+
+    expect(generatedRecordsPath).toContain('status?: "active" | "deleted" | "all";');
+    expect(generatedRecordsPath).toContain("mode_key?: string;");
+    expect(generatedRecordsPath).not.toContain("visibility?:");
+    expect(generatedRecordsPath).toContain('data: components["schemas"]["GameRecord"][];');
+    expect(generatedRecordsPath).toContain("total_pages: number;");
+    expect(generatedRecordsPath).toContain("has_prev: boolean;");
+    expect(generatedRecordsPath).toContain("has_next: boolean;");
+  });
+
+  it("includes the actual Node history fields in generated record types", () => {
+    const gameRecord = readSchema(readSpec(), "GameRecord");
+    const generatedTypes = readGeneratedTypes();
+
+    expect(gameRecord).toMatch(/source:\n\s+type: string\n\s+enum: \[normal, ranked, migration, admin\]/u);
+    expect(gameRecord).toMatch(/steps:\n\s+type: integer\n\s+minimum: 0/u);
+    expect(gameRecord).toMatch(/client_record_id:\n\s+type:\n\s+- string\n\s+- "null"/u);
+    expect(gameRecord).toMatch(/best_tile:\n\s+type: integer\n\s+minimum: 0/u);
+    expect(gameRecord).toMatch(/ended_at:\n\s+type: string\n\s+format: date-time/u);
+    expect(gameRecord).toMatch(/end_reason:\n\s+type: string/u);
+    expect(generatedTypes).toContain('source?: "normal" | "ranked" | "migration" | "admin";');
+    expect(generatedTypes).toContain("steps?: number;");
+    expect(generatedTypes).toContain("client_record_id?: string | null;");
+    expect(generatedTypes).toContain("best_tile?: number;");
+    expect(generatedTypes).toContain("ended_at?: string;");
+    expect(generatedTypes).toContain("end_reason?: string;");
   });
 
   it("keeps generated API types under an explicit drift check", () => {

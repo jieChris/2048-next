@@ -106,6 +106,34 @@ paths:
         "200":
           $ref: "#/components/responses/AuthResponse"
 
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange an existing auth token for a fresh token.
+      description: Supply the existing token either in the optional JSON body or as a Bearer token.
+      security:
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRefreshRequest"
+      responses:
+        "200":
+          description: Refreshed auth token, expiry, and user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthRefreshResponse"
+        "401":
+          description: The supplied token is missing, invalid, expired, revoked, or no longer belongs to an active user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthRefreshError"
+
   /login/captcha:
     post:
       tags: [Auth]
@@ -264,12 +292,21 @@ paths:
     get:
       tags: [Records]
       summary: List user records.
+      description: Active records are public; status=deleted or all requires Bearer authentication for the same user ID.
+      security:
+        - bearerAuth: []
+        - {}
       parameters:
         - $ref: "#/components/parameters/UserIdPath"
         - $ref: "#/components/parameters/PageQuery"
         - $ref: "#/components/parameters/LimitQuery"
         - name: mode
           in: query
+          schema:
+            type: string
+        - name: mode_key
+          in: query
+          description: Canonical mode identifier.
           schema:
             type: string
         - name: sort_by
@@ -282,11 +319,13 @@ paths:
           schema:
             type: string
             enum: [asc, desc]
-        - name: visibility
+        - name: status
           in: query
+          description: Active records are public. Deleted or all records require owner authentication.
           schema:
             type: string
             enum: [active, deleted, all]
+            default: active
       responses:
         "200":
           description: User records.
@@ -296,11 +335,76 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiEnvelope"
                   - type: object
+                    required: [data, page, limit, total, total_pages, has_prev, has_next, pagination, status, sort_by, order]
                     properties:
-                      records:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GameRecord"
+                      records:
+                        type: array
+                        deprecated: true
+                        description: Optional legacy alias retained for older typed consumers; the Node response uses data.
+                        items:
+                          $ref: "#/components/schemas/GameRecord"
+                      page:
+                        type: integer
+                        minimum: 1
+                      limit:
+                        type: integer
+                        minimum: 1
+                      total:
+                        type: integer
+                        minimum: 0
+                      total_pages:
+                        type: integer
+                        minimum: 0
+                      has_prev:
+                        type: boolean
+                      has_next:
+                        type: boolean
+                      pagination:
+                        type: object
+                        additionalProperties: false
+                        required: [page, limit, total, total_pages, has_prev, has_next]
+                        properties:
+                          page:
+                            type: integer
+                            minimum: 1
+                          limit:
+                            type: integer
+                            minimum: 1
+                          total:
+                            type: integer
+                            minimum: 0
+                          total_pages:
+                            type: integer
+                            minimum: 0
+                          has_prev:
+                            type: boolean
+                          has_next:
+                            type: boolean
+                      status:
+                        type: string
+                        enum: [active, deleted, all]
+                      sort_by:
+                        type: string
+                        enum: [time, score, board_sum]
+                      order:
+                        type: string
+                        enum: [asc, desc]
+        "401":
+          description: Authentication is required when status is deleted or all.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "403":
+          description: Deleted or all records were requested for a different user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
 
   /user/{userId}/stats:
     get:
@@ -333,7 +437,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [all, daily, weekly, monthly]
+            enum: [all, day, week, month]
         - name: mode
           in: query
           schema:
@@ -1381,6 +1485,52 @@ components:
         captcha:
           type: string
 
+    AuthRefreshRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          minLength: 1
+
+    AuthRefreshResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, token, expiresAt, ttl, user]
+          properties:
+            success:
+              type: boolean
+              const: true
+            token:
+              type: string
+            expiresAt:
+              type: integer
+              format: int64
+              minimum: 0
+              description: Token expiry as Unix seconds.
+            ttl:
+              type: integer
+              minimum: 0
+              description: Token lifetime in seconds.
+            user:
+              $ref: "#/components/schemas/User"
+
+    AuthRefreshError:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, error, code]
+          properties:
+            success:
+              type: boolean
+              const: false
+            error:
+              type: string
+            code:
+              type: string
+              enum: [INVALID_TOKEN, TOKEN_REVOKED, UNAUTHORIZED]
+
     PasswordChangeRequest:
       type: object
       additionalProperties: false
@@ -1474,8 +1624,27 @@ components:
           type: string
         mode_bucket:
           type: string
+        source:
+          type: string
+          enum: [normal, ranked, migration, admin]
+        steps:
+          type: integer
+          minimum: 0
+        client_record_id:
+          type:
+            - string
+            - "null"
+        best_tile:
+          type: integer
+          minimum: 0
         max_tile:
           type: integer
+          description: Legacy compatibility field; Node history responses use best_tile.
+        ended_at:
+          type: string
+          format: date-time
+        end_reason:
+          type: string
         replay:
           type: string
         replay_url:

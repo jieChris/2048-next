@@ -173,6 +173,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange an existing auth token for a fresh token.
+         * @description Supply the existing token either in the optional JSON body or as a Bearer token.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AuthRefreshRequest"];
+                };
+            };
+            responses: {
+                /** @description Refreshed auth token, expiry, and user. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthRefreshResponse"];
+                    };
+                };
+                /** @description The supplied token is missing, invalid, expired, revoked, or no longer belongs to an active user. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthRefreshError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/login/captcha": {
         parameters: {
             query?: never;
@@ -480,16 +532,22 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List user records. */
+        /**
+         * List user records.
+         * @description Active records are public; status=deleted or all requires Bearer authentication for the same user ID.
+         */
         get: {
             parameters: {
                 query?: {
                     page?: components["parameters"]["PageQuery"];
                     limit?: components["parameters"]["LimitQuery"];
                     mode?: string;
+                    /** @description Canonical mode identifier. */
+                    mode_key?: string;
                     sort_by?: "time" | "score" | "board_sum";
                     order?: "asc" | "desc";
-                    visibility?: "active" | "deleted" | "all";
+                    /** @description Active records are public. Deleted or all records require owner authentication. */
+                    status?: "active" | "deleted" | "all";
                 };
                 header?: never;
                 path: {
@@ -506,8 +564,51 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data: components["schemas"]["GameRecord"][];
+                            /**
+                             * @deprecated
+                             * @description Optional legacy alias retained for older typed consumers; the Node response uses data.
+                             */
                             records?: components["schemas"]["GameRecord"][];
+                            page: number;
+                            limit: number;
+                            total: number;
+                            total_pages: number;
+                            has_prev: boolean;
+                            has_next: boolean;
+                            pagination: {
+                                page: number;
+                                limit: number;
+                                total: number;
+                                total_pages: number;
+                                has_prev: boolean;
+                                has_next: boolean;
+                            };
+                            /** @enum {string} */
+                            status: "active" | "deleted" | "all";
+                            /** @enum {string} */
+                            sort_by: "time" | "score" | "board_sum";
+                            /** @enum {string} */
+                            order: "asc" | "desc";
                         };
+                    };
+                };
+                /** @description Authentication is required when status is deleted or all. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description Deleted or all records were requested for a different user. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
                     };
                 };
             };
@@ -573,7 +674,7 @@ export interface paths {
                 query?: {
                     limit?: components["parameters"]["LimitQuery"];
                     page?: components["parameters"]["PageQuery"];
-                    period?: "all" | "daily" | "weekly" | "monthly";
+                    period?: "all" | "day" | "week" | "month";
                     mode?: string;
                     mode_key?: string;
                     metric?: "score" | "speed";
@@ -2216,6 +2317,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        AuthRefreshRequest: {
+            token?: string;
+        };
+        AuthRefreshResponse: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: true;
+            token: string;
+            /**
+             * Format: int64
+             * @description Token expiry as Unix seconds.
+             */
+            expiresAt: number;
+            /** @description Token lifetime in seconds. */
+            ttl: number;
+            user: components["schemas"]["User"];
+        };
+        AuthRefreshError: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @enum {string} */
+            code: "INVALID_TOKEN" | "TOKEN_REVOKED" | "UNAUTHORIZED";
+        };
         PasswordChangeRequest: {
             old_password: string;
             new_password: string;
@@ -2267,7 +2391,16 @@ export interface components {
             mode?: string;
             mode_key?: string;
             mode_bucket?: string;
+            /** @enum {string} */
+            source?: "normal" | "ranked" | "migration" | "admin";
+            steps?: number;
+            client_record_id?: string | null;
+            best_tile?: number;
+            /** @description Legacy compatibility field; Node history responses use best_tile. */
             max_tile?: number;
+            /** Format: date-time */
+            ended_at?: string;
+            end_reason?: string;
             replay?: string;
             replay_url?: string;
             /** Format: date-time */
