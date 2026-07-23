@@ -2019,14 +2019,23 @@
 
   function sortRecords(records, sortBy, order) {
     var list = Array.isArray(records) ? records.slice() : [];
-    var by = sortBy === "score" ? "score" : "time";
+    var by = sortBy === "score" || sortBy === "board_sum" ? sortBy : "time";
     var dir = order === "asc" ? 1 : -1;
 
     list.sort(function (a, b) {
       var scoreA = Math.floor(Number(a && a.score) || 0);
       var scoreB = Math.floor(Number(b && b.score) || 0);
+      var boardSumA = Math.floor(Number(a && a.board_sum) || 0);
+      var boardSumB = Math.floor(Number(b && b.board_sum) || 0);
       var timeA = parseDateTs(resolveRecordDateValue(a));
       var timeB = parseDateTs(resolveRecordDateValue(b));
+
+      if (by === "board_sum") {
+        if (boardSumA !== boardSumB) return dir * (boardSumA - boardSumB);
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        if (timeA !== timeB) return timeB - timeA;
+        return toText(a && a.mode_bucket).localeCompare(toText(b && b.mode_bucket));
+      }
 
       if (by === "score") {
         if (scoreA !== scoreB) return dir * (scoreA - scoreB);
@@ -2056,7 +2065,7 @@
     var modeFilter = getModeFilterValue();
     activeModeFilter = modeFilter;
     activeRecordVisibility = getRecordVisibilityValue();
-    renderRecords(Array.isArray(cachedRecords) ? cachedRecords : []);
+    renderRecords(sortRecords(cachedRecords, getSortByValue(), getOrderValue()));
   }
 
   function findCachedRecordIndex(recordId) {

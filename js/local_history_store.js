@@ -249,6 +249,12 @@
     return records;
   }
 
+  function compareBoardSumScoreDesc(a, b) {
+    if ((b.board_sum || 0) !== (a.board_sum || 0)) return (b.board_sum || 0) - (a.board_sum || 0);
+    if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+    return compareDatesDesc(a, b);
+  }
+
   function normalizeHistoryBoardMatrix(value) {
     if (!Array.isArray(value)) return [];
     var board = [];
@@ -581,10 +587,7 @@
         return compareDatesDesc(a, b);
       });
     } else if (sortBy === "board_sum_desc") {
-      filteredFallback.sort(function (a, b) {
-        if ((b.board_sum || 0) !== (a.board_sum || 0)) return (b.board_sum || 0) - (a.board_sum || 0);
-        return compareDatesDesc(a, b);
-      });
+      filteredFallback.sort(compareBoardSumScoreDesc);
     } else if (sortBy === "ended_asc") {
       filteredFallback.sort(function (a, b) {
         return -compareDatesDesc(a, b);
@@ -737,12 +740,17 @@
 
       var total = 0;
       var items = [];
+      var filteredItems = [];
       var start = (page - 1) * pageSize;
       var endExclusive = start + pageSize;
 
       request.onsuccess = function () {
         var cursor = request.result;
         if (!cursor) {
+          if (sortBy === "board_sum_desc") {
+            filteredItems.sort(compareBoardSumScoreDesc);
+            items = filteredItems.slice(start, endExclusive);
+          }
           resolve({
             total: total,
             page: page,
@@ -754,7 +762,9 @@
 
         var item = normalizeRecord(cursor.value);
         if ((!modeKey || item.mode_key === modeKey) && matchesOwner(item, ownerKey) && matchesKeyword(item, keyword)) {
-          if (total >= start && total < endExclusive) {
+          if (sortBy === "board_sum_desc") {
+            filteredItems.push(item);
+          } else if (total >= start && total < endExclusive) {
             items.push(item);
           }
           total += 1;

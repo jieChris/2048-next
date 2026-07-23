@@ -325,6 +325,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 duration_ms: 6000,
                 ended_at: "2026-03-14T10:00:00.000Z",
                 created_at: "2026-03-14 10:01:02"
+              },
+              {
+                id: "rec-date-2",
+                user_id: 7,
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 1024,
+                board_sum: 126,
+                best_tile: 64,
+                duration_ms: 7000,
+                ended_at: "2026-03-13T10:00:00.000Z",
+                created_at: "2026-03-13 10:01:02"
               }
             ],
             page: 1,
@@ -401,6 +413,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(orderOptions).toEqual(["desc", "asc"]);
 
     await page.selectOption("#user-record-sort", "board_sum");
+    await expect(page.locator(".user-record-score").first()).toHaveText("1024");
     await page.selectOption("#user-record-order", "asc");
     await expect.poll(() =>
       recordRequests.some((url) => url.includes("sort_by=board_sum") && url.includes("order=asc"))

@@ -24,6 +24,16 @@ test.describe("History smoke: export", () => {
           ended_at: new Date(now).toISOString()
         },
         {
+          id: "legacy_sum_64_high_score",
+          mode: "local",
+          mode_key: "standard_4x4_pow2_no_undo",
+          score: 1200,
+          best_tile: 64,
+          duration_ms: 1000,
+          final_board: [[64, 0], [0, 0]],
+          ended_at: new Date(now - 2000).toISOString()
+        },
+        {
           id: "legacy_sum_64",
           mode: "local",
           mode_key: "standard_4x4_pow2_no_undo",
@@ -37,11 +47,12 @@ test.describe("History smoke: export", () => {
     });
 
     await page.click("#history-load-btn");
-    await expect(page.locator(".history-item")).toHaveCount(2);
+    await expect(page.locator(".history-item")).toHaveCount(3);
     await expect(page.locator(".history-item").first()).toContainText("盘面和: 30");
 
     await page.selectOption("#history-sort", "board_sum_desc");
     await expect(page.locator(".history-item").first()).toContainText("盘面和: 64");
+    await expect(page.locator(".history-item").first()).toContainText("1200");
 
     await page.fill("#history-keyword", "30");
     await page.press("#history-keyword", "Enter");
@@ -52,8 +63,8 @@ test.describe("History smoke: export", () => {
       const payload = (window as any).LocalHistoryStore.exportRecords();
       return JSON.parse(String(payload || "{}"));
     });
-    expect(exported.records).toHaveLength(2);
-    expect(exported.records.map((record: any) => record.board_sum).sort((a: number, b: number) => a - b)).toEqual([30, 64]);
+    expect(exported.records).toHaveLength(3);
+    expect(exported.records.map((record: any) => record.board_sum).sort((a: number, b: number) => a - b)).toEqual([30, 64, 64]);
   });
 
   test("supports export-all and single-record export", async ({ page }) => {
