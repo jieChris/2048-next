@@ -14,15 +14,18 @@
     "api:docs": "vite --host 127.0.0.1 --open /api-docs.html",
     "build": "tsc && vite build && node scripts/precompress-dist.mjs",
     "build:app": "tsc -p tsconfig.app.json && vite build --config vite.app.config.ts",
+    "android:sync": "npm run build:app && cap sync android",
     "preview": "npm run build && node scripts/preview-cloud-api.mjs",
     "preview:raw": "vite preview --open",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",
     "audit:refactor-closure": "node scripts/refactor-closure-audit.mjs",
     "audit:page-legacy-runtime-boundary": "node scripts/page-legacy-runtime-boundary-audit.mjs",
     "audit:mobile-boundary": "node scripts/mobile-boundary-audit.mjs",
+    "audit:android": "node scripts/android-project-audit.mjs",
+    "audit:android:release-signing": "node scripts/android-release-signing-gate.mjs",
     "test:unit": "vitest run tests/unit",
     "test:unit:core": "vitest run tests/unit/core-",
-    "test:unit:app": "vitest run tests/unit/mobile-i18n.spec.ts tests/unit/mobile-theme.spec.ts tests/unit/mobile-privacy.spec.ts tests/unit/mobile-boundary-audit.spec.ts",
+    "test:unit:app": "vitest run tests/unit/mobile-i18n.spec.ts tests/unit/mobile-theme.spec.ts tests/unit/mobile-privacy.spec.ts tests/unit/mobile-boundary-audit.spec.ts tests/unit/mobile-capacitor-config.spec.ts tests/unit/mobile-android-native-config.spec.ts tests/unit/mobile-android-project-audit.spec.ts",
     "test:unit:watch": "vitest tests/unit",
     "test:smoke": "playwright test --config=playwright.config.ts --workers=1",
     "test:smoke:app": "playwright test --config=playwright.app.config.ts --workers=1",
@@ -39,6 +42,7 @@
     "test:refactor-contract": "playwright test --config=playwright.refactor-contract.config.ts --workers=1",
     "verify:iterate": "npm run audit:game-manager && npm run test:unit:core && npm run test:smoke:runtime-contract && npm run test:smoke:play-replay",
     "verify:app": "npm run test:unit:app && npm run build:app && npm run audit:mobile-boundary && npm run test:smoke:app",
+    "android:check": "npm run test:unit:app && npm run android:sync && cd android && ./gradlew --no-daemon lint testDebugUnitTest assembleDebug :app:processReleaseMainManifest && cd .. && npm run audit:android && npm run audit:android:release-signing",
     "verify:refactor": "node scripts/refactor-gate.mjs",
     "verify:refactor:ci": "node scripts/refactor-gate.mjs --smoke-script=test:smoke:ci",
     "verify:prepush": "npm run verify:refactor:ci",
@@ -61,6 +65,7 @@
     "test:smoke:nightly": "npm run test:smoke"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.4.2",
     "@playwright/test": "^1.58.2",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
@@ -72,5 +77,14 @@
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/filesystem": "8.1.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/share": "8.0.1",
+    "@capacitor/status-bar": "8.0.3"
   }
 }

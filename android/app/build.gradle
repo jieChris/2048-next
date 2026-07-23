@@ -1,0 +1,92 @@
+apply plugin: 'com.android.application'
+
+def releaseSigningPropertyNames = [
+    'NEXT2048_RELEASE_STORE_FILE',
+    'NEXT2048_RELEASE_STORE_PASSWORD',
+    'NEXT2048_RELEASE_KEY_ALIAS',
+    'NEXT2048_RELEASE_KEY_PASSWORD'
+]
+def releaseSigningValues = releaseSigningPropertyNames.collectEntries { propertyName ->
+    [(propertyName): providers.gradleProperty(propertyName).orNull?.trim()]
+}
+def missingReleaseSigningProperties = releaseSigningPropertyNames.findAll { propertyName ->
+    !releaseSigningValues[propertyName]
+}
+def releaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    def simpleTaskName = taskName.tokenize(':').last().toLowerCase()
+    simpleTaskName == 'assemblerelease' ||
+        simpleTaskName == 'bundlerelease' ||
+        simpleTaskName == 'packagerelease' ||
+        simpleTaskName.startsWith('publishrelease')
+}
+
+if (releaseTaskRequested && !missingReleaseSigningProperties.isEmpty()) {
+    throw new GradleException(
+        "Release signing configuration is required. Missing Gradle properties: ${missingReleaseSigningProperties.join(', ')}"
+    )
+}
+
+android {
+    namespace = "cn.next2048.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
+        applicationId "cn.next2048.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (missingReleaseSigningProperties.isEmpty()) {
+            release {
+                storeFile file(releaseSigningValues.NEXT2048_RELEASE_STORE_FILE)
+                storePassword releaseSigningValues.NEXT2048_RELEASE_STORE_PASSWORD
+                keyAlias releaseSigningValues.NEXT2048_RELEASE_KEY_ALIAS
+                keyPassword releaseSigningValues.NEXT2048_RELEASE_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            if (missingReleaseSigningProperties.isEmpty()) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'

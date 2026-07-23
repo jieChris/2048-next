@@ -28,3 +28,9 @@ artifacts
 *.sln
 *.sw?
 zotero-import/
+
+# Android local environment and release signing material
+android/local.properties
+android/release-signing.properties
+*.jks
+*.keystore
