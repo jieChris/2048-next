@@ -2379,16 +2379,25 @@ export interface components {
             new_password: string;
         };
         LeaderboardEntry: {
-            rank?: number;
-            user_id?: number;
-            nickname?: string;
-            score?: number;
-            duration_ms?: number;
+            rank: number;
+            user_id: number;
+            nickname: string;
+            score: number;
+            duration_ms: number;
             speed_ms?: number;
-            mode?: string;
-            mode_key?: string;
-            /** Format: date-time */
-            updated_at?: string;
+            /**
+             * Format: date-time
+             * @description Compatibility alias of canonical_ended_at.
+             */
+            game_date: string;
+            /**
+             * Format: date-time
+             * @description Frozen server-derived achievement time used for period membership and tie-breaks.
+             */
+            canonical_ended_at: string;
+            mode_bucket: string;
+            best_tile: number;
+            steps: number;
         } & {
             [key: string]: unknown;
         };

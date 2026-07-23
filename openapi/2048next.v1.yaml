@@ -1564,9 +1564,21 @@ components:
     LeaderboardEntry:
       type: object
       additionalProperties: true
+      required:
+        - rank
+        - user_id
+        - nickname
+        - score
+        - game_date
+        - canonical_ended_at
+        - mode_bucket
+        - best_tile
+        - duration_ms
+        - steps
       properties:
         rank:
           type: integer
+          minimum: 1
         user_id:
           type: integer
         nickname:
@@ -1577,13 +1589,23 @@ components:
           type: integer
         speed_ms:
           type: integer
-        mode:
-          type: string
-        mode_key:
-          type: string
-        updated_at:
+          minimum: 1
+        game_date:
           type: string
           format: date-time
+          description: Compatibility alias of canonical_ended_at.
+        canonical_ended_at:
+          type: string
+          format: date-time
+          description: Frozen server-derived achievement time used for period membership and tie-breaks.
+        mode_bucket:
+          type: string
+        best_tile:
+          type: integer
+          minimum: 0
+        steps:
+          type: integer
+          minimum: 0
 
     UserRecordStats:
       type: object

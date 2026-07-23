@@ -266,6 +266,30 @@ describe("OpenAPI contract", () => {
     expect(generated).toContain('status: "started" | "consumed" | "expired" | "abandoned";');
   });
 
+  it("requires backend-owned absolute leaderboard ranks and canonical time", () => {
+    const spec = readSpec();
+    const entry = readSchema(spec, "LeaderboardEntry");
+    const generated = readGeneratedTypes();
+
+    [
+      "rank",
+      "user_id",
+      "nickname",
+      "score",
+      "game_date",
+      "canonical_ended_at",
+      "mode_bucket",
+      "best_tile",
+      "duration_ms",
+      "steps",
+    ].forEach((field) => expect(entry).toContain(`- ${field}`));
+    expect(entry).toMatch(/rank:\n\s+type: integer\n\s+minimum: 1/u);
+    expect(entry).toContain("Compatibility alias of canonical_ended_at.");
+    expect(generated).toContain("rank: number;");
+    expect(generated).toContain("canonical_ended_at: string;");
+    expect(generated).toContain("speed_ms?: number;");
+  });
+
   it("keeps generated API types under an explicit drift check", () => {
     const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
       scripts?: Record<string, string>;
