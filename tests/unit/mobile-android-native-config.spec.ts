@@ -155,6 +155,10 @@ describe("Android native foundation", () => {
       expect(appGradle).toContain(propertyName);
     }
     expect(appGradle).toContain("Release signing configuration is required");
+    expect(appGradle).toContain("gradle.taskGraph.whenReady");
+    expect(appGradle).toContain("assembleRelease");
+    expect(appGradle).toContain("bundleRelease");
+    expect(appGradle).not.toContain("gradle.startParameter.taskNames");
     expect(appGradle).not.toMatch(
       /release\s*\{[^}]*signingConfig\s+signingConfigs\.debug/u
     );

@@ -13,6 +13,31 @@ const RELEASE_SIGNING_PROPERTIES = Object.freeze([
   "NEXT2048_RELEASE_KEY_ALIAS",
   "NEXT2048_RELEASE_KEY_PASSWORD"
 ]);
+const RELEASE_TASK_ENTRY_POINTS = Object.freeze([
+  ":app:assembleRelease",
+  ":app:assemble",
+  ":app:bundleRelease"
+]);
+
+function runUnsignedReleaseTask({
+  environment,
+  taskName
+}) {
+  const gradleArguments = [
+    "--no-daemon",
+    "--console=plain",
+    "--dry-run",
+    ...RELEASE_SIGNING_PROPERTIES.map((propertyName) => `-P${propertyName}=`),
+    taskName
+  ];
+  return spawnSync("./gradlew", gradleArguments, {
+    cwd: androidRoot,
+    encoding: "utf8",
+    env: environment,
+    maxBuffer: 4 * 1024 * 1024,
+    timeout: 120_000
+  });
+}
 
 function verifyMissingReleaseSigningFails({ environment = process.env } = {}) {
   const isolatedEnvironment = { ...environment };
@@ -21,44 +46,37 @@ function verifyMissingReleaseSigningFails({ environment = process.env } = {}) {
     delete isolatedEnvironment[`ORG_GRADLE_PROJECT_${propertyName}`];
   }
 
-  const gradleArguments = [
-    "--no-daemon",
-    "--console=plain",
-    ...RELEASE_SIGNING_PROPERTIES.map((propertyName) => `-P${propertyName}=`),
-    ":app:assembleRelease"
-  ];
-  const result = spawnSync("./gradlew", gradleArguments, {
-    cwd: androidRoot,
-    encoding: "utf8",
-    env: isolatedEnvironment,
-    maxBuffer: 4 * 1024 * 1024,
-    timeout: 120_000
-  });
-
-  if (result.error) throw result.error;
-  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  if (result.status === 0) {
-    throw new Error(
-      "[android-release-signing-gate] release build unexpectedly succeeded without signing properties"
-    );
-  }
-  if (!output.includes("Release signing configuration is required")) {
-    throw new Error(
-      `[android-release-signing-gate] release failed for the wrong reason\n${output}`
-    );
-  }
-  for (const propertyName of RELEASE_SIGNING_PROPERTIES) {
-    if (!output.includes(propertyName)) {
+  const results = RELEASE_TASK_ENTRY_POINTS.map((taskName) => {
+    const result = runUnsignedReleaseTask({
+      environment: isolatedEnvironment,
+      taskName
+    });
+    if (result.error) throw result.error;
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    if (result.status === 0) {
       throw new Error(
-        `[android-release-signing-gate] failure omitted missing property ${propertyName}`
+        `[android-release-signing-gate] ${taskName} unexpectedly succeeded without signing properties`
       );
     }
-  }
+    if (!output.includes("Release signing configuration is required")) {
+      throw new Error(
+        `[android-release-signing-gate] ${taskName} failed for the wrong reason\n${output}`
+      );
+    }
+    for (const propertyName of RELEASE_SIGNING_PROPERTIES) {
+      if (!output.includes(propertyName)) {
+        throw new Error(
+          `[android-release-signing-gate] ${taskName} failure omitted missing property ${propertyName}`
+        );
+      }
+    }
+    return { taskName, status: result.status, output };
+  });
 
   console.log(
-    `[android-release-signing-gate] PASS: unsigned release rejected with all ${RELEASE_SIGNING_PROPERTIES.length} required properties`
+    `[android-release-signing-gate] PASS: unsigned release rejected across ${RELEASE_TASK_ENTRY_POINTS.length} task entry points with all ${RELEASE_SIGNING_PROPERTIES.length} required properties`
   );
-  return { status: result.status, output };
+  return { results };
 }
 
 function isDirectCliExecution() {
@@ -78,4 +96,9 @@ if (isDirectCliExecution()) {
   }
 }
 
-export { RELEASE_SIGNING_PROPERTIES, verifyMissingReleaseSigningFails };
+export {
+  RELEASE_SIGNING_PROPERTIES,
+  RELEASE_TASK_ENTRY_POINTS,
+  runUnsignedReleaseTask,
+  verifyMissingReleaseSigningFails
+};

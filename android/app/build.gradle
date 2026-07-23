@@ -12,18 +12,27 @@ def releaseSigningValues = releaseSigningPropertyNames.collectEntries { property
 def missingReleaseSigningProperties = releaseSigningPropertyNames.findAll { propertyName ->
     !releaseSigningValues[propertyName]
 }
-def releaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
-    def simpleTaskName = taskName.tokenize(':').last().toLowerCase()
-    simpleTaskName == 'assemblerelease' ||
-        simpleTaskName == 'bundlerelease' ||
-        simpleTaskName == 'packagerelease' ||
-        simpleTaskName.startsWith('publishrelease')
-}
+def releasePackagingTaskNames = [
+    'assembleRelease',
+    'bundleRelease',
+    'packageRelease',
+    'signReleaseBundle'
+] as Set
+def appProject = project
 
-if (releaseTaskRequested && !missingReleaseSigningProperties.isEmpty()) {
-    throw new GradleException(
-        "Release signing configuration is required. Missing Gradle properties: ${missingReleaseSigningProperties.join(', ')}"
-    )
+gradle.taskGraph.whenReady { taskGraph ->
+    def releasePackagingRequested = taskGraph.allTasks.any { task ->
+        task.project == appProject && (
+            releasePackagingTaskNames.contains(task.name) ||
+                (task.name.startsWith('publish') && task.name.contains('Release'))
+        )
+    }
+
+    if (releasePackagingRequested && !missingReleaseSigningProperties.isEmpty()) {
+        throw new GradleException(
+            "Release signing configuration is required. Missing Gradle properties: ${missingReleaseSigningProperties.join(', ')}"
+        )
+    }
 }
 
 android {
