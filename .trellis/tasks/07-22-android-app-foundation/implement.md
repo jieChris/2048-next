@@ -186,26 +186,26 @@ npm run android:check
 
 ## 阶段 4：AppDatabase 与生命周期
 
-- [ ] 建立 `2048_next_app` IndexedDB v1：`saves/records/outbox/cache/diagnostics`。
-- [ ] AppDatabase interface 只暴露产品操作，不暴露通用 key-value 或 IDB request。
-- [ ] 所有记录带 owner key 和 schema version；建立必要 owner/mode/time 索引。
-- [ ] 实现 per-session 串行保存与 revision 防旧写覆盖。
-- [ ] 实现 `active/pending_terminal` 存档和每模式最多一局约束。
-- [ ] 实现一次性终局事务：冻结 record + 写 outbox + 删除 save。
-- [ ] 实现游客立即永久删除、账号缓存只读、云删除不离线排队。
+- [x] 建立 `2048_next_app` IndexedDB v1：`saves/records/outbox/cache/diagnostics`。
+- [x] AppDatabase interface 只暴露产品操作，不暴露通用 key-value 或 IDB request。
+- [x] 所有记录带 owner key 和 schema version；建立必要 owner/mode/time 索引。
+- [x] 实现 per-session 串行保存与 revision 防旧写覆盖。
+- [x] 实现 `active/pending_terminal` 存档和每模式最多一局约束。
+- [x] 实现一次性终局事务：冻结 record + 写 outbox + 删除 save。
+- [x] 实现游客立即永久删除、账号缓存只读、云删除不离线排队。
 - [ ] 实现 owner 清理标记与启动续清，验证切换账号不可见旧数据。
 - [ ] 对“写清理标记、阻断 owner、删除 Keystore、清 IDB、移除标记”每一步做强杀故障注入；任何恢复点都必须先续清，且下一账号始终看不到或上传不到旧 owner 数据。
-- [ ] 实现缓存上限、回放总字节 LRU 和诊断环形上限。
-- [ ] 实现 IndexedDB v1→下一测试迁移样例与损坏记录隔离。
+- [x] 实现缓存上限、回放总字节 LRU 和诊断环形上限。
+- [x] 实现 IndexedDB v1→下一测试迁移样例与损坏记录隔离。
 - [ ] 绑定 Capacitor App 生命周期：每次有效移动已保存，pause/back 再 flush；进程恢复不依赖最后回调。
 - [ ] 计时采用单调时钟 + 墙钟锚点，后台/首页/排行榜时间连续且不可回拨。
 
 最小测试：
 
-- [ ] 多模式并行存档与 `last_closed_at` 选择。
-- [ ] 重新开始只覆盖当前模式且无历史。
+- [x] 多模式并行存档与 `last_closed_at` 选择。
+- [x] 重新开始只覆盖当前模式且无历史。
 - [ ] pending terminal 强杀恢复、撤回继续、确认后只一条记录。
-- [ ] 终局事务各步骤模拟失败后可恢复且不重复。
+- [x] 终局事务各步骤模拟失败后可恢复且不重复。
 - [ ] 退出取消保持完整，确认退出清除账号 owner 并保留 guest。
 
 退出条件：离线数据在后台、强杀、升级和异常写入下不丢失、不串账号、不重复结算。
