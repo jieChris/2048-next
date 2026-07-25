@@ -89,13 +89,13 @@ npm run verify:refactor:ci
 
 - [x] 后端为分数/竞速总、日、周、月榜返回绝对 `rank`。
 - [x] 每用户最佳选择和全局顺序都落实已确认 tie-break；移除 duration/steps/updated_at 隐式裁决。
-- [ ] 以加法迁移为 ranked 记录增加冻结的 `canonical_ended_at` 与 `canonical_time_source`；版本化 ranked session start 接受稳定 `operation_id`，第一次处理原子创建并冻结 `started_at/seed/token`，同一 operation 在响应丢失后重试仍返回同一冻结结果，并在每次响应提供 `server_now` 或等价同步 checkpoint。App 的 ranked 计时/replay 从服务端逻辑锚点开始，不信任设备绝对墙钟。未来 ranked 写入只使用 `started_at + verifier duration` 并校验不晚于 `consumed_at`；新记录缺少锚点时返回可诊断完整性错误并拒绝入榜，不允许使用历史 fallback 或静默改成 normal。客户端 `ended_at` 不得控制榜单。
-- [ ] 迁移前只读盘点全部现有 ranked 记录与 session 关联：可信 begin、仅服务端接收时间、缺失/异常三类分别计数并抽样。按同一优先级回填并记录来源；无法关联 session 的历史行使用服务端 `verified_at/created_at`，不得猜测或继续信任客户端时间。
-- [ ] 保存回填前旧榜快照、记录/用户最佳基线与异常报告；在事务/可回退派生步骤中全量重建 `leaderboard_best`，核对行数、每用户最佳、周期边界和来源分布。不一致则恢复旧派生榜并停止部署，原始 records 不做破坏性回退。
+- [x] 以加法迁移为 ranked 记录增加冻结的 `canonical_ended_at` 与 `canonical_time_source`；版本化 ranked session start 接受稳定 `operation_id`，第一次处理原子创建并冻结 `started_at/seed/token`，同一 operation 在响应丢失后重试仍返回同一冻结结果，并在每次响应提供 `server_now` 或等价同步 checkpoint。App 的 ranked 计时/replay 从服务端逻辑锚点开始，不信任设备绝对墙钟。未来 ranked 写入只使用 `started_at + verifier duration` 并校验不晚于 `consumed_at`；新记录缺少锚点时返回可诊断完整性错误并拒绝入榜，不允许使用历史 fallback 或静默改成 normal。客户端 `ended_at` 不得控制榜单。
+- [x] 迁移前只读盘点全部现有 ranked 记录与 session 关联：可信 begin、仅服务端接收时间、缺失/异常三类分别计数并抽样。按同一优先级回填并记录来源；无法关联 session 的历史行使用服务端 `verified_at/created_at`，不得猜测或继续信任客户端时间。
+- [x] 保存回填前旧榜快照、记录/用户最佳基线与异常报告；在事务/可回退派生步骤中全量重建 `leaderboard_best`，核对行数、每用户最佳、周期边界和来源分布。不一致则恢复旧派生榜并停止部署，原始 records 不做破坏性回退。
 - [x] 完全相同成绩和时间用稳定 user ID 形成唯一连续排名。
 - [x] Web 与 App 都只渲染后端 rank；计时区 TOP 10、模式介绍榜、完整 Web 榜和 App 全屏榜均不再按数组下标推测名次，缺失 rank 时显示未知而不自行编号。
 - [x] 补齐同分、分页、重建和乱序上传的完整后端回归矩阵。
-- [ ] 云记录软删除后在同一可靠流程中退出榜单/派生统计，恢复后重新计算；账号到期彻底清理后按剩余记录重建。补删除、恢复、清理失败重试和分页名次回归测试。
+- [x] 云记录软删除后在同一可靠流程中退出榜单/派生统计，恢复后重新计算；账号到期彻底清理后按剩余记录重建。补删除、恢复、清理失败重试和分页名次回归测试。
 
 ### 2.3 成就、删除账号与诊断
 
@@ -107,8 +107,8 @@ npm run verify:refactor:ci
 - [x] 清理覆盖 users/shadow、records/replay、leaderboard、sessions/checkpoints、achievements 及同一后端其他账号关联数据。
 - [x] 增加无需账号鉴权的 `/client-diagnostics`：白名单、小载荷、限流、request ID 幂等、过期清理，强制 `user_id` 为空。
 - [ ] 根据真实数据收集、Android 权限、诊断字段、第三方/服务商和保留删除规则形成隐私政策与用户协议清单；指定正文责任人，正文必须经用户明确批准并记录版本/生效日期，不能用占位文案通过门禁。
-- [ ] 在 `2048-next` Web 实现稳定公开 `/privacy.html` 与 `/terms.html`，并由同一版本化源生成 App 包内可离线读取的正文；对比测试确保公开页与包内版本、日期和实质内容一致。
-- [ ] 增加包内/公开政策版本合同。公开 Web 页面部署到生产需用户另行授权；未部署或用户未批准正文时不得生成公开候选包。
+- [x] 在 `2048-next` Web 实现稳定公开 `/privacy.html` 与 `/terms.html`，并由同一版本化源生成 App 包内可离线读取的正文；对比测试确保公开页与包内版本、日期和实质内容一致。
+- [x] 增加包内/公开政策版本合同。公开 Web 页面部署到生产需用户另行授权；未部署或用户未批准正文时不得生成公开候选包。
 - [x] 在 `2048-next` Web 实现稳定公开入口 `/account-deletion.html`，直接调用同一后端合同完成邮箱密码身份复验、删除申请、72 小时回执和错误状态；不得把密码验证或删除权威放进前端。
 - [x] 为公开删号网页增加本地端到端页面测试：公开 URL 无需安装 App 或现有 Token即可提交邮箱密码复验，成功后显示 72 小时回执，错误凭据不隐藏表单；旧 Token 立即失效、公开数据隐藏、期限内登录取消和到期拒绝仍由已完成的后端隔离测试覆盖。生产公开 URL 与正式政策版本一致性仍属于 2.5 门禁。
 
@@ -131,7 +131,7 @@ npm run test:node
 
 ### 2.5 `Backend Ready` 在线解锁门禁
 
-- [ ] 先部署到隔离测试环境，运行旧 Web 登录/记录/排行榜、App 合同、CORS、删号、榜单重算和回放恢复 smoke；保存环境版本与完整输出。
+- [x] 先部署到隔离测试环境，运行旧 Web 登录/记录/排行榜、App 合同、CORS、删号、榜单重算和回放恢复 smoke；保存环境版本与完整输出。
 - [x] 新增可重复的 `npm run verify:backend-ready -- --api-base=<测试 API 基址> --web-base=<测试 Web 基址>`，分别核对 OpenAPI 版本、固定 API 基址、Capacitor origin CORS、公开注册、refresh、记录幂等、权威 rank、公开政策/协议/删号页和待删除 Token 拒绝。
 - [ ] 只有用户另行明确批准生产后端部署/迁移与公开 Web 页面部署后，才执行生产备份、加法迁移及部署；不得把本计划批准视为这些生产变更授权。
 - [ ] 生产部署后核对前后端 commit、migration、OpenAPI/政策版本、健康状态、`BETA_ACCESS_GATE_ENABLED=false`、release CORS、公开页面和旧 Web 核心流程，使用受控测试账号运行非破坏性 smoke。
@@ -247,7 +247,7 @@ npm run build:app
 - [x] 登录后从原目标模式继续；开放经典 4×4 可撤回和标准 3×3。
 - [x] 经典模式实现 pending terminal 的“撤回继续 / 结束并结算”。
 - [x] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 及 `server_now`（或等价同步 checkpoint）并安全保存后才创建、展示 ranked 棋盘，计时从服务端逻辑锚点连续计算，不把设备绝对墙钟偏差计入 duration。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
-- [ ] 排位 Token 以 challenge 安全保存；普通离开保留，重开/清除生成幂等 abandon。
+- [x] 排位 Token 以 challenge 安全保存；普通离开保留，重开/清除生成幂等 abandon。
 - [x] 实现 records outbox、错误分类、退避、手动重试和上传状态。
 - [x] normal 离线记录上传后只显示云历史，不进入榜单/排位成就。
 - [x] 退出先有界冲刷；失败时显示未上传/存档数量并要求明确选择。
@@ -263,7 +263,7 @@ npm run typecheck
 npm run test:node
 ```
 
-- [ ] 覆盖注册/登录/refresh、断网曾登录身份、ranked start 响应丢失/重试/强杀返回同一 session 与锚点、安全存储失败不展示半初始化棋盘、棋盘可操作后首步仍满足 50ms、本局缺锚点拒绝入榜、normal 只入历史、401/429/5xx/永久 4xx、幂等重试、退出取消/确认、多账号隔离和删号 Token 失效。
+- [x] 覆盖注册/登录/refresh、断网曾登录身份、ranked start 响应丢失/重试/强杀返回同一 session 与锚点、安全存储失败不展示半初始化棋盘、棋盘可操作后首步仍满足 50ms、本局缺锚点拒绝入榜、normal 只入历史、401/429/5xx/永久 4xx、幂等重试、退出取消/确认、多账号隔离和删号 Token 失效。
 
 退出条件：三模式在线排位/离线普通语义稳定；认证过期、重试、退出和多账号不会丢数据或串数据。
 
@@ -287,10 +287,10 @@ npm run test:node
 ### 成就与我的
 
 - [x] 已获得完整显示；未获得按后端 client/mode 元数据筛选；隐藏成就未获得前无占位。
-- [ ] 实现个人资料、外观、语言、声音、触觉、BGM、诊断、隐私与协议。
+- [x] 实现个人资料、外观、语言、声音、触觉、BGM、诊断、隐私与协议。
 - [x] 实现 72 小时删除账号申请、截止时间提示和重新密码登录取消流程。
 - [x] 删除成功后只保留截止时间与掩码邮箱回执；不保留 Token、用户 ID、账号存档或 outbox，取消删除/到期后清除回执。
-- [ ] App 内同步/成就/网络/账号反馈，不申请通知权限。
+- [x] App 内同步/成就/网络/账号反馈，不申请通知权限。
 
 ### 声音、触觉与诊断
 
@@ -310,7 +310,7 @@ npm run build:app
 ```
 
 - [ ] 覆盖离线联网意图被隐私门拦截、取消后原路返回且零请求、接受后恢复原意图、政策实质升级重询，以及普通文案更新不重询。
-- [ ] 覆盖云记录删除/恢复后的榜单和统计重算、权威 rank 分页稳定、公开删号网页全流程、已获得/未获得成就过滤、分享取消恢复和无通知权限。
+- [x] 覆盖云记录删除/恢复后的榜单和统计重算、权威 rank 分页稳定、公开删号网页全流程、已获得/未获得成就过滤、分享取消恢复和无通知权限。
 
 退出条件：所有首版页面和产品规则完整，断网快照、返回状态、隐私与无通知权限均通过验收。
 
@@ -330,7 +330,7 @@ npm run build:app
 - [x] 新增独立 Android workflow，不修改 Web 生产部署拓扑。
 - [x] PR：`verify:app`、`android:check`、受控 `cap sync` 漂移检查、debug APK artifact。
 - [ ] main/nightly：API 29 与 API 36 模拟器安装/冷启动/离线/后台/强杀 smoke。
-- [ ] 共享核心改动继续通过 Web `npm run verify:release` 和后端测试。
+- [x] 共享核心改动继续通过 Web `npm run verify:release` 和后端测试。
 
 ### 发布
 
@@ -340,7 +340,7 @@ npm run build:app
 - [ ] 受保护手动 workflow 从同一 commit 构建 APK+AAB，验签并生成 SHA-256、版本号、大小和元数据。
 - [ ] 同签名覆盖升级保留 DB/Keystore；错误签名不能覆盖。
 - [ ] 官网发布页展示版本、大小、SHA-256、隐私/协议/删除账号网页。
-- [ ] 商店 SDK、应用内更新、推送和 iOS/小程序仍不进入首版。
+- [x] 商店 SDK、应用内更新、推送和 iOS/小程序仍不进入首版。
 
 最终门禁：
 

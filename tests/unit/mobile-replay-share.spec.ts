@@ -35,4 +35,20 @@ describe("mobile replay share", () => {
     );
     expect(native.remove).toHaveBeenCalledTimes(1);
   });
+
+  it("removes the temporary replay when the system share panel is cancelled", async () => {
+    const native: ReplayShareNativePort = {
+      write: vi.fn(async () => undefined),
+      uri: vi.fn(async () => "content://replay-export"),
+      share: vi.fn(async () => {
+        throw new Error("share_cancelled");
+      }),
+      remove: vi.fn(async () => undefined),
+    };
+
+    await expect(saveReplayRecord(replay, { native })).rejects.toThrow(
+      "share_cancelled",
+    );
+    expect(native.remove).toHaveBeenCalledTimes(1);
+  });
 });
