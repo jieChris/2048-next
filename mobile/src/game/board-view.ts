@@ -128,7 +128,10 @@ export function mountBoard(
 
   let currentBoard = cloneBoard(initialState.board);
   let pendingBoard: number[][] | null = null;
-  let animations: Animation[] = [];
+  let movingTiles: HTMLDivElement[] = [];
+  let animationFrame: number | null = null;
+  let animationTimer: number | null = null;
+  let settleAnimation: (() => void) | null = null;
   let animationEpoch = 0;
   let destroyed = false;
   let pointerId: number | null = null;
@@ -182,8 +185,19 @@ export function mountBoard(
 
   const cancel = (): void => {
     animationEpoch += 1;
-    for (const animation of animations) animation.cancel();
-    animations = [];
+    if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+    if (animationTimer !== null) window.clearTimeout(animationTimer);
+    animationFrame = null;
+    animationTimer = null;
+    for (const tile of movingTiles) {
+      tile.style.removeProperty("transition");
+      tile.style.removeProperty("transform");
+      tile.style.removeProperty("will-change");
+    }
+    movingTiles = [];
+    const settle = settleAnimation;
+    settleAnimation = null;
+    settle?.();
     if (pendingBoard) {
       const finalBoard = pendingBoard;
       pendingBoard = null;
@@ -198,8 +212,7 @@ export function mountBoard(
     const canAnimate =
       !reducedMotion() &&
       durationMs > 0 &&
-      transition.motions.length > 0 &&
-      typeof tiles[0]?.animate === "function";
+      transition.motions.length > 0;
     if (!canAnimate) {
       const finalBoard = pendingBoard;
       pendingBoard = null;
@@ -215,7 +228,7 @@ export function mountBoard(
     );
     const gap = Number.isFinite(computedGap) ? computedGap : 8;
     const cellSize = Math.max(0, (rootRect.width - gap * (size - 1)) / size);
-    const animationBatch = transition.motions.flatMap((motion) => {
+    const motionBatch = transition.motions.flatMap((motion) => {
       const sourceIndex = motion.from.y * size + motion.from.x;
       const source = tiles[sourceIndex];
       if (!source || currentBoard[motion.from.y]?.[motion.from.x] === 0) {
@@ -223,33 +236,49 @@ export function mountBoard(
       }
       const deltaX = (motion.to.x - motion.from.x) * (cellSize + gap);
       const deltaY = (motion.to.y - motion.from.y) * (cellSize + gap);
-      return [
-        source.animate(
-          [
-            { transform: "translate3d(0, 0, 0)" },
-            {
-              transform: `translate3d(${String(deltaX)}px, ${String(deltaY)}px, 0)`,
-            },
-          ],
-          {
-            duration: durationMs,
-            easing: "cubic-bezier(0.22, 0.75, 0.22, 1)",
-            fill: "both",
-          },
-        ),
-      ];
+      return [{
+        tile: source,
+        transform: `translate3d(${String(deltaX)}px, ${String(deltaY)}px, 0)`,
+      }];
     });
-    animations = animationBatch;
-    await Promise.all(
-      animationBatch.map((animation) =>
-        animation.finished.catch(() => undefined),
-      ),
-    );
+    movingTiles = motionBatch.map(({ tile }) => tile);
+    for (const { tile } of motionBatch) {
+      tile.style.transition = "none";
+      tile.style.transform = "translate3d(0, 0, 0)";
+      tile.style.willChange = "transform";
+    }
+    void root.offsetWidth;
+    await new Promise<void>((resolve) => {
+      settleAnimation = resolve;
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = null;
+        if (destroyed || epoch !== animationEpoch) {
+          const settle = settleAnimation;
+          settleAnimation = null;
+          settle?.();
+          return;
+        }
+        for (const { tile, transform } of motionBatch) {
+          tile.style.transition = `transform ${String(durationMs)}ms cubic-bezier(0.22, 0.75, 0.22, 1)`;
+          tile.style.transform = transform;
+        }
+        animationTimer = window.setTimeout(() => {
+          animationTimer = null;
+          const settle = settleAnimation;
+          settleAnimation = null;
+          settle?.();
+        }, durationMs);
+      });
+    });
     if (destroyed || epoch !== animationEpoch || !pendingBoard) return;
-    for (const animation of animationBatch) animation.cancel();
+    for (const tile of movingTiles) {
+      tile.style.removeProperty("transition");
+      tile.style.removeProperty("transform");
+      tile.style.removeProperty("will-change");
+    }
     const finalBoard = pendingBoard;
     pendingBoard = null;
-    if (animations === animationBatch) animations = [];
+    movingTiles = [];
     renderBoard(finalBoard);
     decorateFinalEffects(transition);
   };

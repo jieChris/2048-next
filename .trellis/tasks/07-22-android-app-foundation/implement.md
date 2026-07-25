@@ -319,11 +319,11 @@ npm run build:app
 ### 性能
 
 - [ ] 首屏只包含 shell、首页和必要 token；BGM、历史、榜单、成就和回放按需加载。
-- [ ] User Timing 采集冷启动、导航、进局和输入首帧。
-- [ ] debug-only RAF 采样用于开发诊断，不在 release 保留行为分析；它不能替代发布证据。
+- [x] User Timing 采集冷启动、导航、进局和输入首帧。
+- [x] debug-only RAF 采样用于开发诊断，不在 release 保留行为分析；它不能替代发布证据。
 - [ ] Android 10/4GB 与 90/120Hz 真机达到 PRD 预算。对生产等价的已签名 release 候选，在系统高刷开启、省电关闭且无温控降频时采集不少于 30 秒连续棋盘动画 FrameMetrics/Perfetto：90Hz 有效回调频率在测量容差内不低于 89.5 FPS且中位帧间隔 ≤11.2ms；120Hz 不低于 118 FPS且中位帧间隔 ≤8.6ms；两者均无稳定 16.7ms 平台。保存原始 trace、系统报告刷新率、设备/系统/WebView 版本和测试条件。
 - [ ] 若高刷真机仍被应用锁 60，才实现 API 30+ guarded `setFrameRate`；否则不加。
-- [ ] 建立 dist-app 首屏 JS/CSS、APK/AAB 和 BGM 非首屏资源预算。
+- [x] 建立 dist-app 首屏 JS/CSS、debug APK 和 BGM 非首屏资源预算；正式 AAB 体积仍随已签名候选门禁验证。
 
 ### CI
 

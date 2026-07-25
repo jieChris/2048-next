@@ -368,6 +368,23 @@ async function start(): Promise<void> {
     };
     mountController();
     appRoot.removeAttribute("aria-busy");
+    requestAnimationFrame(() => {
+      if (performance.getEntriesByName("app-startup-start", "mark").length === 0)
+        return;
+      performance.mark("app-startup-end");
+      performance.measure(
+        "app-startup",
+        "app-startup-start",
+        "app-startup-end",
+      );
+      performance.clearMarks("app-startup-start");
+      performance.clearMarks("app-startup-end");
+    });
+    if (import.meta.env.DEV || import.meta.env.MODE === "android-debug") {
+      void import("./performance/debug-frame-sampler").then(
+        ({ installDebugFrameSampler }) => installDebugFrameSampler(),
+      );
+    }
 
     const flushAccountRecords = (): void => {
       if (currentNetworkMode !== "online") return;

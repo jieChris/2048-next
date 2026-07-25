@@ -320,6 +320,7 @@ class MobileAppController implements AppController {
   #navigationEpoch = 0;
   #navigationKind: NavigationKind | null = null;
   #navigationTask: Promise<void> | null = null;
+  #performanceSequence = 0;
   #destroyed = false;
   #leaderboardRequestEpoch = 0;
   #achievementsRequestEpoch = 0;
@@ -927,6 +928,7 @@ class MobileAppController implements AppController {
   }
 
   async #navigateTop(route: AppTopRoute): Promise<void> {
+    const timing = this.#beginPerformanceMeasure("app-navigation");
     if (this.#navigationTask) {
       if (
         this.#navigationKind === "leave" ||
@@ -937,7 +939,28 @@ class MobileAppController implements AppController {
         await this.#invalidateNavigation();
       }
     }
-    if (!this.#destroyed) this.#showRoute(route);
+    if (!this.#destroyed) {
+      this.#showRoute(route);
+      this.#finishPerformanceMeasureNextFrame("app-navigation", timing);
+    } else {
+      performance.clearMarks(timing);
+    }
+  }
+
+  #beginPerformanceMeasure(name: string): string {
+    const mark = `${name}-start-${String(++this.#performanceSequence)}`;
+    performance.mark(mark);
+    return mark;
+  }
+
+  #finishPerformanceMeasureNextFrame(name: string, startMark: string): void {
+    requestAnimationFrame(() => {
+      const endMark = `${startMark}-end`;
+      performance.mark(endMark);
+      performance.measure(name, startMark, endMark);
+      performance.clearMarks(startMark);
+      performance.clearMarks(endMark);
+    });
   }
 
   #showRoute(route: AppRoute): void {
@@ -1486,7 +1509,7 @@ class MobileAppController implements AppController {
     session: AccountSessionV1,
     failureRoute: AuthSourceRoute | "home",
   ): Promise<void> {
-    performance.mark("app-game-entry-start");
+    const timing = this.#beginPerformanceMeasure("app-game-entry");
     return this.#runNavigation("enter-account", async (epoch) => {
       let result: AuthenticatedModeEntryResult = { status: "unavailable" };
       try {
@@ -1496,7 +1519,10 @@ class MobileAppController implements AppController {
       } catch {
         result = { status: "unavailable" };
       }
-      if (!this.#isNavigationCurrent(epoch)) return;
+      if (!this.#isNavigationCurrent(epoch)) {
+        performance.clearMarks(timing);
+        return;
+      }
       const activeSession = this.#runtime.activeSession;
       if (
         result.status === "entered" &&
@@ -1506,14 +1532,10 @@ class MobileAppController implements AppController {
         this.#hideStatus();
         this.#showRoute("game");
         this.#showPendingTerminalIfNeeded();
-        performance.mark("app-game-entry-end");
-        performance.measure(
-          "app-game-entry",
-          "app-game-entry-start",
-          "app-game-entry-end",
-        );
+        this.#finishPerformanceMeasureNextFrame("app-game-entry", timing);
         return;
       }
+      performance.clearMarks(timing);
       this.#showRoute(failureRoute);
       this.#showStatus(this.#t("auth.modeUnavailable"), "error", 5_000);
     });
@@ -1528,25 +1550,25 @@ class MobileAppController implements AppController {
         this.#route === "modes" ? "modes" : "home",
       );
     }
-    performance.mark("app-game-entry-start");
+    const timing = this.#beginPerformanceMeasure("app-game-entry");
     return this.#runNavigation("enter", async (epoch) => {
       try {
         const opened = await this.#runtime.enterGuestStandard();
-        if (!this.#isNavigationCurrent(epoch)) return;
+        if (!this.#isNavigationCurrent(epoch)) {
+          performance.clearMarks(timing);
+          return;
+        }
         if (opened.status !== "ready") {
+          performance.clearMarks(timing);
           this.#showStatus(this.#t("status.storageError"), "error");
           return;
         }
         this.#mountGame(opened.session);
         this.#showRoute("game");
         this.#showPendingTerminalIfNeeded();
-        performance.mark("app-game-entry-end");
-        performance.measure(
-          "app-game-entry",
-          "app-game-entry-start",
-          "app-game-entry-end",
-        );
+        this.#finishPerformanceMeasureNextFrame("app-game-entry", timing);
       } catch (error) {
+        performance.clearMarks(timing);
         if (this.#isNavigationCurrent(epoch)) this.#showStorageError(error);
       }
     });
@@ -1595,21 +1617,29 @@ class MobileAppController implements AppController {
       return;
     }
     this.#moveBusy = true;
-    performance.mark("app-input-start");
+    const timing = this.#beginPerformanceMeasure(
+      "app-input-first-frame-latency",
+    );
+    let timingScheduled = false;
     try {
       const result = this.#runtime.moveActiveSession(direction);
+      const coreEnd = `${timing}-core`;
+      performance.mark(coreEnd);
+      performance.measure("app-input-core", timing, coreEnd);
+      performance.clearMarks(coreEnd);
       this.#onGameTransition(result.transition, result.terminal !== null);
       this.#updateGameReadouts();
       const animation =
         this.#gameBoard?.apply(result.transition) ?? Promise.resolve();
-      requestAnimationFrame(() => {
-        performance.mark("app-input-first-frame");
-        performance.measure(
-          "app-input-first-frame-latency",
-          "app-input-start",
-          "app-input-first-frame",
-        );
-      });
+      const commitEnd = `${timing}-commit`;
+      performance.mark(commitEnd);
+      performance.measure("app-input-dom-commit", timing, commitEnd);
+      performance.clearMarks(commitEnd);
+      this.#finishPerformanceMeasureNextFrame(
+        "app-input-first-frame-latency",
+        timing,
+      );
+      timingScheduled = true;
       if (result.save) {
         void result.save.catch((error: unknown) => {
           this.#showStorageError(error, "retry-save");
@@ -1625,6 +1655,7 @@ class MobileAppController implements AppController {
         this.#showPendingTerminalIfNeeded();
       }
     } catch (error) {
+      if (!timingScheduled) performance.clearMarks(timing);
       this.#showStorageError(error);
     } finally {
       if (this.#route === "game" && !session.inputFences.has("terminal")) {

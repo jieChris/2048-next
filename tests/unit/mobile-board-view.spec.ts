@@ -193,25 +193,14 @@ describe("mobile board view", () => {
     view.destroy();
   });
 
-  it("cancels finished WAAPI effects before committing the final board", async () => {
+  it("clears transition styles before committing the final board", async () => {
+    vi.useFakeTimers();
     const root = document.createElement("div");
     Object.defineProperty(root, "clientWidth", { value: 320 });
     root.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      "animate",
-    );
-    const cancels: Array<ReturnType<typeof vi.fn>> = [];
-    Object.defineProperty(HTMLElement.prototype, "animate", {
-      configurable: true,
-      value: vi.fn(() => {
-        const cancel = vi.fn();
-        cancels.push(cancel);
-        return {
-          cancel,
-          finished: Promise.resolve(),
-        } as unknown as Animation;
-      }),
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
     });
 
     try {
@@ -231,14 +220,18 @@ describe("mobile board view", () => {
         isInputLocked: () => false,
         onDirection: vi.fn(),
         reducedMotion: () => false,
+        animationDurationMs: 1,
       });
       const transition = engine.move({ direction: 1, atMs: 100 });
-      await view.apply(transition);
+      const applied = view.apply(transition);
+      await vi.advanceTimersByTimeAsync(1);
+      await applied;
 
-      expect(cancels.length).toBeGreaterThan(0);
-      expect(cancels.every((cancel) => cancel.mock.calls.length === 1)).toBe(
-        true,
-      );
+      expect(
+        [...root.querySelectorAll<HTMLElement>("[data-board-tile]")].every(
+          (tile) => !tile.style.transition && !tile.style.willChange,
+        ),
+      ).toBe(true);
       const spawnCell = transition.spawn
         ? transition.spawn.y * 4 + transition.spawn.x
         : -1;
@@ -249,12 +242,44 @@ describe("mobile board view", () => {
       ).toBe(String(transition.spawn?.value));
       view.destroy();
     } finally {
-      if (descriptor) {
-        Object.defineProperty(HTMLElement.prototype, "animate", descriptor);
-      } else {
-        Reflect.deleteProperty(HTMLElement.prototype, "animate");
-      }
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
     }
+  });
+
+  it("settles an in-flight transition when the board is cancelled", async () => {
+    const root = document.createElement("div");
+    Object.defineProperty(root, "clientWidth", { value: 320 });
+    root.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    const engine = createEngineSession({
+      modeKey: "standard_4x4_pow2_no_undo",
+      seed: 30,
+    });
+    const initial = engine.init({
+      board: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ],
+    });
+    const view = mountBoard(root, initial, {
+      isInputLocked: () => false,
+      onDirection: vi.fn(),
+      reducedMotion: () => false,
+      animationDurationMs: 1_000,
+    });
+
+    const applied = view.apply(engine.move({ direction: 1, atMs: 100 }));
+    view.cancel();
+    await applied;
+
+    view.destroy();
+    vi.unstubAllGlobals();
   });
 
   it("keeps an explicit visual tier for six-digit and higher tiles", () => {
