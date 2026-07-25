@@ -14,7 +14,8 @@ export interface PolicyDocument {
   readonly sections: readonly PolicySection[];
 }
 
-export const POLICY_BUNDLE_VERSION = "unapproved-draft" as const;
+export const POLICY_BUNDLE_VERSION = "unapproved-draft.1" as const;
+export const POLICY_CONSENT_VERSION = "unapproved-draft" as const;
 export const POLICY_EFFECTIVE_DATE: string | null = null;
 export const POLICY_APPROVAL_BLOCKERS = [
   "operator_identity",

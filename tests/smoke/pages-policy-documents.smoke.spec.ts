@@ -12,7 +12,7 @@ test("public privacy and terms pages render the same unapproved policy bundle", 
   await page.goto("/privacy.html");
   await expect(page.locator("body")).toHaveAttribute("data-ready", "1");
   await expect(page.getByRole("heading", { name: "2048 NEXT 隐私政策" })).toBeVisible();
-  await expect(page.locator("[data-policy-version]")).toHaveText("unapproved-draft");
+  await expect(page.locator("[data-policy-version]")).toHaveText("unapproved-draft.1");
   await expect(page.locator("[data-policy-date]")).toHaveText("尚未生效");
   await expect(page.locator("[data-policy-status]")).toContainText("运营主体");
   await expect(page.locator("[data-policy-status]")).toContainText("生产托管信息");
