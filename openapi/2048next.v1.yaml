@@ -107,6 +107,38 @@ paths:
         "200":
           $ref: "#/components/responses/AuthResponse"
 
+  /account/deletion/request:
+    post:
+      tags: [Auth]
+      summary: Request account deletion after password re-verification.
+      description: The server freezes a 72-hour deadline, revokes existing tokens, and returns a non-sensitive receipt.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "200":
+          description: Account is pending deletion.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionResponse"
+        "401":
+          description: Email or password is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "410":
+          description: The deletion deadline has already passed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+
   /auth/refresh:
     post:
       tags: [Auth]
@@ -1548,6 +1580,43 @@ components:
           format: email
         password:
           type: string
+
+    AccountDeletionRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AccountDeletionResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success:
+              type: boolean
+              const: true
+            data:
+              type: object
+              additionalProperties: false
+              required: [status, requestedAt, dueAt, maskedEmail]
+              properties:
+                status:
+                  type: string
+                  const: pending_deletion
+                requestedAt:
+                  type: string
+                  format: date-time
+                dueAt:
+                  type: string
+                  format: date-time
+                maskedEmail:
+                  type: string
 
     AuthRefreshRequest:
       type: object

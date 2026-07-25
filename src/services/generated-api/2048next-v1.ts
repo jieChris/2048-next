@@ -176,6 +176,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/account/deletion/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request account deletion after password re-verification.
+         * @description The server freezes a 72-hour deadline, revokes existing tokens, and returns a non-sensitive receipt.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountDeletionRequest"];
+                };
+            };
+            responses: {
+                /** @description Account is pending deletion. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeletionResponse"];
+                    };
+                };
+                /** @description Email or password is invalid. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The deletion deadline has already passed. */
+                410: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -2435,6 +2496,24 @@ export interface components {
             password: string;
         } & {
             [key: string]: unknown;
+        };
+        AccountDeletionRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        AccountDeletionResponse: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: true;
+            data: {
+                /** @constant */
+                status: "pending_deletion";
+                /** Format: date-time */
+                requestedAt: string;
+                /** Format: date-time */
+                dueAt: string;
+                maskedEmail: string;
+            };
         };
         AuthRefreshRequest: {
             token?: string;

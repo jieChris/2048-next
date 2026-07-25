@@ -23,6 +23,7 @@ import {
   type StoredGameSave,
 } from "../data/app-database";
 import {
+  ACCOUNT_SESSION_SECURE_KEY,
   OwnerCleanupWorkGate,
   clearConfirmedOwner,
   restoreOwnerCleanupAtStartup,
@@ -83,6 +84,7 @@ export interface GuestAppRuntimeOptions extends Omit<
     enabled: () => boolean;
     getAuthService: () => Promise<Pick<MobileAuthService, "submitRecord">>;
   };
+  forceAccountClearAtStartup?: boolean;
 }
 
 type AccountOwnerKey = `user:${string}`;
@@ -264,10 +266,42 @@ export class GuestAppRuntime {
   static async bootstrap(
     options: GuestAppRuntimeOptions,
   ): Promise<GuestAppRuntime> {
-    const startup = await restoreOwnerCleanupAtStartup({
+    let workGate = options.workGate ?? new OwnerCleanupWorkGate();
+    let startup = await restoreOwnerCleanupAtStartup({
       database: options.database,
       secureStorage: options.secureStorage,
     });
+    if (
+      options.forceAccountClearAtStartup &&
+      startup.mode === "ready" &&
+      startup.sessionEnvelope !== null
+    ) {
+      try {
+        const pendingSession = parseAccountSessionEnvelope(
+          startup.sessionEnvelope,
+        );
+        if (pendingSession) {
+          await clearConfirmedOwner({
+            ownerKey: accountOwnerKey(pendingSession),
+            createdAt: Math.max(
+              0,
+              Math.floor(options.clockSources?.wallNow() ?? Date.now()),
+            ),
+            database: options.database,
+            secureStorage: options.secureStorage,
+            workGate,
+            clearMemoryAuth: () => undefined,
+          });
+          workGate = new OwnerCleanupWorkGate();
+        }
+        startup = { mode: "ready", sessionEnvelope: null };
+      } catch (error) {
+        await options.secureStorage
+          .delete(ACCOUNT_SESSION_SECURE_KEY)
+          .catch(() => undefined);
+        startup = { mode: "offline_only", error };
+      }
+    }
 
     let accountSession: AccountSessionV1 | null = null;
     let accountSessionError: unknown | null = null;
@@ -291,7 +325,7 @@ export class GuestAppRuntime {
       options.database.listRecords("guest"),
     ]);
     return new GuestAppRuntime(
-      options,
+      { ...options, workGate },
       startup,
       accountSession,
       accountSessionError,
@@ -474,6 +508,47 @@ export class GuestAppRuntime {
         .catch(() => [] as AppOwnerKey[]);
       if (!pending.includes(ownerKey)) throw error;
       return { status: "cleanup_pending", summary, error };
+    }
+  }
+
+  async clearAccountAfterDeletion(): Promise<AccountLogoutResult | null> {
+    try {
+      return await this.confirmAccountLogout();
+    } catch (error) {
+      let session: AccountSessionV1 | null = null;
+      try {
+        session = await loadAccountSession(this.#secureStorage);
+      } catch {
+        session = null;
+      }
+      const summary = session
+        ? await this.#readAccountLogoutSummary(
+            accountOwnerKey(session),
+            false,
+          ).catch(() => ({
+            ownerKey: accountOwnerKey(session!),
+            unfinishedSaves: 0,
+            pendingRecords: 0,
+            pendingOperations: 0,
+            requiresConfirmation: false,
+            flushTimedOut: false,
+          }))
+        : null;
+      if (session) {
+        const ownerKey = accountOwnerKey(session);
+        if (this.#activeSession?.currentSave.ownerKey === ownerKey) {
+          this.#activeSession = null;
+          this.#activeRankedOrchestrator = null;
+        }
+        this.#accountSession = null;
+        this.#accountSessionError = null;
+      }
+      await this.#secureStorage
+        .delete(ACCOUNT_SESSION_SECURE_KEY)
+        .catch(() => undefined);
+      return summary
+        ? { status: "cleanup_pending", summary, error }
+        : null;
     }
   }
 

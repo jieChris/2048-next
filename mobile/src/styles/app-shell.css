@@ -1028,6 +1028,24 @@ h2 {
   background: var(--precision-line-soft);
 }
 
+.deletion-receipt {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 12px;
+}
+
+.deletion-receipt h2 {
+  margin-top: 5px;
+  font-size: 1rem;
+}
+
+.deletion-receipt p:last-child {
+  margin-top: 8px;
+  color: var(--precision-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
 .setting-link {
   width: 100%;
   min-height: 72px;

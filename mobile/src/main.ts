@@ -15,6 +15,11 @@ import {
 } from "./app/app-runtime";
 import { renderAppTemplate } from "./app/templates";
 import type { MobileAuthService } from "./auth/auth-service";
+import {
+  clearAccountDeletionReceipt,
+  loadAccountDeletionReceipt,
+  type AccountDeletionReceipt,
+} from "./auth/account-deletion-receipt";
 import { AppDatabase } from "./data/app-database";
 import { createTranslator, resolveSystemLocale } from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
@@ -116,6 +121,12 @@ async function start(): Promise<void> {
   try {
     const secureStorage = createPlatformSecureStorage();
     const database = new AppDatabase();
+    let deletionReceipt: AccountDeletionReceipt | null = null;
+    try {
+      deletionReceipt = loadAccountDeletionReceipt(window.localStorage);
+    } catch {
+      deletionReceipt = null;
+    }
     let activeRuntime: GuestAppRuntime | null = null;
     let authServicePromise: Promise<MobileAuthService> | null = null;
     const getAuthService = (): Promise<MobileAuthService> => {
@@ -130,7 +141,18 @@ async function start(): Promise<void> {
               privacy ?? createPreviewPrivacyRecord("offline", Date.now()),
             secureStorage,
             timeoutMs: 8_000,
-            onAuthenticatedSession() {
+            onAuthenticatedSession(_session, _reason, notice) {
+              if (notice.accountDeletionCancelled) {
+                try {
+                  clearAccountDeletionReceipt(window.localStorage);
+                } catch {
+                  // The server cancellation remains authoritative.
+                }
+                window.setTimeout(
+                  () => controller?.notifyAccountDeletionCancelled(),
+                  0,
+                );
+              }
               void activeRuntime
                 ?.flushAccountRecordOutbox()
                 .catch(() => undefined);
@@ -150,8 +172,16 @@ async function start(): Promise<void> {
         enabled: () => currentNetworkMode === "online",
         getAuthService,
       },
+      forceAccountClearAtStartup: deletionReceipt !== null,
     });
     activeRuntime = runtime;
+    if (
+      deletionReceipt &&
+      Date.parse(deletionReceipt.dueAt) <= Date.now() &&
+      runtime.accountSession === null
+    ) {
+      clearAccountDeletionReceipt(window.localStorage);
+    }
     controller = createAppController({
       root: appRoot,
       runtime,

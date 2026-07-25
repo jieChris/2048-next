@@ -109,3 +109,112 @@ test("account logout cancels safely, then clears only the account owner", async 
     "POST /api/ranked-session/start",
   ]);
 });
+
+test("account deletion stores only its receipt and password login cancels within the cooling-off period", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  let loginCount = 0;
+  await page.route("**/api/**", async (route) => {
+    const url = new URL(route.request().url());
+    requests.push(`${route.request().method()} ${url.pathname}`);
+    if (url.pathname.endsWith("/api/login")) {
+      loginCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          token: `smoke-account-token-${loginCount}`,
+          expiresAt: 2_000_000_000,
+          accountDeletionCancelled: loginCount === 2,
+          user: {
+            id: 42,
+            email: "player@example.com",
+            nickname: "Smoke Player",
+            role: "player",
+          },
+        }),
+      });
+      return;
+    }
+    if (url.pathname.endsWith("/api/account/deletion/request")) {
+      expect(JSON.parse(route.request().postData() ?? "{}"))
+        .toEqual({
+          email: "player@example.com",
+          password: "password-123",
+        });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            status: "pending_deletion",
+            requestedAt: "2026-07-25T00:00:00.000Z",
+            dueAt: "2026-07-28T00:00:00.000Z",
+            maskedEmail: "p***@example.com",
+          },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ success: false, code: "UNEXPECTED_ROUTE" }),
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "我的", exact: true }).click();
+  await page.getByRole("button", { name: "登录或注册" }).click();
+  let login = page.locator('[data-app-view="auth-login"]');
+  await login.locator('input[name="email"]').fill("player@example.com");
+  await login.locator('input[name="password"]').fill("password-123");
+  await login.getByRole("button", { name: "登录并继续" }).click();
+  await expect(page.locator("[data-account-title]")).toHaveText("Smoke Player");
+
+  await page.getByRole("button", { name: "申请删除账号" }).click();
+  const deletion = page.locator("[data-account-deletion-dialog]");
+  await deletion.locator('input[name="password"]').fill("password-123");
+  await deletion.getByRole("button", { name: "申请删除并退出" }).click();
+
+  await expect(page.locator("[data-account-title]")).toHaveText("当前为游客");
+  const receipt = page.locator("[data-account-deletion-receipt]");
+  await expect(receipt).toBeVisible();
+  await expect(receipt).toContainText("p***@example.com");
+  const receiptStorage = await page.evaluate(() =>
+    window.localStorage.getItem(
+      "2048-next.app.account-deletion-receipt-v1",
+    ),
+  );
+  expect(receiptStorage).not.toContain("player@example.com");
+  expect(receiptStorage).not.toContain("token");
+  expect(receiptStorage).not.toContain("userId");
+
+  await page.getByRole("button", { name: "登录或注册" }).click();
+  login = page.locator('[data-app-view="auth-login"]');
+  await login.locator('input[name="email"]').fill("player@example.com");
+  await login.locator('input[name="password"]').fill("password-123");
+  await login.getByRole("button", { name: "登录并继续" }).click();
+
+  await expect(page.locator("[data-account-title]")).toHaveText("Smoke Player");
+  await expect(receipt).toBeHidden();
+  await expect(page.locator("[data-app-status]")).toContainText(
+    "账号删除已取消",
+  );
+  expect(
+    await page.evaluate(() =>
+      window.localStorage.getItem(
+        "2048-next.app.account-deletion-receipt-v1",
+      ),
+    ),
+  ).toBeNull();
+  expect(requests).toEqual([
+    "POST /api/login",
+    "POST /api/account/deletion/request",
+    "POST /api/login",
+  ]);
+});

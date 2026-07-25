@@ -1,6 +1,7 @@
 import type { AppModeKey } from "../../../src/contracts";
 import type { Translator } from "../i18n";
 import type { AccountSessionV1 } from "./account-session";
+import type { AccountDeletionReceipt } from "./account-deletion-receipt";
 import {
   MobileAuthCoordinator,
   type MobileAuthIssue,
@@ -136,6 +137,25 @@ export class MobileAuthTask {
     this.renderAccountState();
   }
 
+  requestAccountDeletion(
+    password: string,
+  ): Promise<MobileAuthOperationResult<AccountDeletionReceipt>> {
+    if (!this.#auth || !this.#session) {
+      return Promise.resolve({
+        status: "failure",
+        issue: {
+          kind: "invalid_credentials",
+          status: 401,
+          serverCode: "SESSION_MISSING",
+          retryable: false,
+        },
+      });
+    }
+    return this.#auth.run((service) =>
+      service.requestAccountDeletion({ password }),
+    );
+  }
+
   async submit(
     form: HTMLFormElement,
     route: AuthTaskRoute,
@@ -236,6 +256,9 @@ export class MobileAuthTask {
     const logout = this.#root.querySelector<HTMLButtonElement>(
       '[data-action="request-account-logout"]',
     );
+    const deleteAccount = this.#root.querySelector<HTMLButtonElement>(
+      '[data-action="request-account-deletion"]',
+    );
     const modeIdentity = this.#root.querySelector<HTMLElement>(
       "[data-mode-identity]",
     );
@@ -254,6 +277,7 @@ export class MobileAuthTask {
     }
     if (login) login.hidden = session !== null;
     if (logout) logout.hidden = session === null;
+    if (deleteAccount) deleteAccount.hidden = session === null;
     if (modeIdentity) {
       modeIdentity.textContent =
         session?.user.nickname ?? this.#t("records.guestOwner");

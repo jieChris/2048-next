@@ -147,6 +147,37 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).not.toContain('"/auth/refresh-token"');
   });
 
+  it("freezes the password-verified 72-hour account deletion receipt", () => {
+    const spec = readSpec();
+    const generatedTypes = readGeneratedTypes();
+    const path = readPathItem(spec, "/account/deletion/request");
+    const request = readSchema(spec, "AccountDeletionRequest");
+    const response = readSchema(spec, "AccountDeletionResponse");
+    const generatedPath = readGeneratedPathItem(
+      generatedTypes,
+      "/account/deletion/request",
+    );
+
+    expect(path).toContain("security: []");
+    expect(path).toContain(
+      '$ref: "#/components/schemas/AccountDeletionRequest"',
+    );
+    expect(path).toContain(
+      '$ref: "#/components/schemas/AccountDeletionResponse"',
+    );
+    expect(request).toContain("required: [email, password]");
+    expect(response).toContain(
+      "required: [status, requestedAt, dueAt, maskedEmail]",
+    );
+    expect(response).toContain("const: pending_deletion");
+    expect(generatedPath).toContain(
+      'components["schemas"]["AccountDeletionRequest"]',
+    );
+    expect(generatedPath).toContain(
+      'components["schemas"]["AccountDeletionResponse"]',
+    );
+  });
+
   it("matches the Node registration and password-reset verification payloads", () => {
     const spec = readSpec();
     const generated = readGeneratedTypes();

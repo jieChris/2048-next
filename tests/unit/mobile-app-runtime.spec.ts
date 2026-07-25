@@ -787,6 +787,49 @@ describe("mobile guest app runtime", () => {
     ).resolves.toMatchObject({ status: "ready", gameKind: "normal" });
   });
 
+  it("forces receipt-backed owner cleanup before restoring an account identity at startup", async () => {
+    const database = createDatabase("account-deletion-startup-clear");
+    await seedSave(database, "guest", { clientRecordId: "guest-after-delete" });
+    await seedSave(database, "user:7", { clientRecordId: "account-after-delete" });
+    const storage = createMemorySecureStorage();
+    await saveAccountSession(storage, accountSession());
+
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      forceAccountClearAtStartup: true,
+    });
+
+    expect(runtime.accountSession).toBeNull();
+    await expect(loadAccountSession(storage)).resolves.toBeNull();
+    await expect(database.listSaves("user:7")).resolves.toEqual([]);
+    await expect(database.getSave("guest", GUEST_STANDARD_MODE_KEY)).resolves.toMatchObject(
+      { status: "ok", save: { clientRecordId: "guest-after-delete" } },
+    );
+  });
+
+  it("deletes the local credential after server deletion even if the IDB marker cannot start", async () => {
+    const database = createDatabase("account-deletion-fallback");
+    await seedSave(database, "user:7", { clientRecordId: "orphaned-owner" });
+    const storage = createMemorySecureStorage();
+    await saveAccountSession(storage, accountSession());
+    const runtime = await bootstrapGuestAppRuntime({
+      database: runtimeDatabase(database, {
+        beginOwnerClear: async () => {
+          throw new Error("marker_write_failed");
+        },
+      }),
+      secureStorage: storage,
+    });
+
+    await expect(runtime.clearAccountAfterDeletion()).resolves.toMatchObject({
+      status: "cleanup_pending",
+    });
+    expect(runtime.accountSession).toBeNull();
+    await expect(loadAccountSession(storage)).resolves.toBeNull();
+    await expect(database.listSaves("user:7")).resolves.toHaveLength(1);
+  });
+
   it("routes account save work through the owner cleanup gate", async () => {
     const database = createDatabase("account-work-gate");
     const session = accountSession();

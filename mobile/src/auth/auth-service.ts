@@ -23,6 +23,7 @@ import {
   type AccountSessionV1,
   type AccountUserV1,
 } from "./account-session";
+import type { AccountDeletionReceipt } from "./account-deletion-receipt";
 
 export type MobileAuthErrorCode =
   | "privacy_online_required"
@@ -70,6 +71,7 @@ export interface MobileAuthServiceOptions {
   onAuthenticatedSession?: (
     session: AccountSessionV1,
     reason: "login" | "register" | "refresh",
+    notice: { accountDeletionCancelled: boolean },
   ) => void | Promise<void>;
 }
 
@@ -106,6 +108,9 @@ export interface MobileAuthService {
   currentUser(): Promise<AccountUserV1>;
   refresh(): Promise<AccountSessionV1>;
   submitRecord(input: MobileRecordSubmitInput): Promise<JsonRecord>;
+  requestAccountDeletion(input: {
+    password: string;
+  }): Promise<AccountDeletionReceipt>;
 }
 
 const AUTH_REFRESH_WINDOW_SECONDS = 5 * 60;
@@ -236,6 +241,27 @@ function parseUser(value: unknown): AccountUserV1 {
   };
 }
 
+function parseAccountDeletionReceipt(body: JsonRecord): AccountDeletionReceipt {
+  const data = record(body.data);
+  const requestedAt = data?.requestedAt;
+  const dueAt = data?.dueAt;
+  const maskedEmail = data?.maskedEmail;
+  if (
+    data?.status !== "pending_deletion" ||
+    typeof requestedAt !== "string" ||
+    typeof dueAt !== "string" ||
+    typeof maskedEmail !== "string" ||
+    !maskedEmail.trim() ||
+    maskedEmail.length > 320 ||
+    !Number.isFinite(Date.parse(requestedAt)) ||
+    !Number.isFinite(Date.parse(dueAt)) ||
+    Date.parse(dueAt) <= Date.parse(requestedAt)
+  ) {
+    throw new MobileAuthError("invalid_response");
+  }
+  return { version: 1, requestedAt, dueAt, maskedEmail };
+}
+
 function jsonBody(value: JsonRecord): RequestInit {
   return { method: "POST", body: JSON.stringify(value) };
 }
@@ -296,10 +322,13 @@ export function createMobileAuthService(
   const notifyAuthenticatedSession = (
     session: AccountSessionV1,
     reason: "login" | "register" | "refresh",
+    accountDeletionCancelled = false,
   ): void => {
     try {
       void Promise.resolve(
-        options.onAuthenticatedSession?.(session, reason),
+        options.onAuthenticatedSession?.(session, reason, {
+          accountDeletionCancelled,
+        }),
       ).catch(() => undefined);
     } catch {
       // Authentication remains successful when best-effort sync scheduling fails.
@@ -440,7 +469,11 @@ export function createMobileAuthService(
         body,
         await loadAccountSession(options.secureStorage),
       );
-      notifyAuthenticatedSession(session, "login");
+      notifyAuthenticatedSession(
+        session,
+        "login",
+        body.accountDeletionCancelled === true,
+      );
       return session;
     },
     registerStart(input) {
@@ -523,6 +556,17 @@ export function createMobileAuthService(
             : {}),
         }),
       );
+    },
+    async requestAccountDeletion(input) {
+      const session = await requireSession();
+      const body = await requestPublic(
+        "/account/deletion/request",
+        jsonBody({
+          email: session.user.email,
+          password: password(input.password),
+        }),
+      );
+      return parseAccountDeletionReceipt(body);
     },
   };
 }

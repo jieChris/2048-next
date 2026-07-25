@@ -189,6 +189,12 @@ export function renderAppTemplate(t: Translator): string {
             </div>
             <button class="action-button action-button--secondary" type="button" data-action="open-auth-gate">${t("me.loginAction")}</button>
             <button class="danger-button" type="button" data-action="request-account-logout" hidden>${t("me.logoutAction")}</button>
+            <button class="danger-button" type="button" data-action="request-account-deletion" hidden>${t("me.deleteAccountAction")}</button>
+          </section>
+          <section class="deletion-receipt instrument-card" data-account-deletion-receipt hidden>
+            <p class="eyebrow">${t("deletionReceipt.eyebrow")}</p>
+            <h2>${t("deletionReceipt.title")}</h2>
+            <p data-account-deletion-receipt-copy></p>
           </section>
           <div class="settings-list">
             <button class="setting-link" type="button" data-action="open-achievements-gate">
@@ -522,6 +528,23 @@ export function renderAppTemplate(t: Translator): string {
             <button class="danger-button" type="button" data-action="confirm-account-logout">${t("logout.confirm")}</button>
           </div>
         </div>
+      </dialog>
+
+      <dialog class="app-dialog app-dialog--compact" data-account-deletion-dialog aria-labelledby="account-deletion-title">
+        <form class="dialog-plate" data-account-deletion-form>
+          <p class="eyebrow">${t("accountDeletion.eyebrow")}</p>
+          <h2 id="account-deletion-title">${t("accountDeletion.title")}</h2>
+          <p>${t("accountDeletion.body")}</p>
+          <label class="auth-field">
+            <span>${t("accountDeletion.password")}</span>
+            <input name="password" type="password" autocomplete="current-password" maxlength="256" required>
+          </label>
+          <p class="auth-issue" data-account-deletion-issue role="alert" hidden></p>
+          <div class="dialog-actions dialog-actions--split">
+            <button class="action-button action-button--secondary" type="button" data-action="cancel-account-deletion">${t("accountDeletion.cancel")}</button>
+            <button class="danger-button" type="submit">${t("accountDeletion.confirm")}</button>
+          </div>
+        </form>
       </dialog>
 
     </div>

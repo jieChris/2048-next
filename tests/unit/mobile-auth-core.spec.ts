@@ -147,6 +147,17 @@ describe("mobile auth service", () => {
       if (url.endsWith("/auth/refresh")) {
         return response(200, authBody("refresh-token"));
       }
+      if (url.endsWith("/account/deletion/request")) {
+        return response(200, {
+          success: true,
+          data: {
+            status: "pending_deletion",
+            requestedAt: "2026-07-25T00:00:00.000Z",
+            dueAt: "2026-07-28T00:00:00.000Z",
+            maskedEmail: "p***@example.com",
+          },
+        });
+      }
       return response(200, { success: true });
     });
     const service = createMobileAuthService({
@@ -172,6 +183,7 @@ describe("mobile auth service", () => {
     });
     await service.currentUser();
     await service.refresh();
+    await service.requestAccountDeletion({ password: "Password123!" });
 
     expect(urls).toEqual([
       "https://api.example.test/mobile-api/login",
@@ -181,6 +193,7 @@ describe("mobile auth service", () => {
       "https://api.example.test/mobile-api/password/reset/verify",
       "https://api.example.test/mobile-api/user/me",
       "https://api.example.test/mobile-api/auth/refresh",
+      "https://api.example.test/mobile-api/account/deletion/request",
     ]);
     expect(
       urls.every((url) => url.startsWith("https://api.example.test/")),
@@ -308,6 +321,74 @@ describe("mobile auth service", () => {
     expect(onAuthenticatedSession).toHaveBeenCalledWith(
       expect.objectContaining({ accessToken: "record-refreshed-token" }),
       "refresh",
+      { accountDeletionCancelled: false },
+    );
+  });
+
+  it("requests account deletion with the stored email and parses only the server receipt", async () => {
+    const storage = createMemorySecureStorage();
+    await saveAccountSession(storage, session("deletion-token"));
+    const requests: Array<Record<string, unknown>> = [];
+    const service = createMobileAuthService({
+      apiBase: "https://api.example.test/api",
+      privacy: createPreviewPrivacyRecord("online", 1),
+      secureStorage: storage,
+      fetchLike: vi.fn(async (url, init) => {
+        expect(url).toBe(
+          "https://api.example.test/api/account/deletion/request",
+        );
+        requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return response(200, {
+          success: true,
+          data: {
+            status: "pending_deletion",
+            requestedAt: "2026-07-25T00:00:00.000Z",
+            dueAt: "2026-07-28T00:00:00.000Z",
+            maskedEmail: "p***@example.com",
+          },
+        });
+      }),
+    });
+
+    await expect(
+      service.requestAccountDeletion({ password: "Password123!" }),
+    ).resolves.toEqual({
+      version: 1,
+      requestedAt: "2026-07-25T00:00:00.000Z",
+      dueAt: "2026-07-28T00:00:00.000Z",
+      maskedEmail: "p***@example.com",
+    });
+    expect(requests).toEqual([
+      { email: user.email, password: "Password123!" },
+    ]);
+    await expect(loadAccountSession(storage)).resolves.toMatchObject({
+      accessToken: "deletion-token",
+    });
+  });
+
+  it("reports a password-login cancellation of pending account deletion", async () => {
+    const onAuthenticatedSession = vi.fn();
+    const service = createMobileAuthService({
+      apiBase: "https://api.example.test/api",
+      privacy: createPreviewPrivacyRecord("online", 1),
+      secureStorage: createMemorySecureStorage(),
+      fetchLike: vi.fn(async () =>
+        response(200, {
+          ...authBody("restored-account-token"),
+          accountDeletionCancelled: true,
+        }),
+      ),
+      onAuthenticatedSession,
+    });
+
+    await service.login({
+      email: user.email,
+      password: "Password123!",
+    });
+    expect(onAuthenticatedSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: "restored-account-token" }),
+      "login",
+      { accountDeletionCancelled: true },
     );
   });
 

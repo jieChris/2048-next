@@ -1,6 +1,11 @@
 import type { AppModeKey, GameDirection } from "../../../src/contracts";
 import { getBestTileValue } from "../../../src/core/engine";
 import type { AccountSessionV1 } from "../auth/account-session";
+import {
+  loadAccountDeletionReceipt,
+  saveAccountDeletionReceipt,
+} from "../auth/account-deletion-receipt";
+import type { MobileAuthIssue } from "../auth/auth-flow";
 import type { MobileAuthServiceFactory } from "../auth/auth-flow";
 import {
   isAuthenticatedModeKey,
@@ -78,6 +83,7 @@ export interface AppController {
   pause(): Promise<void>;
   resume(): void;
   handleBack(): Promise<boolean>;
+  notifyAccountDeletionCancelled(): void;
   showFatal(error: unknown): void;
   destroy(): void;
 }
@@ -292,11 +298,16 @@ class MobileAppController implements AppController {
     this.#onSubmit = (event) => {
       const form = event.target;
       if (
-        !(form instanceof HTMLFormElement) ||
-        !form.matches("[data-auth-form]")
+        !(form instanceof HTMLFormElement)
       ) {
         return;
       }
+      if (form.matches("[data-account-deletion-form]")) {
+        event.preventDefault();
+        void this.#submitAccountDeletion(form);
+        return;
+      }
+      if (!form.matches("[data-auth-form]")) return;
       event.preventDefault();
       void this.#submitAuth(form).catch((error: unknown) => {
         this.#authTask.showUnexpectedIssue(this.#route, errorCode(error));
@@ -317,6 +328,7 @@ class MobileAppController implements AppController {
 
     this.#syncShellState();
     this.#renderRecordSummaries();
+    this.#renderAccountDeletionReceipt();
     this.#showRoute(this.#route);
     const save = this.#runtime.guestSave;
     if (save.status === "corrupt" || save.status === "future_schema") {
@@ -326,6 +338,15 @@ class MobileAppController implements AppController {
 
   get route(): AppRoute {
     return this.#route;
+  }
+
+  notifyAccountDeletionCancelled(): void {
+    this.#renderAccountDeletionReceipt();
+    this.#showStatus(
+      this.#t("accountDeletion.cancelled"),
+      "success",
+      5_000,
+    );
   }
 
   async pause(): Promise<void> {
@@ -546,6 +567,12 @@ class MobileAppController implements AppController {
         break;
       case "confirm-account-logout":
         await this.#confirmAccountLogout();
+        break;
+      case "request-account-deletion":
+        this.#openAccountDeletionDialog();
+        break;
+      case "cancel-account-deletion":
+        this.#closeNamedDialog("[data-account-deletion-dialog]");
         break;
       case "close-detail":
         this.#showRoute(this.#detailSource);
@@ -1603,6 +1630,105 @@ class MobileAppController implements AppController {
         this.#showStatus(this.#t("logout.error"), "error", 5_000);
       }
     }
+  }
+
+  #openAccountDeletionDialog(): void {
+    if (!this.#authTask.session) return;
+    const form = requireElement<HTMLFormElement>(
+      this.#root,
+      "[data-account-deletion-form]",
+    );
+    form.reset();
+    const issue = requireElement<HTMLElement>(
+      this.#root,
+      "[data-account-deletion-issue]",
+    );
+    issue.hidden = true;
+    issue.textContent = "";
+    this.#openModal(
+      requireElement<HTMLDialogElement>(
+        this.#root,
+        "[data-account-deletion-dialog]",
+      ),
+    );
+  }
+
+  async #submitAccountDeletion(form: HTMLFormElement): Promise<void> {
+    if (!form.checkValidity()) return;
+    const password = new FormData(form).get("password");
+    if (typeof password !== "string" || !password) return;
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (submit) submit.disabled = true;
+    const issue = requireElement<HTMLElement>(
+      this.#root,
+      "[data-account-deletion-issue]",
+    );
+    issue.hidden = true;
+    issue.textContent = "";
+    try {
+      const result = await this.#authTask.requestAccountDeletion(password);
+      if (result.status === "busy") return;
+      if (result.status === "failure") {
+        issue.textContent = this.#accountDeletionIssue(result.issue);
+        issue.hidden = false;
+        return;
+      }
+      try {
+        saveAccountDeletionReceipt(window.localStorage, result.value);
+      } catch {
+        // The server receipt remains authoritative when localStorage is unavailable.
+      }
+      const cleanup = await this.#runtime
+        .clearAccountAfterDeletion()
+        .catch(() => null);
+      this.#authTask.signOut();
+      form.reset();
+      this.#closeNamedDialog("[data-account-deletion-dialog]");
+      this.#renderAccountDeletionReceipt();
+      this.#renderRecordSummaries();
+      this.#showStatus(
+        cleanup?.status === "cleanup_pending"
+          ? this.#t("logout.pending")
+          : this.#t("accountDeletion.success"),
+        cleanup?.status === "cleanup_pending" ? "error" : "success",
+        cleanup?.status === "cleanup_pending" ? 0 : 5_000,
+      );
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  #accountDeletionIssue(issue: MobileAuthIssue): string {
+    if (issue.kind === "invalid_credentials") {
+      return this.#t("accountDeletion.invalid");
+    }
+    if (
+      issue.kind === "network_error" ||
+      issue.kind === "service_unavailable" ||
+      issue.kind === "rate_limited"
+    ) {
+      return this.#t("accountDeletion.network");
+    }
+    return this.#t("accountDeletion.error");
+  }
+
+  #renderAccountDeletionReceipt(): void {
+    const container = requireElement<HTMLElement>(
+      this.#root,
+      "[data-account-deletion-receipt]",
+    );
+    let receipt = null;
+    try {
+      receipt = loadAccountDeletionReceipt(window.localStorage);
+    } catch {
+      receipt = null;
+    }
+    container.hidden = receipt === null;
+    if (!receipt) return;
+    const copy = this.#t("deletionReceipt.copy")
+      .replace("{email}", receipt.maskedEmail)
+      .replace("{dueAt}", this.#dateFormat.format(new Date(receipt.dueAt)));
+    this.#setText("[data-account-deletion-receipt-copy]", copy);
   }
 
   #renderDetail(record: StoredGameRecord): void {

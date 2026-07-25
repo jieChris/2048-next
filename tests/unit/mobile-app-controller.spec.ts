@@ -129,6 +129,12 @@ function authService(
     currentUser: vi.fn(async () => accountSession().user),
     refresh: vi.fn(async () => accountSession()),
     submitRecord: vi.fn(async () => ({ success: true })),
+    requestAccountDeletion: vi.fn(async () => ({
+      version: 1,
+      requestedAt: "2026-07-25T00:00:00.000Z",
+      dueAt: "2026-07-28T00:00:00.000Z",
+      maskedEmail: "p***@example.com",
+    })),
     ...overrides,
   };
 }
@@ -147,6 +153,7 @@ interface RuntimeHarness {
   readonly retryAccountRecordSubmit: ReturnType<typeof vi.fn>;
   readonly prepareAccountLogout: ReturnType<typeof vi.fn>;
   readonly confirmAccountLogout: ReturnType<typeof vi.fn>;
+  readonly clearAccountAfterDeletion: ReturnType<typeof vi.fn>;
   get activeSession(): GuestGameSession | null;
   setActiveSession(value: GuestGameSession | null): void;
 }
@@ -182,6 +189,7 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
   const retryAccountRecordSubmit = vi.fn(async () => null);
   const prepareAccountLogout = vi.fn(async () => null);
   const confirmAccountLogout = vi.fn(async () => null);
+  const clearAccountAfterDeletion = vi.fn(async () => null);
   const runtime = {
     get guestSave() {
       return { status: "missing" as const };
@@ -205,6 +213,7 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     retryAccountRecordSubmit,
     prepareAccountLogout,
     confirmAccountLogout,
+    clearAccountAfterDeletion,
     refreshGuestSummary: vi.fn(async () => undefined),
     deleteGuestRecord: vi.fn(async () => true),
     pauseActiveSession: vi.fn(async () => undefined),
@@ -224,6 +233,7 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     retryAccountRecordSubmit,
     prepareAccountLogout,
     confirmAccountLogout,
+    clearAccountAfterDeletion,
     get activeSession() {
       return activeSession;
     },
@@ -335,6 +345,7 @@ function record(
 
 beforeEach(() => {
   document.body.replaceChildren();
+  window.localStorage.clear();
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
@@ -359,6 +370,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.replaceChildren();
+  window.localStorage.clear();
   performance.clearMarks();
   performance.clearMeasures();
   vi.unstubAllGlobals();
@@ -873,6 +885,60 @@ describe("mobile app controller navigation", () => {
     expect(
       root.querySelector<HTMLElement>("[data-app-status]")?.textContent,
     ).toContain("已退出账号，并清除该账号的本机数据。");
+    controller.destroy();
+  });
+
+  it("requests password-verified account deletion, clears local owner data, and renders the receipt", async () => {
+    const harness = runtimeHarness();
+    const service = authService();
+    const requestAccountDeletion = vi.mocked(service.requestAccountDeletion);
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      authServiceFactory: async () => service,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="request-account-deletion"]');
+    const dialog = root.querySelector<HTMLDialogElement>(
+      "[data-account-deletion-dialog]",
+    );
+    await vi.waitFor(() => expect(dialog?.open).toBe(true));
+    const form = root.querySelector<HTMLFormElement>(
+      "[data-account-deletion-form]",
+    );
+    const password = form?.querySelector<HTMLInputElement>(
+      'input[name="password"]',
+    );
+    if (!form || !password) throw new Error("missing deletion form");
+    password.value = "Password123!";
+    form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-account-title]")?.textContent).toBe(
+        "当前为游客",
+      ),
+    );
+    expect(requestAccountDeletion).toHaveBeenCalledWith({
+      password: "Password123!",
+    });
+    expect(harness.clearAccountAfterDeletion).toHaveBeenCalledTimes(1);
+    const receipt = root.querySelector<HTMLElement>(
+      "[data-account-deletion-receipt]",
+    );
+    expect(receipt?.hidden).toBe(false);
+    expect(receipt?.textContent).toContain("p***@example.com");
+    expect(window.localStorage.getItem("2048-next.app.account-deletion-receipt-v1"))
+      .not.toContain("player@example.com");
+
+    window.localStorage.removeItem(
+      "2048-next.app.account-deletion-receipt-v1",
+    );
+    controller.notifyAccountDeletionCancelled();
+    expect(receipt?.hidden).toBe(true);
+    expect(
+      root.querySelector<HTMLElement>("[data-app-status]")?.textContent,
+    ).toContain("账号删除已取消");
     controller.destroy();
   });
 
