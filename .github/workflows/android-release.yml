@@ -1,0 +1,100 @@
+name: Android Release Candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  JAVA_VERSION: "21"
+
+jobs:
+  release-candidate:
+    name: Build and verify signed APK + AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: android-release
+    steps:
+      - name: Checkout dispatched commit
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmdline-tools;latest"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify App
+        run: npm run verify:app
+
+      - name: Validate protected release secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NEXT2048_RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.NEXT2048_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.NEXT2048_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.NEXT2048_RELEASE_KEY_PASSWORD }}
+          CERTIFICATE_SHA256: ${{ secrets.NEXT2048_RELEASE_CERT_SHA256 }}
+        run: |
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERTIFICATE_SHA256; do
+            if [ -z "${!name}" ]; then
+              echo "Missing protected Android release secret: ${name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NEXT2048_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/next2048-release.jks"
+          test -s "$RUNNER_TEMP/next2048-release.jks"
+
+      - name: Build and verify release artifacts
+        env:
+          ORG_GRADLE_PROJECT_NEXT2048_RELEASE_STORE_FILE: ${{ runner.temp }}/next2048-release.jks
+          ORG_GRADLE_PROJECT_NEXT2048_RELEASE_STORE_PASSWORD: ${{ secrets.NEXT2048_RELEASE_STORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_NEXT2048_RELEASE_KEY_ALIAS: ${{ secrets.NEXT2048_RELEASE_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_NEXT2048_RELEASE_KEY_PASSWORD: ${{ secrets.NEXT2048_RELEASE_KEY_PASSWORD }}
+          NEXT2048_RELEASE_CERT_SHA256: ${{ secrets.NEXT2048_RELEASE_CERT_SHA256 }}
+        run: npm run android:release
+
+      - name: Publish release metadata summary
+        run: |
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat artifacts/android-release/metadata.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload verified APK, AAB, and metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.sha }}
+          path: artifacts/android-release
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove release keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/next2048-release.jks"
