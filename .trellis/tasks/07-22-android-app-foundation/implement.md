@@ -327,8 +327,8 @@ npm run build:app
 
 ### CI
 
-- [ ] 新增独立 Android workflow，不修改 Web 生产部署拓扑。
-- [ ] PR：`verify:app`、`android:check`、受控 `cap sync` 漂移检查、debug APK artifact。
+- [x] 新增独立 Android workflow，不修改 Web 生产部署拓扑。
+- [x] PR：`verify:app`、`android:check`、受控 `cap sync` 漂移检查、debug APK artifact。
 - [ ] main/nightly：API 29 与 API 36 模拟器安装/冷启动/离线/后台/强杀 smoke。
 - [ ] 共享核心改动继续通过 Web `npm run verify:release` 和后端测试。
 
