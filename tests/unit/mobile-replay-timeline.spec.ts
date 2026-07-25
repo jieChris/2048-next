@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildReplayTimeline,
   buildStandard4x4ReplayTimeline,
   resolveReplayProgress,
   type ReplayTimelineSource,
 } from "../../mobile/src/game/replay-timeline";
 import type {
+  AppModeKey,
   GameDirection,
   GameSnapshot,
   ReplayRecord,
@@ -60,6 +62,26 @@ function terminalReplaySource(): ReplayTimelineSource {
     }
   }
   throw new Error("terminal replay fixture did not finish");
+}
+
+function modeReplaySource(modeKey: AppModeKey): ReplayTimelineSource {
+  const engine = createEngineSession({ modeKey, seed: 777 });
+  engine.init();
+  let atMs = 5_000;
+  let undid = false;
+  for (const direction of [3, 2, 1, 0, 3, 2, 1, 0] as GameDirection[]) {
+    const transition = engine.move({ direction, atMs });
+    atMs += 113;
+    if (modeKey === "classic_4x4_pow2_undo" && transition.moved && !undid) {
+      engine.undo({ atMs });
+      atMs += 113;
+      undid = true;
+    }
+  }
+  return {
+    replay: engine.exportReplay(),
+    finalSnapshot: engine.exportState(atMs),
+  };
 }
 
 function replaceReplay(
@@ -124,6 +146,25 @@ describe("mobile replay timeline", () => {
     );
   });
 
+  it("reconstructs all App modes from an authoritative RPL1 without a local snapshot", () => {
+    for (const modeKey of [
+      "standard_4x4_pow2_no_undo",
+      "classic_4x4_pow2_undo",
+      "board_3x3_pow2_no_undo",
+    ] as const) {
+      const source = modeReplaySource(modeKey);
+      const timeline = buildReplayTimeline({ replay: source.replay });
+      const finalState = source.finalSnapshot.state;
+      expect(timeline.modeKey).toBe(modeKey);
+      expect(timeline.frames.at(-1)).toMatchObject({
+        board: finalState.board,
+        score: finalState.score,
+        steps: finalState.steps,
+        durationMs: finalState.durationMs,
+      });
+    }
+  });
+
   it("resolves clamped step and time progress without a playback clock", () => {
     const timeline = buildStandard4x4ReplayTimeline(replaySource());
     const middle = resolveReplayProgress(timeline, 2);
@@ -179,6 +220,27 @@ describe("mobile replay timeline", () => {
     expect(() =>
       buildStandard4x4ReplayTimeline(replaceReplay(source, replay)),
     ).toThrow("replay_timeline_spawn_mismatch");
+  });
+
+  it("rejects compressed undo counts before expanding an oversized action stream", () => {
+    const source = modeReplaySource("classic_4x4_pow2_undo");
+    if (source.replay.kind !== "rpl1") throw new Error("expected rpl1 fixture");
+    const decoded = decodeReplayV1Base64(source.replay.replayString);
+    const metadata = decoded.records.filter((record) => record.kind === "ext");
+    const replay: ReplayRecord = {
+      ...source.replay,
+      replayString: encodeReplayV1Base64({
+        ...decoded,
+        records: [
+          ...metadata,
+          { kind: "undon", undoCount: 50_001, deltaMs: 0 },
+        ],
+      }),
+    };
+
+    expect(() => buildReplayTimeline({ replay })).toThrow(
+      "replay_timeline_action_limit",
+    );
   });
 
   it("rejects a final snapshot that differs from the replayed engine state", () => {

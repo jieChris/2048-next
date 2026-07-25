@@ -154,6 +154,8 @@ export function renderAppTemplate(t: Translator): string {
               <span>${t("records.ownerLabel")}</span>
               <select data-record-owner>
                 <option value="guest">${t("records.guestOwner")}</option>
+                <option value="account-active" hidden disabled>${t("records.accountOwner")}</option>
+                <option value="account-deleted" hidden disabled>${t("records.deletedOwner")}</option>
               </select>
             </label>
             <label>
@@ -165,6 +167,7 @@ export function renderAppTemplate(t: Translator): string {
               </select>
             </label>
           </div>
+          <p class="cloud-history-status" data-cloud-history-status hidden></p>
           <div class="record-list" data-record-list></div>
           <div class="empty-state" data-record-empty>
             <span class="empty-state__mark" aria-hidden="true">□</span>
@@ -277,6 +280,7 @@ export function renderAppTemplate(t: Translator): string {
           <div class="result-actions">
             <button class="action-button action-button--primary" type="button" data-action="result-again">${t("result.again")}</button>
             <button class="action-button action-button--secondary" type="button" data-action="result-replay">${t("result.replay")}</button>
+            <button class="action-button action-button--secondary" type="button" data-action="share-replay" data-result-share-replay>${t("replay.share")}</button>
             <button class="action-button action-button--secondary" type="button" data-action="retry-record-upload" hidden>${t("result.retryUpload")}</button>
             <button class="text-button" type="button" data-action="result-home">${t("result.home")}</button>
           </div>
@@ -303,6 +307,7 @@ export function renderAppTemplate(t: Translator): string {
           </div>
           <div class="detail-actions">
             <button class="action-button action-button--primary" type="button" data-action="open-replay">${t("detail.replay")}</button>
+            <button class="action-button action-button--secondary" type="button" data-action="share-replay" data-detail-share-replay>${t("replay.share")}</button>
             <button class="danger-button" type="button" data-action="delete-record">${t("detail.delete")}</button>
           </div>
         </section>
@@ -467,6 +472,45 @@ export function renderAppTemplate(t: Translator): string {
         <button type="button" data-action="dismiss-status" aria-label="${t("status.dismiss")}">×</button>
       </div>
 
+      <dialog class="leaderboard-dialog" data-leaderboard-dialog aria-labelledby="leaderboard-title">
+        <section class="leaderboard-sheet">
+          <header class="task-bar leaderboard-bar">
+            <button class="icon-button" type="button" data-action="close-leaderboard" aria-label="${t("leaderboard.close")}">←</button>
+            <div>
+              <p class="eyebrow">${t("leaderboard.eyebrow")}</p>
+              <h2 id="leaderboard-title">${t("leaderboard.title")}</h2>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <div class="leaderboard-filters">
+            <label><span>${t("leaderboard.mode")}</span><select data-leaderboard-filter data-leaderboard-mode>
+              <option value="standard_4x4_pow2_no_undo">${t("modes.standardTitle")}</option>
+              <option value="classic_4x4_pow2_undo">${t("modes.classicTitle")}</option>
+              <option value="board_3x3_pow2_no_undo">${t("modes.compactTitle")}</option>
+            </select></label>
+            <label><span>${t("leaderboard.metric")}</span><select data-leaderboard-filter data-leaderboard-metric>
+              <option value="score">${t("leaderboard.score")}</option>
+              <option value="speed">${t("leaderboard.speed")}</option>
+            </select></label>
+            <label><span>${t("leaderboard.period")}</span><select data-leaderboard-filter data-leaderboard-period>
+              <option value="all">${t("leaderboard.all")}</option>
+              <option value="day">${t("leaderboard.day")}</option>
+              <option value="week">${t("leaderboard.week")}</option>
+              <option value="month">${t("leaderboard.month")}</option>
+            </select></label>
+            <label><span>${t("leaderboard.target")}</span><select data-leaderboard-filter data-leaderboard-target>
+              <option value="2048">2048</option><option value="4096">4096</option><option value="8192">8192</option><option value="16384">16384</option><option value="32768">32768</option>
+            </select></label>
+          </div>
+          <p class="leaderboard-status" data-leaderboard-status>${t("leaderboard.loading")}</p>
+          <div class="leaderboard-list" data-leaderboard-list></div>
+          <div class="empty-state" data-leaderboard-empty hidden>
+            <span class="empty-state__mark" aria-hidden="true">#</span>
+            <strong>${t("leaderboard.empty")}</strong>
+          </div>
+        </section>
+      </dialog>
+
       <dialog class="app-dialog" data-offline-gate aria-labelledby="offline-gate-title">
         <div class="dialog-plate">
           <p class="eyebrow">${t("gate.eyebrow")}</p>
@@ -517,8 +561,8 @@ export function renderAppTemplate(t: Translator): string {
       <dialog class="app-dialog app-dialog--compact" data-delete-dialog aria-labelledby="delete-title">
         <div class="dialog-plate">
           <p class="eyebrow">${t("delete.eyebrow")}</p>
-          <h2 id="delete-title">${t("delete.title")}</h2>
-          <p>${t("delete.body")}</p>
+          <h2 id="delete-title" data-delete-title>${t("delete.title")}</h2>
+          <p data-delete-body>${t("delete.body")}</p>
           <div class="dialog-actions dialog-actions--split">
             <button class="action-button action-button--secondary" type="button" data-action="cancel-delete">${t("delete.cancel")}</button>
             <button class="danger-button" type="button" data-action="confirm-delete">${t("delete.confirm")}</button>

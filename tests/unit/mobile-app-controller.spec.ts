@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAppController,
   formatDuration,
+  formatSpeedDuration,
   resolveStoredSaveDurationMs,
   sortGuestRecords,
   type AppController,
@@ -23,6 +24,7 @@ import {
 } from "../../mobile/src/data/app-database";
 import type { GuestGameSession } from "../../mobile/src/game/guest-session";
 import { createTranslator } from "../../mobile/src/i18n";
+import type { GameDirection } from "../../src/contracts";
 import { createEngineSession } from "../../src/core/engine";
 
 interface Deferred<T> {
@@ -253,7 +255,9 @@ type ControllerOverrides = Partial<
     | "diagnosticsEnabled"
     | "onDiagnosticsEnabledChange"
     | "onExportDiagnostics"
+    | "onShareReplay"
     | "onAccountSessionChange"
+    | "cloudData"
   >
 >;
 
@@ -404,6 +408,10 @@ describe("mobile app controller helpers", () => {
     expect(formatDuration(durationMs)).toBe(expected);
   });
 
+  it("keeps leaderboard speed milliseconds visible", () => {
+    expect(formatSpeedDuration(62_345)).toBe("01:02.345");
+  });
+
   it.each([
     [{ savedAtMs: 9_000, startedAtMs: null, durationMs: 0 }, 0],
     [{ savedAtMs: 4_200, startedAtMs: 1_000, durationMs: 100 }, 3_200],
@@ -451,6 +459,354 @@ describe("mobile app controller helpers", () => {
 });
 
 describe("mobile app controller navigation", () => {
+  it("renders account history and performs server delete and restore from the two filters", async () => {
+    const harness = runtimeHarness();
+    const activeRow = {
+      id: "cloud-active",
+      clientRecordId: "client-active",
+      modeKey: "standard_4x4_pow2_no_undo" as const,
+      source: "ranked" as const,
+      score: 4096,
+      boardSum: 8192,
+      durationMs: 10_000,
+      steps: 42,
+      bestTile: 2048,
+      endedAt: "2026-07-25T00:00:00.000Z",
+      deletedAt: null,
+      restoreUntil: null,
+      replayAvailable: true,
+    };
+    const deletedRow = {
+      ...activeRow,
+      id: "cloud-deleted",
+      deletedAt: "2026-07-25T01:00:00.000Z",
+      restoreUntil: "2026-07-28T01:00:00.000Z",
+    };
+    const refreshHistory = vi.fn(async (query) => ({
+      fetchedAt: 200,
+      value: {
+        rows: query.status === "deleted" ? [deletedRow] : [activeRow],
+        page: 1,
+        totalPages: 1,
+        hasNext: false,
+        status: query.status,
+      },
+    }));
+    const deleteRecord = vi.fn(async () => undefined);
+    const restoreRecord = vi.fn(async () => undefined);
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      cloudData: {
+        readHistoryCache: vi.fn(async () => null),
+        refreshHistory,
+        deleteRecord,
+        restoreRecord,
+        readLeaderboardCache: vi.fn(async () => null),
+        refreshLeaderboard: vi.fn(async () => ({
+          fetchedAt: 200,
+          value: { rows: [], page: 1, hasNext: false },
+        })),
+      },
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="records"]');
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-record-list]")?.textContent)
+        .toContain("4,096"),
+    );
+    focusAndClick(root, '[data-cloud-record-id="cloud-active"]');
+    expect(controller.route).toBe("detail");
+    focusAndClick(root, '[data-action="delete-record"]');
+    focusAndClick(root, '[data-action="confirm-delete"]');
+    await vi.waitFor(() =>
+      expect(deleteRecord).toHaveBeenCalledWith({
+        userId: 42,
+        recordId: "cloud-active",
+      }),
+    );
+
+    const owner = root.querySelector<HTMLSelectElement>("[data-record-owner]");
+    if (!owner) throw new Error("missing record owner filter");
+    owner.value = "account-deleted";
+    owner.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector('[data-cloud-record-id="cloud-deleted"]'),
+      ).not.toBeNull(),
+    );
+    focusAndClick(root, '[data-cloud-record-id="cloud-deleted"]');
+    expect(
+      root.querySelector<HTMLButtonElement>('[data-action="delete-record"]')
+        ?.textContent,
+    ).toContain("恢复记录");
+    focusAndClick(root, '[data-action="delete-record"]');
+    await vi.waitFor(() =>
+      expect(restoreRecord).toHaveBeenCalledWith({
+        userId: 42,
+        recordId: "cloud-deleted",
+      }),
+    );
+    controller.destroy();
+  });
+
+  it("plays a cached cloud replay, refreshes it, and shares the same record from detail and player", async () => {
+    const engine = createEngineSession({
+      modeKey: "standard_4x4_pow2_no_undo",
+      seed: 9,
+    });
+    engine.init();
+    const directions: GameDirection[] = [3, 2, 1, 2];
+    let atMs = 10_000;
+    for (let index = 0; index < 5_000; index += 1) {
+      const transition = engine.move({
+        direction: directions[index % directions.length],
+        atMs,
+      });
+      atMs += 17;
+      if (transition.gameOver) break;
+    }
+    const replay = engine.exportReplay();
+    const state = engine.getState();
+    if (!state.gameOver) throw new Error("cloud replay fixture did not finish");
+    const cloudRow = {
+      id: "cloud-replay",
+      clientRecordId: "client-replay",
+      modeKey: state.modeKey,
+      source: "ranked" as const,
+      score: state.score,
+      boardSum: state.board.flat().reduce((sum, value) => sum + value, 0),
+      durationMs: state.durationMs,
+      steps: state.steps,
+      bestTile: Math.max(...state.board.flat()),
+      endedAt: "2026-07-25T00:00:00.000Z",
+      deletedAt: null,
+      restoreUntil: null,
+      replayAvailable: true,
+    };
+    const refreshReplay = vi.fn(async () => ({
+      fetchedAt: 300,
+      value: replay,
+    }));
+    const onShareReplay = vi.fn(async () => undefined);
+    const { controller, root } = mountController(runtimeHarness(), {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      onShareReplay,
+      cloudData: {
+        readHistoryCache: vi.fn(async () => null),
+        refreshHistory: vi.fn(async () => ({
+          fetchedAt: 200,
+          value: {
+            rows: [cloudRow],
+            page: 1,
+            totalPages: 1,
+            hasNext: false,
+            status: "active" as const,
+          },
+        })),
+        deleteRecord: vi.fn(async () => undefined),
+        restoreRecord: vi.fn(async () => undefined),
+        readLeaderboardCache: vi.fn(async () => null),
+        refreshLeaderboard: vi.fn(async () => ({
+          fetchedAt: 200,
+          value: { rows: [], page: 1, hasNext: false },
+        })),
+        readReplayCache: vi.fn(async () => ({ fetchedAt: 100, value: replay })),
+        refreshReplay,
+      },
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="records"]');
+    await vi.waitFor(() =>
+      expect(root.querySelector('[data-cloud-record-id="cloud-replay"]'))
+        .not.toBeNull(),
+    );
+    focusAndClick(root, '[data-cloud-record-id="cloud-replay"]');
+    expect(
+      root.querySelector<HTMLButtonElement>('[data-action="open-replay"]')
+        ?.hidden,
+    ).toBe(false);
+    focusAndClick(root, '[data-action="open-replay"]');
+    await vi.waitFor(() => expect(controller.route).toBe("replay"));
+    expect(refreshReplay).toHaveBeenCalledWith({
+      userId: 42,
+      recordId: "cloud-replay",
+    });
+    focusAndClick(root, '[data-action="close-replay"]');
+    focusAndClick(root, "[data-detail-share-replay]");
+    await vi.waitFor(() => expect(onShareReplay).toHaveBeenCalledWith(replay));
+
+    focusAndClick(root, '[data-action="open-replay"]');
+    await vi.waitFor(() => expect(controller.route).toBe("replay"));
+    focusAndClick(
+      root.querySelector('[data-app-view="replay"]')!,
+      '[data-action="share-replay"]',
+    );
+    await vi.waitFor(() => expect(onShareReplay).toHaveBeenCalledTimes(2));
+    expect(onShareReplay.mock.calls[1]?.[0]).toEqual(replay);
+    controller.destroy();
+  });
+
+  it("shares the frozen ReplayRecord directly from the result page", async () => {
+    const terminalRecord = record("result-share", {
+      endedAt: 50,
+      score: 512,
+      boardSum: 256,
+    });
+    const harness = runtimeHarness();
+    const transitionEngine = createEngineSession({
+      modeKey: "standard_4x4_pow2_no_undo",
+      seed: 4_096,
+    });
+    transitionEngine.init();
+    const transition = transitionEngine.move({ direction: 1, atMs: 100 });
+    harness.moveActiveSession.mockReturnValue({
+      transition,
+      save: null,
+      terminal: Promise.resolve(terminalRecord),
+    });
+    const onShareReplay = vi.fn(async () => undefined);
+    const { controller, root } = mountController(harness, { onShareReplay });
+
+    focusAndClick(root, '[data-action="enter-standard"]');
+    await vi.waitFor(() => expect(controller.route).toBe("game"));
+    root.querySelector<HTMLElement>("[data-game-board-root]")?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    await vi.waitFor(() => expect(controller.route).toBe("result"));
+    focusAndClick(root, "[data-result-share-replay]");
+    await vi.waitFor(() =>
+      expect(onShareReplay).toHaveBeenCalledWith(terminalRecord.replay),
+    );
+    controller.destroy();
+  });
+
+  it("keeps cached cloud history read-only while the App is offline", async () => {
+    const cachedRow = {
+      id: "offline-cloud",
+      clientRecordId: "offline-client",
+      modeKey: "standard_4x4_pow2_no_undo" as const,
+      source: "normal" as const,
+      score: 2_048,
+      boardSum: 4_096,
+      durationMs: 2_000,
+      steps: 20,
+      bestTile: 1_024,
+      endedAt: "2026-07-25T00:00:00.000Z",
+      deletedAt: null,
+      restoreUntil: null,
+      replayAvailable: true,
+    };
+    const refreshHistory = vi.fn();
+    const { controller, root } = mountController(runtimeHarness(), {
+      networkMode: "offline",
+      initialAccountSession: accountSession(),
+      cloudData: {
+        readHistoryCache: vi.fn(async () => ({
+          fetchedAt: 100,
+          value: {
+            rows: [cachedRow],
+            page: 1,
+            totalPages: 1,
+            hasNext: false,
+            status: "active" as const,
+          },
+        })),
+        refreshHistory,
+        deleteRecord: vi.fn(async () => undefined),
+        restoreRecord: vi.fn(async () => undefined),
+        readLeaderboardCache: vi.fn(async () => null),
+        refreshLeaderboard: vi.fn(async () => ({
+          fetchedAt: 100,
+          value: { rows: [], page: 1, hasNext: false },
+        })),
+        readReplayCache: vi.fn(async () => null),
+        refreshReplay: vi.fn(),
+      },
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="records"]');
+    await vi.waitFor(() =>
+      expect(root.querySelector('[data-cloud-record-id="offline-cloud"]'))
+        .not.toBeNull(),
+    );
+    focusAndClick(root, '[data-cloud-record-id="offline-cloud"]');
+    expect(
+      root.querySelector<HTMLButtonElement>('[data-action="delete-record"]')
+        ?.hidden,
+    ).toBe(true);
+    expect(refreshHistory).not.toHaveBeenCalled();
+    controller.destroy();
+  });
+
+  it("opens a full-screen leaderboard with backend ranks and reloads the selected period", async () => {
+    const harness = runtimeHarness();
+    const readLeaderboardCache = vi.fn(async () => ({
+      fetchedAt: 100,
+      value: {
+        rows: [{
+          rank: 47,
+          userId: "9",
+          nickname: "Player Nine",
+          score: 65536,
+          speedMs: null,
+          achievedAt: "2026-07-25T00:00:00.000Z",
+        }],
+        page: 1,
+        hasNext: false,
+      },
+    }));
+    const refreshLeaderboard = vi.fn(async (query) => ({
+      fetchedAt: 200,
+      value: {
+        rows: [{
+          rank: query.period === "week" ? 8 : 47,
+          userId: "9",
+          nickname: "Player Nine",
+          score: 65536,
+          speedMs: null,
+          achievedAt: "2026-07-25T00:00:00.000Z",
+        }],
+        page: 1,
+        hasNext: false,
+      },
+    }));
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      cloudData: { readLeaderboardCache, refreshLeaderboard },
+    });
+    focusAndClick(root, '[data-action="open-leaderboard"]');
+    const dialog = root.querySelector<HTMLDialogElement>(
+      "[data-leaderboard-dialog]",
+    );
+    await vi.waitFor(() => expect(dialog?.open).toBe(true));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-leaderboard-list]")?.textContent)
+        .toContain("#47"),
+    );
+
+    const period = root.querySelector<HTMLSelectElement>(
+      "[data-leaderboard-period]",
+    );
+    if (!period) throw new Error("missing leaderboard period");
+    period.value = "week";
+    period.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(refreshLeaderboard).toHaveBeenLastCalledWith(
+        expect.objectContaining({ period: "week" }),
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-leaderboard-list]")?.textContent)
+        .toContain("#8"),
+    );
+    focusAndClick(root, '[data-action="close-leaderboard"]');
+    expect(dialog?.open).toBe(false);
+    expect(controller.route).toBe("home");
+    controller.destroy();
+  });
+
   it("persists the diagnostics toggle and exports without leaving Me", async () => {
     const harness = runtimeHarness();
     const onDiagnosticsEnabledChange = vi.fn();

@@ -1,4 +1,8 @@
-import type { AppModeKey, GameDirection } from "../../../src/contracts";
+import type {
+  AppModeKey,
+  GameDirection,
+  ReplayRecord,
+} from "../../../src/contracts";
 import { getBestTileValue } from "../../../src/core/engine";
 import type { AccountSessionV1 } from "../auth/account-session";
 import {
@@ -15,12 +19,23 @@ import {
   type AuthSourceRoute,
   type AuthTaskRoute,
 } from "../auth/auth-task";
-import type { StoredGameRecord } from "../data/app-database";
+import type {
+  CachedHistoryRow,
+  CloudHistoryCacheValue,
+  StoredGameRecord,
+} from "../data/app-database";
+import type {
+  CloudHistoryQuery,
+  LeaderboardMetric,
+  LeaderboardPeriod,
+  LeaderboardQuery,
+  MobileCloudData,
+} from "../data/mobile-cloud-data";
 import { mountBoard, type BoardView } from "../game/board-view";
 import {
-  buildStandard4x4ReplayTimeline,
+  buildReplayTimeline,
   resolveReplayProgress,
-  type Standard4x4ReplayTimeline,
+  type ReplayTimeline,
 } from "../game/replay-timeline";
 import type { GuestGameSession } from "../game/guest-session";
 import type { Translator } from "../i18n";
@@ -44,6 +59,7 @@ export type AuthenticatedModeEntryResult =
   | { status: "unavailable" };
 
 type RecordSort = "time" | "score" | "boardSum";
+type RecordOwner = "guest" | "account-active" | "account-deleted";
 type OnlineIntent = "auth" | "achievements" | "leaderboard";
 type RecordSourceRoute = "home" | "records";
 type ReplaySourceRoute = "result" | "detail";
@@ -79,7 +95,19 @@ export interface AppControllerOptions {
   diagnosticsEnabled?: boolean;
   onDiagnosticsEnabledChange?: (enabled: boolean) => void;
   onExportDiagnostics?: () => Promise<void>;
+  onShareReplay?: (replay: ReplayRecord) => Promise<void>;
   onAccountSessionChange?: (session: AccountSessionV1 | null) => void;
+  cloudData?: Pick<
+    MobileCloudData,
+    | "readHistoryCache"
+    | "refreshHistory"
+    | "deleteRecord"
+    | "restoreRecord"
+    | "readLeaderboardCache"
+    | "refreshLeaderboard"
+    | "readReplayCache"
+    | "refreshReplay"
+  >;
 }
 
 export interface AppController {
@@ -119,6 +147,15 @@ export function formatDuration(durationMs: number): string {
   return hours > 0
     ? `${pair(hours)}:${pair(minutes)}:${pair(remainder)}`
     : `${pair(minutes)}:${pair(remainder)}`;
+}
+
+export function formatSpeedDuration(durationMs: number): string {
+  const milliseconds = Math.max(0, Math.floor(durationMs));
+  const seconds = Math.floor(milliseconds / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  const remainderSeconds = seconds % 60;
+  const remainderMilliseconds = milliseconds % 1_000;
+  return `${String(minutes).padStart(2, "0")}:${String(remainderSeconds).padStart(2, "0")}.${String(remainderMilliseconds).padStart(3, "0")}`;
 }
 
 export function resolveStoredSaveDurationMs(save: {
@@ -201,7 +238,9 @@ class MobileAppController implements AppController {
   > | null;
   readonly #onDiagnosticsEnabledChange: (enabled: boolean) => void;
   readonly #onExportDiagnostics: () => Promise<void>;
+  readonly #onShareReplay: (replay: ReplayRecord) => Promise<void>;
   readonly #onAccountSessionChange: (session: AccountSessionV1 | null) => void;
+  readonly #cloudData: AppControllerOptions["cloudData"];
   readonly #views: Map<AppRoute, HTMLElement>;
   readonly #bottomNavigation: HTMLElement;
   readonly #status: HTMLElement;
@@ -218,10 +257,16 @@ class MobileAppController implements AppController {
   #detailSource: RecordSourceRoute = "records";
   #replaySource: ReplaySourceRoute = "detail";
   #selectedRecord: StoredGameRecord | null = null;
+  #selectedCloudRecord: CachedHistoryRow | null = null;
   #recordSort: RecordSort = "time";
+  #recordOwner: RecordOwner;
+  #cloudHistory: CloudHistoryCacheValue | null = null;
+  #cloudHistoryFetchedAt: number | null = null;
+  #cloudHistoryRequestEpoch = 0;
   #gameBoard: BoardView | null = null;
   #replayBoard: BoardView | null = null;
-  #replayTimeline: Standard4x4ReplayTimeline | null = null;
+  #replayTimeline: ReplayTimeline | null = null;
+  #replayRecord: ReplayRecord | null = null;
   #replayIndex = 0;
   #replayTimer: number | null = null;
   #gameTimer: number | null = null;
@@ -233,6 +278,14 @@ class MobileAppController implements AppController {
   #navigationKind: NavigationKind | null = null;
   #navigationTask: Promise<void> | null = null;
   #destroyed = false;
+  #leaderboardRequestEpoch = 0;
+  #leaderboardQuery: LeaderboardQuery = {
+    modeKey: "standard_4x4_pow2_no_undo",
+    metric: "score",
+    period: "all",
+    targetTile: 2048,
+    page: 1,
+  };
 
   constructor(options: AppControllerOptions) {
     this.#root = options.root;
@@ -254,8 +307,14 @@ class MobileAppController implements AppController {
       options.onDiagnosticsEnabledChange ?? (() => undefined);
     this.#onExportDiagnostics =
       options.onExportDiagnostics ?? (() => Promise.resolve());
+    this.#onShareReplay =
+      options.onShareReplay ?? (() => Promise.resolve());
     this.#onAccountSessionChange =
       options.onAccountSessionChange ?? (() => undefined);
+    this.#cloudData = options.cloudData;
+    this.#recordOwner = options.initialAccountSession
+      ? "account-active"
+      : "guest";
     this.#numberFormat = new Intl.NumberFormat(options.locale);
     this.#dateFormat = new Intl.DateTimeFormat(options.locale, {
       month: "short",
@@ -279,7 +338,7 @@ class MobileAppController implements AppController {
       const target = event.target;
       if (!(target instanceof Element)) return;
       const trigger = target.closest<HTMLElement>(
-        "[data-consent], [data-nav], [data-action], [data-mode-card], [data-record-id]",
+        "[data-consent], [data-nav], [data-action], [data-mode-card], [data-record-id], [data-cloud-record-id]",
       );
       if (!trigger || !this.#root.contains(trigger)) return;
       void this.#dispatch(trigger).catch((error: unknown) => {
@@ -301,6 +360,22 @@ class MobileAppController implements AppController {
         if (value === "time" || value === "score" || value === "boardSum") {
           this.#recordSort = value;
           this.#renderRecordSummaries();
+          if (this.#recordOwner !== "guest") void this.#loadCloudHistory();
+        }
+      }
+      if (target.matches("[data-record-owner]")) {
+        const value = target.value;
+        if (
+          value === "guest" ||
+          value === "account-active" ||
+          value === "account-deleted"
+        ) {
+          this.#recordOwner = value;
+          this.#cloudHistoryRequestEpoch += 1;
+          this.#cloudHistory = null;
+          this.#cloudHistoryFetchedAt = null;
+          this.#renderRecordSummaries();
+          if (value !== "guest") void this.#loadCloudHistory();
         }
       }
       if (
@@ -312,6 +387,10 @@ class MobileAppController implements AppController {
       if (target.matches("[data-replay-progress]")) {
         this.#stopReplay();
         this.#setReplayIndex(Number.parseInt(target.value, 10));
+      }
+      if (target.matches("[data-leaderboard-filter]")) {
+        this.#updateLeaderboardQuery();
+        void this.#loadLeaderboard();
       }
     };
     this.#onSubmit = (event) => {
@@ -538,6 +617,15 @@ class MobileAppController implements AppController {
       return;
     }
 
+    const cloudRecordId = trigger.dataset.cloudRecordId;
+    if (cloudRecordId) {
+      this.#openCloudRecord(
+        cloudRecordId,
+        this.#route === "home" ? "home" : "records",
+      );
+      return;
+    }
+
     if (trigger.hasAttribute("data-mode-card")) {
       const mode = trigger.dataset.mode;
       if (mode === "standard_4x4_pow2_no_undo") await this.#enterStandard();
@@ -618,10 +706,15 @@ class MobileAppController implements AppController {
         this.#toggleReplay();
         break;
       case "share-replay":
-        this.#showStatus(this.#t("status.shareDeferred"), "info", 4_000);
+        await this.#shareReplay();
         break;
       case "delete-record":
-        this.#openModal(requireElement(this.#root, "[data-delete-dialog]"));
+        if (this.#selectedCloudRecord?.deletedAt) {
+          await this.#deleteSelectedRecord();
+        } else {
+          this.#prepareDeleteDialog();
+          this.#openModal(requireElement(this.#root, "[data-delete-dialog]"));
+        }
         break;
       case "cancel-delete":
         this.#closeNamedDialog("[data-delete-dialog]");
@@ -632,6 +725,9 @@ class MobileAppController implements AppController {
         break;
       case "open-leaderboard":
         this.#requestOnline("leaderboard");
+        break;
+      case "close-leaderboard":
+        this.#closeNamedDialog("[data-leaderboard-dialog]");
         break;
       case "open-auth-gate":
         this.#requestAuthentication("me", null);
@@ -737,6 +833,9 @@ class MobileAppController implements AppController {
     if (route === "home" || route === "modes" || route === "records") {
       this.#renderRecordSummaries();
     }
+    if (route === "records" && this.#recordOwner !== "guest") {
+      void this.#loadCloudHistory();
+    }
     if (route === "game") this.#startGameTimer();
     else this.#stopGameTimer();
     this.#syncShellState();
@@ -810,7 +909,186 @@ class MobileAppController implements AppController {
       this.#openAuthentication();
       return;
     }
+    if (_intent === "leaderboard") {
+      this.#openLeaderboard();
+      return;
+    }
     this.#openModal(requireElement(this.#root, "[data-auth-gate]"));
+  }
+
+  #openLeaderboard(): void {
+    const activeMode = this.#runtime.activeSession?.state.modeKey;
+    if (activeMode && isAuthenticatedModeKey(activeMode)) {
+      this.#leaderboardQuery = {
+        ...this.#leaderboardQuery,
+        modeKey: activeMode,
+        metric: "score",
+      };
+    } else if (activeMode === "standard_4x4_pow2_no_undo") {
+      this.#leaderboardQuery = {
+        ...this.#leaderboardQuery,
+        modeKey: activeMode,
+      };
+    }
+    this.#syncLeaderboardFilters();
+    this.#openModal(
+      requireElement<HTMLDialogElement>(
+        this.#root,
+        "[data-leaderboard-dialog]",
+      ),
+    );
+    void this.#loadLeaderboard();
+  }
+
+  #syncLeaderboardFilters(): void {
+    const mode = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-mode]",
+    );
+    const metric = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-metric]",
+    );
+    const period = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-period]",
+    );
+    const target = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-target]",
+    );
+    mode.value = this.#leaderboardQuery.modeKey;
+    metric.value = this.#leaderboardQuery.metric;
+    period.value = this.#leaderboardQuery.period;
+    target.value = String(this.#leaderboardQuery.targetTile ?? 2048);
+    const speedAvailable =
+      this.#leaderboardQuery.modeKey === "standard_4x4_pow2_no_undo";
+    metric.querySelector<HTMLOptionElement>('option[value="speed"]')!.disabled =
+      !speedAvailable;
+    target.closest<HTMLElement>("label")!.hidden =
+      !speedAvailable || this.#leaderboardQuery.metric !== "speed";
+  }
+
+  #updateLeaderboardQuery(): void {
+    const mode = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-mode]",
+    ).value;
+    const metric = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-metric]",
+    ).value;
+    const period = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-leaderboard-period]",
+    ).value;
+    const targetTile = Number(
+      requireElement<HTMLSelectElement>(
+        this.#root,
+        "[data-leaderboard-target]",
+      ).value,
+    );
+    if (!isAuthenticatedModeKey(mode) && mode !== "standard_4x4_pow2_no_undo") {
+      return;
+    }
+    const normalizedMetric: LeaderboardMetric =
+      mode === "standard_4x4_pow2_no_undo" && metric === "speed"
+        ? "speed"
+        : "score";
+    const normalizedPeriod: LeaderboardPeriod =
+      period === "day" || period === "week" || period === "month"
+        ? period
+        : "all";
+    this.#leaderboardQuery = {
+      modeKey: mode,
+      metric: normalizedMetric,
+      period: normalizedPeriod,
+      targetTile: [2048, 4096, 8192, 16384, 32768].includes(targetTile)
+        ? targetTile
+        : 2048,
+      page: 1,
+    };
+    this.#syncLeaderboardFilters();
+  }
+
+  async #loadLeaderboard(): Promise<void> {
+    const epoch = ++this.#leaderboardRequestEpoch;
+    const dialog = requireElement<HTMLDialogElement>(
+      this.#root,
+      "[data-leaderboard-dialog]",
+    );
+    if (!this.#cloudData || !dialog.open) return;
+    const query = { ...this.#leaderboardQuery };
+    const status = requireElement<HTMLElement>(
+      this.#root,
+      "[data-leaderboard-status]",
+    );
+    status.textContent = this.#t("leaderboard.loading");
+    const cached = await this.#cloudData.readLeaderboardCache(query).catch(
+      () => null,
+    );
+    if (epoch !== this.#leaderboardRequestEpoch || !dialog.open) return;
+    if (cached) {
+      this.#renderLeaderboard(cached.value);
+      status.textContent = this.#t("leaderboard.cached").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(cached.fetchedAt)),
+      );
+    }
+    try {
+      const refreshed = await this.#cloudData.refreshLeaderboard(query);
+      if (epoch !== this.#leaderboardRequestEpoch || !dialog.open) return;
+      this.#renderLeaderboard(refreshed.value);
+      status.textContent = this.#t("leaderboard.updated").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(refreshed.fetchedAt)),
+      );
+    } catch {
+      if (epoch !== this.#leaderboardRequestEpoch || !dialog.open) return;
+      status.textContent = cached
+        ? this.#t("leaderboard.offlineCached")
+        : this.#t("leaderboard.unavailable");
+      if (!cached) this.#renderLeaderboard({ rows: [] });
+    }
+  }
+
+  #renderLeaderboard(value: {
+    rows: Array<{
+      rank: number;
+      nickname: string;
+      score: number | null;
+      speedMs: number | null;
+      achievedAt: string;
+    }>;
+  }): void {
+    const list = requireElement<HTMLElement>(
+      this.#root,
+      "[data-leaderboard-list]",
+    );
+    const fragment = document.createDocumentFragment();
+    for (const row of value.rows) {
+      const item = document.createElement("div");
+      item.className = "leaderboard-row";
+      const rank = document.createElement("strong");
+      rank.className = "leaderboard-row__rank";
+      rank.textContent = `#${this.#numberFormat.format(row.rank)}`;
+      const player = document.createElement("span");
+      player.className = "leaderboard-row__player";
+      player.textContent = row.nickname;
+      const result = document.createElement("span");
+      result.className = "leaderboard-row__result";
+      result.textContent =
+        this.#leaderboardQuery.metric === "speed"
+          ? formatSpeedDuration(row.speedMs ?? 0)
+          : this.#numberFormat.format(row.score ?? 0);
+      item.append(rank, player, result);
+      fragment.append(item);
+    }
+    list.replaceChildren(fragment);
+    requireElement<HTMLElement>(
+      this.#root,
+      "[data-leaderboard-empty]",
+    ).hidden = value.rows.length > 0;
   }
 
   async #requestAuthenticatedMode(
@@ -882,6 +1160,8 @@ class MobileAppController implements AppController {
       return;
     }
     this.#onAccountSessionChange(effect.session);
+    this.#recordOwner = "account-active";
+    this.#renderRecordSummaries();
     if (effect.targetMode) {
       await this.#enterAccountMode(
         effect.targetMode,
@@ -1268,6 +1548,7 @@ class MobileAppController implements AppController {
           return;
         }
         this.#selectedRecord = record;
+        this.#selectedCloudRecord = null;
         this.#detailSource = source;
         this.#renderDetail(record);
         this.#showRoute("detail");
@@ -1277,7 +1558,72 @@ class MobileAppController implements AppController {
     });
   }
 
+  #openCloudRecord(recordId: string, source: RecordSourceRoute): void {
+    const record = this.#cloudHistory?.rows.find((row) => row.id === recordId);
+    if (!record) return;
+    this.#selectedRecord = null;
+    this.#selectedCloudRecord = record;
+    this.#detailSource = source;
+    this.#renderCloudDetail(record);
+    this.#showRoute("detail");
+  }
+
+  #prepareDeleteDialog(): void {
+    const cloud = this.#selectedCloudRecord;
+    this.#setText(
+      "[data-delete-title]",
+      cloud ? this.#t("delete.cloudTitle") : this.#t("delete.title"),
+    );
+    this.#setText(
+      "[data-delete-body]",
+      cloud ? this.#t("delete.cloudBody") : this.#t("delete.body"),
+    );
+    this.#setText(
+      '[data-action="confirm-delete"]',
+      cloud ? this.#t("delete.cloudConfirm") : this.#t("delete.confirm"),
+    );
+  }
+
   #deleteSelectedRecord(): Promise<void> {
+    const cloud = this.#selectedCloudRecord;
+    const session = this.#authTask.session;
+    if (cloud && session && this.#cloudData) {
+      return this.#runNavigation("delete-record", async (epoch) => {
+        try {
+          if (cloud.deletedAt) {
+            await this.#cloudData!.restoreRecord({
+              userId: session.user.id,
+              recordId: cloud.id,
+            });
+          } else {
+            await this.#cloudData!.deleteRecord({
+              userId: session.user.id,
+              recordId: cloud.id,
+            });
+          }
+          if (!this.#isNavigationCurrent(epoch)) return;
+          this.#selectedCloudRecord = null;
+          this.#cloudHistory = null;
+          this.#cloudHistoryFetchedAt = null;
+          this.#showRoute(this.#detailSource);
+          this.#showStatus(
+            cloud.deletedAt
+              ? this.#t("status.restored")
+              : this.#t("status.cloudDeleted"),
+            "success",
+            4_000,
+          );
+        } catch {
+          if (this.#isNavigationCurrent(epoch)) {
+            this.#showStatus(
+              this.#t("status.cloudActionFailed"),
+              "error",
+              5_000,
+            );
+          }
+        }
+      });
+    }
     const record = this.#selectedRecord;
     if (!record) return Promise.resolve();
     return this.#runNavigation("delete-record", async (epoch) => {
@@ -1285,6 +1631,7 @@ class MobileAppController implements AppController {
         await this.#runtime.deleteGuestRecord(record.clientRecordId);
         if (!this.#isNavigationCurrent(epoch)) return;
         this.#selectedRecord = null;
+        this.#selectedCloudRecord = null;
         this.#renderRecordSummaries();
         this.#showRoute(this.#detailSource);
         this.#showStatus(this.#t("status.deleted"), "success", 3_000);
@@ -1295,43 +1642,148 @@ class MobileAppController implements AppController {
   }
 
   async #openReplay(source: ReplaySourceRoute): Promise<void> {
-    const record = this.#selectedRecord;
-    if (!record) return;
+    const localRecord = this.#selectedRecord;
+    const cloudRecord = this.#selectedCloudRecord;
     try {
-      const timeline = buildStandard4x4ReplayTimeline({
-        replay: record.replay,
-        finalSnapshot: record.finalSnapshot,
-      });
-      this.#clearReplaySurface();
-      this.#replayTimeline = timeline;
-      this.#replaySource = source;
-      this.#replayIndex = 0;
-      const boardRoot = requireElement<HTMLElement>(
-        this.#root,
-        "[data-replay-board-root]",
+      if (localRecord) {
+        this.#presentReplay(
+          localRecord.replay,
+          buildReplayTimeline({
+            replay: localRecord.replay,
+            finalSnapshot: localRecord.finalSnapshot,
+          }),
+          source,
+        );
+        return;
+      }
+      if (!cloudRecord || cloudRecord.deletedAt) return;
+      this.#showStatus(this.#t("status.replayLoading"), "info", 0);
+      const replay = await this.#loadCloudReplay(cloudRecord);
+      if (
+        this.#route !== "detail" ||
+        this.#selectedCloudRecord?.id !== cloudRecord.id
+      ) {
+        return;
+      }
+      this.#presentReplay(
+        replay,
+        this.#buildCloudReplayTimeline(cloudRecord, replay),
+        source,
       );
-      this.#replayBoard = mountBoard(
-        boardRoot,
-        {
-          board: timeline.frames[0]?.board ?? record.finalSnapshot.state.board,
-        },
-        {
-          isInputLocked: () => true,
-          onDirection: () => undefined,
-          reducedMotion: () => true,
-          cellLabel: (value, position) => this.#boardCellLabel(value, position),
-        },
-      );
-      const range = requireElement<HTMLInputElement>(
-        this.#root,
-        "[data-replay-progress]",
-      );
-      range.max = String(Math.max(0, timeline.frames.length - 1));
-      this.#setReplayIndex(0);
-      this.#showRoute("replay");
+      this.#hideStatus();
     } catch (error) {
-      this.#showStatus(this.#t("status.replayError"), "error", 0);
-      this.#status.dataset.errorCode = errorCode(error);
+      const code = errorCode(error);
+      this.#showStatus(
+        this.#t(
+          code === "cloud_replay_offline"
+            ? "status.replayOffline"
+            : "status.replayError",
+        ),
+        "error",
+        0,
+      );
+      this.#status.dataset.errorCode = code;
+    }
+  }
+
+  async #loadCloudReplay(record: CachedHistoryRow): Promise<ReplayRecord> {
+    const session = this.#authTask.session;
+    if (!session || !this.#cloudData) throw new Error("cloud_replay_unavailable");
+    const input = { userId: session.user.id, recordId: record.id };
+    const cached = await this.#cloudData.readReplayCache(input).catch(
+      () => null,
+    );
+    if (cached) {
+      if (this.#networkMode === "online") {
+        void this.#cloudData.refreshReplay(input).catch(() => undefined);
+      }
+      return cached.value;
+    }
+    if (this.#networkMode !== "online") {
+      throw new Error("cloud_replay_offline");
+    }
+    return (await this.#cloudData.refreshReplay(input)).value;
+  }
+
+  #buildCloudReplayTimeline(
+    record: CachedHistoryRow,
+    replay: ReplayRecord,
+  ): ReplayTimeline {
+    const timeline = buildReplayTimeline({ replay });
+    const finalFrame = timeline.frames.at(-1);
+    if (!finalFrame) throw new Error("cloud_replay_empty");
+    const boardSum = finalFrame.board
+      .flat()
+      .reduce((total, value) => total + value, 0);
+    if (
+      timeline.modeKey !== record.modeKey ||
+      finalFrame.score !== record.score ||
+      finalFrame.steps !== record.steps ||
+      finalFrame.durationMs !== record.durationMs ||
+      getBestTileValue(finalFrame.board) !== record.bestTile ||
+      boardSum !== record.boardSum
+    ) {
+      throw new Error("cloud_replay_summary_mismatch");
+    }
+    return timeline;
+  }
+
+  #presentReplay(
+    replay: ReplayRecord,
+    timeline: ReplayTimeline,
+    source: ReplaySourceRoute,
+  ): void {
+    const initialFrame = timeline.frames[0];
+    if (!initialFrame) throw new Error("replay_timeline_empty");
+    this.#clearReplaySurface();
+    this.#replayTimeline = timeline;
+    this.#replayRecord = replay;
+    this.#replaySource = source;
+    this.#replayIndex = 0;
+    this.#setText("#replay-title", this.#modeTitle(timeline.modeKey));
+    const boardRoot = requireElement<HTMLElement>(
+      this.#root,
+      "[data-replay-board-root]",
+    );
+    boardRoot.setAttribute(
+      "aria-label",
+      `${this.#modeTitle(timeline.modeKey)} · ${this.#t("replay.title")}`,
+    );
+    this.#replayBoard = mountBoard(
+      boardRoot,
+      { board: initialFrame.board },
+      {
+        isInputLocked: () => true,
+        onDirection: () => undefined,
+        reducedMotion: () => true,
+        cellLabel: (value, position) => this.#boardCellLabel(value, position),
+      },
+    );
+    const range = requireElement<HTMLInputElement>(
+      this.#root,
+      "[data-replay-progress]",
+    );
+    range.max = String(Math.max(0, timeline.frames.length - 1));
+    this.#setReplayIndex(0);
+    this.#showRoute("replay");
+  }
+
+  async #shareReplay(): Promise<void> {
+    try {
+      let replay = this.#route === "replay" ? this.#replayRecord : null;
+      replay ??= this.#selectedRecord?.replay ?? null;
+      if (!replay && this.#selectedCloudRecord?.deletedAt === null) {
+        const cloud = this.#selectedCloudRecord;
+        if (cloud) {
+          replay = await this.#loadCloudReplay(cloud);
+          this.#buildCloudReplayTimeline(cloud, replay);
+        }
+      }
+      if (!replay) throw new Error("replay_share_unavailable");
+      await this.#onShareReplay(replay);
+      this.#showStatus(this.#t("status.replayShared"), "success", 4_000);
+    } catch {
+      this.#showStatus(this.#t("status.replayShareFailed"), "error", 5_000);
     }
   }
 
@@ -1445,14 +1897,21 @@ class MobileAppController implements AppController {
       this.#runtime.guestRecords,
       this.#recordSort,
     );
+    this.#syncRecordOwnerFilter();
     const recordList =
       this.#root.querySelector<HTMLElement>("[data-record-list]");
     const recordEmpty = this.#root.querySelector<HTMLElement>(
       "[data-record-empty]",
     );
     if (recordList && recordEmpty) {
-      this.#renderRecordCards(recordList, records);
-      recordEmpty.hidden = records.length > 0;
+      if (this.#recordOwner === "guest") {
+        this.#renderRecordCards(recordList, records);
+        recordEmpty.hidden = records.length > 0;
+      } else {
+        const cloudRows = this.#cloudHistory?.rows ?? [];
+        this.#renderCloudRecordCards(recordList, cloudRows);
+        recordEmpty.hidden = cloudRows.length > 0;
+      }
     }
     const recentList = this.#root.querySelector<HTMLElement>(
       "[data-home-recent-records]",
@@ -1463,6 +1922,91 @@ class MobileAppController implements AppController {
     if (recentList && recentEmpty) {
       this.#renderRecordCards(recentList, records.slice(0, 3));
       recentEmpty.hidden = records.length > 0;
+    }
+  }
+
+  #syncRecordOwnerFilter(): void {
+    const session = this.#authTask.session;
+    const select = requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-record-owner]",
+    );
+    for (const option of select.querySelectorAll<HTMLOptionElement>(
+      'option[value^="account-"]',
+    )) {
+      option.hidden = session === null;
+      option.disabled = session === null;
+    }
+    if (!session && this.#recordOwner !== "guest") {
+      this.#recordOwner = "guest";
+      this.#cloudHistory = null;
+      this.#cloudHistoryFetchedAt = null;
+    }
+    select.value = this.#recordOwner;
+    const status = requireElement<HTMLElement>(
+      this.#root,
+      "[data-cloud-history-status]",
+    );
+    status.hidden = this.#recordOwner === "guest";
+    if (this.#recordOwner !== "guest" && this.#cloudHistoryFetchedAt !== null) {
+      status.textContent = this.#t("records.cachedAt").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(this.#cloudHistoryFetchedAt)),
+      );
+    }
+  }
+
+  #cloudHistoryQuery(): CloudHistoryQuery | null {
+    const session = this.#authTask.session;
+    if (!session || this.#recordOwner === "guest") return null;
+    return {
+      userId: session.user.id,
+      status: this.#recordOwner === "account-deleted" ? "deleted" : "active",
+      sort:
+        this.#recordSort === "boardSum" ? "board_sum" : this.#recordSort,
+    };
+  }
+
+  async #loadCloudHistory(): Promise<void> {
+    const query = this.#cloudHistoryQuery();
+    if (!query || !this.#cloudData) return;
+    const epoch = ++this.#cloudHistoryRequestEpoch;
+    const status = requireElement<HTMLElement>(
+      this.#root,
+      "[data-cloud-history-status]",
+    );
+    status.hidden = false;
+    status.textContent = this.#t("records.loadingCloud");
+    const cached = await this.#cloudData.readHistoryCache(query).catch(
+      () => null,
+    );
+    if (epoch !== this.#cloudHistoryRequestEpoch) return;
+    if (cached) {
+      this.#cloudHistory = cached.value;
+      this.#cloudHistoryFetchedAt = cached.fetchedAt;
+      this.#renderRecordSummaries();
+    }
+    if (this.#networkMode !== "online") {
+      status.textContent = cached
+        ? this.#t("records.offlineCached")
+        : this.#t("records.offlineEmpty");
+      return;
+    }
+    try {
+      const refreshed = await this.#cloudData.refreshHistory(query);
+      if (epoch !== this.#cloudHistoryRequestEpoch) return;
+      this.#cloudHistory = refreshed.value;
+      this.#cloudHistoryFetchedAt = refreshed.fetchedAt;
+      this.#renderRecordSummaries();
+      status.textContent = this.#t("records.updatedAt").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(refreshed.fetchedAt)),
+      );
+    } catch {
+      if (epoch !== this.#cloudHistoryRequestEpoch) return;
+      status.textContent = cached
+        ? this.#t("records.offlineCached")
+        : this.#t("records.cloudUnavailable");
     }
   }
 
@@ -1495,6 +2039,32 @@ class MobileAppController implements AppController {
       copy.append(title, meta);
       const time = document.createElement("time");
       time.dateTime = new Date(record.endedAt).toISOString();
+      time.textContent = this.#dateFormat.format(new Date(record.endedAt));
+      button.append(copy, time);
+      fragment.append(button);
+    }
+    container.replaceChildren(fragment);
+  }
+
+  #renderCloudRecordCards(
+    container: HTMLElement,
+    records: readonly CachedHistoryRow[],
+  ): void {
+    const fragment = document.createDocumentFragment();
+    for (const record of records) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "record-card";
+      button.dataset.cloudRecordId = record.id;
+      const copy = document.createElement("span");
+      copy.className = "record-card__copy";
+      const title = document.createElement("strong");
+      title.textContent = `${this.#numberFormat.format(record.score)} ${this.#t("game.score")}`;
+      const meta = document.createElement("small");
+      meta.textContent = `${this.#modeTitle(record.modeKey)} · ${record.source === "normal" ? this.#t("records.normalSource") : this.#t("records.rankedSource")}`;
+      copy.append(title, meta);
+      const time = document.createElement("time");
+      time.dateTime = record.endedAt;
       time.textContent = this.#dateFormat.format(new Date(record.endedAt));
       button.append(copy, time);
       fragment.append(button);
@@ -1771,6 +2341,8 @@ class MobileAppController implements AppController {
   }
 
   #renderDetail(record: StoredGameRecord): void {
+    this.#setText("#detail-title", this.#modeTitle(record.modeKey));
+    this.#setText(".result-score--compact span", this.#t("detail.localRecord"));
     this.#setText(
       "[data-detail-score]",
       this.#numberFormat.format(record.score),
@@ -1788,6 +2360,63 @@ class MobileAppController implements AppController {
       "[data-detail-steps]",
       this.#numberFormat.format(record.steps),
     );
+    requireElement<HTMLButtonElement>(
+      this.#root,
+      '[data-action="open-replay"]',
+    ).hidden = false;
+    requireElement<HTMLButtonElement>(
+      this.#root,
+      "[data-detail-share-replay]",
+    ).hidden = false;
+    const deleteButton = requireElement<HTMLButtonElement>(
+      this.#root,
+      '[data-action="delete-record"]',
+    );
+    deleteButton.hidden = false;
+    deleteButton.textContent = this.#t("detail.delete");
+  }
+
+  #renderCloudDetail(record: CachedHistoryRow): void {
+    this.#setText("#detail-title", this.#modeTitle(record.modeKey));
+    this.#setText(
+      ".result-score--compact span",
+      record.deletedAt
+        ? this.#t("detail.deletedCloudRecord")
+        : this.#t("detail.cloudRecord"),
+    );
+    this.#setText(
+      "[data-detail-score]",
+      this.#numberFormat.format(record.score),
+    );
+    this.#setText(
+      "[data-detail-best-tile]",
+      this.#numberFormat.format(record.bestTile),
+    );
+    this.#setText(
+      "[data-detail-board-sum]",
+      this.#numberFormat.format(record.boardSum),
+    );
+    this.#setText("[data-detail-time]", formatDuration(record.durationMs));
+    this.#setText(
+      "[data-detail-steps]",
+      this.#numberFormat.format(record.steps),
+    );
+    requireElement<HTMLButtonElement>(
+      this.#root,
+      '[data-action="open-replay"]',
+    ).hidden = record.deletedAt !== null || !record.replayAvailable;
+    requireElement<HTMLButtonElement>(
+      this.#root,
+      "[data-detail-share-replay]",
+    ).hidden = record.deletedAt !== null || !record.replayAvailable;
+    const deleteButton = requireElement<HTMLButtonElement>(
+      this.#root,
+      '[data-action="delete-record"]',
+    );
+    deleteButton.hidden = this.#networkMode !== "online";
+    deleteButton.textContent = record.deletedAt
+      ? this.#t("detail.restore")
+      : this.#t("detail.deleteCloud");
   }
 
   #updateGameReadouts(): void {
@@ -1850,6 +2479,7 @@ class MobileAppController implements AppController {
     this.#replayBoard?.destroy();
     this.#replayBoard = null;
     this.#replayTimeline = null;
+    this.#replayRecord = null;
     this.#replayIndex = 0;
   }
 

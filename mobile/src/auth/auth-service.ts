@@ -111,6 +111,7 @@ export interface MobileAuthService {
   requestAccountDeletion(input: {
     password: string;
   }): Promise<AccountDeletionReceipt>;
+  requestAccount(path: string, init: RequestInit): Promise<JsonRecord>;
 }
 
 const AUTH_REFRESH_WINDOW_SECONDS = 5 * 60;
@@ -567,6 +568,12 @@ export function createMobileAuthService(
         }),
       );
       return parseAccountDeletionReceipt(body);
+    },
+    requestAccount(path, init) {
+      if (!path.startsWith("/") || path.length > 2048) {
+        throw new MobileAuthError("invalid_input");
+      }
+      return requestAuthenticated(path, init);
     },
   };
 }

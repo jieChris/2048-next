@@ -22,10 +22,12 @@ import {
   type AccountDeletionReceipt,
 } from "./auth/account-deletion-receipt";
 import { AppDatabase } from "./data/app-database";
+import { MobileCloudData } from "./data/mobile-cloud-data";
 import { ClientDiagnostics } from "./diagnostics/client-diagnostics";
 import { createTranslator, resolveSystemLocale } from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
 import { saveDiagnosticExport } from "./platform/diagnostic-export";
+import { saveReplayRecord } from "./platform/replay-share";
 import { createPlatformSecureStorage } from "./platform/secure-storage";
 import {
   createPreviewPrivacyRecord,
@@ -213,6 +215,12 @@ async function start(): Promise<void> {
     });
     activeRuntime = runtime;
     diagnosticsAccountSession = runtime.accountSession;
+    const cloudData = new MobileCloudData({
+      database,
+      apiBase: MOBILE_BUILD_FLAGS.apiBase,
+      getAuthService,
+      timeoutMs: 8_000,
+    });
     if (
       deletionReceipt &&
       Date.parse(deletionReceipt.dueAt) <= Date.now() &&
@@ -266,9 +274,11 @@ async function start(): Promise<void> {
       async onExportDiagnostics() {
         await saveDiagnosticExport(await diagnostics.buildExport());
       },
+      onShareReplay: saveReplayRecord,
       onAccountSessionChange(session) {
         diagnosticsAccountSession = session;
       },
+      cloudData,
     });
     appRoot.removeAttribute("aria-busy");
 
