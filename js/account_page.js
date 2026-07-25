@@ -1053,16 +1053,16 @@
     scoreHeader.textContent = metric === "score" ? t("colScore") : (metric === "speed" ? t("colTime") : t("colMinSteps"));
   }
 
+  function resolveBackendLeaderboardRank(item) {
+    var rank = Math.floor(Number(item && item.rank) || 0);
+    return rank > 0 ? rank : 0;
+  }
+
   function renderBoardList(resultList, pageLike, pageSizeLike, metricLike, stateLike) {
     var host = byId("account-board-list");
     if (!host) return;
     host.innerHTML = "";
     var renderState = toText(stateLike).toLowerCase() === "error" ? "error" : "ready";
-    var safePage = Math.floor(Number(pageLike) || 1);
-    if (safePage <= 0) safePage = 1;
-    var safePageSize = Math.floor(Number(pageSizeLike) || DEFAULT_LIMIT);
-    if (safePageSize <= 0) safePageSize = DEFAULT_LIMIT;
-    var rankOffset = (safePage - 1) * safePageSize;
 
     if (!Array.isArray(resultList) || resultList.length === 0) {
       var empty = global.document.createElement("div");
@@ -1085,18 +1085,18 @@
       var item = resultList[i] || {};
       var row = global.document.createElement("div");
       row.className = "account-board-row";
-      var absoluteRank = rankOffset + i + 1;
-      if (absoluteRank === 1) {
+      var backendRank = resolveBackendLeaderboardRank(item);
+      if (backendRank === 1) {
         row.classList.add("is-rank-top1");
-      } else if (absoluteRank === 2) {
+      } else if (backendRank === 2) {
         row.classList.add("is-rank-top2");
-      } else if (absoluteRank === 3) {
+      } else if (backendRank === 3) {
         row.classList.add("is-rank-top3");
       }
 
       var rank = global.document.createElement("span");
       rank.className = "account-rank";
-      rank.textContent = String(absoluteRank);
+      rank.textContent = backendRank ? String(backendRank) : "--";
       row.appendChild(rank);
 
       var name = global.document.createElement("span");

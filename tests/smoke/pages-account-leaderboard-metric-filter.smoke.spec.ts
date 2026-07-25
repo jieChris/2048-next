@@ -33,6 +33,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
               success: true,
               data: [
                 {
+                  rank: 42,
                   user_id: 1,
                   nickname: "Alice",
                   score: 4096,
@@ -68,6 +69,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const initialSnapshot = await page.evaluate(() => {
       const value = (document.querySelector("#account-board-list .account-score") as HTMLElement | null)?.textContent || "";
+      const rank = (document.querySelector("#account-board-list .account-rank") as HTMLElement | null)?.textContent || "";
       const date = (document.querySelector("#account-board-list .account-date") as HTMLElement | null)?.textContent || "";
       const options = Array.from(document.querySelectorAll("#account-board-metric option")).map((option) =>
         (option as HTMLOptionElement).value
@@ -100,6 +102,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const tools = document.querySelector(".account-board-tools") as HTMLElement | null;
       const refresh = document.querySelector("#account-board-refresh") as HTMLElement | null;
       return {
+        rank,
         value,
         date,
         options,
@@ -124,6 +127,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
+    expect(initialSnapshot.rank).toBe("42");
     expect(initialSnapshot.value).toBe("4096");
     expect(initialSnapshot.date).toBe("2026-03-25 18:00:00");
     expect(initialSnapshot.date).not.toContain("T");

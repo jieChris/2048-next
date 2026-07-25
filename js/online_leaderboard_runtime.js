@@ -249,6 +249,10 @@
     return parsed > 0 ? parsed : 0;
   }
 
+  function resolveBackendLeaderboardRank(item) {
+    return parsePositiveInt(item && item.rank);
+  }
+
   function buildUserProfileUrl(userId, nickname) {
     var safeUserId = parsePositiveInt(userId);
     if (!safeUserId) return "";
@@ -1611,13 +1615,14 @@ function shouldAutoLoadOnlineLeaderboard() {
       var item = rows[i] || {};
       var displayParts = resolveLeaderboardDisplayParts(item, lang);
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
+      var backendRank = resolveBackendLeaderboardRank(item);
       var rankClassName = "";
-      if (i === 0) rankClassName = "is-top-1";
-      else if (i === 1) rankClassName = "is-top-2";
-      else if (i === 2) rankClassName = "is-top-3";
+      if (backendRank === 1) rankClassName = "is-top-1";
+      else if (backendRank === 2) rankClassName = "is-top-2";
+      else if (backendRank === 3) rankClassName = "is-top-3";
       updateTimerLeaderboardRowNode(
         rowNodes[rowCursor],
-        String(i + 1),
+        backendRank ? String(backendRank) : "--",
         displayParts.text,
         "",
         rankClassName,
@@ -1825,8 +1830,9 @@ function shouldAutoLoadOnlineLeaderboard() {
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i] || {};
       if (String(item.user_id || "") === userId) {
+        var backendRank = resolveBackendLeaderboardRank(item);
         return {
-          rank: i + 1,
+          rank: backendRank || "--",
           user_id: Math.floor(Number(item.user_id) || 0),
           score: Math.floor(Number(item.score) || 0),
           nickname: toText(item.nickname || getNickname() || "")
@@ -3338,7 +3344,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i] || {};
       var row = createEl("div", "mode-intro-leaderboard-row", "");
-      row.appendChild(createEl("span", "mode-intro-leaderboard-rank", "#" + String(i + 1)));
+      var backendRank = resolveBackendLeaderboardRank(item);
+      row.appendChild(createEl("span", "mode-intro-leaderboard-rank", backendRank ? "#" + String(backendRank) : "#--"));
       var profileUrl = buildUserProfileUrl(item.user_id, item.nickname);
       var displayNickname = normalizeLeaderboardNickname(item.nickname) || (getLanguage() === "en" ? "Anonymous" : "匿名");
       if (profileUrl) {

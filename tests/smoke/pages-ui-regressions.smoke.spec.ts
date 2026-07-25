@@ -796,9 +796,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         body: JSON.stringify({
           success: true,
           data: [
-            { user_id: 7, nickname: "Alice", score: 4096 },
-            { user_id: 8, nickname: "Bob", score: 2048 },
-            { user_id: 9, nickname: "Carol", score: 1024 }
+            { rank: 4, user_id: 7, nickname: "Alice", score: 4096 },
+            { rank: 7, user_id: 8, nickname: "Bob", score: 2048 },
+            { rank: 9, user_id: 9, nickname: "Carol", score: 1024 }
           ]
         })
       });
@@ -941,11 +941,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.firstNameBackground).toBe("rgb(238, 228, 218)");
     expect(snapshot.firstNameColor).toBe("rgb(119, 110, 101)");
     expect(snapshot.selfNameBackground).toBe("rgb(244, 234, 223)");
-    expect(snapshot.firstRankText).toBe("1");
+    expect(snapshot.firstRankText).toBe("4");
     expect(snapshot.firstNameText).toBe("Alice-4096");
     expect(snapshot.firstNameText).toContain("4096");
     expect(snapshot.firstNameText).toContain("Alice");
-    expect(snapshot.selfRankText).toBe("2");
+    expect(snapshot.selfRankText).toBe("7");
     expect(snapshot.selfNameText).toBe("Bob-2048");
     expect(snapshot.firstNameWidth).toBe(187);
     expect(snapshot.selfNameWidth).toBe(187);
