@@ -15,14 +15,17 @@ import {
 } from "./app/app-runtime";
 import { renderAppTemplate } from "./app/templates";
 import type { MobileAuthService } from "./auth/auth-service";
+import type { AccountSessionV1 } from "./auth/account-session";
 import {
   clearAccountDeletionReceipt,
   loadAccountDeletionReceipt,
   type AccountDeletionReceipt,
 } from "./auth/account-deletion-receipt";
 import { AppDatabase } from "./data/app-database";
+import { ClientDiagnostics } from "./diagnostics/client-diagnostics";
 import { createTranslator, resolveSystemLocale } from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
+import { saveDiagnosticExport } from "./platform/diagnostic-export";
 import { createPlatformSecureStorage } from "./platform/secure-storage";
 import {
   createPreviewPrivacyRecord,
@@ -64,6 +67,20 @@ function resolveNetworkMode(value: string | null): AppNetworkMode {
 
 function themeColor(theme: ResolvedTheme): string {
   return theme === "dark" ? "#0e2025" : "#f3ede1";
+}
+
+const AUTO_DIAGNOSTICS_STORAGE_KEY =
+  "2048-next.app.auto-diagnostics-v1";
+
+async function diagnosticPlatformInfo() {
+  const info = await App.getInfo().catch(() => null);
+  const userAgent = window.navigator.userAgent;
+  return {
+    appVersion: info?.version || "unknown",
+    buildNumber: info?.build || "unknown",
+    androidVersion: /Android\s+([^;)]+)/u.exec(userAgent)?.[1] ?? null,
+    webViewVersion: /(?:Chrome|CriOS)\/([0-9.]+)/u.exec(userAgent)?.[1] ?? null,
+  };
 }
 
 const appRoot = requireAppRoot();
@@ -121,6 +138,7 @@ async function start(): Promise<void> {
   try {
     const secureStorage = createPlatformSecureStorage();
     const database = new AppDatabase();
+    let diagnosticsEnabled = safeRead(AUTO_DIAGNOSTICS_STORAGE_KEY) !== "false";
     let deletionReceipt: AccountDeletionReceipt | null = null;
     try {
       deletionReceipt = loadAccountDeletionReceipt(window.localStorage);
@@ -128,6 +146,23 @@ async function start(): Promise<void> {
       deletionReceipt = null;
     }
     let activeRuntime: GuestAppRuntime | null = null;
+    let diagnosticsAccountSession: AccountSessionV1 | null = null;
+    const diagnostics = new ClientDiagnostics({
+      database,
+      apiBase: MOBILE_BUILD_FLAGS.apiBase,
+      currentOwnerKey: () =>
+        diagnosticsAccountSession
+          ? `user:${diagnosticsAccountSession.user.id}`
+          : "guest",
+      visibleOwnerKeys: () =>
+        diagnosticsAccountSession
+          ? ["guest", `user:${diagnosticsAccountSession.user.id}`]
+          : ["guest"],
+      networkAllowed: () => currentNetworkMode === "online",
+      autoEnabled: () => diagnosticsEnabled,
+      isOnline: () => window.navigator.onLine,
+      platformInfo: diagnosticPlatformInfo,
+    });
     let authServicePromise: Promise<MobileAuthService> | null = null;
     const getAuthService = (): Promise<MobileAuthService> => {
       if (authServicePromise) return authServicePromise;
@@ -142,6 +177,7 @@ async function start(): Promise<void> {
             secureStorage,
             timeoutMs: 8_000,
             onAuthenticatedSession(_session, _reason, notice) {
+              diagnosticsAccountSession = _session;
               if (notice.accountDeletionCancelled) {
                 try {
                   clearAccountDeletionReceipt(window.localStorage);
@@ -156,6 +192,7 @@ async function start(): Promise<void> {
               void activeRuntime
                 ?.flushAccountRecordOutbox()
                 .catch(() => undefined);
+              void diagnostics.flush().catch(() => undefined);
             },
           });
         },
@@ -175,6 +212,7 @@ async function start(): Promise<void> {
       forceAccountClearAtStartup: deletionReceipt !== null,
     });
     activeRuntime = runtime;
+    diagnosticsAccountSession = runtime.accountSession;
     if (
       deletionReceipt &&
       Date.parse(deletionReceipt.dueAt) <= Date.now() &&
@@ -216,7 +254,20 @@ async function start(): Promise<void> {
         );
         if (mode === "online") {
           void runtime.flushAccountRecordOutbox().catch(() => undefined);
+          void diagnostics.flush().catch(() => undefined);
         }
+      },
+      diagnosticsEnabled,
+      onDiagnosticsEnabledChange(enabled) {
+        diagnosticsEnabled = enabled;
+        safeWrite(AUTO_DIAGNOSTICS_STORAGE_KEY, String(enabled));
+        if (enabled) void diagnostics.flush().catch(() => undefined);
+      },
+      async onExportDiagnostics() {
+        await saveDiagnosticExport(await diagnostics.buildExport());
+      },
+      onAccountSessionChange(session) {
+        diagnosticsAccountSession = session;
       },
     });
     appRoot.removeAttribute("aria-busy");
@@ -224,6 +275,7 @@ async function start(): Promise<void> {
     const flushAccountRecords = (): void => {
       if (currentNetworkMode !== "online") return;
       void runtime.flushAccountRecordOutbox().catch(() => undefined);
+      void diagnostics.flush().catch(() => undefined);
     };
     window.addEventListener("online", flushAccountRecords);
     flushAccountRecords();
@@ -240,8 +292,22 @@ async function start(): Promise<void> {
         if (!(await controller?.handleBack())) await App.exitApp();
       },
       onError({ error }) {
+        void diagnostics
+          .record(error, "lifecycle_error", "critical")
+          .catch(() => undefined);
         controller?.showFatal(error);
       },
+    });
+
+    window.addEventListener("error", (event) => {
+      void diagnostics
+        .record(event.error ?? event.message, "uncaught_error", "critical")
+        .catch(() => undefined);
+    });
+    window.addEventListener("unhandledrejection", (event) => {
+      void diagnostics
+        .record(event.reason, "unhandled_rejection", "critical")
+        .catch(() => undefined);
     });
   } catch (error) {
     appRoot.removeAttribute("aria-busy");

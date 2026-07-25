@@ -178,6 +178,36 @@ describe("OpenAPI contract", () => {
     );
   });
 
+  it("freezes the anonymous redacted client diagnostics contract", () => {
+    const spec = readSpec();
+    const generatedTypes = readGeneratedTypes();
+    const path = readPathItem(spec, "/client-diagnostics");
+    const request = readSchema(spec, "ClientDiagnosticRequest");
+    const response = readSchema(spec, "ClientDiagnosticResponse");
+    const generatedPath = readGeneratedPathItem(
+      generatedTypes,
+      "/client-diagnostics",
+    );
+
+    expect(path).toContain("security: []");
+    expect(path).toContain('$ref: "#/components/schemas/ClientDiagnosticRequest"');
+    expect(path).toContain('"201":');
+    expect(request).toContain("additionalProperties: false");
+    expect(request).toContain(
+      "required: [event_id, category, severity, occurred_at_ms, payload]",
+    );
+    expect(request).toContain("enum: [error, critical]");
+    expect(request).toContain("maxLength: 8192");
+    expect(request).not.toContain("email:");
+    expect(request).not.toContain("token:");
+    expect(request).not.toContain("board:");
+    expect(request).not.toContain("replay:");
+    expect(response).toContain("required: [success, accepted, duplicate]");
+    expect(generatedPath).toContain(
+      'components["schemas"]["ClientDiagnosticRequest"]',
+    );
+  });
+
   it("matches the Node registration and password-reset verification payloads", () => {
     const spec = readSpec();
     const generated = readGeneratedTypes();

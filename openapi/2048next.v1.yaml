@@ -23,6 +23,7 @@ tags:
   - name: Rescue
   - name: Admin
   - name: Achievements
+  - name: Diagnostics
 paths:
   /register:
     post:
@@ -134,6 +135,44 @@ paths:
                 $ref: "#/components/schemas/ApiEnvelope"
         "410":
           description: The deletion deadline has already passed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+
+  /client-diagnostics:
+    post:
+      tags: [Diagnostics]
+      summary: Store an anonymous redacted crash or serious-error diagnostic.
+      description: Accepts only the frozen technical whitelist. The request never carries authentication, account identifiers, boards, replays, or move sequences.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientDiagnosticRequest"
+      responses:
+        "201":
+          description: Diagnostic accepted or previously accepted with the same event ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDiagnosticResponse"
+        "400":
+          description: The payload is outside the frozen whitelist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "413":
+          description: The diagnostic payload exceeds the route limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
+        "429":
+          description: The anonymous client-IP rate limit was exceeded.
           content:
             application/json:
               schema:
@@ -1617,6 +1656,69 @@ components:
                   format: date-time
                 maskedEmail:
                   type: string
+
+    ClientDiagnosticRequest:
+      type: object
+      additionalProperties: false
+      required: [event_id, category, severity, occurred_at_ms, payload]
+      properties:
+        event_id:
+          type: string
+          minLength: 1
+          maxLength: 160
+          pattern: '^[A-Za-z0-9._:-]+$'
+        category:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[a-z0-9._-]+$'
+        severity:
+          type: string
+          enum: [error, critical]
+        occurred_at_ms:
+          type: integer
+          format: int64
+          minimum: 0
+        payload:
+          type: object
+          additionalProperties: false
+          required: [error_type, stack, app_version, build_number, android_version, webview_version]
+          properties:
+            error_type:
+              type: string
+              minLength: 1
+              maxLength: 128
+            stack:
+              type: [string, "null"]
+              maxLength: 8192
+            app_version:
+              type: string
+              minLength: 1
+              maxLength: 64
+            build_number:
+              type: string
+              minLength: 1
+              maxLength: 64
+            android_version:
+              type: [string, "null"]
+              maxLength: 128
+            webview_version:
+              type: [string, "null"]
+              maxLength: 128
+
+    ClientDiagnosticResponse:
+      type: object
+      additionalProperties: false
+      required: [success, accepted, duplicate]
+      properties:
+        success:
+          type: boolean
+          const: true
+        accepted:
+          type: boolean
+          const: true
+        duplicate:
+          type: boolean
 
     AuthRefreshRequest:
       type: object

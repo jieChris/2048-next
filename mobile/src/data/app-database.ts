@@ -2512,6 +2512,45 @@ export class AppDatabase {
     return rows.map(cloneValue);
   }
 
+  async markDiagnosticUploaded(
+    eventId: string,
+    uploadedAt: number,
+  ): Promise<boolean> {
+    requireNonEmptyText(eventId, "eventId");
+    if (!isNonNegativeSafeInteger(uploadedAt)) {
+      throw new AppDatabaseError("invalid_timestamp");
+    }
+    const database = await this.#database();
+    const transaction = database.transaction(
+      [STORES.cache, STORES.diagnostics],
+      "readwrite",
+    );
+    const completion = transactionCompletion(transaction);
+    try {
+      const store = transaction.objectStore(STORES.diagnostics);
+      const existing = await requestResult<StoredDiagnostic | undefined>(
+        store.get(eventId),
+      );
+      if (!existing) {
+        await completion;
+        return false;
+      }
+      assertCurrentSchemaRow(existing, "corrupt_diagnostic");
+      assertValidDiagnostic(existing, this.#diagnosticMaxPayloadBytes);
+      await assertOwnerVisible(transaction, existing.ownerKey);
+      store.put({
+        ...existing,
+        uploadedAt: Math.max(existing.uploadedAt ?? 0, uploadedAt),
+      });
+      await completion;
+      return true;
+    } catch (error) {
+      abortTransaction(transaction);
+      await completion.catch(() => undefined);
+      throw error;
+    }
+  }
+
   async beginOwnerClear(
     ownerKey: AppOwnerKey,
     createdAt: number,

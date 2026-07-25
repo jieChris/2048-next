@@ -76,6 +76,10 @@ export interface AppControllerOptions {
     modeKey: AppModeKey,
     session: AccountSessionV1,
   ) => Promise<AuthenticatedModeEntryResult>;
+  diagnosticsEnabled?: boolean;
+  onDiagnosticsEnabledChange?: (enabled: boolean) => void;
+  onExportDiagnostics?: () => Promise<void>;
+  onAccountSessionChange?: (session: AccountSessionV1 | null) => void;
 }
 
 export interface AppController {
@@ -195,6 +199,9 @@ class MobileAppController implements AppController {
   readonly #enterAuthenticatedMode: NonNullable<
     AppControllerOptions["enterAuthenticatedMode"]
   > | null;
+  readonly #onDiagnosticsEnabledChange: (enabled: boolean) => void;
+  readonly #onExportDiagnostics: () => Promise<void>;
+  readonly #onAccountSessionChange: (session: AccountSessionV1 | null) => void;
   readonly #views: Map<AppRoute, HTMLElement>;
   readonly #bottomNavigation: HTMLElement;
   readonly #status: HTMLElement;
@@ -243,6 +250,12 @@ class MobileAppController implements AppController {
       initialSession: options.initialAccountSession ?? null,
     });
     this.#enterAuthenticatedMode = options.enterAuthenticatedMode ?? null;
+    this.#onDiagnosticsEnabledChange =
+      options.onDiagnosticsEnabledChange ?? (() => undefined);
+    this.#onExportDiagnostics =
+      options.onExportDiagnostics ?? (() => Promise.resolve());
+    this.#onAccountSessionChange =
+      options.onAccountSessionChange ?? (() => undefined);
     this.#numberFormat = new Intl.NumberFormat(options.locale);
     this.#dateFormat = new Intl.DateTimeFormat(options.locale, {
       month: "short",
@@ -290,6 +303,12 @@ class MobileAppController implements AppController {
           this.#renderRecordSummaries();
         }
       }
+      if (
+        target instanceof HTMLInputElement &&
+        target.matches("[data-diagnostics-enabled]")
+      ) {
+        this.#onDiagnosticsEnabledChange(target.checked);
+      }
       if (target.matches("[data-replay-progress]")) {
         this.#stopReplay();
         this.#setReplayIndex(Number.parseInt(target.value, 10));
@@ -327,6 +346,10 @@ class MobileAppController implements AppController {
     }
 
     this.#syncShellState();
+    requireElement<HTMLInputElement>(
+      this.#root,
+      "[data-diagnostics-enabled]",
+    ).checked = options.diagnosticsEnabled ?? true;
     this.#renderRecordSummaries();
     this.#renderAccountDeletionReceipt();
     this.#showRoute(this.#route);
@@ -616,6 +639,9 @@ class MobileAppController implements AppController {
       case "open-achievements-gate":
         this.#requestOnline("achievements");
         break;
+      case "export-diagnostics":
+        await this.#exportDiagnostics();
+        break;
       case "close-offline-gate":
         this.#pendingOnlineIntent = null;
         this.#clearAuthenticationIntent();
@@ -855,6 +881,7 @@ class MobileAppController implements AppController {
       }
       return;
     }
+    this.#onAccountSessionChange(effect.session);
     if (effect.targetMode) {
       await this.#enterAccountMode(
         effect.targetMode,
@@ -1563,6 +1590,7 @@ class MobileAppController implements AppController {
         if (!this.#isNavigationCurrent(epoch)) return;
         if (!summary) {
           this.#authTask.signOut();
+          this.#onAccountSessionChange(null);
           return;
         }
         if (!summary.requiresConfirmation) {
@@ -1612,6 +1640,7 @@ class MobileAppController implements AppController {
       const result = await this.#runtime.confirmAccountLogout();
       if (!this.#isNavigationCurrent(epoch)) return;
       this.#authTask.signOut();
+      this.#onAccountSessionChange(null);
       const dialog = requireElement<HTMLDialogElement>(
         this.#root,
         "[data-account-logout-dialog]",
@@ -1682,6 +1711,7 @@ class MobileAppController implements AppController {
         .clearAccountAfterDeletion()
         .catch(() => null);
       this.#authTask.signOut();
+      this.#onAccountSessionChange(null);
       form.reset();
       this.#closeNamedDialog("[data-account-deletion-dialog]");
       this.#renderAccountDeletionReceipt();
@@ -1729,6 +1759,15 @@ class MobileAppController implements AppController {
       .replace("{email}", receipt.maskedEmail)
       .replace("{dueAt}", this.#dateFormat.format(new Date(receipt.dueAt)));
     this.#setText("[data-account-deletion-receipt-copy]", copy);
+  }
+
+  async #exportDiagnostics(): Promise<void> {
+    try {
+      await this.#onExportDiagnostics();
+      this.#showStatus(this.#t("diagnostics.exported"), "success", 4_000);
+    } catch {
+      this.#showStatus(this.#t("diagnostics.exportFailed"), "error", 5_000);
+    }
   }
 
   #renderDetail(record: StoredGameRecord): void {

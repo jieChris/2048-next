@@ -217,6 +217,16 @@ export function renderAppTemplate(t: Translator): string {
               <span><strong>${t("me.soundTitle")}</strong><small>${t("me.hapticsTitle")}</small></span>
               <output>${t("me.onValue")}</output>
             </div>
+            <label class="setting-link setting-toggle">
+              <span class="setting-link__code" aria-hidden="true">D1</span>
+              <span><strong>${t("diagnostics.title")}</strong><small>${t("diagnostics.body")}</small></span>
+              <input type="checkbox" data-diagnostics-enabled>
+            </label>
+            <button class="setting-link" type="button" data-action="export-diagnostics">
+              <span class="setting-link__code" aria-hidden="true">D2</span>
+              <span><strong>${t("diagnostics.exportTitle")}</strong><small>${t("diagnostics.exportBody")}</small></span>
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
         </section>
 

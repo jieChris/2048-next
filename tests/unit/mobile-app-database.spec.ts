@@ -1043,6 +1043,12 @@ describe("mobile AppDatabase", () => {
     await expect(database.addDiagnostic(oversized)).rejects.toMatchObject({
       code: "invalid_diagnostic",
     });
+
+    await expect(database.markDiagnosticUploaded("e3", 9)).resolves.toBe(true);
+    await expect(database.markDiagnosticUploaded("missing", 10)).resolves.toBe(false);
+    await expect(database.listDiagnostics("guest")).resolves.toContainEqual(
+      expect.objectContaining({ eventId: "e3", uploadedAt: 9 }),
+    );
   });
 
   it("never evicts a future diagnostic while enforcing the current-version ring", async () => {

@@ -132,7 +132,7 @@ describe("Android native foundation", () => {
     ]);
   });
 
-  it("shares only the dedicated replay cache subtree", () => {
+  it("shares only the dedicated replay and diagnostic cache subtrees", () => {
     const filePaths = compact(
       readProjectFile("android/app/src/main/res/xml/file_paths.xml")
     );
@@ -140,10 +140,13 @@ describe("Android native foundation", () => {
     expect(filePaths).toContain(
       '<cache-path name="replay_share_cache" path="replay-share/" />'
     );
+    expect(filePaths).toContain(
+      '<cache-path name="diagnostic_share_cache" path="diagnostic-share/" />'
+    );
     expect(filePaths).not.toMatch(
       /external-path|external-cache-path|external-files-path|files-path/u
     );
-    expect(filePaths.match(/<(?:cache-path)\b/gu)).toHaveLength(1);
+    expect(filePaths.match(/<(?:cache-path)\b/gu)).toHaveLength(2);
   });
 
   it("contains no Google Services or Firebase wiring", () => {

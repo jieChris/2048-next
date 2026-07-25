@@ -1094,6 +1094,13 @@ h2 {
   cursor: default;
 }
 
+.setting-toggle input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--precision-lapis);
+}
+
 .task-view {
   display: flex;
   flex-direction: column;

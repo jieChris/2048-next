@@ -237,6 +237,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/client-diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Store an anonymous redacted crash or serious-error diagnostic.
+         * @description Accepts only the frozen technical whitelist. The request never carries authentication, account identifiers, boards, replays, or move sequences.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ClientDiagnosticRequest"];
+                };
+            };
+            responses: {
+                /** @description Diagnostic accepted or previously accepted with the same event ID. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ClientDiagnosticResponse"];
+                    };
+                };
+                /** @description The payload is outside the frozen whitelist. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The diagnostic payload exceeds the route limit. */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The anonymous client-IP rate limit was exceeded. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -2514,6 +2584,29 @@ export interface components {
                 dueAt: string;
                 maskedEmail: string;
             };
+        };
+        ClientDiagnosticRequest: {
+            event_id: string;
+            category: string;
+            /** @enum {string} */
+            severity: "error" | "critical";
+            /** Format: int64 */
+            occurred_at_ms: number;
+            payload: {
+                error_type: string;
+                stack: string | null;
+                app_version: string;
+                build_number: string;
+                android_version: string | null;
+                webview_version: string | null;
+            };
+        };
+        ClientDiagnosticResponse: {
+            /** @constant */
+            success: true;
+            /** @constant */
+            accepted: true;
+            duplicate: boolean;
         };
         AuthRefreshRequest: {
             token?: string;

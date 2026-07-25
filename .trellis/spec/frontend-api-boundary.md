@@ -48,6 +48,14 @@ Use these checks after boundary-sensitive changes:
 - Put cache keys on the HTML stylesheet entry when needed. Keep nested local imports build-resolvable so their rules are inlined into the hashed production asset.
 - Any globally rendered UI, including the achievement unlock toast, needs a build-output assertion or production smoke check in addition to source-mode styling checks.
 
+## Mobile Client Diagnostics Boundary
+
+- The Android client may call anonymous `POST /client-diagnostics` only after the current privacy choice is online and the automatic diagnostics setting is enabled. The request never carries `Authorization` or account identity.
+- A diagnostic created while privacy is offline or automatic diagnostics are disabled is stored with `uploadPolicy: never` and must not be retroactively uploaded after consent or re-enabling.
+- Uploads contain only event/category/severity/time plus error type, redacted stack, App version/build number, Android version, and WebView version. Before local storage and upload, redact emails, Bearer/JWT-like values, credential-shaped key/value pairs, URL queries/fragments, and local OS usernames.
+- Do not add board state, replay data, move sequences, nickname, email, Token, user ID, device identifiers, navigation analytics, or gameplay analytics to this contract.
+- Manual export may include the same local technical fields and upload status, but must omit local `ownerKey`. Android export uses only the dedicated `diagnostic-share/` cache subtree and removes the temporary file after the system share/save panel returns.
+
 ## Scenario: Pending Score Uploads After Expired Auth
 
 ### 1. Scope / Trigger

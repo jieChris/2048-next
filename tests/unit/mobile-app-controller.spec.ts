@@ -250,6 +250,10 @@ type ControllerOverrides = Partial<
     | "authServiceFactory"
     | "initialAccountSession"
     | "enterAuthenticatedMode"
+    | "diagnosticsEnabled"
+    | "onDiagnosticsEnabledChange"
+    | "onExportDiagnostics"
+    | "onAccountSessionChange"
   >
 >;
 
@@ -447,6 +451,34 @@ describe("mobile app controller helpers", () => {
 });
 
 describe("mobile app controller navigation", () => {
+  it("persists the diagnostics toggle and exports without leaving Me", async () => {
+    const harness = runtimeHarness();
+    const onDiagnosticsEnabledChange = vi.fn();
+    const onExportDiagnostics = vi.fn(async () => undefined);
+    const { controller, root } = mountController(harness, {
+      diagnosticsEnabled: true,
+      onDiagnosticsEnabledChange,
+      onExportDiagnostics,
+    });
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    const toggle = root.querySelector<HTMLInputElement>(
+      "[data-diagnostics-enabled]",
+    );
+    if (!toggle) throw new Error("missing diagnostics toggle");
+    expect(toggle.checked).toBe(true);
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(onDiagnosticsEnabledChange).toHaveBeenCalledWith(false);
+
+    focusAndClick(root, '[data-action="export-diagnostics"]');
+    await vi.waitFor(() => expect(onExportDiagnostics).toHaveBeenCalledTimes(1));
+    expect(controller.route).toBe("me");
+    expect(root.querySelector("[data-app-status]")?.textContent).toContain(
+      "系统分享或保存面板",
+    );
+    controller.destroy();
+  });
+
   it("consumes Back while home entry is pending and ignores the stale route", async () => {
     const harness = runtimeHarness();
     const openedSession = session();
