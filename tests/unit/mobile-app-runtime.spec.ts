@@ -9,9 +9,15 @@ import {
 } from "../../mobile/src/data/app-database";
 import {
   bootstrapGuestAppRuntime,
-  type GuestAppRuntimeDatabase,
+  createHttpRankedSessionGateway,
+  type AuthenticatedModeRuntimeDatabase,
 } from "../../mobile/src/app/app-runtime";
+import {
+  serializeAccountSessionEnvelope,
+  type AccountSessionV1,
+} from "../../mobile/src/auth/account-session";
 import { ACCOUNT_SESSION_SECURE_KEY } from "../../mobile/src/data/owner-cleanup";
+import { OwnerCleanupWorkGate } from "../../mobile/src/data/owner-cleanup";
 import { GUEST_STANDARD_MODE_KEY } from "../../mobile/src/game/guest-session";
 import {
   createMemorySecureStorage,
@@ -75,9 +81,10 @@ async function seedSave(
 
 function runtimeDatabase(
   database: AppDatabase,
-  overrides: Partial<GuestAppRuntimeDatabase> = {},
-): GuestAppRuntimeDatabase {
+  overrides: Partial<AuthenticatedModeRuntimeDatabase> = {},
+): AuthenticatedModeRuntimeDatabase {
   return {
+    name: database.name,
     open: database.open.bind(database),
     listPendingOwnerClears: database.listPendingOwnerClears.bind(database),
     completeOwnerClear: database.completeOwnerClear.bind(database),
@@ -89,7 +96,30 @@ function runtimeDatabase(
     getRecord: database.getRecord.bind(database),
     listRecords: database.listRecords.bind(database),
     deleteGuestRecord: database.deleteGuestRecord.bind(database),
+    addDiagnostic: database.addDiagnostic.bind(database),
+    enqueueOutbox: database.enqueueOutbox.bind(database),
+    freezeRankedStartIntent: database.freezeRankedStartIntent.bind(database),
+    getOrCreateRankedStartIntent:
+      database.getOrCreateRankedStartIntent.bind(database),
+    listOutbox: database.listOutbox.bind(database),
+    removeOutbox: database.removeOutbox.bind(database),
     ...overrides,
+  };
+}
+
+function accountSession(userId = 7): AccountSessionV1 {
+  return {
+    version: 1,
+    accessToken: `access-token-${userId}`,
+    expiresAtEpochSeconds: 2_000_000_000,
+    user: {
+      id: userId,
+      email: `player-${userId}@example.com`,
+      nickname: `Player ${userId}`,
+      role: "player",
+    },
+    persistentIdentity: { userId, establishedAtMs: 500 },
+    challengeRefs: [],
   };
 }
 
@@ -375,5 +405,277 @@ describe("mobile guest app runtime", () => {
     expect(runtime.activeSession).toBeNull();
     expect(runtime.guestSave).toEqual({ status: "missing" });
     expect(runtime.guestRecords).toHaveLength(1);
+  });
+
+  it("keeps an unknown account envelope untouched, records a local diagnostic, and still starts guest play", async () => {
+    const database = createDatabase("invalid-account-envelope");
+    const storage = createMemorySecureStorage();
+    const serialized = JSON.stringify({ version: 2, opaque: "keep-me" });
+    await storage.set(ACCOUNT_SESSION_SECURE_KEY, serialized);
+
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      createClientRecordId: () => "guest-after-invalid-envelope",
+      createSeed: () => 7,
+    });
+
+    expect(runtime.startupMode).toBe("ready");
+    expect(runtime.accountSession).toBeNull();
+    expect(runtime.accountSessionError).toMatchObject({
+      code: "invalid_account_session_envelope",
+    });
+    await expect(storage.get(ACCOUNT_SESSION_SECURE_KEY)).resolves.toBe(
+      serialized,
+    );
+    await expect(database.listDiagnostics("guest")).resolves.toEqual([
+      expect.objectContaining({
+        category: "account_session",
+        uploadPolicy: "never",
+        payload: expect.objectContaining({
+          errorType: "invalid_account_session_envelope",
+        }),
+      }),
+    ]);
+    await expect(runtime.enterGuestStandard()).resolves.toMatchObject({
+      status: "ready",
+      restored: false,
+    });
+  });
+
+  it("restores an account-owned mode offline without exposing it as guest history", async () => {
+    const database = createDatabase("account-offline-restore");
+    const session = accountSession();
+    const storage = createMemorySecureStorage();
+    await storage.set(
+      ACCOUNT_SESSION_SECURE_KEY,
+      serializeAccountSessionEnvelope(session),
+    );
+    await seedSave(database, "user:7", {
+      clientRecordId: "account-3x3-save",
+      modeKey: "board_3x3_pow2_no_undo",
+    });
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+    });
+
+    const opened = await runtime.enterAuthenticatedMode(
+      "board_3x3_pow2_no_undo",
+      session,
+      { online: false },
+    );
+
+    expect(opened).toMatchObject({
+      status: "ready",
+      restored: true,
+      gameKind: "normal",
+    });
+    expect(runtime.activeSession?.currentSave).toMatchObject({
+      ownerKey: "user:7",
+      modeKey: "board_3x3_pow2_no_undo",
+      clientRecordId: "account-3x3-save",
+    });
+    expect(runtime.guestSave).toEqual({ status: "missing" });
+    expect(runtime.guestRecords).toEqual([]);
+  });
+
+  it("uses the real HTTP ranked gateway before exposing a new account board", async () => {
+    const database = createDatabase("account-ranked-entry");
+    const session = accountSession();
+    const storage = createMemorySecureStorage();
+    await storage.set(
+      ACCOUNT_SESSION_SECURE_KEY,
+      serializeAccountSessionEnvelope(session),
+    );
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const challengeId = "rch_11111111111111111111111111111111";
+    const gateway = createHttpRankedSessionGateway({
+      apiBase: "https://api.example.test/api",
+      fetchLike: async (url, init) => {
+        requests.push({ url, init });
+        if (url.endsWith("/ranked-session/abandon")) {
+          return {
+            status: 200,
+            statusText: "OK",
+            json: async () => ({
+              success: true,
+              data: { status: "abandoned" },
+            }),
+          };
+        }
+        const request = JSON.parse(String(init?.body)) as {
+          operation_id: string;
+          mode_key: string;
+        };
+        return {
+          status: 200,
+          statusText: "OK",
+          json: async () => ({
+            success: true,
+            data: {
+              ranked_session_id: challengeId,
+              challenge_id: challengeId,
+              operation_id: request.operation_id,
+              mode_key: request.mode_key,
+              seed: 123,
+              ranked_session_token: "ranked-token-1",
+              issued_at: 1_700_000_000,
+              started_at: 1_700_000_000,
+              started_at_ms: 1_700_000_000_000,
+              server_now_ms: 1_700_000_000_100,
+              expired_at: 2_000_000_000,
+              expires_at: 2_000_000_000,
+              exp: 2_000_000_000,
+              status: "started",
+            },
+          }),
+        };
+      },
+    });
+    const time = createTime(1_700_000_000_100, 20);
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      clockSources: time.sources,
+      createClientRecordId: () => "account-ranked-game",
+    });
+
+    const opened = await runtime.enterAuthenticatedMode(
+      GUEST_STANDARD_MODE_KEY,
+      session,
+      { online: true, gateway },
+    );
+
+    expect(opened).toMatchObject({
+      status: "ready",
+      restored: false,
+      gameKind: "ranked",
+    });
+    expect(runtime.activeSession?.currentSave).toMatchObject({
+      ownerKey: "user:7",
+      gameKind: "ranked",
+      rankedSessionId: challengeId,
+    });
+    await gateway.abandon({
+      accessToken: session.accessToken,
+      operationId: `ranked.abandon:${challengeId}`,
+      challengeId,
+      rankedSessionId: challengeId,
+      rankedSessionToken: "ranked-token-1",
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.url).toBe(
+      "https://api.example.test/api/ranked-session/start",
+    );
+    expect(new Headers(requests[0]?.init?.headers).get("authorization")).toBe(
+      `Bearer ${session.accessToken}`,
+    );
+    expect(
+      JSON.parse(String(requests[0]?.init?.body)),
+    ).toMatchObject({
+      mode_key: GUEST_STANDARD_MODE_KEY,
+      operation_id: expect.stringMatching(/^ranked\.start:/u),
+    });
+    expect(requests[1]?.url).toBe(
+      "https://api.example.test/api/ranked-session/abandon",
+    );
+    expect(JSON.parse(String(requests[1]?.init?.body))).toEqual({
+      operation_id: `ranked.abandon:${challengeId}`,
+      challenge_id: challengeId,
+      ranked_session_id: challengeId,
+      ranked_session_token: "ranked-token-1",
+    });
+    await expect(database.listOutbox("user:7")).resolves.toEqual([]);
+    const storedSession = JSON.parse(
+      String(await storage.get(ACCOUNT_SESSION_SECURE_KEY)),
+    ) as AccountSessionV1;
+    expect(storedSession.challengeRefs).toEqual([
+      expect.objectContaining({
+        challengeId,
+        rankedSessionId: challengeId,
+        token: "ranked-token-1",
+      }),
+    ]);
+  });
+
+  it("falls back to a normal account game after a bounded ranked start failure", async () => {
+    const database = createDatabase("account-ranked-fallback");
+    const session = accountSession();
+    const storage = createMemorySecureStorage();
+    await storage.set(
+      ACCOUNT_SESSION_SECURE_KEY,
+      serializeAccountSessionEnvelope(session),
+    );
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      createClientRecordId: () => "account-normal-fallback",
+      createSeed: () => 9,
+    });
+
+    const opened = await runtime.enterAuthenticatedMode(
+      "classic_4x4_pow2_undo",
+      session,
+      {
+        online: true,
+        gateway: {
+          start: async () => {
+            throw new Error("offline");
+          },
+          abandon: async () => undefined,
+        },
+        requestTimeoutMs: 20,
+      },
+    );
+
+    expect(opened).toMatchObject({
+      status: "ready",
+      restored: false,
+      gameKind: "normal",
+    });
+    expect(runtime.activeSession?.currentSave).toMatchObject({
+      ownerKey: "user:7",
+      modeKey: "classic_4x4_pow2_undo",
+      gameKind: "normal",
+    });
+    expect(
+      (await database.listOutbox("user:7")).map((item) => item.kind),
+    ).toEqual(["ranked.session_start"]);
+  });
+
+  it("routes account save work through the owner cleanup gate", async () => {
+    const database = createDatabase("account-work-gate");
+    const session = accountSession();
+    const storage = createMemorySecureStorage();
+    const workGate = new OwnerCleanupWorkGate();
+    await storage.set(
+      ACCOUNT_SESSION_SECURE_KEY,
+      serializeAccountSessionEnvelope(session),
+    );
+    await seedSave(database, "user:7", {
+      clientRecordId: "account-gated-save",
+      board: [
+        [2, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+      ],
+    });
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      workGate,
+    });
+    await runtime.enterAuthenticatedMode(GUEST_STANDARD_MODE_KEY, session, {
+      online: false,
+    });
+    await workGate.stopAndDrain("user:7");
+
+    const move = runtime.moveActiveSession(1);
+
+    await expect(move.save).rejects.toMatchObject({
+      code: "owner_work_stopped",
+    });
   });
 });

@@ -998,6 +998,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ranked-session/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Idempotently abandon or expire an unconsumed ranked session. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RankedSessionAbandonRequest"];
+                };
+            };
+            responses: {
+                /** @description The session is abandoned or already expired. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RankedSessionAbandonResponse"];
+                    };
+                };
+                /** @description The abandon operation is invalid or not bound to its challenge. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The account or ranked-session token is invalid. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The ranked session does not exist. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The session is mismatched, consumed, or otherwise inactive. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+                /** @description The session could not be abandoned safely. */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ranked-checkpoint": {
         parameters: {
             query?: never;
@@ -2519,6 +2604,23 @@ export interface components {
             /** @constant */
             success: true;
             data: components["schemas"]["RankedSession"];
+        };
+        RankedSessionAbandonRequest: {
+            operation_id: string;
+            challenge_id: string;
+            ranked_session_id: string;
+            ranked_session_token: string;
+        };
+        RankedSessionAbandonResponse: {
+            /** @constant */
+            success: true;
+            data: {
+                operation_id: string;
+                challenge_id: string;
+                ranked_session_id: string;
+                /** @enum {string} */
+                status: "abandoned" | "expired";
+            };
         };
         RankedSessionStartBadRequestError: {
             /** @constant */

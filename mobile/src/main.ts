@@ -7,8 +7,13 @@ import {
   type AppController,
   type AppNetworkMode,
 } from "./app/app-controller";
-import { bootstrapGuestAppRuntime } from "./app/app-runtime";
+import { MOBILE_BUILD_FLAGS } from "./app/build-flags";
+import {
+  bootstrapGuestAppRuntime,
+  createHttpRankedSessionGateway,
+} from "./app/app-runtime";
 import { renderAppTemplate } from "./app/templates";
+import type { MobileAuthService } from "./auth/auth-service";
 import { AppDatabase } from "./data/app-database";
 import { createTranslator, resolveSystemLocale } from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
@@ -76,6 +81,7 @@ const initialNetworkMode = resolveNetworkMode(
   parsePreviewPrivacyRecord(safeRead(PREVIEW_PRIVACY_STORAGE_KEY))?.choice ??
     null,
 );
+let currentNetworkMode = initialNetworkMode;
 document.documentElement.lang = locale;
 appRoot.innerHTML = renderAppTemplate(t);
 appRoot.setAttribute("aria-busy", "true");
@@ -107,17 +113,60 @@ function showBootstrapFailure(error: unknown): void {
 
 async function start(): Promise<void> {
   try {
+    const secureStorage = createPlatformSecureStorage();
+    const database = new AppDatabase();
     const runtime = await bootstrapGuestAppRuntime({
-      database: new AppDatabase(),
-      secureStorage: createPlatformSecureStorage(),
+      database,
+      secureStorage,
     });
+    let authServicePromise: Promise<MobileAuthService> | null = null;
+    const getAuthService = (): Promise<MobileAuthService> => {
+      if (authServicePromise) return authServicePromise;
+      authServicePromise = import("./auth/auth-service").then(
+        ({ createMobileAuthService }) => {
+          const privacy = parsePreviewPrivacyRecord(
+            safeRead(PREVIEW_PRIVACY_STORAGE_KEY),
+          );
+          return createMobileAuthService({
+            privacy:
+              privacy ?? createPreviewPrivacyRecord("offline", Date.now()),
+            secureStorage,
+          });
+        },
+      );
+      void authServicePromise.catch(() => {
+        authServicePromise = null;
+      });
+      return authServicePromise;
+    };
     controller = createAppController({
       root: appRoot,
       runtime,
       t,
       locale,
       networkMode: initialNetworkMode,
+      initialAccountSession: runtime.accountSession,
+      authServiceFactory: getAuthService,
+      async enterAuthenticatedMode(modeKey, session) {
+        const online = currentNetworkMode === "online";
+        const opened = await runtime.enterAuthenticatedMode(modeKey, session, {
+          online,
+          ...(online
+            ? {
+                gateway: createHttpRankedSessionGateway({
+                  apiBase: MOBILE_BUILD_FLAGS.apiBase,
+                  timeoutMs: 8_000,
+                }),
+                refreshSession: async () => (await getAuthService()).refresh(),
+              }
+            : {}),
+        });
+        return opened.status === "ready"
+          ? { status: "entered" }
+          : { status: "unavailable" };
+      },
       onNetworkModeChange(mode) {
+        currentNetworkMode = mode;
         safeWrite(
           PREVIEW_PRIVACY_STORAGE_KEY,
           JSON.stringify(createPreviewPrivacyRecord(mode, Date.now())),
