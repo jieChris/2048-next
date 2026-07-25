@@ -94,7 +94,7 @@ npm run verify:refactor:ci
 - [ ] 保存回填前旧榜快照、记录/用户最佳基线与异常报告；在事务/可回退派生步骤中全量重建 `leaderboard_best`，核对行数、每用户最佳、周期边界和来源分布。不一致则恢复旧派生榜并停止部署，原始 records 不做破坏性回退。
 - [x] 完全相同成绩和时间用稳定 user ID 形成唯一连续排名。
 - [x] Web 与 App 都只渲染后端 rank；计时区 TOP 10、模式介绍榜、完整 Web 榜和 App 全屏榜均不再按数组下标推测名次，缺失 rank 时显示未知而不自行编号。
-- [ ] 补齐同分、分页、重建和乱序上传的完整后端回归矩阵。
+- [x] 补齐同分、分页、重建和乱序上传的完整后端回归矩阵。
 - [ ] 云记录软删除后在同一可靠流程中退出榜单/派生统计，恢复后重新计算；账号到期彻底清理后按剩余记录重建。补删除、恢复、清理失败重试和分页名次回归测试。
 
 ### 2.3 成就、删除账号与诊断
@@ -132,7 +132,7 @@ npm run test:node
 ### 2.5 `Backend Ready` 在线解锁门禁
 
 - [ ] 先部署到隔离测试环境，运行旧 Web 登录/记录/排行榜、App 合同、CORS、删号、榜单重算和回放恢复 smoke；保存环境版本与完整输出。
-- [ ] 新增可重复的 `npm run verify:backend-ready -- --api-base=<测试 API 基址> --web-base=<测试 Web 基址>`，分别核对 OpenAPI 版本、固定 API 基址、Capacitor origin CORS、公开注册、refresh、记录幂等、权威 rank、公开政策/协议/删号页和待删除 Token 拒绝。
+- [x] 新增可重复的 `npm run verify:backend-ready -- --api-base=<测试 API 基址> --web-base=<测试 Web 基址>`，分别核对 OpenAPI 版本、固定 API 基址、Capacitor origin CORS、公开注册、refresh、记录幂等、权威 rank、公开政策/协议/删号页和待删除 Token 拒绝。
 - [ ] 只有用户另行明确批准生产后端部署/迁移与公开 Web 页面部署后，才执行生产备份、加法迁移及部署；不得把本计划批准视为这些生产变更授权。
 - [ ] 生产部署后核对前后端 commit、migration、OpenAPI/政策版本、健康状态、`BETA_ACCESS_GATE_ENABLED=false`、release CORS、公开页面和旧 Web 核心流程，使用受控测试账号运行非破坏性 smoke。
 - [ ] 在 `execution-notes.md` 写入带时间、环境、版本、验证输出和批准依据的 `Backend Ready` 记录。该记录不存在时，阶段 6/7 的在线入口只能在本地/测试环境开发，不得在候选包开启或指向生产。
