@@ -11,6 +11,7 @@ import {
   parseAccountSessionEnvelope,
   type AccountSessionV1,
 } from "../auth/account-session";
+import type { MobileAuthService } from "../auth/auth-service";
 import {
   APP_DATABASE_SCHEMA_VERSION,
   type AppDatabase,
@@ -44,6 +45,11 @@ import {
   type RankedSessionOrchestrationDatabase,
 } from "../game/ranked-session-orchestrator";
 import type { SessionClockSources } from "../game/session-clock";
+import {
+  flushRecordSubmitOutbox,
+  prepareRecordSubmitRetry,
+  type RecordOutboxSyncResult,
+} from "./record-outbox-sync";
 
 export type GuestAppRuntimeDatabase = GuestSessionDatabase &
   Pick<
@@ -55,6 +61,8 @@ export type GuestAppRuntimeDatabase = GuestSessionDatabase &
     | "listRecords"
     | "deleteGuestRecord"
     | "addDiagnostic"
+    | "updateOutboxAttempt"
+    | "applyRecordSubmitOutcome"
   >;
 
 export type AuthenticatedModeRuntimeDatabase = GuestAppRuntimeDatabase &
@@ -67,6 +75,10 @@ export interface GuestAppRuntimeOptions extends Omit<
   database: AuthenticatedModeRuntimeDatabase;
   secureStorage: Pick<SecureStorage, "get" | "set" | "delete">;
   workGate?: OwnerCleanupWorkGate;
+  recordSync?: {
+    enabled: () => boolean;
+    getAuthService: () => Promise<Pick<MobileAuthService, "submitRecord">>;
+  };
 }
 
 type AccountOwnerKey = `user:${string}`;
@@ -196,11 +208,13 @@ export class GuestAppRuntime {
   readonly #startup: OwnerCleanupStartupResult;
   readonly #accountSession: AccountSessionV1 | null;
   readonly #accountSessionError: unknown | null;
+  readonly #recordSync: GuestAppRuntimeOptions["recordSync"];
   #guestSave: SaveReadResult;
   #guestRecords: StoredGameRecord[];
   #activeSession: GuestGameSession | null = null;
   #activeRankedOrchestrator: RankedSessionOrchestrator | null = null;
   #lastSummaryError: unknown | null = null;
+  #recordFlushInFlight: Promise<RecordOutboxSyncResult | null> | null = null;
 
   private constructor(
     options: GuestAppRuntimeOptions,
@@ -225,6 +239,7 @@ export class GuestAppRuntime {
     this.#startup = startup;
     this.#accountSession = accountSession ? cloneValue(accountSession) : null;
     this.#accountSessionError = accountSessionError;
+    this.#recordSync = options.recordSync;
     this.#guestSave = cloneValue(guestSave);
     this.#guestRecords = cloneValue(guestRecords);
   }
@@ -319,6 +334,82 @@ export class GuestAppRuntime {
       this.#lastSummaryError = error;
       throw error;
     }
+  }
+
+  async flushAccountRecordOutbox(
+    forceOperationId?: string,
+  ): Promise<RecordOutboxSyncResult | null> {
+    if (!this.#recordSync?.enabled()) return null;
+    if (this.#recordFlushInFlight) {
+      if (!forceOperationId) return this.#recordFlushInFlight;
+      await this.#recordFlushInFlight.catch(() => undefined);
+    }
+
+    const operation = (async () => {
+      let session: AccountSessionV1 | null;
+      try {
+        session = await loadAccountSession(this.#secureStorage);
+      } catch {
+        return null;
+      }
+      if (!session) return null;
+      const ownerKey = accountOwnerKey(session);
+      return this.#workGate.run(ownerKey, async () => {
+        const authService = await this.#recordSync!.getAuthService();
+        return flushRecordSubmitOutbox({
+          ownerKey,
+          database: this.#database,
+          secureStorage: this.#secureStorage,
+          authService,
+          ...(forceOperationId ? { forceOperationId } : {}),
+        });
+      });
+    })();
+    this.#recordFlushInFlight = operation;
+    try {
+      return await operation;
+    } finally {
+      if (this.#recordFlushInFlight === operation) {
+        this.#recordFlushInFlight = null;
+      }
+    }
+  }
+
+  async retryAccountRecordSubmit(
+    clientRecordId: string,
+  ): Promise<RecordOutboxSyncResult | null> {
+    if (this.#recordFlushInFlight) {
+      await this.#recordFlushInFlight.catch(() => undefined);
+    }
+    const session = await loadAccountSession(this.#secureStorage);
+    if (!session) return null;
+    const ownerKey = accountOwnerKey(session);
+    const operationId = (
+      await this.#database.listOutbox(ownerKey)
+    ).find(
+      (item) =>
+        item.kind === "record.submit" &&
+        item.clientRecordId === clientRecordId,
+    )?.operationId;
+    if (!operationId) return null;
+    await this.#workGate.run(ownerKey, () =>
+      prepareRecordSubmitRetry(
+        { ownerKey, database: this.#database },
+        operationId,
+      ),
+    );
+    return this.flushAccountRecordOutbox(operationId);
+  }
+
+  async getAccountRecord(
+    clientRecordId: string,
+  ): Promise<StoredGameRecord | null> {
+    const session = await loadAccountSession(this.#secureStorage);
+    if (!session) return null;
+    return this.#database.getRecord(
+      accountOwnerKey(session),
+      clientRecordId,
+    );
   }
 
   async enterGuestStandard(): Promise<OpenGuestStandardSessionResult> {
@@ -769,7 +860,10 @@ export class GuestAppRuntime {
   }
 
   #applyFinalizedRecord(record: StoredGameRecord): void {
-    if (record.ownerKey !== "guest") return;
+    if (record.ownerKey !== "guest") {
+      void this.flushAccountRecordOutbox().catch(() => undefined);
+      return;
+    }
     this.#guestSave = { status: "missing" };
     this.#guestRecords = [
       cloneValue(record),

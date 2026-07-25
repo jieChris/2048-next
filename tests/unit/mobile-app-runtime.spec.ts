@@ -1,5 +1,5 @@
 import { IDBFactory, IDBKeyRange } from "fake-indexeddb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   APP_DATABASE_SCHEMA_VERSION,
@@ -13,6 +13,7 @@ import {
   type AuthenticatedModeRuntimeDatabase,
 } from "../../mobile/src/app/app-runtime";
 import {
+  saveAccountSession,
   serializeAccountSessionEnvelope,
   type AccountSessionV1,
 } from "../../mobile/src/auth/account-session";
@@ -103,6 +104,9 @@ function runtimeDatabase(
       database.getOrCreateRankedStartIntent.bind(database),
     listOutbox: database.listOutbox.bind(database),
     removeOutbox: database.removeOutbox.bind(database),
+    updateOutboxAttempt: database.updateOutboxAttempt.bind(database),
+    applyRecordSubmitOutcome:
+      database.applyRecordSubmitOutcome.bind(database),
     ...overrides,
   };
 }
@@ -642,6 +646,55 @@ describe("mobile guest app runtime", () => {
     expect(
       (await database.listOutbox("user:7")).map((item) => item.kind),
     ).toEqual(["ranked.session_start"]);
+  });
+
+  it("flushes an account terminal record without ranking a normal game", async () => {
+    const database = createDatabase("account-record-sync");
+    await seedSave(database, "user:7", {
+      clientRecordId: "account-normal-terminal",
+      board: [
+        [2, 2, 8, 16],
+        [32, 64, 128, 256],
+        [64, 128, 256, 512],
+        [128, 256, 512, 1024],
+      ],
+    });
+    const storage = createMemorySecureStorage();
+    const account = accountSession();
+    await saveAccountSession(storage, account);
+    const submitRecord = vi.fn(async () => ({ success: true }));
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      recordSync: {
+        enabled: () => true,
+        getAuthService: async () => ({ submitRecord }),
+      },
+    });
+
+    const opened = await runtime.enterAuthenticatedMode(
+      GUEST_STANDARD_MODE_KEY,
+      account,
+      { online: false },
+    );
+    expect(opened).toMatchObject({ status: "ready", gameKind: "normal" });
+    const terminal = runtime.moveActiveSession(3).terminal;
+    expect(terminal).not.toBeNull();
+    const record = await terminal!;
+    await runtime.flushAccountRecordOutbox();
+
+    expect(submitRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientRecordId: "account-normal-terminal",
+      }),
+    );
+    expect(submitRecord.mock.calls[0]?.[0]).not.toHaveProperty(
+      "rankedSessionToken",
+    );
+    await expect(
+      database.getRecord("user:7", record.clientRecordId),
+    ).resolves.toMatchObject({ source: "normal", uploadStatus: "uploaded" });
+    await expect(database.listOutbox("user:7")).resolves.toEqual([]);
   });
 
   it("routes account save work through the owner cleanup gate", async () => {

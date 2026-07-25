@@ -236,6 +236,81 @@ describe("mobile auth service", () => {
     });
   });
 
+  it("submits a frozen record payload and retries one authenticated 401 after refresh", async () => {
+    const storage = createMemorySecureStorage();
+    await saveAccountSession(storage, session("record-token"));
+    const calls: Array<{
+      url: string;
+      authorization: string | null;
+      body: Record<string, unknown> | null;
+    }> = [];
+    let recordAttempts = 0;
+    const fetchLike: FetchLike = vi.fn(async (url, init) => {
+      calls.push({
+        url,
+        authorization: new Headers(init?.headers).get("Authorization"),
+        body:
+          typeof init?.body === "string"
+            ? (JSON.parse(init.body) as Record<string, unknown>)
+            : null,
+      });
+      if (url.endsWith("/auth/refresh")) {
+        return response(200, authBody("record-refreshed-token"));
+      }
+      recordAttempts += 1;
+      return recordAttempts === 1
+        ? response(401, { success: false, code: "UNAUTHORIZED" })
+        : response(200, { success: true, id: "record-cloud-1" });
+    });
+    const onAuthenticatedSession = vi.fn();
+    const service = createMobileAuthService({
+      apiBase: "https://api.example.test/api",
+      privacy: createPreviewPrivacyRecord("online", 1),
+      secureStorage: storage,
+      fetchLike,
+      onAuthenticatedSession,
+    });
+
+    await expect(
+      service.submitRecord({
+        clientRecordId: "record-local-1",
+        modeKey: "standard_4x4_pow2_no_undo",
+        score: 4096,
+        durationMs: 12_345,
+        bestTile: 2048,
+        endedAt: "2026-07-25T00:00:00.000Z",
+        replayString: "REPLAY_v1RPL_B64_payload",
+        rankedSessionToken: "ranked-token-1",
+        challengeId: "challenge-1",
+      }),
+    ).resolves.toMatchObject({ success: true, id: "record-cloud-1" });
+
+    expect(calls.map(({ url, authorization }) => ({ url, authorization }))).toEqual([
+      {
+        url: "https://api.example.test/api/records",
+        authorization: "Bearer record-token",
+      },
+      {
+        url: "https://api.example.test/api/auth/refresh",
+        authorization: "Bearer record-token",
+      },
+      {
+        url: "https://api.example.test/api/records",
+        authorization: "Bearer record-refreshed-token",
+      },
+    ]);
+    expect(calls[0]?.body).toMatchObject({
+      client_record_id: "record-local-1",
+      mode_key: "standard_4x4_pow2_no_undo",
+      ranked_session_token: "ranked-token-1",
+      challenge_id: "challenge-1",
+    });
+    expect(onAuthenticatedSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: "record-refreshed-token" }),
+      "refresh",
+    );
+  });
+
   it("refreshes before a still-valid token enters the backend expiry boundary", async () => {
     const storage = createMemorySecureStorage();
     await saveAccountSession(storage, session("near-expiry-token", 1_200));

@@ -128,6 +128,7 @@ function authService(
     passwordResetVerify: vi.fn(async () => ({ success: true })),
     currentUser: vi.fn(async () => accountSession().user),
     refresh: vi.fn(async () => accountSession()),
+    submitRecord: vi.fn(async () => ({ success: true })),
     ...overrides,
   };
 }
@@ -142,6 +143,8 @@ interface RuntimeHarness {
   readonly undoActivePendingTerminal: ReturnType<typeof vi.fn>;
   readonly confirmActivePendingTerminal: ReturnType<typeof vi.fn>;
   readonly getGuestRecord: ReturnType<typeof vi.fn>;
+  readonly getAccountRecord: ReturnType<typeof vi.fn>;
+  readonly retryAccountRecordSubmit: ReturnType<typeof vi.fn>;
   get activeSession(): GuestGameSession | null;
   setActiveSession(value: GuestGameSession | null): void;
 }
@@ -171,6 +174,10 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
   });
   const confirmActivePendingTerminal = vi.fn();
   const getGuestRecord = vi.fn(async () => null);
+  const getAccountRecord = vi.fn(async (clientRecordId: string) =>
+    records.find((record) => record.clientRecordId === clientRecordId) ?? null,
+  );
+  const retryAccountRecordSubmit = vi.fn(async () => null);
   const runtime = {
     get guestSave() {
       return { status: "missing" as const };
@@ -189,6 +196,9 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     undoActivePendingTerminal,
     confirmActivePendingTerminal,
     getGuestRecord,
+    getAccountRecord,
+    flushAccountRecordOutbox: vi.fn(async () => null),
+    retryAccountRecordSubmit,
     refreshGuestSummary: vi.fn(async () => undefined),
     deleteGuestRecord: vi.fn(async () => true),
     pauseActiveSession: vi.fn(async () => undefined),
@@ -204,6 +214,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     undoActivePendingTerminal,
     confirmActivePendingTerminal,
     getGuestRecord,
+    getAccountRecord,
+    retryAccountRecordSubmit,
     get activeSession() {
       return activeSession;
     },
@@ -731,6 +743,71 @@ describe("mobile app controller navigation", () => {
     await vi.waitFor(() => expect(controller.route).toBe("result"));
     expect(harness.confirmActivePendingTerminal).toHaveBeenCalledTimes(1);
     expect(root.querySelector("#result-title")?.textContent).toBe("经典 4×4");
+    controller.destroy();
+  });
+
+  it("shows account upload failure and retries the same result in place", async () => {
+    const harness = runtimeHarness();
+    const active = session(false, "classic_4x4_pow2_undo", {
+      ownerKey: "user:42",
+      gameKind: "normal",
+      pendingTerminal: true,
+    });
+    let stored: StoredGameRecord = {
+      ...record("account-upload-retry", {
+        endedAt: 50,
+        score: 512,
+        boardSum: 256,
+      }),
+      ownerKey: "user:42" as const,
+      modeKey: "classic_4x4_pow2_undo" as const,
+      source: "normal" as const,
+      uploadStatus: "failed",
+    };
+    harness.confirmActivePendingTerminal.mockResolvedValue(stored);
+    harness.getAccountRecord.mockImplementation(async () => stored);
+    harness.retryAccountRecordSubmit.mockImplementation(async () => {
+      stored = { ...stored, uploadStatus: "uploaded" };
+      return null;
+    });
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      enterAuthenticatedMode: vi.fn(async () => {
+        harness.setActiveSession(active);
+        return { status: "entered" as const };
+      }),
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector<HTMLDialogElement>(
+          "[data-pending-terminal-dialog]",
+        )?.open,
+      ).toBe(true),
+    );
+    focusAndClick(root, '[data-action="pending-terminal-confirm"]');
+
+    const retry = root.querySelector<HTMLButtonElement>(
+      '[data-action="retry-record-upload"]',
+    );
+    await vi.waitFor(() => expect(retry?.hidden).toBe(false));
+    expect(
+      root.querySelector("[data-result-upload-status]")?.textContent,
+    ).toBe("同步失败");
+    retry?.click();
+
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-result-upload-status]")?.textContent,
+      ).toBe("已同步"),
+    );
+    expect(harness.retryAccountRecordSubmit).toHaveBeenCalledWith(
+      "account-upload-retry",
+    );
+    expect(retry?.hidden).toBe(true);
     controller.destroy();
   });
 

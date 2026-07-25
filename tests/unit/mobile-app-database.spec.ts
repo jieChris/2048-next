@@ -731,6 +731,67 @@ describe("mobile AppDatabase", () => {
     expect(await database.listOutbox(owner)).toEqual([]);
   });
 
+  it("atomically preserves or acknowledges a record submit with its upload status", async () => {
+    const { database } = createDatabase("record-submit-outcome");
+    const owner = "user:41" as const;
+    const record = terminalRecord(owner, "record-submit-1");
+    const outbox = recordOutbox(owner, record);
+    await database.putSave(
+      activeSave(
+        owner,
+        record.modeKey,
+        1,
+        100,
+        "normal",
+        record.clientRecordId,
+      ),
+    );
+    await database.finalizeTerminal({
+      ownerKey: owner,
+      modeKey: record.modeKey,
+      expectedSaveRevision: 1,
+      record,
+      outbox,
+    });
+
+    await expect(
+      database.applyRecordSubmitOutcome(owner, outbox.operationId, {
+        status: "failed",
+        attemptCount: 1,
+        nextAttemptAt: 5_000,
+        lastErrorCode: "REPLAY_INVALID",
+        updatedAt: 1_000,
+      }),
+    ).resolves.toMatchObject({ uploadStatus: "failed" });
+    expect(await database.listOutbox(owner)).toEqual([
+      expect.objectContaining({
+        attemptCount: 1,
+        nextAttemptAt: 5_000,
+        lastErrorCode: "REPLAY_INVALID",
+      }),
+    ]);
+
+    await expect(
+      database.applyRecordSubmitOutcome(owner, outbox.operationId, {
+        status: "pending",
+        attemptCount: 1,
+        nextAttemptAt: 1_001,
+        lastErrorCode: null,
+        updatedAt: 1_001,
+      }),
+    ).resolves.toMatchObject({ uploadStatus: "pending" });
+    await expect(
+      database.applyRecordSubmitOutcome(owner, outbox.operationId, {
+        status: "uploaded",
+        updatedAt: 1_002,
+      }),
+    ).resolves.toMatchObject({ uploadStatus: "uploaded" });
+    expect(await database.listOutbox(owner)).toEqual([]);
+    expect(await database.getRecord(owner, record.clientRecordId)).toMatchObject(
+      { uploadStatus: "uploaded" },
+    );
+  });
+
   it("atomically reuses one ranked start intent per owner and mode across database instances", async () => {
     const { database, factory, name } = createDatabase(
       "ranked-start-intent-single-flight",

@@ -46,6 +46,7 @@ type NavigationKind =
   | "enter"
   | "terminal"
   | "retry-terminal"
+  | "retry-record-upload"
   | "restart"
   | "leave"
   | "result-home"
@@ -529,6 +530,9 @@ class MobileAppController implements AppController {
       case "result-replay":
         await this.#openReplay("result");
         break;
+      case "retry-record-upload":
+        await this.#retryRecordUpload();
+        break;
       case "result-home":
         await this.#returnHomeFromResult();
         break;
@@ -1007,6 +1011,7 @@ class MobileAppController implements AppController {
       this.#renderResult(record);
       this.#clearGameSurface();
       this.#showRoute("result");
+      void this.#refreshResultUpload(record);
       this.#refreshSummariesInBackground();
     });
   }
@@ -1021,6 +1026,7 @@ class MobileAppController implements AppController {
         this.#hideStatus();
         this.#clearGameSurface();
         this.#showRoute("result");
+        void this.#refreshResultUpload(record);
         this.#refreshSummariesInBackground();
       } catch (error) {
         if (this.#isNavigationCurrent(epoch)) {
@@ -1077,6 +1083,7 @@ class MobileAppController implements AppController {
         this.#hideStatus();
         this.#clearGameSurface();
         this.#showRoute("result");
+        void this.#refreshResultUpload(record);
         this.#refreshSummariesInBackground();
       } catch (error) {
         if (this.#isNavigationCurrent(epoch)) {
@@ -1445,6 +1452,70 @@ class MobileAppController implements AppController {
       "[data-result-steps]",
       this.#numberFormat.format(record.steps),
     );
+    const status =
+      record.ownerKey === "guest"
+        ? this.#t("result.savedLocal")
+        : record.uploadStatus === "uploaded"
+          ? this.#t("result.uploaded")
+          : record.uploadStatus === "failed"
+            ? this.#t("result.uploadFailed")
+            : this.#t("result.uploadPending");
+    this.#setText("[data-result-upload-status]", status);
+    this.#setText(
+      "[data-result-upload-note]",
+      record.ownerKey === "guest"
+        ? this.#t("detail.localRecord")
+        : this.#t("result.accountRecord"),
+    );
+    const retry = requireElement<HTMLButtonElement>(
+      this.#root,
+      '[data-action="retry-record-upload"]',
+    );
+    retry.hidden =
+      record.ownerKey === "guest" || record.uploadStatus !== "failed";
+    retry.disabled = false;
+  }
+
+  async #refreshResultUpload(record: StoredGameRecord): Promise<void> {
+    if (record.ownerKey === "guest") return;
+    await this.#runtime.flushAccountRecordOutbox().catch(() => null);
+    const current = await this.#runtime
+      .getAccountRecord(record.clientRecordId)
+      .catch(() => null);
+    if (
+      !current ||
+      this.#route !== "result" ||
+      this.#selectedRecord?.clientRecordId !== record.clientRecordId
+    ) {
+      return;
+    }
+    this.#selectedRecord = current;
+    this.#renderResult(current);
+  }
+
+  #retryRecordUpload(): Promise<void> {
+    return this.#runNavigation("retry-record-upload", async (epoch) => {
+      const record = this.#selectedRecord;
+      if (!record || record.ownerKey === "guest") return;
+      const retry = requireElement<HTMLButtonElement>(
+        this.#root,
+        '[data-action="retry-record-upload"]',
+      );
+      retry.disabled = true;
+      await this.#runtime
+        .retryAccountRecordSubmit(record.clientRecordId)
+        .catch(() => null);
+      const current = await this.#runtime
+        .getAccountRecord(record.clientRecordId)
+        .catch(() => null);
+      if (!this.#isNavigationCurrent(epoch)) return;
+      if (!current) {
+        retry.disabled = false;
+        return;
+      }
+      this.#selectedRecord = current;
+      this.#renderResult(current);
+    });
   }
 
   #renderDetail(record: StoredGameRecord): void {

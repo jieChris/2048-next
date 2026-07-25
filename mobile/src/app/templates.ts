@@ -245,7 +245,7 @@ export function renderAppTemplate(t: Translator): string {
               <p class="eyebrow">${t("result.eyebrow")}</p>
               <h1 id="result-title">${t("result.title")}</h1>
             </div>
-            <span class="local-state">${t("result.savedLocal")}</span>
+            <span class="local-state" data-result-upload-status>${t("result.savedLocal")}</span>
           </header>
           <section class="result-score instrument-card">
             <span>${t("result.finalScore")}</span>
@@ -256,10 +256,11 @@ export function renderAppTemplate(t: Translator): string {
             <div class="readout"><span>${t("result.time")}</span><strong data-result-time>00:00</strong></div>
             <div class="readout"><span>${t("result.steps")}</span><strong data-result-steps>0</strong></div>
           </div>
-          <p class="local-note">${t("detail.localRecord")}</p>
+          <p class="local-note" data-result-upload-note>${t("detail.localRecord")}</p>
           <div class="result-actions">
             <button class="action-button action-button--primary" type="button" data-action="result-again">${t("result.again")}</button>
             <button class="action-button action-button--secondary" type="button" data-action="result-replay">${t("result.replay")}</button>
+            <button class="action-button action-button--secondary" type="button" data-action="retry-record-upload" hidden>${t("result.retryUpload")}</button>
             <button class="text-button" type="button" data-action="result-home">${t("result.home")}</button>
           </div>
         </section>

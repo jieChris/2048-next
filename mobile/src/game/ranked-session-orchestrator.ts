@@ -7,6 +7,7 @@ import { randomHex } from "../../../src/utils/crypto-random";
 import {
   ACCOUNT_SESSION_TOKEN_MAX_LENGTH,
   loadAccountSession,
+  removeAccountChallengeRef,
   updateAccountSession,
   type AccountChallengeRefV1,
   type AccountSessionV1,
@@ -857,15 +858,14 @@ export class RankedSessionOrchestrator {
   }
 
   async #removeChallenge(challengeId: string): Promise<void> {
-    await updateAccountSession(this.#options.secureStorage, (current) => {
-      this.#assertAccountSession(current);
-      return {
-        ...current,
-        challengeRefs: current.challengeRefs.filter(
-          (candidate) => candidate.challengeId !== challengeId,
-        ),
-      };
-    });
+    await removeAccountChallengeRef(
+      this.#options.secureStorage,
+      {
+        userId: Number(this.#options.ownerKey.slice("user:".length)),
+        establishedAtMs: this.#options.identityEstablishedAtMs,
+      },
+      challengeId,
+    );
   }
 
   async #requireAccountSession(): Promise<AccountSessionV1> {

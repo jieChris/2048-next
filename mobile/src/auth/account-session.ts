@@ -219,3 +219,26 @@ export async function updateAccountSession(
     if (mutationTails.get(storage) === tail) mutationTails.delete(storage);
   }
 }
+
+export function removeAccountChallengeRef(
+  storage: Pick<SecureStorage, "get" | "set">,
+  expectedIdentity: AccountSessionV1["persistentIdentity"],
+  challengeId: string,
+): Promise<AccountSessionV1> {
+  return updateAccountSession(storage, (current) => {
+    if (
+      !current ||
+      current.persistentIdentity.userId !== expectedIdentity.userId ||
+      current.persistentIdentity.establishedAtMs !==
+        expectedIdentity.establishedAtMs
+    ) {
+      throw new AccountSessionEnvelopeError();
+    }
+    return {
+      ...current,
+      challengeRefs: current.challengeRefs.filter(
+        (candidate) => candidate.challengeId !== challengeId,
+      ),
+    };
+  });
+}

@@ -247,8 +247,8 @@ npm run build:app
 - [x] 经典模式实现 pending terminal 的“撤回继续 / 结束并结算”。
 - [x] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 及 `server_now`（或等价同步 checkpoint）并安全保存后才创建、展示 ranked 棋盘，计时从服务端逻辑锚点连续计算，不把设备绝对墙钟偏差计入 duration。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
 - [ ] 排位 Token 以 challenge 安全保存；普通离开保留，重开/清除生成幂等 abandon。
-- [ ] 实现 records outbox、错误分类、退避、手动重试和上传状态。
-- [ ] normal 离线记录上传后只显示云历史，不进入榜单/排位成就。
+- [x] 实现 records outbox、错误分类、退避、手动重试和上传状态。
+- [x] normal 离线记录上传后只显示云历史，不进入榜单/排位成就。
 - [ ] 退出先有界冲刷；失败时显示未上传/存档数量并要求明确选择。
 - [ ] 登录不上传或合并游客历史；账号/游客列表按 owner 清晰区分。
 

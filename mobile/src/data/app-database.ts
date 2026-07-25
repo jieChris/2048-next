@@ -285,6 +285,19 @@ export interface FinalizeTerminalResult {
   record: StoredGameRecord;
 }
 
+export type RecordSubmitOutcome =
+  | {
+      status: "uploaded";
+      updatedAt: number;
+    }
+  | {
+      status: "pending" | "failed";
+      attemptCount: number;
+      nextAttemptAt: number;
+      lastErrorCode: string | null;
+      updatedAt: number;
+    };
+
 export interface DeleteSaveInput {
   ownerKey: AppOwnerKey;
   modeKey: AppModeKey;
@@ -2189,6 +2202,91 @@ export class AppDatabase {
       store.delete(operationId);
       await completion;
       return true;
+    } catch (error) {
+      abortTransaction(transaction);
+      await completion.catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async applyRecordSubmitOutcome(
+    ownerKey: AppOwnerKey,
+    operationId: string,
+    outcome: RecordSubmitOutcome,
+  ): Promise<StoredGameRecord> {
+    assertOwnerKey(ownerKey);
+    requireNonEmptyText(operationId, "operationId");
+    if (
+      !isNonNegativeSafeInteger(outcome.updatedAt) ||
+      (outcome.status !== "uploaded" &&
+        (!isNonNegativeSafeInteger(outcome.attemptCount) ||
+          !isNonNegativeSafeInteger(outcome.nextAttemptAt) ||
+          (outcome.lastErrorCode !== null &&
+            typeof outcome.lastErrorCode !== "string")))
+    ) {
+      throw new AppDatabaseError("invalid_record_submit_outcome");
+    }
+
+    const database = await this.#database();
+    const transaction = database.transaction(
+      [STORES.cache, STORES.records, STORES.outbox],
+      "readwrite",
+    );
+    const completion = transactionCompletion(transaction);
+    try {
+      await assertOwnerVisible(transaction, ownerKey);
+      const records = transaction.objectStore(STORES.records);
+      const outbox = transaction.objectStore(STORES.outbox);
+      const item = await requestResult<StoredOutboxItem | undefined>(
+        outbox.get(operationId),
+      );
+      if (
+        !item ||
+        item.ownerKey !== ownerKey ||
+        item.kind !== "record.submit"
+      ) {
+        throw new AppDatabaseError("record_submit_outbox_missing");
+      }
+      assertCurrentSchemaRow(item, "corrupt_outbox");
+      assertValidOutbox(item);
+      const record = await requestResult<StoredGameRecord | undefined>(
+        records.get(item.clientRecordId),
+      );
+      if (!record || record.ownerKey !== ownerKey) {
+        throw new AppDatabaseError("record_submit_record_missing");
+      }
+      assertCurrentSchemaRow(record, "corrupt_record");
+      assertValidRecord(record);
+      if (outcome.updatedAt < item.updatedAt) {
+        throw new AppDatabaseError("stale_outbox_update");
+      }
+
+      const nextRecord: StoredGameRecord = {
+        ...record,
+        uploadStatus: outcome.status,
+      };
+      assertValidRecord(nextRecord);
+      records.put(nextRecord);
+
+      if (outcome.status === "uploaded") {
+        outbox.delete(operationId);
+      } else {
+        if (outcome.attemptCount < item.attemptCount) {
+          throw new AppDatabaseError("stale_outbox_update");
+        }
+        const nextItem = {
+          ...item,
+          attemptCount: outcome.attemptCount,
+          nextAttemptAt: outcome.nextAttemptAt,
+          lastErrorCode: outcome.lastErrorCode,
+          updatedAt: outcome.updatedAt,
+        };
+        assertValidOutbox(nextItem);
+        outbox.put(nextItem);
+      }
+
+      await completion;
+      return cloneValue(nextRecord);
     } catch (error) {
       abortTransaction(transaction);
       await completion.catch(() => undefined);

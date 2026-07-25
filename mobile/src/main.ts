@@ -11,6 +11,7 @@ import { MOBILE_BUILD_FLAGS } from "./app/build-flags";
 import {
   bootstrapGuestAppRuntime,
   createHttpRankedSessionGateway,
+  type GuestAppRuntime,
 } from "./app/app-runtime";
 import { renderAppTemplate } from "./app/templates";
 import type { MobileAuthService } from "./auth/auth-service";
@@ -115,10 +116,7 @@ async function start(): Promise<void> {
   try {
     const secureStorage = createPlatformSecureStorage();
     const database = new AppDatabase();
-    const runtime = await bootstrapGuestAppRuntime({
-      database,
-      secureStorage,
-    });
+    let activeRuntime: GuestAppRuntime | null = null;
     let authServicePromise: Promise<MobileAuthService> | null = null;
     const getAuthService = (): Promise<MobileAuthService> => {
       if (authServicePromise) return authServicePromise;
@@ -131,6 +129,11 @@ async function start(): Promise<void> {
             privacy:
               privacy ?? createPreviewPrivacyRecord("offline", Date.now()),
             secureStorage,
+            onAuthenticatedSession() {
+              void activeRuntime
+                ?.flushAccountRecordOutbox()
+                .catch(() => undefined);
+            },
           });
         },
       );
@@ -139,6 +142,15 @@ async function start(): Promise<void> {
       });
       return authServicePromise;
     };
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage,
+      recordSync: {
+        enabled: () => currentNetworkMode === "online",
+        getAuthService,
+      },
+    });
+    activeRuntime = runtime;
     controller = createAppController({
       root: appRoot,
       runtime,
@@ -171,9 +183,19 @@ async function start(): Promise<void> {
           PREVIEW_PRIVACY_STORAGE_KEY,
           JSON.stringify(createPreviewPrivacyRecord(mode, Date.now())),
         );
+        if (mode === "online") {
+          void runtime.flushAccountRecordOutbox().catch(() => undefined);
+        }
       },
     });
     appRoot.removeAttribute("aria-busy");
+
+    const flushAccountRecords = (): void => {
+      if (currentNetworkMode !== "online") return;
+      void runtime.flushAccountRecordOutbox().catch(() => undefined);
+    };
+    window.addEventListener("online", flushAccountRecords);
+    flushAccountRecords();
 
     await bindAndroidAppLifecycle({
       async onPause() {
@@ -181,6 +203,7 @@ async function start(): Promise<void> {
       },
       onResume() {
         controller?.resume();
+        flushAccountRecords();
       },
       async onBackButton() {
         if (!(await controller?.handleBack())) await App.exitApp();

@@ -67,6 +67,22 @@ export interface MobileAuthServiceOptions {
   timeoutMs?: number;
   now?: () => number;
   clientFactory?: ClientFactory;
+  onAuthenticatedSession?: (
+    session: AccountSessionV1,
+    reason: "login" | "register" | "refresh",
+  ) => void | Promise<void>;
+}
+
+export interface MobileRecordSubmitInput {
+  clientRecordId: string;
+  modeKey: string;
+  score: number;
+  durationMs: number;
+  bestTile: number;
+  endedAt: string;
+  replayString: string;
+  rankedSessionToken?: string;
+  challengeId?: string;
 }
 
 export interface MobileAuthService {
@@ -89,6 +105,7 @@ export interface MobileAuthService {
   }): Promise<JsonRecord>;
   currentUser(): Promise<AccountUserV1>;
   refresh(): Promise<AccountSessionV1>;
+  submitRecord(input: MobileRecordSubmitInput): Promise<JsonRecord>;
 }
 
 const AUTH_REFRESH_WINDOW_SECONDS = 5 * 60;
@@ -276,6 +293,19 @@ export function createMobileAuthService(
   const clientFor = (token: string): JsonApiClient =>
     createClient({ ...commonClientOptions, token });
 
+  const notifyAuthenticatedSession = (
+    session: AccountSessionV1,
+    reason: "login" | "register" | "refresh",
+  ): void => {
+    try {
+      void Promise.resolve(
+        options.onAuthenticatedSession?.(session, reason),
+      ).catch(() => undefined);
+    } catch {
+      // Authentication remains successful when best-effort sync scheduling fails.
+    }
+  };
+
   const requestPublic = async (
     path: string,
     init: RequestInit,
@@ -350,7 +380,13 @@ export function createMobileAuthService(
           jsonBody({ token: previous.accessToken }),
         ),
       );
-      return persistAuthBody(body, previous, previous.accessToken);
+      const session = await persistAuthBody(
+        body,
+        previous,
+        previous.accessToken,
+      );
+      notifyAuthenticatedSession(session, "refresh");
+      return session;
     })();
     refreshInFlight = operation;
     void operation.then(
@@ -400,10 +436,12 @@ export function createMobileAuthService(
           password: password(input.password),
         }),
       );
-      return persistAuthBody(
+      const session = await persistAuthBody(
         body,
         await loadAccountSession(options.secureStorage),
       );
+      notifyAuthenticatedSession(session, "login");
+      return session;
     },
     registerStart(input) {
       return requestPublic(
@@ -423,10 +461,12 @@ export function createMobileAuthService(
           code: requiredText(input.code, 32),
         }),
       );
-      return persistAuthBody(
+      const session = await persistAuthBody(
         body,
         await loadAccountSession(options.secureStorage),
       );
+      notifyAuthenticatedSession(session, "register");
+      return session;
     },
     passwordResetStart(input) {
       return requestPublic(
@@ -449,5 +489,40 @@ export function createMobileAuthService(
       return parseUser(body.user ?? body.data);
     },
     refresh,
+    submitRecord(input) {
+      if (
+        ![input.score, input.durationMs, input.bestTile].every(
+          (value) => Number.isSafeInteger(value) && value >= 0,
+        ) ||
+        !Number.isFinite(Date.parse(input.endedAt)) ||
+        Boolean(input.rankedSessionToken) !== Boolean(input.challengeId)
+      ) {
+        throw new MobileAuthError("invalid_input");
+      }
+      return requestAuthenticated(
+        "/records",
+        jsonBody({
+          client_record_id: requiredText(input.clientRecordId, 160),
+          mode_key: requiredText(input.modeKey, 160),
+          score: input.score,
+          duration_ms: input.durationMs,
+          max_tile: input.bestTile,
+          ended_at: requiredText(input.endedAt, 40),
+          end_reason: "game_over",
+          replay_string: requiredText(input.replayString, 1_048_576),
+          ...(input.rankedSessionToken
+            ? {
+                ranked_session_token: requiredText(
+                  input.rankedSessionToken,
+                  ACCOUNT_SESSION_TOKEN_MAX_LENGTH,
+                ),
+              }
+            : {}),
+          ...(input.challengeId
+            ? { challenge_id: requiredText(input.challengeId, 160) }
+            : {}),
+        }),
+      );
+    },
   };
 }
