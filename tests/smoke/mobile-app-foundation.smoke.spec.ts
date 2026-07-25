@@ -472,6 +472,23 @@ test("dialog actions remain reachable at 320dp with 200 percent text", async ({
       bounds[0].y + bounds[0].height,
     );
   }
+
+  await page.evaluate(() => {
+    document
+      .querySelector<HTMLDialogElement>("[data-offline-gate]")
+      ?.close();
+    document
+      .querySelector<HTMLDialogElement>("[data-pending-terminal-dialog]")
+      ?.showModal();
+  });
+  const pendingTerminal = page.locator("[data-pending-terminal-dialog]");
+  await expect(pendingTerminal).toBeVisible();
+  await pendingTerminal.locator(".dialog-plate").evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(
+    pendingTerminal.getByRole("button", { name: "Finish and save" }),
+  ).toBeInViewport();
 });
 
 test("auth task pages stay inside the 320dp short-screen scroll container", async ({

@@ -484,6 +484,16 @@ export class GuestAppRuntime {
     return record;
   }
 
+  undoActivePendingTerminal() {
+    return this.#requireActiveSession().undoPendingTerminal();
+  }
+
+  async confirmActivePendingTerminal(): Promise<StoredGameRecord> {
+    const record = await this.#requireActiveSession().confirmPendingTerminal();
+    this.#applyFinalizedRecord(record);
+    return record;
+  }
+
   async flushActiveSession(): Promise<void> {
     await this.#requireActiveSession().flush();
   }

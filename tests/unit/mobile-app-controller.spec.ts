@@ -50,14 +50,16 @@ function session(
   options: {
     ownerKey?: "guest" | `user:${number}`;
     gameKind?: "normal" | "ranked";
+    pendingTerminal?: boolean;
   } = {},
 ): GuestGameSession {
   const engine = createEngineSession({
     modeKey,
     seed: hasEffectiveMove ? 4_096 : 2_048,
   });
-  const state = engine.init();
+  let state = engine.init();
   const fences = new Set<string>();
+  let pendingTerminal = options.pendingTerminal ?? false;
   return {
     get state() {
       return state;
@@ -78,10 +80,23 @@ function session(
     get hasEffectiveMove() {
       return hasEffectiveMove;
     },
+    get pendingTerminal() {
+      return pendingTerminal;
+    },
     elapsedMs: () => 0,
     addInputFence: vi.fn((reason: string) => fences.add(reason)),
     removeInputFence: vi.fn((reason: string) => fences.delete(reason)),
     flush: vi.fn(async () => undefined),
+    undoPendingTerminal: vi.fn(async () => {
+      for (const direction of [0, 1, 2, 3] as const) {
+        const transition = engine.move({ direction, atMs: 1 });
+        if (!transition.moved) continue;
+        state = transition.state;
+        pendingTerminal = false;
+        return transition;
+      }
+      throw new Error("test_transition_missing");
+    }),
   } as unknown as GuestGameSession;
 }
 
@@ -124,6 +139,8 @@ interface RuntimeHarness {
   readonly leaveActiveSession: ReturnType<typeof vi.fn>;
   readonly moveActiveSession: ReturnType<typeof vi.fn>;
   readonly finalizeActiveTerminal: ReturnType<typeof vi.fn>;
+  readonly undoActivePendingTerminal: ReturnType<typeof vi.fn>;
+  readonly confirmActivePendingTerminal: ReturnType<typeof vi.fn>;
   readonly getGuestRecord: ReturnType<typeof vi.fn>;
   get activeSession(): GuestGameSession | null;
   setActiveSession(value: GuestGameSession | null): void;
@@ -148,6 +165,11 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
   });
   const moveActiveSession = vi.fn();
   const finalizeActiveTerminal = vi.fn();
+  const undoActivePendingTerminal = vi.fn(async () => {
+    if (!activeSession) throw new Error("no_active_session");
+    return activeSession.undoPendingTerminal();
+  });
+  const confirmActivePendingTerminal = vi.fn();
   const getGuestRecord = vi.fn(async () => null);
   const runtime = {
     get guestSave() {
@@ -164,6 +186,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     leaveActiveSession,
     moveActiveSession,
     finalizeActiveTerminal,
+    undoActivePendingTerminal,
+    confirmActivePendingTerminal,
     getGuestRecord,
     refreshGuestSummary: vi.fn(async () => undefined),
     deleteGuestRecord: vi.fn(async () => true),
@@ -177,6 +201,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     leaveActiveSession,
     moveActiveSession,
     finalizeActiveTerminal,
+    undoActivePendingTerminal,
+    confirmActivePendingTerminal,
     getGuestRecord,
     get activeSession() {
       return activeSession;
@@ -595,6 +621,151 @@ describe("mobile app controller navigation", () => {
     expect(
       root.querySelector<HTMLElement>('[data-app-view="result"]')?.hidden,
     ).toBe(true);
+    controller.destroy();
+  });
+
+  it("opens the classic pending-terminal choice after a move and resumes after undo", async () => {
+    const harness = runtimeHarness();
+    const active = session(false, "classic_4x4_pow2_undo", {
+      ownerKey: "user:42",
+      gameKind: "normal",
+    });
+    let pendingTerminal = false;
+    Object.defineProperty(active, "pendingTerminal", {
+      configurable: true,
+      get: () => pendingTerminal,
+    });
+    const enterAuthenticatedMode = vi.fn(async () => {
+      harness.setActiveSession(active);
+      return { status: "entered" as const };
+    });
+    const transitionEngine = createEngineSession({
+      modeKey: "classic_4x4_pow2_undo",
+      seed: 32_768,
+    });
+    transitionEngine.init();
+    const terminalTransition = transitionEngine.move({
+      direction: 1,
+      atMs: 100,
+    });
+    harness.moveActiveSession.mockImplementation(() => {
+      pendingTerminal = true;
+      return {
+        transition: terminalTransition,
+        save: Promise.resolve("written"),
+        terminal: null,
+      };
+    });
+    harness.undoActivePendingTerminal.mockImplementation(async () => {
+      pendingTerminal = false;
+      return terminalTransition;
+    });
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      enterAuthenticatedMode,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    await vi.waitFor(() => expect(controller.route).toBe("game"));
+    root
+      .querySelector<HTMLElement>("[data-game-board-root]")
+      ?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+    const dialog = root.querySelector<HTMLDialogElement>(
+      "[data-pending-terminal-dialog]",
+    );
+    await vi.waitFor(() => expect(dialog?.open).toBe(true));
+
+    focusAndClick(root, '[data-action="pending-terminal-undo"]');
+
+    await vi.waitFor(() => expect(dialog?.open).toBe(false));
+    expect(harness.undoActivePendingTerminal).toHaveBeenCalledTimes(1);
+    expect(controller.route).toBe("game");
+    controller.destroy();
+  });
+
+  it("restores a classic pending terminal and finalizes exactly once", async () => {
+    const harness = runtimeHarness();
+    const active = session(false, "classic_4x4_pow2_undo", {
+      ownerKey: "user:42",
+      gameKind: "normal",
+      pendingTerminal: true,
+    });
+    const finalized = {
+      ...record("classic-pending-final", {
+        endedAt: 50,
+        score: 512,
+        boardSum: 256,
+      }),
+      ownerKey: "user:42" as const,
+      modeKey: "classic_4x4_pow2_undo" as const,
+      source: "normal" as const,
+      uploadStatus: "pending" as const,
+    };
+    const enterAuthenticatedMode = vi.fn(async () => {
+      harness.setActiveSession(active);
+      return { status: "entered" as const };
+    });
+    harness.confirmActivePendingTerminal.mockResolvedValue(finalized);
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      enterAuthenticatedMode,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector<HTMLDialogElement>(
+          "[data-pending-terminal-dialog]",
+        )?.open,
+      ).toBe(true),
+    );
+
+    focusAndClick(root, '[data-action="pending-terminal-confirm"]');
+
+    await vi.waitFor(() => expect(controller.route).toBe("result"));
+    expect(harness.confirmActivePendingTerminal).toHaveBeenCalledTimes(1);
+    expect(root.querySelector("#result-title")?.textContent).toBe("经典 4×4");
+    controller.destroy();
+  });
+
+  it("leaves a restored pending terminal on Android Back without settling it", async () => {
+    const harness = runtimeHarness();
+    const active = session(false, "classic_4x4_pow2_undo", {
+      ownerKey: "user:42",
+      gameKind: "normal",
+      pendingTerminal: true,
+    });
+    const enterAuthenticatedMode = vi.fn(async () => {
+      harness.setActiveSession(active);
+      return { status: "entered" as const };
+    });
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      enterAuthenticatedMode,
+    });
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector<HTMLDialogElement>(
+          "[data-pending-terminal-dialog]",
+        )?.open,
+      ).toBe(true),
+    );
+
+    expect(await controller.handleBack()).toBe(true);
+
+    expect(harness.leaveActiveSession).toHaveBeenCalledTimes(1);
+    expect(harness.confirmActivePendingTerminal).not.toHaveBeenCalled();
+    expect(harness.undoActivePendingTerminal).not.toHaveBeenCalled();
+    expect(controller.route).toBe("home");
     controller.destroy();
   });
 });

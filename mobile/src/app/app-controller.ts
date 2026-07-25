@@ -51,7 +51,9 @@ type NavigationKind =
   | "result-home"
   | "open-record"
   | "delete-record"
-  | "enter-account";
+  | "enter-account"
+  | "pending-terminal-undo"
+  | "pending-terminal-confirm";
 
 export interface AppControllerOptions {
   root: HTMLElement;
@@ -341,6 +343,11 @@ class MobileAppController implements AppController {
   async handleBack(): Promise<boolean> {
     const openModal = this.#dialogs().find((dialog) => dialog.open);
     if (openModal) {
+      if (openModal.matches("[data-pending-terminal-dialog]")) {
+        this.#closeModal(openModal);
+        await this.#leaveGame();
+        return true;
+      }
       this.#cancelModal(openModal);
       return true;
     }
@@ -509,6 +516,12 @@ class MobileAppController implements AppController {
       case "confirm-restart":
         this.#closeNamedDialog("[data-restart-dialog]");
         await this.#restartGame();
+        break;
+      case "pending-terminal-undo":
+        await this.#undoPendingTerminal();
+        break;
+      case "pending-terminal-confirm":
+        await this.#confirmPendingTerminal();
         break;
       case "result-again":
         await this.#restartGame();
@@ -836,6 +849,7 @@ class MobileAppController implements AppController {
         this.#mountGame(activeSession);
         this.#hideStatus();
         this.#showRoute("game");
+        this.#showPendingTerminalIfNeeded();
         performance.mark("app-game-entry-end");
         performance.measure(
           "app-game-entry",
@@ -869,6 +883,7 @@ class MobileAppController implements AppController {
         }
         this.#mountGame(opened.session);
         this.#showRoute("game");
+        this.#showPendingTerminalIfNeeded();
         performance.mark("app-game-entry-end");
         performance.measure(
           "app-game-entry",
@@ -949,6 +964,9 @@ class MobileAppController implements AppController {
         return;
       }
       await animation;
+      if (session.pendingTerminal && this.#route === "game") {
+        this.#showPendingTerminalIfNeeded();
+      }
     } catch (error) {
       this.#showStorageError(error);
     } finally {
@@ -1010,6 +1028,67 @@ class MobileAppController implements AppController {
         }
       }
     });
+  }
+
+  #showPendingTerminalIfNeeded(): void {
+    if (!this.#runtime.activeSession?.pendingTerminal) return;
+    const dialog = requireElement<HTMLDialogElement>(
+      this.#root,
+      "[data-pending-terminal-dialog]",
+    );
+    if (!dialog.open) this.#openModal(dialog);
+  }
+
+  #undoPendingTerminal(): Promise<void> {
+    return this.#runNavigation("pending-terminal-undo", async (epoch) => {
+      try {
+        const transition = await this.#runtime.undoActivePendingTerminal();
+        if (!this.#isNavigationCurrent(epoch)) return;
+        const dialog = requireElement<HTMLDialogElement>(
+          this.#root,
+          "[data-pending-terminal-dialog]",
+        );
+        if (dialog.open) this.#closeModal(dialog);
+        this.#updateGameReadouts();
+        await (this.#gameBoard?.apply(transition) ?? Promise.resolve());
+        if (!this.#isNavigationCurrent(epoch)) return;
+        this.#moveBusy = false;
+        this.#hideStatus();
+      } catch (error) {
+        if (this.#isNavigationCurrent(epoch)) {
+          this.#showPendingTerminalError(error);
+        }
+      }
+    });
+  }
+
+  #confirmPendingTerminal(): Promise<void> {
+    return this.#runNavigation("pending-terminal-confirm", async (epoch) => {
+      try {
+        const record = await this.#runtime.confirmActivePendingTerminal();
+        if (!this.#isNavigationCurrent(epoch)) return;
+        const dialog = requireElement<HTMLDialogElement>(
+          this.#root,
+          "[data-pending-terminal-dialog]",
+        );
+        if (dialog.open) this.#closeModal(dialog);
+        this.#selectedRecord = record;
+        this.#renderResult(record);
+        this.#hideStatus();
+        this.#clearGameSurface();
+        this.#showRoute("result");
+        this.#refreshSummariesInBackground();
+      } catch (error) {
+        if (this.#isNavigationCurrent(epoch)) {
+          this.#showPendingTerminalError(error);
+        }
+      }
+    });
+  }
+
+  #showPendingTerminalError(error: unknown): void {
+    this.#showStatus(this.#t("pendingTerminal.error"), "error", 0);
+    this.#status.dataset.errorCode = errorCode(error);
   }
 
   async #retrySave(): Promise<void> {
@@ -1494,6 +1573,11 @@ class MobileAppController implements AppController {
   }
 
   #cancelModal(dialog: HTMLDialogElement): void {
+    if (dialog.matches("[data-pending-terminal-dialog]")) {
+      this.#closeModal(dialog);
+      void this.#leaveGame();
+      return;
+    }
     if (
       dialog.matches("[data-offline-gate]") ||
       dialog.matches("[data-auth-gate]")

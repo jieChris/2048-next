@@ -484,6 +484,18 @@ export function renderAppTemplate(t: Translator): string {
         </div>
       </dialog>
 
+      <dialog class="app-dialog app-dialog--compact" data-pending-terminal-dialog aria-labelledby="pending-terminal-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("pendingTerminal.eyebrow")}</p>
+          <h2 id="pending-terminal-title">${t("pendingTerminal.title")}</h2>
+          <p>${t("pendingTerminal.body")}</p>
+          <div class="dialog-actions dialog-actions--split">
+            <button class="action-button action-button--secondary" type="button" data-action="pending-terminal-undo">${t("pendingTerminal.undo")}</button>
+            <button class="action-button action-button--primary" type="button" data-action="pending-terminal-confirm">${t("pendingTerminal.confirm")}</button>
+          </div>
+        </div>
+      </dialog>
+
       <dialog class="app-dialog app-dialog--compact" data-delete-dialog aria-labelledby="delete-title">
         <div class="dialog-plate">
           <p class="eyebrow">${t("delete.eyebrow")}</p>

@@ -188,6 +188,13 @@ const ZH_CN_MESSAGES = {
     "当前未结束进度会被覆盖，并且不会生成历史记录。其他模式存档不受影响。",
   "restart.cancel": "取消",
   "restart.confirm": "重新开始",
+  "pendingTerminal.eyebrow": "经典模式终局",
+  "pendingTerminal.title": "要撤回继续，还是结束结算？",
+  "pendingTerminal.body":
+    "当前棋盘已无可移动位置，但仍可撤回。只有选择结束并结算才会生成历史记录。",
+  "pendingTerminal.undo": "撤回继续",
+  "pendingTerminal.confirm": "结束并结算",
+  "pendingTerminal.error": "终局状态尚未确认，请直接重试当前操作。",
   "nav.home": "首页",
   "nav.modes": "模式",
   "nav.records": "记录",
@@ -404,6 +411,14 @@ const EN_MESSAGES: Record<MessageKey, string> = {
     "The unfinished game will be replaced without creating history. Saves in other modes are unchanged.",
   "restart.cancel": "Cancel",
   "restart.confirm": "Restart",
+  "pendingTerminal.eyebrow": "Classic game over",
+  "pendingTerminal.title": "Undo and continue, or finish this game?",
+  "pendingTerminal.body":
+    "The board has no moves, but undo is still available. A history record is created only if you finish the game.",
+  "pendingTerminal.undo": "Undo and continue",
+  "pendingTerminal.confirm": "Finish and save",
+  "pendingTerminal.error":
+    "The final state is not confirmed yet. Retry the same action.",
   "nav.home": "Home",
   "nav.modes": "Modes",
   "nav.records": "Records",
