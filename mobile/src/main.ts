@@ -135,7 +135,7 @@ const initialNetworkMode = resolveNetworkMode(
 );
 let currentNetworkMode = initialNetworkMode;
 document.documentElement.lang = currentLocale;
-appRoot.innerHTML = renderAppTemplate(t);
+appRoot.innerHTML = renderAppTemplate(t, currentLocale);
 appRoot.setAttribute("aria-busy", "true");
 
 function showBootView(route: "privacy" | "home"): void {
@@ -275,7 +275,7 @@ async function start(): Promise<void> {
       );
       t = createTranslator(currentLocale);
       document.documentElement.lang = currentLocale;
-      appRoot.innerHTML = renderAppTemplate(t);
+      appRoot.innerHTML = renderAppTemplate(t, currentLocale);
       controller = createAppController({
         root: appRoot,
         runtime,

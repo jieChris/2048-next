@@ -19,6 +19,14 @@ test("mobile settings apply immediately, keep the Me route, and persist without 
   await page.getByRole("button", { name: "仅离线体验" }).click();
   await page.getByRole("button", { name: "我的", exact: true }).click();
 
+  await page.getByRole("button", { name: "隐私政策与用户协议" }).click();
+  const policies = page.locator('[data-app-view="policies"]');
+  await expect(policies).toBeVisible();
+  await expect(policies).toContainText("unapproved-draft");
+  await expect(policies).toContainText("Resend");
+  await policies.getByRole("button", { name: "返回" }).click();
+  await expect(page.locator('[data-app-view="me"]')).toBeVisible();
+
   const theme = page.locator("[data-theme-preference]");
   const locale = page.locator("[data-locale-preference]");
   const sound = page.locator("[data-sound-effects-enabled]");

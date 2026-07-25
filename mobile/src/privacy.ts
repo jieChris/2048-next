@@ -1,3 +1,5 @@
+import { POLICY_BUNDLE_VERSION } from "../../src/policies/2048-next-policy";
+
 export type PreviewPrivacyChoice = "offline" | "online";
 
 export interface PreviewPrivacyRecord {
@@ -7,7 +9,7 @@ export interface PreviewPrivacyRecord {
   readonly policyVersion: typeof PREVIEW_POLICY_VERSION;
 }
 
-export const PREVIEW_POLICY_VERSION = "unapproved-draft" as const;
+export const PREVIEW_POLICY_VERSION = POLICY_BUNDLE_VERSION;
 export const PREVIEW_PRIVACY_STORAGE_KEY =
   "2048-next.app.preview-privacy-v1";
 

@@ -52,6 +52,7 @@ export type AppRoute =
   | "privacy"
   | AppTopRoute
   | "achievements"
+  | "policies"
   | "game"
   | "result"
   | "detail"
@@ -293,6 +294,7 @@ class MobileAppController implements AppController {
   #route: AppRoute;
   #networkMode: AppNetworkMode;
   #privacyReturnRoute: AppRoute | null = null;
+  #policyReturnRoute: AppRoute = "me";
   #pendingOnlineIntent: OnlineIntent | null = null;
   #postAuthRoute: "achievements" | null = null;
   #detailSource: RecordSourceRoute = "records";
@@ -605,6 +607,7 @@ class MobileAppController implements AppController {
       if (this.#destroyed) return true;
       if (this.#route === "detail") this.#showRoute(this.#detailSource);
       else if (this.#route === "replay") this.#closeReplay();
+      else if (this.#route === "policies") this.#returnFromPolicies();
       else if (isAuthTaskRoute(this.#route)) this.#backAuthentication();
       else if (this.#route === "privacy" && this.#privacyReturnRoute) {
         this.#returnFromPrivacy(false);
@@ -636,6 +639,10 @@ class MobileAppController implements AppController {
     }
     if (this.#route === "achievements") {
       this.#showRoute("me");
+      return true;
+    }
+    if (this.#route === "policies") {
+      this.#returnFromPolicies();
       return true;
     }
     if (this.#route === "replay") {
@@ -850,6 +857,12 @@ class MobileAppController implements AppController {
       case "close-achievements":
         this.#showRoute("me");
         break;
+      case "open-policies":
+        this.#openPoliciesFromCurrentRoute();
+        break;
+      case "close-policies":
+        this.#returnFromPolicies();
+        break;
       case "export-diagnostics":
         await this.#exportDiagnostics();
         break;
@@ -985,6 +998,14 @@ class MobileAppController implements AppController {
     this.#showRoute("home");
   }
 
+  #openPoliciesFromCurrentRoute(): void {
+    const openDialog = this.#dialogs().find((dialog) => dialog.open);
+    if (openDialog) this.#closeModal(openDialog);
+    this.#policyReturnRoute = this.#route;
+    this.#runtime.activeSession?.addInputFence("dialog");
+    this.#showRoute("policies");
+  }
+
   #openPrivacyFromCurrentRoute(): void {
     const openDialog = this.#dialogs().find((dialog) => dialog.open);
     if (openDialog) this.#closeModal(openDialog);
@@ -995,6 +1016,11 @@ class MobileAppController implements AppController {
     this.#privacyReturnRoute = this.#route;
     this.#runtime.activeSession?.addInputFence("dialog");
     this.#showRoute("privacy");
+  }
+
+  #returnFromPolicies(): void {
+    this.#runtime.activeSession?.removeInputFence("dialog");
+    this.#showRoute(this.#policyReturnRoute);
   }
 
   #returnFromPrivacy(continueIntent: boolean): void {

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 NEXT 账号删除</title>
+  <meta name="description" content="无需安装 App，即可申请删除 2048 NEXT 账号及其游戏数据。">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
+  <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
+  <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
+  <link href="style/main.css?v=20260721-leaderboard-rank-colors-v1" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
+  <link href="style/account_page.css?v=20260321-01" rel="stylesheet" type="text/css">
+  <link href="style/account-deletion-page.css?v=20260725-01" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body data-page="account-deletion" data-ready="0">
+  <main class="palette-page-shell deletion-page-shell">
+    <header class="palette-page-header deletion-page-header">
+      <div class="palette-title-wrap">
+        <p class="palette-kicker" data-copy="kicker">2048 NEXT · 账号管理</p>
+        <h1 class="palette-title" data-copy="title">申请删除账号</h1>
+        <p class="palette-subtitle" data-copy="subtitle">无需安装 App。提交后进入 72 小时冷静期，期间使用邮箱和密码登录会取消删除。</p>
+      </div>
+      <nav class="palette-nav" aria-label="页面导航">
+        <select class="deletion-language" data-language aria-label="语言">
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+        </select>
+        <a class="replay-button palette-nav-btn" href="2048.html" data-copy="home">返回首页</a>
+      </nav>
+    </header>
+
+    <section class="card-surface deletion-card" aria-labelledby="deletion-form-title">
+      <div class="panel-head">
+        <h2 id="deletion-form-title" data-copy="formTitle">验证账号并提交</h2>
+      </div>
+
+      <div class="deletion-warning" role="note">
+        <strong data-copy="warningTitle">提交后会立即发生</strong>
+        <ul>
+          <li data-copy="warningOne">现有登录凭据失效，账号退出。</li>
+          <li data-copy="warningTwo">账号资料、记录、回放、排行榜和成就从公开页面隐藏。</li>
+          <li data-copy="warningThree">72 小时内重新使用邮箱和密码登录，可取消删除并恢复数据。</li>
+          <li data-copy="warningFour">超过期限仍未登录，账号和游戏数据将被彻底删除且无法恢复。</li>
+        </ul>
+      </div>
+
+      <form class="deletion-form" data-deletion-form>
+        <label for="deletion-email" data-copy="emailLabel">邮箱</label>
+        <input id="deletion-email" class="account-input" name="email" type="email" autocomplete="email" required data-copy-placeholder="emailPlaceholder" placeholder="请输入账号邮箱">
+
+        <label for="deletion-password" data-copy="passwordLabel">密码</label>
+        <input id="deletion-password" class="account-input" name="password" type="password" autocomplete="current-password" required data-copy-placeholder="passwordPlaceholder" placeholder="请输入当前密码">
+
+        <label class="deletion-confirm">
+          <input type="checkbox" name="confirmed" required>
+          <span data-copy="confirmLabel">我已了解 72 小时冷静期和到期后不可恢复的后果。</span>
+        </label>
+
+        <button class="replay-button deletion-submit" type="submit" data-copy="submit">申请删除账号</button>
+      </form>
+
+      <p class="account-tip deletion-status" data-deletion-status aria-live="polite"></p>
+
+      <section class="deletion-receipt" data-deletion-receipt hidden aria-labelledby="deletion-receipt-title">
+        <p class="palette-kicker" data-copy="receiptKicker">删除申请已受理</p>
+        <h2 id="deletion-receipt-title" data-copy="receiptTitle">账号已进入冷静期</h2>
+        <dl>
+          <div><dt data-copy="receiptEmail">账号</dt><dd data-receipt-email>--</dd></div>
+          <div><dt data-copy="receiptDue">删除截止时间</dt><dd data-receipt-due>--</dd></div>
+        </dl>
+        <p data-copy="receiptBody">截止时间前使用邮箱和密码登录会自动取消删除；到期后数据将不可恢复。</p>
+        <a class="replay-button" href="account_settings.html" data-copy="login">前往登录</a>
+      </section>
+    </section>
+
+    <footer class="deletion-footer">
+      <a href="privacy.html" data-copy="privacy">隐私政策</a>
+      <a href="terms.html" data-copy="terms">用户协议</a>
+    </footer>
+  </main>
+
+  <script type="module" src="./src/entries/account-deletion.ts"></script>
+</body>
+</html>

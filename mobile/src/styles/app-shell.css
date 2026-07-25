@@ -1112,6 +1112,70 @@ h2 {
   font-size: 0.72rem;
 }
 
+.policies-view {
+  gap: 18px;
+  overflow-y: auto;
+}
+
+.policy-draft-note {
+  padding: 14px 16px;
+  border-left: 3px solid var(--precision-danger);
+  background: color-mix(in srgb, var(--precision-danger) 9%, transparent);
+  line-height: 1.55;
+}
+
+.policy-bundle-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 0;
+}
+
+.policy-bundle-meta div {
+  display: flex;
+  gap: 7px;
+}
+
+.policy-bundle-meta dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.policy-document {
+  padding: clamp(18px, 5vw, 28px);
+  border: 1px solid var(--precision-line);
+  border-radius: 8px;
+  background: var(--precision-panel-raised);
+}
+
+.policy-document > h2 {
+  margin-top: 0;
+}
+
+.policy-document__intro,
+.policy-section p,
+.policy-section li {
+  line-height: 1.7;
+}
+
+.policy-section + .policy-section {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--precision-line);
+}
+
+.policy-section h2 {
+  font-size: 1.05rem;
+}
+
+.policy-section ul {
+  padding-left: 20px;
+}
+
+.policy-section li + li {
+  margin-top: 7px;
+}
+
 .leaderboard-dialog {
   width: min(100vw, 540px);
   max-width: none;

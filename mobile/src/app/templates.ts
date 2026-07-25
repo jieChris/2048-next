@@ -1,4 +1,11 @@
 import type { Translator } from "../i18n";
+import {
+  getPolicyDocument,
+  POLICY_BUNDLE_VERSION,
+  POLICY_EFFECTIVE_DATE,
+  renderPolicyDocumentHtml,
+  type PolicyLocale,
+} from "../../../src/policies/2048-next-policy";
 
 function brandBoard(): string {
   return `
@@ -31,7 +38,12 @@ function bottomNavigation(t: Translator): string {
   `;
 }
 
-export function renderAppTemplate(t: Translator): string {
+export function renderAppTemplate(
+  t: Translator,
+  locale: PolicyLocale = "zh-CN",
+): string {
+  const privacyPolicy = getPolicyDocument("privacy", locale);
+  const termsPolicy = getPolicyDocument("terms", locale);
   return `
     <div class="app-shell app-shell--precision" data-app-shell data-app-template="precision-v1" data-network-mode="undecided">
       <div class="app-stage" data-app-stage>
@@ -57,7 +69,7 @@ export function renderAppTemplate(t: Translator): string {
             <button class="action-button action-button--secondary" type="button" data-consent="offline">
               ${t("privacy.offlineAction")}
             </button>
-            <button class="text-button" type="button" data-action="show-privacy-notes">
+            <button class="text-button" type="button" data-action="open-policies">
               ${t("privacy.policyAction")}
             </button>
           </div>
@@ -205,6 +217,11 @@ export function renderAppTemplate(t: Translator): string {
               <span><strong>${t("me.achievementsTitle")}</strong><small>${t("me.achievementsBody")}</small></span>
               <span aria-hidden="true">→</span>
             </button>
+            <button class="setting-link" type="button" data-action="open-policies">
+              <span class="setting-link__code" aria-hidden="true">P1</span>
+              <span><strong>${t("me.policiesTitle")}</strong><small>${t("me.policiesBody")}</small></span>
+              <span aria-hidden="true">→</span>
+            </button>
             <label class="setting-link setting-select">
               <span class="setting-link__code" aria-hidden="true">S1</span>
               <span><strong>${t("me.appearanceTitle")}</strong><small>${t("me.appearanceBody")}</small></span>
@@ -249,6 +266,32 @@ export function renderAppTemplate(t: Translator): string {
               <span aria-hidden="true">→</span>
             </button>
           </div>
+        </section>
+
+        <section class="app-view task-view policies-view" data-app-view="policies" aria-labelledby="policies-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="close-policies" aria-label="${t("policies.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("policies.eyebrow")}</p>
+              <h1 id="policies-title">${t("policies.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <aside class="policy-draft-note" role="note">${t("policies.draft")}</aside>
+          <dl class="policy-bundle-meta">
+            <div><dt>${t("policies.version")}</dt><dd>${POLICY_BUNDLE_VERSION}</dd></div>
+            <div><dt>${t("policies.effectiveDate")}</dt><dd>${POLICY_EFFECTIVE_DATE ?? t("policies.notEffective")}</dd></div>
+          </dl>
+          <article class="policy-document">
+            <h2>${privacyPolicy.title}</h2>
+            <p class="policy-document__intro">${privacyPolicy.intro}</p>
+            ${renderPolicyDocumentHtml("privacy", locale)}
+          </article>
+          <article class="policy-document">
+            <h2>${termsPolicy.title}</h2>
+            <p class="policy-document__intro">${termsPolicy.intro}</p>
+            ${renderPolicyDocumentHtml("terms", locale)}
+          </article>
         </section>
 
         <section class="app-view task-view achievements-view" data-app-view="achievements" aria-labelledby="achievements-title" hidden>
