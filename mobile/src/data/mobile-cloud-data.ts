@@ -13,6 +13,8 @@ import {
 import type { MobileAuthService } from "../auth/auth-service";
 import {
   APP_DATABASE_SCHEMA_VERSION,
+  type AchievementsCacheValue,
+  type CachedAchievementRow,
   type CachedHistoryRow,
   type CacheOwnerKey,
   type CloudHistoryCacheValue,
@@ -141,6 +143,8 @@ function replayKey(recordId: string): string {
   return `replay:${recordId}`;
 }
 
+const achievementsKey = "achievements";
+
 function accountOwner(userId: number): `user:${string}` {
   if (!Number.isSafeInteger(userId) || userId <= 0) {
     throw new Error("invalid_user_id");
@@ -241,6 +245,119 @@ function parseReplay(body: JsonRecord): ReplayRecord {
     modeKey,
     replayString,
   };
+}
+
+function textList(value: unknown, maxItems = 16): string[] {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    throw new Error("invalid_cloud_response");
+  }
+  return Array.from(
+    new Set(value.map((item) => requiredText(item, 160))),
+  );
+}
+
+function localizedText(
+  value: unknown,
+  fallback: string,
+  maxLength: number,
+): { zhCn: string; en: string } {
+  const translations = object(value);
+  const read = (key: string): string | null => {
+    const candidate = translations?.[key];
+    return typeof candidate === "string" && candidate.trim()
+      ? requiredText(candidate, maxLength)
+      : null;
+  };
+  return {
+    zhCn: read("zh-CN") ?? read("zh") ?? fallback,
+    en: read("en") ?? fallback,
+  };
+}
+
+function parseAchievementDefinition(value: unknown): {
+  row: CachedAchievementRow;
+  completableClients: Array<"web" | "android">;
+} {
+  const definition = object(value);
+  if (!definition) throw new Error("invalid_cloud_response");
+  const name = requiredText(definition.name, 160);
+  const description = requiredText(definition.description, 1_000);
+  const completableClients = textList(definition.completable_clients, 2);
+  if (
+    completableClients.some(
+      (client) => client !== "web" && client !== "android",
+    )
+  ) {
+    throw new Error("invalid_cloud_response");
+  }
+  return {
+    row: {
+      id: requiredText(definition.id, 160),
+      name: localizedText(definition.name_i18n, name, 160),
+      description: localizedText(
+        definition.description_i18n,
+        description,
+        1_000,
+      ),
+      earnedAt: null,
+      source: null,
+      requiredModeKeys: textList(definition.required_mode_keys),
+    },
+    completableClients: completableClients as Array<"web" | "android">,
+  };
+}
+
+function parseAchievements(
+  catalogBody: JsonRecord,
+  earnedBody: JsonRecord,
+): AchievementsCacheValue {
+  if (
+    catalogBody.success !== true ||
+    !Array.isArray(catalogBody.data) ||
+    earnedBody.success !== true ||
+    !Array.isArray(earnedBody.data)
+  ) {
+    throw new Error("invalid_cloud_response");
+  }
+  const earned: CachedAchievementRow[] = [];
+  const earnedIds = new Set<string>();
+  for (const value of earnedBody.data) {
+    const item = object(value);
+    if (!item) throw new Error("invalid_cloud_response");
+    const parsed = parseAchievementDefinition(item.achievement);
+    const source = item.source;
+    if (
+      source !== "record" &&
+      source !== "event" &&
+      source !== "manual" &&
+      source !== "backfill"
+    ) {
+      throw new Error("invalid_cloud_response");
+    }
+    if (earnedIds.has(parsed.row.id)) continue;
+    earnedIds.add(parsed.row.id);
+    earned.push({
+      ...parsed.row,
+      earnedAt: date(item.earned_at),
+      source,
+    });
+  }
+  const available: CachedAchievementRow[] = [];
+  const availableIds = new Set<string>();
+  for (const value of catalogBody.data) {
+    const parsed = parseAchievementDefinition(value);
+    if (
+      earnedIds.has(parsed.row.id) ||
+      availableIds.has(parsed.row.id) ||
+      !parsed.completableClients.includes("android") ||
+      !parsed.row.requiredModeKeys.every(isAppModeKey)
+    ) {
+      continue;
+    }
+    availableIds.add(parsed.row.id);
+    available.push(parsed.row);
+  }
+  return { earned, available };
 }
 
 export class MobileCloudData {
@@ -366,6 +483,37 @@ export class MobileCloudData {
         "public",
         leaderboardKey(query),
         "leaderboard",
+        value,
+        fetchedAt,
+      ),
+    );
+    return { value, fetchedAt };
+  }
+
+  async readAchievementsCache(userId: number) {
+    const cached = await this.#options.database.getCache(
+      achievementsKey,
+      accountOwner(userId),
+      this.#now(),
+    );
+    return cached?.cacheKind === "achievements"
+      ? { value: cached.value, fetchedAt: cached.fetchedAt }
+      : null;
+  }
+
+  async refreshAchievements(input: { userId: number }) {
+    const auth = await this.#options.getAuthService();
+    const [catalog, earned] = await Promise.all([
+      auth.requestAccount("/achievements", { method: "GET" }),
+      auth.requestAccount("/user/me/achievements", { method: "GET" }),
+    ]);
+    const value = parseAchievements(catalog, earned);
+    const fetchedAt = this.#now();
+    await this.#options.database.putCache(
+      cacheEntry(
+        accountOwner(input.userId),
+        achievementsKey,
+        "achievements",
         value,
         fetchedAt,
       ),

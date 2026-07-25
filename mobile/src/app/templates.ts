@@ -233,6 +233,41 @@ export function renderAppTemplate(t: Translator): string {
           </div>
         </section>
 
+        <section class="app-view task-view achievements-view" data-app-view="achievements" aria-labelledby="achievements-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="close-achievements" aria-label="${t("achievements.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("achievements.eyebrow")}</p>
+              <h1 id="achievements-title">${t("achievements.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="achievements-intro">${t("achievements.body")}</p>
+          <p class="achievements-status" data-achievements-status>${t("achievements.loading")}</p>
+          <section class="achievement-group" aria-labelledby="achievements-earned-title">
+            <div class="section-heading">
+              <h2 id="achievements-earned-title">${t("achievements.earnedTitle")}</h2>
+              <output data-achievements-earned-count>0</output>
+            </div>
+            <div class="achievement-list" data-achievements-earned></div>
+            <div class="empty-state compact-empty" data-achievements-earned-empty>
+              <span class="empty-state__mark" aria-hidden="true">✓</span>
+              <strong>${t("achievements.earnedEmpty")}</strong>
+            </div>
+          </section>
+          <section class="achievement-group" aria-labelledby="achievements-available-title">
+            <div class="section-heading">
+              <h2 id="achievements-available-title">${t("achievements.availableTitle")}</h2>
+              <output data-achievements-available-count>0</output>
+            </div>
+            <div class="achievement-list" data-achievements-available></div>
+            <div class="empty-state compact-empty" data-achievements-available-empty>
+              <span class="empty-state__mark" aria-hidden="true">○</span>
+              <strong>${t("achievements.availableEmpty")}</strong>
+            </div>
+          </section>
+        </section>
+
         <section class="app-view task-view game-view" data-app-view="game" aria-labelledby="game-title" hidden>
           <header class="task-bar">
             <button class="icon-button" type="button" data-action="leave-game" aria-label="${t("game.backLabel")}">←</button>

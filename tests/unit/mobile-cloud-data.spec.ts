@@ -28,7 +28,9 @@ function cacheDatabase() {
 }
 
 function service(options: {
-  accountBody?: Record<string, unknown>;
+  accountBody?:
+    | Record<string, unknown>
+    | ((path: string) => Record<string, unknown>);
   publicBody?: Record<string, unknown>;
 }) {
   const cache = cacheDatabase();
@@ -40,7 +42,9 @@ function service(options: {
     getAuthService: async () => ({
       requestAccount: async (path, init) => {
         accountRequests.push({ path, init });
-        return options.accountBody ?? { success: true };
+        return typeof options.accountBody === "function"
+          ? options.accountBody(path)
+          : options.accountBody ?? { success: true };
       },
     }),
     fetchLike: vi.fn(async (url) => {
@@ -161,6 +165,90 @@ describe("mobile cloud data", () => {
     await expect(
       harness.cloud.readReplayCache({ userId: 42, recordId: "rec-1" }),
     ).resolves.toMatchObject({ value: { kind: "rpl1" } });
+  });
+
+  it("caches every earned achievement and only Android-completable app challenges", async () => {
+    const definition = (
+      id: string,
+      clients: string[],
+      modes: string[],
+      name = id,
+    ) => ({
+      id,
+      name,
+      description: `${name} description`,
+      name_i18n: { "zh-CN": `${name} 中文`, en: `${name} English` },
+      description_i18n: {
+        "zh-CN": `${name} 中文说明`,
+        en: `${name} English description`,
+      },
+      icon_url: "data:image/svg+xml,%3Csvg/%3E",
+      status: "active",
+      completable_clients: clients,
+      required_mode_keys: modes,
+      rules: [],
+    });
+    const earnedHidden = definition(
+      "earned-web-secret",
+      ["web"],
+      ["unported_mode"],
+      "Secret",
+    );
+    const available = definition(
+      "android-standard",
+      ["web", "android"],
+      ["standard_4x4_pow2_no_undo"],
+      "Standard",
+    );
+    const harness = service({
+      accountBody: (path) =>
+        path === "/achievements"
+          ? {
+              success: true,
+              data: [
+                available,
+                definition("web-only", ["web"], []),
+                definition("unported", ["android"], ["future_mode"]),
+              ],
+            }
+          : {
+              success: true,
+              data: [
+                {
+                  achievement: earnedHidden,
+                  earned_at: "2026-07-25T00:00:00.000Z",
+                  source: "event",
+                },
+              ],
+            },
+    });
+
+    const refreshed = await harness.cloud.refreshAchievements({ userId: 42 });
+
+    expect(harness.accountRequests.map((request) => request.path)).toEqual([
+      "/achievements",
+      "/user/me/achievements",
+    ]);
+    expect(refreshed.value.earned).toEqual([
+      expect.objectContaining({
+        id: "earned-web-secret",
+        name: { zhCn: "Secret 中文", en: "Secret English" },
+        source: "event",
+        requiredModeKeys: ["unported_mode"],
+      }),
+    ]);
+    expect(refreshed.value.available).toEqual([
+      expect.objectContaining({
+        id: "android-standard",
+        name: { zhCn: "Standard 中文", en: "Standard English" },
+        earnedAt: null,
+        source: null,
+      }),
+    ]);
+    await expect(harness.cloud.readAchievementsCache(42)).resolves.toMatchObject({
+      value: refreshed.value,
+      fetchedAt: 1_775_000_000_000,
+    });
   });
 
   it("invalidates all first-page history views after delete or restore", async () => {

@@ -1,7 +1,8 @@
-import type {
-  AppModeKey,
-  GameDirection,
-  ReplayRecord,
+import {
+  isAppModeKey,
+  type AppModeKey,
+  type GameDirection,
+  type ReplayRecord,
 } from "../../../src/contracts";
 import { getBestTileValue } from "../../../src/core/engine";
 import type { AccountSessionV1 } from "../auth/account-session";
@@ -20,6 +21,8 @@ import {
   type AuthTaskRoute,
 } from "../auth/auth-task";
 import type {
+  AchievementsCacheValue,
+  CachedAchievementRow,
   CachedHistoryRow,
   CloudHistoryCacheValue,
   StoredGameRecord,
@@ -46,6 +49,7 @@ export type AppTopRoute = "home" | "modes" | "records" | "me";
 export type AppRoute =
   | "privacy"
   | AppTopRoute
+  | "achievements"
   | "game"
   | "result"
   | "detail"
@@ -107,7 +111,13 @@ export interface AppControllerOptions {
     | "refreshLeaderboard"
     | "readReplayCache"
     | "refreshReplay"
-  >;
+  > &
+    Partial<
+      Pick<
+        MobileCloudData,
+        "readAchievementsCache" | "refreshAchievements"
+      >
+    >;
 }
 
 export interface AppController {
@@ -254,6 +264,7 @@ class MobileAppController implements AppController {
   #networkMode: AppNetworkMode;
   #privacyReturnRoute: AppRoute | null = null;
   #pendingOnlineIntent: OnlineIntent | null = null;
+  #postAuthRoute: "achievements" | null = null;
   #detailSource: RecordSourceRoute = "records";
   #replaySource: ReplaySourceRoute = "detail";
   #selectedRecord: StoredGameRecord | null = null;
@@ -279,6 +290,7 @@ class MobileAppController implements AppController {
   #navigationTask: Promise<void> | null = null;
   #destroyed = false;
   #leaderboardRequestEpoch = 0;
+  #achievementsRequestEpoch = 0;
   #leaderboardQuery: LeaderboardQuery = {
     modeKey: "standard_4x4_pow2_no_undo",
     metric: "score",
@@ -526,6 +538,10 @@ class MobileAppController implements AppController {
       this.#showRoute(this.#detailSource);
       return true;
     }
+    if (this.#route === "achievements") {
+      this.#showRoute("me");
+      return true;
+    }
     if (this.#route === "replay") {
       this.#closeReplay();
       return true;
@@ -735,6 +751,9 @@ class MobileAppController implements AppController {
       case "open-achievements-gate":
         this.#requestOnline("achievements");
         break;
+      case "close-achievements":
+        this.#showRoute("me");
+        break;
       case "export-diagnostics":
         await this.#exportDiagnostics();
         break;
@@ -836,6 +855,7 @@ class MobileAppController implements AppController {
     if (route === "records" && this.#recordOwner !== "guest") {
       void this.#loadCloudHistory();
     }
+    if (route === "achievements") void this.#loadAchievements();
     if (route === "game") this.#startGameTimer();
     else this.#stopGameTimer();
     this.#syncShellState();
@@ -913,7 +933,16 @@ class MobileAppController implements AppController {
       this.#openLeaderboard();
       return;
     }
-    this.#openModal(requireElement(this.#root, "[data-auth-gate]"));
+    this.#openAchievements();
+  }
+
+  #openAchievements(): void {
+    if (this.#authTask.session) {
+      this.#showRoute("achievements");
+      return;
+    }
+    this.#postAuthRoute = "achievements";
+    this.#requestAuthentication("me", null);
   }
 
   #openLeaderboard(): void {
@@ -1091,6 +1120,152 @@ class MobileAppController implements AppController {
     ).hidden = value.rows.length > 0;
   }
 
+  async #loadAchievements(): Promise<void> {
+    const epoch = ++this.#achievementsRequestEpoch;
+    const cloudData = this.#cloudData;
+    const session = this.#authTask.session;
+    const status = requireElement<HTMLElement>(
+      this.#root,
+      "[data-achievements-status]",
+    );
+    this.#renderAchievements({ earned: [], available: [] });
+    status.textContent = this.#t("achievements.loading");
+    if (
+      !session ||
+      !cloudData?.readAchievementsCache ||
+      !cloudData.refreshAchievements
+    ) {
+      status.textContent = this.#t("achievements.unavailable");
+      return;
+    }
+    const cached = await cloudData.readAchievementsCache(session.user.id).catch(
+      () => null,
+    );
+    if (epoch !== this.#achievementsRequestEpoch || this.#route !== "achievements") {
+      return;
+    }
+    if (cached) {
+      this.#renderAchievements(cached.value);
+      status.textContent = this.#t("achievements.cached").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(cached.fetchedAt)),
+      );
+    }
+    try {
+      const refreshed = await cloudData.refreshAchievements({
+        userId: session.user.id,
+      });
+      if (
+        epoch !== this.#achievementsRequestEpoch ||
+        this.#route !== "achievements"
+      ) {
+        return;
+      }
+      this.#renderAchievements(refreshed.value);
+      status.textContent = this.#t("achievements.updated").replace(
+        "{time}",
+        this.#dateFormat.format(new Date(refreshed.fetchedAt)),
+      );
+    } catch {
+      if (
+        epoch !== this.#achievementsRequestEpoch ||
+        this.#route !== "achievements"
+      ) {
+        return;
+      }
+      status.textContent = cached
+        ? this.#t("achievements.offlineCached")
+        : this.#t(
+            window.navigator.onLine
+              ? "achievements.unavailable"
+              : "achievements.offlineEmpty",
+          );
+    }
+  }
+
+  #renderAchievements(value: AchievementsCacheValue): void {
+    this.#renderAchievementCards(
+      "[data-achievements-earned]",
+      value.earned,
+      true,
+    );
+    this.#renderAchievementCards(
+      "[data-achievements-available]",
+      value.available,
+      false,
+    );
+    this.#setText(
+      "[data-achievements-earned-count]",
+      this.#numberFormat.format(value.earned.length),
+    );
+    this.#setText(
+      "[data-achievements-available-count]",
+      this.#numberFormat.format(value.available.length),
+    );
+    requireElement<HTMLElement>(
+      this.#root,
+      "[data-achievements-earned-empty]",
+    ).hidden = value.earned.length > 0;
+    requireElement<HTMLElement>(
+      this.#root,
+      "[data-achievements-available-empty]",
+    ).hidden = value.available.length > 0;
+  }
+
+  #renderAchievementCards(
+    selector: string,
+    rows: readonly CachedAchievementRow[],
+    earned: boolean,
+  ): void {
+    const list = requireElement<HTMLElement>(this.#root, selector);
+    const fragment = document.createDocumentFragment();
+    for (const row of rows) {
+      const card = document.createElement("article");
+      card.className = "achievement-card";
+      card.dataset.achievementId = row.id;
+      const badge = document.createElement("span");
+      badge.className = "achievement-card__badge";
+      badge.setAttribute("aria-hidden", "true");
+      badge.textContent = earned ? "✓" : "○";
+      const copy = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = this.#localizedAchievementText(row.name);
+      const description = document.createElement("p");
+      description.textContent = this.#localizedAchievementText(row.description);
+      const meta = document.createElement("small");
+      if (earned && row.earnedAt && row.source) {
+        meta.textContent = this.#t("achievements.earnedMeta")
+          .replace("{time}", this.#dateFormat.format(new Date(row.earnedAt)))
+          .replace("{source}", this.#achievementSource(row.source));
+      } else if (row.requiredModeKeys.length > 0) {
+        meta.textContent = this.#t("achievements.availableMeta").replace(
+          "{modes}",
+          row.requiredModeKeys
+            .filter(isAppModeKey)
+            .map((modeKey) => this.#modeTitle(modeKey))
+            .join(" · "),
+        );
+      } else {
+        meta.textContent = this.#t("achievements.availableAnyMode");
+      }
+      copy.append(title, description, meta);
+      card.append(badge, copy);
+      fragment.append(card);
+    }
+    list.replaceChildren(fragment);
+  }
+
+  #localizedAchievementText(value: { zhCn: string; en: string }): string {
+    return this.#locale === "en" ? value.en : value.zhCn;
+  }
+
+  #achievementSource(source: NonNullable<CachedAchievementRow["source"]>): string {
+    if (source === "event") return this.#t("achievements.sourceEvent");
+    if (source === "manual") return this.#t("achievements.sourceManual");
+    if (source === "backfill") return this.#t("achievements.sourceBackfill");
+    return this.#t("achievements.sourceRecord");
+  }
+
   async #requestAuthenticatedMode(
     modeKey: AuthenticatedAppModeKey,
   ): Promise<void> {
@@ -1130,10 +1305,13 @@ class MobileAppController implements AppController {
 
   #backAuthentication(): void {
     if (!isAuthTaskRoute(this.#route)) return;
-    this.#showRoute(this.#authTask.back(this.#route));
+    const route = this.#authTask.back(this.#route);
+    if (!isAuthTaskRoute(route)) this.#postAuthRoute = null;
+    this.#showRoute(route);
   }
 
   #cancelAuthentication(): void {
+    this.#postAuthRoute = null;
     this.#showRoute(this.#authTask.cancel());
   }
 
@@ -1141,6 +1319,7 @@ class MobileAppController implements AppController {
     if (this.#pendingOnlineIntent === "auth") {
       this.#pendingOnlineIntent = null;
     }
+    this.#postAuthRoute = null;
     this.#authTask.clearIntent();
   }
 
@@ -1168,6 +1347,12 @@ class MobileAppController implements AppController {
         effect.session,
         effect.source,
       );
+      return;
+    }
+    if (this.#postAuthRoute === "achievements") {
+      this.#postAuthRoute = null;
+      this.#showRoute("achievements");
+      this.#showStatus(this.#t("auth.success.signedIn"), "success", 3_000);
       return;
     }
     this.#showRoute(effect.source);

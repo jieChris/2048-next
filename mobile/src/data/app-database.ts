@@ -179,11 +179,11 @@ export interface LeaderboardCacheValue {
 
 export interface CachedAchievementRow {
   id: string;
-  name: string;
-  description: string;
-  iconUrl: string;
+  name: { zhCn: string; en: string };
+  description: { zhCn: string; en: string };
   earnedAt: string | null;
   source: "record" | "event" | "manual" | "backfill" | null;
+  requiredModeKeys: string[];
 }
 
 export interface AchievementsCacheValue {
@@ -988,25 +988,6 @@ function isSafeDisplayText(value: unknown, maxLength: number): value is string {
   );
 }
 
-function isSafeIconUrl(value: unknown): value is string {
-  if (typeof value !== "string" || value.length === 0 || value.length > 512)
-    return false;
-  if (value.startsWith("/") && !value.startsWith("//"))
-    return !/[?#]/u.test(value);
-  try {
-    const url = new URL(value);
-    return (
-      (url.protocol === "https:" || url.protocol === "http:") &&
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash
-    );
-  } catch {
-    return false;
-  }
-}
-
 function assertValidHistoryCache(value: CloudHistoryCacheValue): void {
   if (
     !hasExactKeys(value, ["rows", "page", "totalPages", "hasNext", "status"]) ||
@@ -1102,17 +1083,23 @@ function assertValidAchievementsCache(value: AchievementsCacheValue): void {
         "id",
         "name",
         "description",
-        "iconUrl",
         "earnedAt",
         "source",
+        "requiredModeKeys",
       ]) ||
       !isStableReference(row.id) ||
-      !isSafeDisplayText(row.name, 160) ||
-      !isSafeDisplayText(row.description, 1000) ||
-      !isSafeIconUrl(row.iconUrl) ||
+      !hasExactKeys(row.name, ["zhCn", "en"]) ||
+      !isSafeDisplayText(row.name.zhCn, 160) ||
+      !isSafeDisplayText(row.name.en, 160) ||
+      !hasExactKeys(row.description, ["zhCn", "en"]) ||
+      !isSafeDisplayText(row.description.zhCn, 1000) ||
+      !isSafeDisplayText(row.description.en, 1000) ||
       (row.earnedAt !== null && !isIsoTimestamp(row.earnedAt)) ||
       (row.source !== null &&
-        !["record", "event", "manual", "backfill"].includes(row.source))
+        !["record", "event", "manual", "backfill"].includes(row.source)) ||
+      !Array.isArray(row.requiredModeKeys) ||
+      row.requiredModeKeys.length > 16 ||
+      row.requiredModeKeys.some((modeKey) => !isStableReference(modeKey))
     ) {
       throw new AppDatabaseError("invalid_cache_value");
     }

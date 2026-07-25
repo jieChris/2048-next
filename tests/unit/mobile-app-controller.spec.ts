@@ -459,6 +459,103 @@ describe("mobile app controller helpers", () => {
 });
 
 describe("mobile app controller navigation", () => {
+  it("continues a guest achievement intent after sign-in and renders the account snapshot", async () => {
+    const readAchievementsCache = vi.fn(async () => ({
+      fetchedAt: 100,
+      value: {
+        earned: [
+          {
+            id: "earned-secret",
+            name: { zhCn: "隐藏发现", en: "Secret discovery" },
+            description: { zhCn: "来自其他端的已获得成就", en: "Earned on another client" },
+            earnedAt: "2026-07-25T00:00:00.000Z",
+            source: "event" as const,
+            requiredModeKeys: ["future_mode"],
+          },
+        ],
+        available: [],
+      },
+    }));
+    const refreshAchievements = vi.fn(async () => ({
+      fetchedAt: 200,
+      value: {
+        earned: [
+          {
+            id: "earned-secret",
+            name: { zhCn: "隐藏发现", en: "Secret discovery" },
+            description: { zhCn: "来自其他端的已获得成就", en: "Earned on another client" },
+            earnedAt: "2026-07-25T00:00:00.000Z",
+            source: "event" as const,
+            requiredModeKeys: ["future_mode"],
+          },
+        ],
+        available: [
+          {
+            id: "android-standard",
+            name: { zhCn: "稳定发挥", en: "Steady play" },
+            description: { zhCn: "完成标准模式挑战", en: "Complete the standard challenge" },
+            earnedAt: null,
+            source: null,
+            requiredModeKeys: ["standard_4x4_pow2_no_undo"],
+          },
+        ],
+      },
+    }));
+    const { controller, root } = mountController(runtimeHarness(), {
+      networkMode: "online",
+      authServiceFactory: async () => authService(),
+      cloudData: {
+        readHistoryCache: vi.fn(async () => null),
+        refreshHistory: vi.fn(async () => ({
+          fetchedAt: 0,
+          value: {
+            rows: [],
+            page: 1,
+            totalPages: 0,
+            hasNext: false,
+            status: "active" as const,
+          },
+        })),
+        deleteRecord: vi.fn(async () => undefined),
+        restoreRecord: vi.fn(async () => undefined),
+        readLeaderboardCache: vi.fn(async () => null),
+        refreshLeaderboard: vi.fn(async () => ({
+          fetchedAt: 0,
+          value: { rows: [], page: 1, hasNext: false },
+        })),
+        readReplayCache: vi.fn(async () => null),
+        refreshReplay: vi.fn(async () => {
+          throw new Error("unused_replay_refresh");
+        }),
+        readAchievementsCache,
+        refreshAchievements,
+      },
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="open-achievements-gate"]');
+    expect(controller.route).toBe("auth-login");
+    setAuthInput(root, "auth-login", "email", "player@example.com");
+    setAuthInput(root, "auth-login", "password", "password-123");
+    submitAuth(root, "auth-login");
+
+    await vi.waitFor(() => expect(controller.route).toBe("achievements"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-achievements-available]")?.textContent)
+        .toContain("稳定发挥"),
+    );
+    expect(root.querySelector("[data-achievements-earned]")?.textContent)
+      .toContain("隐藏发现");
+    expect(root.querySelector("[data-app-bottom-nav]")?.hasAttribute("hidden"))
+      .toBe(true);
+    expect(readAchievementsCache).toHaveBeenCalledWith(42);
+    expect(refreshAchievements).toHaveBeenCalledWith({ userId: 42 });
+
+    focusAndClick(root, '[data-action="close-achievements"]');
+    expect(controller.route).toBe("me");
+    controller.destroy();
+  });
+
   it("renders account history and performs server delete and restore from the two filters", async () => {
     const harness = runtimeHarness();
     const activeRow = {
