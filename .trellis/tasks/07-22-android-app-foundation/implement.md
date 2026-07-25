@@ -99,11 +99,11 @@ npm run verify:refactor:ci
 ### 2.3 成就、删除账号与诊断
 
 - [x] 下一号 PostgreSQL 加法迁移增加 achievement client/mode 元数据。
-- [ ] 增加账号 `deletion_requested_at`、`deletion_due_at`、`auth_version`。
-- [ ] Auth token 携带并校验 version；待删除账号的普通 auth/refresh 全部拒绝。
-- [ ] 兼容旧 Web Token：缺少 version 时按 0 处理；正常账号继续使用，账号 version 一旦递增立即拒绝。补旧 Token、删除态、多实例/缓存绕过测试。
-- [ ] 实现申请删除、冷静期内密码登录取消、到期后禁止登录和幂等清理任务。
-- [ ] 清理覆盖 users/shadow、records/replay、leaderboard、sessions/checkpoints、achievements 及同一后端其他账号关联数据。
+- [x] 增加账号 `deletion_requested_at`、`deletion_due_at`、`auth_version`。
+- [x] Auth token 携带并校验 version；待删除账号的普通 auth/refresh 全部拒绝。
+- [x] 兼容旧 Web Token：缺少 version 时按 0 处理；正常账号继续使用，账号 version 一旦递增立即拒绝。补旧 Token、删除态、多实例/缓存绕过测试。
+- [x] 实现申请删除、冷静期内密码登录取消、到期后禁止登录和幂等清理任务。
+- [x] 清理覆盖 users/shadow、records/replay、leaderboard、sessions/checkpoints、achievements 及同一后端其他账号关联数据。
 - [ ] 增加无需账号鉴权的 `/client-diagnostics`：白名单、小载荷、限流、request ID 幂等、过期清理，强制 `user_id` 为空。
 - [ ] 根据真实数据收集、Android 权限、诊断字段、第三方/服务商和保留删除规则形成隐私政策与用户协议清单；指定正文责任人，正文必须经用户明确批准并记录版本/生效日期，不能用占位文案通过门禁。
 - [ ] 在 `2048-next` Web 实现稳定公开 `/privacy.html` 与 `/terms.html`，并由同一版本化源生成 App 包内可离线读取的正文；对比测试确保公开页与包内版本、日期和实质内容一致。
@@ -125,8 +125,8 @@ npm run typecheck
 npm run test:node
 ```
 
-- [ ] 在一次性隔离 PostgreSQL 上运行迁移并核对前后行数、约束、回放引用和回滚备份；不得对生产执行。
-- [ ] 在 `2048-next` 运行 `npm run api:types && npm run verify:api`。
+- [x] 在一次性隔离 PostgreSQL 上运行迁移并核对前后行数、约束、回放引用和回滚备份；不得对生产执行。
+- [x] 在 `2048-next` 运行 `npm run api:types && npm run verify:api`。
 
 ### 2.5 `Backend Ready` 在线解锁门禁
 
@@ -240,12 +240,12 @@ npm run build:app
 
 前置门禁：生产候选开启任何在线入口前，必须存在阶段 2.5 的 `Backend Ready` 记录；没有记录时仅允许连接本地/隔离测试环境。
 
-- [ ] 实现公开验证码注册、邮箱密码登录、密码找回和当前用户，不出现 beta 文案。
-- [ ] Token/用户/到期时间只进 Keystore；实现 refresh 和 401 单次恢复。
-- [ ] 曾登录且未主动退出的身份在断网或 Token 过期时仍可进入三个模式，但只能创建 normal 局；从未登录/已退出游客仍只开放标准 4×4。
-- [ ] 登录后从原目标模式继续；开放经典 4×4 可撤回和标准 3×3。
+- [x] 实现公开验证码注册、邮箱密码登录、密码找回和当前用户，不出现 beta 文案。
+- [x] Token/用户/到期时间只进 Keystore；实现 refresh 和 401 单次恢复。
+- [x] 曾登录且未主动退出的身份在断网或 Token 过期时仍可进入三个模式，但只能创建 normal 局；从未登录/已退出游客仍只开放标准 4×4。
+- [x] 登录后从原目标模式继续；开放经典 4×4 可撤回和标准 3×3。
 - [ ] 经典模式实现 pending terminal 的“撤回继续 / 结束并结算”。
-- [ ] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 及 `server_now`（或等价同步 checkpoint）并安全保存后才创建、展示 ranked 棋盘，计时从服务端逻辑锚点连续计算，不把设备绝对墙钟偏差计入 duration。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
+- [x] 进入无存档模式时，在棋盘展示前持久化轻量 ranked start intent 与稳定 `operation_id`，调用幂等 session start；收到同一 `started_at/seed/token` 及 `server_now`（或等价同步 checkpoint）并安全保存后才创建、展示 ranked 棋盘，计时从服务端逻辑锚点连续计算，不把设备绝对墙钟偏差计入 duration。请求/重试/安全存储有界失败则清理 intent、幂等 abandon 或等待服务端过期，并直接创建 normal 局。棋盘一旦可操作不再切换类别，首步和后续滑动全部本地执行。
 - [ ] 排位 Token 以 challenge 安全保存；普通离开保留，重开/清除生成幂等 abandon。
 - [ ] 实现 records outbox、错误分类、退避、手动重试和上传状态。
 - [ ] normal 离线记录上传后只显示云历史，不进入榜单/排位成就。
