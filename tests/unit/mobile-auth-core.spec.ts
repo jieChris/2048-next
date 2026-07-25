@@ -10,12 +10,17 @@ import {
   type AccountSessionV1,
 } from "../../mobile/src/auth/account-session";
 import {
+  classifyMobileAuthIssue,
+  MobileAuthCoordinator,
+} from "../../mobile/src/auth/auth-flow";
+import {
   createMobileAuthService,
   DEFAULT_MOBILE_AUTH_TIMEOUT_MS,
   MobileAuthError,
   normalizeMobileApiBase,
   resolveMobileAuthApiBase,
   validateMobileOnlinePrivacy,
+  type MobileAuthService,
 } from "../../mobile/src/auth/auth-service";
 import {
   MOBILE_PRODUCTION_API_BASE,
@@ -72,6 +77,14 @@ function authBody(token: string) {
     ttl: 3_600,
     user,
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
 
 describe("mobile account session envelope", () => {
@@ -326,7 +339,9 @@ describe("mobile auth service", () => {
         authorization: "Bearer concurrent-token",
       },
     ]);
-    expect(calls.some((call) => call.url.endsWith("/auth/refresh"))).toBe(false);
+    expect(calls.some((call) => call.url.endsWith("/auth/refresh"))).toBe(
+      false,
+    );
   });
 
   it("shares one preemptive refresh across concurrent authenticated requests", async () => {
@@ -355,17 +370,17 @@ describe("mobile auth service", () => {
     const second = service.currentUser();
     await vi.waitFor(() => {
       expect(
-        vi.mocked(fetchLike).mock.calls.filter(([url]) =>
-          url.endsWith("/auth/refresh"),
-        ),
+        vi
+          .mocked(fetchLike)
+          .mock.calls.filter(([url]) => url.endsWith("/auth/refresh")),
       ).toHaveLength(1);
     });
     releaseRefresh?.();
     await expect(Promise.all([first, second])).resolves.toEqual([user, user]);
     expect(
-      vi.mocked(fetchLike).mock.calls.filter(([url]) =>
-        url.endsWith("/auth/refresh"),
-      ),
+      vi
+        .mocked(fetchLike)
+        .mock.calls.filter(([url]) => url.endsWith("/auth/refresh")),
     ).toHaveLength(1);
   });
 
@@ -455,9 +470,9 @@ describe("mobile auth service", () => {
     shouldHang = false;
     await expect(service.currentUser()).resolves.toEqual(user);
     expect(
-      vi.mocked(fetchLike).mock.calls.filter(([url]) =>
-        url.endsWith("/auth/refresh"),
-      ),
+      vi
+        .mocked(fetchLike)
+        .mock.calls.filter(([url]) => url.endsWith("/auth/refresh")),
     ).toHaveLength(2);
   });
 
@@ -639,5 +654,65 @@ describe("mobile auth service", () => {
         resolveMobileBuildFlags("test"),
       ),
     ).not.toThrow();
+  });
+});
+
+describe("mobile auth coordinator", () => {
+  it("constructs the service lazily and rejects duplicate submissions", async () => {
+    const loginResult = deferred<AccountSessionV1>();
+    const login = vi.fn(() => loginResult.promise);
+    const service = { login } as unknown as MobileAuthService;
+    const factory = vi.fn(async () => service);
+    const coordinator = new MobileAuthCoordinator(factory);
+
+    expect(factory).not.toHaveBeenCalled();
+    const first = coordinator.run((auth) =>
+      auth.login({ email: user.email, password: "Password123!" }),
+    );
+    const duplicate = await coordinator.run((auth) =>
+      auth.login({ email: user.email, password: "Password123!" }),
+    );
+
+    expect(duplicate).toEqual({ status: "busy" });
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(login).toHaveBeenCalledTimes(1);
+
+    loginResult.resolve(session());
+    await expect(first).resolves.toEqual({
+      status: "success",
+      value: session(),
+    });
+    expect(coordinator.busy).toBe(false);
+  });
+
+  it.each([
+    [
+      new MobileAuthError("http_error", {
+        status: 401,
+        serverCode: "INVALID_CREDENTIALS",
+      }),
+      "invalid_credentials",
+      false,
+    ],
+    [
+      new MobileAuthError("http_error", {
+        status: 400,
+        serverCode: "VERIFICATION_EXPIRED",
+      }),
+      "verification_expired",
+      false,
+    ],
+    [
+      new MobileAuthError("http_error", {
+        status: 429,
+        serverCode: "RATE_LIMIT_EMAIL",
+      }),
+      "rate_limited",
+      true,
+    ],
+    [new MobileAuthError("network_error"), "network_error", true],
+    [new Error("opaque"), "unknown", false],
+  ] as const)("maps auth failures to %s", (error, kind, retryable) => {
+    expect(classifyMobileAuthIssue(error)).toMatchObject({ kind, retryable });
   });
 });

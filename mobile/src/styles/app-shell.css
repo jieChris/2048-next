@@ -1080,6 +1080,85 @@ h2 {
   flex-direction: column;
 }
 
+.auth-view {
+  gap: 0;
+}
+
+.auth-context {
+  margin: 22px 0 0;
+  color: var(--precision-muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.auth-context strong {
+  color: var(--precision-ink);
+  overflow-wrap: anywhere;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 22px 18px 20px;
+  border-radius: 12px;
+}
+
+.auth-field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  color: var(--precision-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+}
+
+.auth-field input {
+  width: 100%;
+  min-height: 50px;
+  padding: 11px 12px;
+  border: 1px solid var(--precision-line);
+  border-radius: 7px;
+  background: var(--precision-panel-raised);
+  color: var(--precision-ink);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.auth-field input:focus {
+  border-color: var(--precision-lapis-strong);
+}
+
+.auth-error {
+  margin: -2px 0 0;
+  padding: 10px 11px;
+  border-left: 3px solid var(--precision-danger);
+  border-radius: 4px;
+  background: var(--precision-danger-soft);
+  color: var(--precision-danger);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.auth-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.auth-secondary-actions .text-button {
+  min-width: 0;
+  white-space: normal;
+}
+
+.auth-cancel {
+  align-self: center;
+  margin-top: 10px;
+}
+
 .game-readouts,
 .result-grid {
   display: grid;

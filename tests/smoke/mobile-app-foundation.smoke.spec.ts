@@ -474,6 +474,50 @@ test("dialog actions remain reachable at 320dp with 200 percent text", async ({
   }
 });
 
+test("auth task pages stay inside the 320dp short-screen scroll container", async ({
+  page,
+}) => {
+  const businessRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (
+      request.resourceType() === "fetch" ||
+      request.resourceType() === "xhr" ||
+      request.resourceType() === "websocket" ||
+      url.pathname.startsWith("/api/")
+    ) {
+      businessRequests.push(request.url());
+    }
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "仅离线体验" }).click();
+  await page.locator('[data-app-bottom-nav] [data-nav="modes"]').click();
+  await page.locator('[data-mode="classic_4x4_pow2_undo"]').click();
+  await page.getByRole("button", { name: "查看联网说明" }).click();
+  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+
+  const login = page.locator('[data-app-view="auth-login"]');
+  await expect(login).toBeVisible();
+  let layout = await readAppLayout(page);
+  expectAppConfinedToViewport(layout, false);
+  expect(layout.view.scrollHeight).toBeGreaterThan(layout.view.clientHeight);
+  await login.locator("[data-auth-submit]").scrollIntoViewIfNeeded();
+  await expect(login.locator("[data-auth-submit]")).toBeInViewport();
+
+  await login.locator('[data-action="auth-open-register"]').click();
+  const register = page.locator('[data-app-view="auth-register"]');
+  await expect(register).toBeVisible();
+  layout = await readAppLayout(page);
+  expectAppConfinedToViewport(layout, false);
+  await register.locator("[data-auth-submit]").scrollIntoViewIfNeeded();
+  await expect(register.locator("[data-auth-submit]")).toBeInViewport();
+  expect(businessRequests).toEqual([]);
+});
+
 test.describe("English system locale", () => {
   test.use({ locale: "en-US" });
 

@@ -108,7 +108,7 @@ export function renderAppTemplate(t: Translator): string {
               <p class="eyebrow">${t("modes.eyebrow")}</p>
               <h1 id="modes-title">${t("modes.title")}</h1>
             </div>
-            <span class="identity-chip">${t("records.guestOwner")}</span>
+            <span class="identity-chip" data-mode-identity>${t("records.guestOwner")}</span>
           </header>
           <p class="view-intro">${t("modes.body")}</p>
           <div class="mode-list">
@@ -126,7 +126,7 @@ export function renderAppTemplate(t: Translator): string {
                 <strong>${t("modes.classicTitle")}</strong>
                 <small>${t("modes.classicMeta")}</small>
               </span>
-              <span class="mode-card__state mode-card__state--locked" id="classic-mode-lock">${t("modes.lockedState")}</span>
+              <span class="mode-card__state mode-card__state--locked" id="classic-mode-lock" data-mode-state>${t("modes.lockedState")}</span>
             </button>
             <button class="mode-card" type="button" data-mode-card data-mode="board_3x3_pow2_no_undo" data-requires-auth="true" aria-describedby="compact-mode-lock">
               <span class="mode-card__index" aria-hidden="true">03</span>
@@ -134,7 +134,7 @@ export function renderAppTemplate(t: Translator): string {
                 <strong>${t("modes.compactTitle")}</strong>
                 <small>${t("modes.compactMeta")}</small>
               </span>
-              <span class="mode-card__state mode-card__state--locked" id="compact-mode-lock">${t("modes.lockedState")}</span>
+              <span class="mode-card__state mode-card__state--locked" id="compact-mode-lock" data-mode-state>${t("modes.lockedState")}</span>
             </button>
           </div>
         </section>
@@ -179,13 +179,13 @@ export function renderAppTemplate(t: Translator): string {
               <p class="eyebrow">${t("me.eyebrow")}</p>
               <h1 id="me-title">${t("me.title")}</h1>
             </div>
-            <span class="identity-chip">${t("me.guestBadge")}</span>
+            <span class="identity-chip" data-account-badge>${t("me.guestBadge")}</span>
           </header>
           <section class="account-plate instrument-card">
             <span class="account-plate__avatar" aria-hidden="true">2</span>
             <div>
-              <h2>${t("me.guestTitle")}</h2>
-              <p>${t("me.guestBody")}</p>
+              <h2 data-account-title>${t("me.guestTitle")}</h2>
+              <p data-account-body>${t("me.guestBody")}</p>
             </div>
             <button class="action-button action-button--secondary" type="button" data-action="open-auth-gate">${t("me.loginAction")}</button>
           </section>
@@ -314,6 +314,131 @@ export function renderAppTemplate(t: Translator): string {
             <button class="action-button action-button--secondary" type="button" data-action="replay-next">${t("replay.next")}</button>
           </div>
           <button class="text-button replay-share" type="button" data-action="share-replay">${t("replay.share")}</button>
+        </section>
+
+        <section class="app-view task-view auth-view" data-app-view="auth-login" aria-labelledby="auth-login-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="cancel-auth" aria-label="${t("auth.cancel")}">←</button>
+            <div>
+              <p class="eyebrow">${t("auth.eyebrow")}</p>
+              <h1 id="auth-login-title">${t("auth.login.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="auth-context" data-auth-context>${t("auth.contextAccount")}</p>
+          <form class="auth-form instrument-card" data-auth-form novalidate>
+            <label class="auth-field">
+              <span>${t("auth.login.email")}</span>
+              <input name="email" type="email" autocomplete="email" maxlength="320" required>
+            </label>
+            <label class="auth-field">
+              <span>${t("auth.login.password")}</span>
+              <input name="password" type="password" autocomplete="current-password" maxlength="256" required>
+            </label>
+            <p class="auth-error" data-auth-error role="alert" hidden></p>
+            <button class="action-button action-button--primary" type="submit" data-auth-submit>${t("auth.login.submit")}</button>
+          </form>
+          <div class="auth-secondary-actions">
+            <button class="text-button" type="button" data-action="auth-open-register">${t("auth.login.register")}</button>
+            <button class="text-button" type="button" data-action="auth-open-reset">${t("auth.login.forgot")}</button>
+          </div>
+          <button class="text-button auth-cancel" type="button" data-action="cancel-auth">${t("auth.cancel")}</button>
+        </section>
+
+        <section class="app-view task-view auth-view" data-app-view="auth-register" aria-labelledby="auth-register-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="auth-back" aria-label="${t("auth.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("auth.eyebrow")}</p>
+              <h1 id="auth-register-title">${t("auth.register.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="auth-context">${t("auth.register.body")}</p>
+          <form class="auth-form instrument-card" data-auth-form novalidate>
+            <label class="auth-field">
+              <span>${t("auth.register.email")}</span>
+              <input name="email" type="email" autocomplete="email" maxlength="320" required>
+            </label>
+            <label class="auth-field">
+              <span>${t("auth.register.nickname")}</span>
+              <input name="nickname" type="text" autocomplete="nickname" maxlength="64" required>
+            </label>
+            <label class="auth-field">
+              <span>${t("auth.register.password")}</span>
+              <input name="password" type="password" autocomplete="new-password" maxlength="256" required>
+            </label>
+            <p class="auth-error" data-auth-error role="alert" hidden></p>
+            <button class="action-button action-button--primary" type="submit" data-auth-submit>${t("auth.register.submit")}</button>
+          </form>
+          <button class="text-button auth-cancel" type="button" data-action="cancel-auth">${t("auth.cancel")}</button>
+        </section>
+
+        <section class="app-view task-view auth-view" data-app-view="auth-register-verify" aria-labelledby="auth-register-verify-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="auth-back" aria-label="${t("auth.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("auth.eyebrow")}</p>
+              <h1 id="auth-register-verify-title">${t("auth.register.verifyTitle")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="auth-context">${t("auth.register.verifyBody")} <strong data-auth-register-email></strong></p>
+          <form class="auth-form instrument-card" data-auth-form novalidate>
+            <label class="auth-field">
+              <span>${t("auth.register.code")}</span>
+              <input name="code" type="text" autocomplete="one-time-code" inputmode="numeric" maxlength="32" required>
+            </label>
+            <p class="auth-error" data-auth-error role="alert" hidden></p>
+            <button class="action-button action-button--primary" type="submit" data-auth-submit>${t("auth.register.verifySubmit")}</button>
+          </form>
+          <button class="text-button auth-cancel" type="button" data-action="cancel-auth">${t("auth.cancel")}</button>
+        </section>
+
+        <section class="app-view task-view auth-view" data-app-view="auth-reset" aria-labelledby="auth-reset-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="auth-back" aria-label="${t("auth.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("auth.eyebrow")}</p>
+              <h1 id="auth-reset-title">${t("auth.reset.title")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="auth-context">${t("auth.reset.body")}</p>
+          <form class="auth-form instrument-card" data-auth-form novalidate>
+            <label class="auth-field">
+              <span>${t("auth.reset.email")}</span>
+              <input name="email" type="email" autocomplete="email" maxlength="320" required>
+            </label>
+            <p class="auth-error" data-auth-error role="alert" hidden></p>
+            <button class="action-button action-button--primary" type="submit" data-auth-submit>${t("auth.reset.submit")}</button>
+          </form>
+          <button class="text-button auth-cancel" type="button" data-action="cancel-auth">${t("auth.cancel")}</button>
+        </section>
+
+        <section class="app-view task-view auth-view" data-app-view="auth-reset-verify" aria-labelledby="auth-reset-verify-title" hidden>
+          <header class="task-bar">
+            <button class="icon-button" type="button" data-action="auth-back" aria-label="${t("auth.back")}">←</button>
+            <div>
+              <p class="eyebrow">${t("auth.eyebrow")}</p>
+              <h1 id="auth-reset-verify-title">${t("auth.reset.verifyTitle")}</h1>
+            </div>
+            <span class="task-bar__spacer" aria-hidden="true"></span>
+          </header>
+          <p class="auth-context">${t("auth.reset.verifyBody")} <strong data-auth-reset-email></strong></p>
+          <form class="auth-form instrument-card" data-auth-form novalidate>
+            <label class="auth-field">
+              <span>${t("auth.reset.code")}</span>
+              <input name="code" type="text" autocomplete="one-time-code" inputmode="numeric" maxlength="32" required>
+            </label>
+            <label class="auth-field">
+              <span>${t("auth.reset.newPassword")}</span>
+              <input name="newPassword" type="password" autocomplete="new-password" maxlength="256" required>
+            </label>
+            <p class="auth-error" data-auth-error role="alert" hidden></p>
+            <button class="action-button action-button--primary" type="submit" data-auth-submit>${t("auth.reset.verifySubmit")}</button>
+          </form>
+          <button class="text-button auth-cancel" type="button" data-action="cancel-auth">${t("auth.cancel")}</button>
         </section>
       </div>
 

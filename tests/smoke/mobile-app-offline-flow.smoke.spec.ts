@@ -484,7 +484,7 @@ test("the first 2048 milestone stays non-blocking and the next swipe runs once",
   expect(evidence.consoleErrors).toEqual([]);
 });
 
-test("locked modes stay behind local privacy and account gates without requests", async ({
+test("locked modes preserve their target through privacy into auth without requests", async ({
   page,
 }) => {
   const evidence = observeNetwork(page);
@@ -513,8 +513,13 @@ test("locked modes stay behind local privacy and account gates without requests"
   await page.getByRole("button", { name: "查看联网说明" }).click();
   await expect(page.getByRole("heading", { name: "开始之前" })).toBeVisible();
   await page.getByRole("button", { name: "预览联网入口" }).click();
-  await expect(page.locator("[data-auth-gate]")).toBeVisible();
-  await page.getByRole("button", { name: "保持游客身份" }).click();
+  const auth = page.locator('[data-app-view="auth-login"]');
+  await expect(auth).toBeVisible();
+  await expect(
+    auth.getByText("登录后将继续进入刚才选择的模式。"),
+  ).toBeVisible();
+  await expect(page.locator("[data-app-bottom-nav]")).toBeHidden();
+  await auth.locator('[data-action="cancel-auth"]').last().click();
   await expect(page.locator('[data-app-view="modes"]')).toBeVisible();
   expect(evidence.businessRequests).toEqual([]);
   expect(evidence.externalRequests).toEqual([]);

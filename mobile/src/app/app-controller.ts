@@ -1,5 +1,15 @@
-import type { GameDirection } from "../../../src/contracts";
+import type { AppModeKey, GameDirection } from "../../../src/contracts";
 import { getBestTileValue } from "../../../src/core/engine";
+import type { AccountSessionV1 } from "../auth/account-session";
+import type { MobileAuthServiceFactory } from "../auth/auth-flow";
+import {
+  isAuthenticatedModeKey,
+  isAuthTaskRoute,
+  MobileAuthTask,
+  type AuthenticatedAppModeKey,
+  type AuthSourceRoute,
+  type AuthTaskRoute,
+} from "../auth/auth-task";
 import type { StoredGameRecord } from "../data/app-database";
 import { mountBoard, type BoardView } from "../game/board-view";
 import {
@@ -19,7 +29,14 @@ export type AppRoute =
   | "game"
   | "result"
   | "detail"
-  | "replay";
+  | "replay"
+  | AuthTaskRoute;
+
+export type { AuthenticatedAppModeKey, AuthTaskRoute } from "../auth/auth-task";
+
+export type AuthenticatedModeEntryResult =
+  | { status: "entered" }
+  | { status: "unavailable" };
 
 type RecordSort = "time" | "score" | "boardSum";
 type OnlineIntent = "auth" | "achievements" | "leaderboard";
@@ -33,7 +50,8 @@ type NavigationKind =
   | "leave"
   | "result-home"
   | "open-record"
-  | "delete-record";
+  | "delete-record"
+  | "enter-account";
 
 export interface AppControllerOptions {
   root: HTMLElement;
@@ -42,6 +60,12 @@ export interface AppControllerOptions {
   locale: "zh-CN" | "en";
   networkMode: AppNetworkMode;
   onNetworkModeChange(mode: Exclude<AppNetworkMode, "undecided">): void;
+  authServiceFactory?: MobileAuthServiceFactory;
+  initialAccountSession?: AccountSessionV1 | null;
+  enterAuthenticatedMode?: (
+    modeKey: AppModeKey,
+    session: AccountSessionV1,
+  ) => Promise<AuthenticatedModeEntryResult>;
 }
 
 export interface AppController {
@@ -156,11 +180,16 @@ class MobileAppController implements AppController {
   readonly #numberFormat: Intl.NumberFormat;
   readonly #dateFormat: Intl.DateTimeFormat;
   readonly #onNetworkModeChange: AppControllerOptions["onNetworkModeChange"];
+  readonly #authTask: MobileAuthTask;
+  readonly #enterAuthenticatedMode: NonNullable<
+    AppControllerOptions["enterAuthenticatedMode"]
+  > | null;
   readonly #views: Map<AppRoute, HTMLElement>;
   readonly #bottomNavigation: HTMLElement;
   readonly #status: HTMLElement;
   readonly #onClick: (event: Event) => void;
   readonly #onChange: (event: Event) => void;
+  readonly #onSubmit: (event: SubmitEvent) => void;
   readonly #onDialogCancel: (event: Event) => void;
   readonly #dialogOpeners = new WeakMap<HTMLDialogElement, HTMLElement>();
 
@@ -194,6 +223,15 @@ class MobileAppController implements AppController {
     this.#locale = options.locale;
     this.#networkMode = options.networkMode;
     this.#onNetworkModeChange = options.onNetworkModeChange;
+    this.#authTask = new MobileAuthTask({
+      root: options.root,
+      t: options.t,
+      ...(options.authServiceFactory
+        ? { serviceFactory: options.authServiceFactory }
+        : {}),
+      initialSession: options.initialAccountSession ?? null,
+    });
+    this.#enterAuthenticatedMode = options.enterAuthenticatedMode ?? null;
     this.#numberFormat = new Intl.NumberFormat(options.locale);
     this.#dateFormat = new Intl.DateTimeFormat(options.locale, {
       month: "short",
@@ -246,14 +284,28 @@ class MobileAppController implements AppController {
         this.#setReplayIndex(Number.parseInt(target.value, 10));
       }
     };
+    this.#onSubmit = (event) => {
+      const form = event.target;
+      if (
+        !(form instanceof HTMLFormElement) ||
+        !form.matches("[data-auth-form]")
+      ) {
+        return;
+      }
+      event.preventDefault();
+      void this.#submitAuth(form).catch((error: unknown) => {
+        this.#authTask.showUnexpectedIssue(this.#route, errorCode(error));
+      });
+    };
     this.#onDialogCancel = (event) => {
       event.preventDefault();
       const target = event.target;
-      if (target instanceof HTMLDialogElement) this.#closeModal(target);
+      if (target instanceof HTMLDialogElement) this.#cancelModal(target);
     };
 
     this.#root.addEventListener("click", this.#onClick);
     this.#root.addEventListener("change", this.#onChange);
+    this.#root.addEventListener("submit", this.#onSubmit);
     for (const dialog of this.#dialogs()) {
       dialog.addEventListener("cancel", this.#onDialogCancel);
     }
@@ -289,7 +341,7 @@ class MobileAppController implements AppController {
   async handleBack(): Promise<boolean> {
     const openModal = this.#dialogs().find((dialog) => dialog.open);
     if (openModal) {
-      this.#closeModal(openModal);
+      this.#cancelModal(openModal);
       return true;
     }
 
@@ -312,6 +364,7 @@ class MobileAppController implements AppController {
       if (this.#destroyed) return true;
       if (this.#route === "detail") this.#showRoute(this.#detailSource);
       else if (this.#route === "replay") this.#closeReplay();
+      else if (isAuthTaskRoute(this.#route)) this.#backAuthentication();
       else if (this.#route === "privacy" && this.#privacyReturnRoute) {
         this.#returnFromPrivacy(false);
       } else if (this.#route !== "home" && this.#route !== "privacy") {
@@ -322,6 +375,10 @@ class MobileAppController implements AppController {
 
     if (this.#route === "privacy" && this.#privacyReturnRoute) {
       this.#returnFromPrivacy(false);
+      return true;
+    }
+    if (isAuthTaskRoute(this.#route)) {
+      this.#backAuthentication();
       return true;
     }
     if (this.#route === "game") {
@@ -357,6 +414,7 @@ class MobileAppController implements AppController {
     this.#navigationEpoch += 1;
     this.#root.removeEventListener("click", this.#onClick);
     this.#root.removeEventListener("change", this.#onChange);
+    this.#root.removeEventListener("submit", this.#onSubmit);
     for (const dialog of this.#dialogs()) {
       dialog.removeEventListener("cancel", this.#onDialogCancel);
     }
@@ -429,7 +487,9 @@ class MobileAppController implements AppController {
     if (trigger.hasAttribute("data-mode-card")) {
       const mode = trigger.dataset.mode;
       if (mode === "standard_4x4_pow2_no_undo") await this.#enterStandard();
-      else this.#requestOnline("auth");
+      else if (isAuthenticatedModeKey(mode)) {
+        await this.#requestAuthenticatedMode(mode);
+      }
       return;
     }
 
@@ -496,17 +556,31 @@ class MobileAppController implements AppController {
         this.#requestOnline("leaderboard");
         break;
       case "open-auth-gate":
-        this.#requestOnline("auth");
+        this.#requestAuthentication("me", null);
         break;
       case "open-achievements-gate":
         this.#requestOnline("achievements");
         break;
       case "close-offline-gate":
         this.#pendingOnlineIntent = null;
+        this.#clearAuthenticationIntent();
         this.#closeNamedDialog("[data-offline-gate]");
         break;
       case "close-auth-gate":
+        this.#clearAuthenticationIntent();
         this.#closeNamedDialog("[data-auth-gate]");
+        break;
+      case "cancel-auth":
+        this.#cancelAuthentication();
+        break;
+      case "auth-back":
+        this.#backAuthentication();
+        break;
+      case "auth-open-register":
+        this.#showAuthRoute("auth-register");
+        break;
+      case "auth-open-reset":
+        this.#showAuthRoute("auth-reset");
         break;
       case "show-privacy-notes":
         this.#openPrivacyFromCurrentRoute();
@@ -634,7 +708,11 @@ class MobileAppController implements AppController {
     this.#showRoute(route);
     const intent = this.#pendingOnlineIntent;
     this.#pendingOnlineIntent = null;
-    if (continueIntent && intent) this.#showUnavailableOnlineIntent(intent);
+    if (continueIntent && intent) {
+      this.#showUnavailableOnlineIntent(intent);
+    } else if (intent === "auth") {
+      this.#clearAuthenticationIntent();
+    }
   }
 
   #requestOnline(intent: OnlineIntent): void {
@@ -647,10 +725,139 @@ class MobileAppController implements AppController {
   }
 
   #showUnavailableOnlineIntent(_intent: OnlineIntent): void {
+    if (_intent === "auth") {
+      this.#openAuthentication();
+      return;
+    }
     this.#openModal(requireElement(this.#root, "[data-auth-gate]"));
   }
 
+  async #requestAuthenticatedMode(
+    modeKey: AuthenticatedAppModeKey,
+  ): Promise<void> {
+    const session = this.#authTask.session;
+    if (session) {
+      await this.#enterAccountMode(modeKey, session, "modes");
+      return;
+    }
+    this.#requestAuthentication("modes", modeKey);
+  }
+
+  #requestAuthentication(
+    source: AuthSourceRoute,
+    targetMode: AuthenticatedAppModeKey | null,
+  ): void {
+    this.#authTask.setIntent(source, targetMode);
+    if (this.#networkMode !== "online") {
+      this.#pendingOnlineIntent = "auth";
+      this.#openModal(requireElement(this.#root, "[data-offline-gate]"));
+      return;
+    }
+    this.#openAuthentication();
+  }
+
+  #openAuthentication(): void {
+    const route = this.#authTask.open();
+    if (!route) {
+      this.#openModal(requireElement(this.#root, "[data-auth-gate]"));
+      return;
+    }
+    this.#showRoute(route);
+  }
+
+  #showAuthRoute(route: AuthTaskRoute): void {
+    this.#showRoute(this.#authTask.navigate(route));
+  }
+
+  #backAuthentication(): void {
+    if (!isAuthTaskRoute(this.#route)) return;
+    this.#showRoute(this.#authTask.back(this.#route));
+  }
+
+  #cancelAuthentication(): void {
+    this.#showRoute(this.#authTask.cancel());
+  }
+
+  #clearAuthenticationIntent(): void {
+    if (this.#pendingOnlineIntent === "auth") {
+      this.#pendingOnlineIntent = null;
+    }
+    this.#authTask.clearIntent();
+  }
+
+  async #submitAuth(form: HTMLFormElement): Promise<void> {
+    if (!isAuthTaskRoute(this.#route)) return;
+    const effect = await this.#authTask.submit(form, this.#route);
+    if (effect.status === "none") return;
+    if (effect.status === "navigate") {
+      this.#showRoute(effect.route);
+      if (effect.passwordReset) {
+        this.#showStatus(
+          this.#t("auth.success.passwordReset"),
+          "success",
+          4_000,
+        );
+      }
+      return;
+    }
+    if (effect.targetMode) {
+      await this.#enterAccountMode(
+        effect.targetMode,
+        effect.session,
+        effect.source,
+      );
+      return;
+    }
+    this.#showRoute(effect.source);
+    this.#showStatus(this.#t("auth.success.signedIn"), "success", 3_000);
+  }
+
+  #enterAccountMode(
+    modeKey: AppModeKey,
+    session: AccountSessionV1,
+    failureRoute: AuthSourceRoute | "home",
+  ): Promise<void> {
+    performance.mark("app-game-entry-start");
+    return this.#runNavigation("enter-account", async (epoch) => {
+      let result: AuthenticatedModeEntryResult = { status: "unavailable" };
+      try {
+        if (this.#enterAuthenticatedMode) {
+          result = await this.#enterAuthenticatedMode(modeKey, session);
+        }
+      } catch {
+        result = { status: "unavailable" };
+      }
+      if (!this.#isNavigationCurrent(epoch)) return;
+      const activeSession = this.#runtime.activeSession;
+      if (
+        result.status === "entered" &&
+        activeSession?.state.modeKey === modeKey
+      ) {
+        this.#mountGame(activeSession);
+        this.#hideStatus();
+        this.#showRoute("game");
+        performance.mark("app-game-entry-end");
+        performance.measure(
+          "app-game-entry",
+          "app-game-entry-start",
+          "app-game-entry-end",
+        );
+        return;
+      }
+      this.#showRoute(failureRoute);
+      this.#showStatus(this.#t("auth.modeUnavailable"), "error", 5_000);
+    });
+  }
+
   #enterStandard(): Promise<void> {
+    const accountSession = this.#authTask.session;
+    if (accountSession) {
+      return this.#enterAccountMode(
+        "standard_4x4_pow2_no_undo",
+        accountSession,
+        this.#route === "modes" ? "modes" : "home",
+      );
+    }
     performance.mark("app-game-entry-start");
     return this.#runNavigation("enter", async (epoch) => {
       try {
@@ -676,9 +883,24 @@ class MobileAppController implements AppController {
 
   #mountGame(session: GuestGameSession): void {
     this.#gameBoard?.destroy();
+    const save = session.currentSave;
+    const title = this.#modeTitle(save.modeKey);
+    this.#setText("#game-title", title);
+    this.#setText(
+      "[data-game-status]",
+      save.ownerKey === "guest"
+        ? this.#t("game.status")
+        : save.gameKind === "ranked"
+          ? this.#t("game.statusRanked")
+          : this.#t("game.statusNormal"),
+    );
     const boardRoot = requireElement<HTMLElement>(
       this.#root,
       "[data-game-board-root]",
+    );
+    boardRoot.setAttribute(
+      "aria-label",
+      `${title} ${this.#t("game.boardSuffix")}`,
     );
     this.#gameBoard = mountBoard(boardRoot, session.state, {
       isInputLocked: () =>
@@ -1130,6 +1352,7 @@ class MobileAppController implements AppController {
   }
 
   #renderResult(record: StoredGameRecord): void {
+    this.#setText("#result-title", this.#modeTitle(record.modeKey));
     this.#setText(
       "[data-result-score]",
       this.#numberFormat.format(record.score),
@@ -1175,6 +1398,17 @@ class MobileAppController implements AppController {
       this.#numberFormat.format(getBestTileValue(state.board)),
     );
     this.#setText("[data-game-time]", formatDuration(session.elapsedMs()));
+  }
+
+  #modeTitle(modeKey: AppModeKey): string {
+    switch (modeKey) {
+      case "classic_4x4_pow2_undo":
+        return this.#t("modes.classicTitle");
+      case "board_3x3_pow2_no_undo":
+        return this.#t("modes.compactTitle");
+      default:
+        return this.#t("modes.standardTitle");
+    }
   }
 
   #startGameTimer(): void {
@@ -1257,6 +1491,17 @@ class MobileAppController implements AppController {
         opener.focus({ preventScroll: true });
       }
     }
+  }
+
+  #cancelModal(dialog: HTMLDialogElement): void {
+    if (
+      dialog.matches("[data-offline-gate]") ||
+      dialog.matches("[data-auth-gate]")
+    ) {
+      this.#pendingOnlineIntent = null;
+      this.#clearAuthenticationIntent();
+    }
+    this.#closeModal(dialog);
   }
 
   #closeNamedDialog(selector: string): void {

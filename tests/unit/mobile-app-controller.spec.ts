@@ -8,9 +8,15 @@ import {
   resolveStoredSaveDurationMs,
   sortGuestRecords,
   type AppController,
+  type AppControllerOptions,
 } from "../../mobile/src/app/app-controller";
 import type { GuestAppRuntime } from "../../mobile/src/app/app-runtime";
 import { renderAppTemplate } from "../../mobile/src/app/templates";
+import type { AccountSessionV1 } from "../../mobile/src/auth/account-session";
+import {
+  MobileAuthError,
+  type MobileAuthService,
+} from "../../mobile/src/auth/auth-service";
 import {
   APP_DATABASE_SCHEMA_VERSION,
   type StoredGameRecord,
@@ -35,9 +41,19 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-function session(hasEffectiveMove = false): GuestGameSession {
+function session(
+  hasEffectiveMove = false,
+  modeKey:
+    | "standard_4x4_pow2_no_undo"
+    | "classic_4x4_pow2_undo"
+    | "board_3x3_pow2_no_undo" = "standard_4x4_pow2_no_undo",
+  options: {
+    ownerKey?: "guest" | `user:${number}`;
+    gameKind?: "normal" | "ranked";
+  } = {},
+): GuestGameSession {
   const engine = createEngineSession({
-    modeKey: "standard_4x4_pow2_no_undo",
+    modeKey,
     seed: hasEffectiveMove ? 4_096 : 2_048,
   });
   const state = engine.init();
@@ -45,6 +61,13 @@ function session(hasEffectiveMove = false): GuestGameSession {
   return {
     get state() {
       return state;
+    },
+    get currentSave() {
+      return {
+        ownerKey: options.ownerKey ?? "guest",
+        modeKey,
+        gameKind: options.gameKind ?? "normal",
+      };
     },
     get inputLocked() {
       return fences.size > 0;
@@ -60,6 +83,38 @@ function session(hasEffectiveMove = false): GuestGameSession {
     removeInputFence: vi.fn((reason: string) => fences.delete(reason)),
     flush: vi.fn(async () => undefined),
   } as unknown as GuestGameSession;
+}
+
+function accountSession(): AccountSessionV1 {
+  return {
+    version: 1,
+    accessToken: "account-access-token",
+    expiresAtEpochSeconds: 2_000_000_000,
+    user: {
+      id: 42,
+      email: "player@example.com",
+      nickname: "Next Player",
+      role: "player",
+    },
+    persistentIdentity: { userId: 42, establishedAtMs: 1_000 },
+    challengeRefs: [],
+  };
+}
+
+function authService(
+  overrides: Partial<MobileAuthService> = {},
+): MobileAuthService {
+  return {
+    getSession: vi.fn(async () => accountSession()),
+    login: vi.fn(async () => accountSession()),
+    registerStart: vi.fn(async () => ({ success: true })),
+    registerVerify: vi.fn(async () => accountSession()),
+    passwordResetStart: vi.fn(async () => ({ success: true })),
+    passwordResetVerify: vi.fn(async () => ({ success: true })),
+    currentUser: vi.fn(async () => accountSession().user),
+    refresh: vi.fn(async () => accountSession()),
+    ...overrides,
+  };
 }
 
 interface RuntimeHarness {
@@ -132,7 +187,20 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
   };
 }
 
-function mountController(harness: RuntimeHarness): {
+type ControllerOverrides = Partial<
+  Pick<
+    AppControllerOptions,
+    | "networkMode"
+    | "authServiceFactory"
+    | "initialAccountSession"
+    | "enterAuthenticatedMode"
+  >
+>;
+
+function mountController(
+  harness: RuntimeHarness,
+  overrides: ControllerOverrides = {},
+): {
   controller: AppController;
   root: HTMLElement;
 } {
@@ -148,8 +216,30 @@ function mountController(harness: RuntimeHarness): {
       locale: "zh-CN",
       networkMode: "offline",
       onNetworkModeChange: vi.fn(),
+      ...overrides,
     }),
   };
+}
+
+function setAuthInput(
+  root: ParentNode,
+  route: string,
+  name: string,
+  value: string,
+): void {
+  const input = root.querySelector<HTMLInputElement>(
+    `[data-app-view="${route}"] input[name="${name}"]`,
+  );
+  if (!input) throw new Error(`missing_auth_input:${route}:${name}`);
+  input.value = value;
+}
+
+function submitAuth(root: ParentNode, route: string): void {
+  const form = root.querySelector<HTMLFormElement>(
+    `[data-app-view="${route}"] [data-auth-form]`,
+  );
+  if (!form) throw new Error(`missing_auth_form:${route}`);
+  form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 }
 
 function focusAndClick(root: ParentNode, selector: string): HTMLElement {
@@ -506,6 +596,349 @@ describe("mobile app controller navigation", () => {
       root.querySelector<HTMLElement>('[data-app-view="result"]')?.hidden,
     ).toBe(true);
     controller.destroy();
+  });
+});
+
+describe("mobile app authentication tasks", () => {
+  it("does not construct auth before online privacy and the first submission", async () => {
+    const harness = runtimeHarness();
+    const service = authService();
+    const factory = vi.fn(() => service);
+    const { controller, root } = mountController(harness, {
+      authServiceFactory: factory,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    expect(factory).not.toHaveBeenCalled();
+    focusAndClick(root, '[data-action="show-privacy-notes"]');
+    expect(controller.route).toBe("privacy");
+    expect(factory).not.toHaveBeenCalled();
+
+    focusAndClick(root, '[data-consent="online"]');
+    expect(controller.route).toBe("auth-login");
+    expect(factory).not.toHaveBeenCalled();
+    setAuthInput(root, "auth-login", "email", "player@example.com");
+    setAuthInput(root, "auth-login", "password", "Password123!");
+    submitAuth(root, "auth-login");
+
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(1));
+    expect(service.login).toHaveBeenCalledTimes(1);
+    controller.destroy();
+  });
+
+  it.each(["classic_4x4_pow2_undo", "board_3x3_pow2_no_undo"] as const)(
+    "preserves the exact %s target through sign-in",
+    async (modeKey) => {
+      const harness = runtimeHarness();
+      const service = authService();
+      const enteredSession = session(false, modeKey, {
+        ownerKey: "user:42",
+        gameKind: "ranked",
+      });
+      const enterAuthenticatedMode = vi.fn(async () => {
+        harness.setActiveSession(enteredSession);
+        return { status: "entered" as const };
+      });
+      const { controller, root } = mountController(harness, {
+        networkMode: "online",
+        authServiceFactory: () => service,
+        enterAuthenticatedMode,
+      });
+
+      focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+      focusAndClick(root, `[data-mode="${modeKey}"]`);
+      expect(controller.route).toBe("auth-login");
+      setAuthInput(root, "auth-login", "email", "player@example.com");
+      setAuthInput(root, "auth-login", "password", "Password123!");
+      submitAuth(root, "auth-login");
+
+      await vi.waitFor(() => expect(controller.route).toBe("game"));
+      expect(enterAuthenticatedMode).toHaveBeenCalledWith(
+        modeKey,
+        accountSession(),
+      );
+      expect(root.querySelector("[data-game-status]")?.textContent).toBe(
+        "排位对局",
+      );
+      expect(root.querySelector("#game-title")?.textContent).toBe(
+        modeKey === "classic_4x4_pow2_undo"
+          ? "经典 4×4"
+          : modeKey === "board_3x3_pow2_no_undo"
+            ? "标准 3×3"
+            : "标准 4×4",
+      );
+      expect(harness.enterGuestStandard).not.toHaveBeenCalled();
+      controller.destroy();
+    },
+  );
+
+  it.each([
+    "standard_4x4_pow2_no_undo",
+    "classic_4x4_pow2_undo",
+    "board_3x3_pow2_no_undo",
+  ] as const)(
+    "routes signed-in %s through the account runtime",
+    async (modeKey) => {
+      const harness = runtimeHarness();
+      const enteredSession = session(false, modeKey, {
+        ownerKey: "user:42",
+        gameKind: "ranked",
+      });
+      const enterAuthenticatedMode = vi.fn(async () => {
+        harness.setActiveSession(enteredSession);
+        return { status: "entered" as const };
+      });
+      const { controller, root } = mountController(harness, {
+        networkMode: "online",
+        initialAccountSession: accountSession(),
+        enterAuthenticatedMode,
+      });
+
+      if (modeKey === "standard_4x4_pow2_no_undo") {
+        focusAndClick(root, '[data-action="enter-standard"]');
+      } else {
+        focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+        focusAndClick(root, `[data-mode="${modeKey}"]`);
+      }
+
+      await vi.waitFor(() => expect(controller.route).toBe("game"));
+      expect(enterAuthenticatedMode).toHaveBeenCalledWith(
+        modeKey,
+        accountSession(),
+      );
+      expect(harness.enterGuestStandard).not.toHaveBeenCalled();
+      controller.destroy();
+    },
+  );
+
+  it("fails closed when the account mode runtime is unavailable", async () => {
+    const harness = runtimeHarness();
+    const enterAuthenticatedMode = vi.fn(async () => ({
+      status: "unavailable" as const,
+    }));
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+      authServiceFactory: () => authService(),
+      enterAuthenticatedMode,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    expect(root.querySelector("[data-mode-identity]")?.textContent).toBe(
+      "Next Player",
+    );
+    expect(
+      root.querySelector(
+        '[data-mode="board_3x3_pow2_no_undo"] [data-mode-state]',
+      )?.textContent,
+    ).toBe("账号已登录");
+    focusAndClick(root, '[data-mode="board_3x3_pow2_no_undo"]');
+
+    await vi.waitFor(() =>
+      expect(enterAuthenticatedMode).toHaveBeenCalledWith(
+        "board_3x3_pow2_no_undo",
+        accountSession(),
+      ),
+    );
+    expect(controller.route).toBe("modes");
+    expect(harness.enterGuestStandard).not.toHaveBeenCalled();
+    expect(root.querySelector("[data-game-board-root] .game-tile")).toBeNull();
+    expect(root.querySelector("[data-app-status]")?.textContent).toContain(
+      "未启动任何对局",
+    );
+    controller.destroy();
+  });
+
+  it("uses explicit auth history and clears a cancelled mode target", async () => {
+    const harness = runtimeHarness();
+    const enterAuthenticatedMode = vi.fn(async () => ({
+      status: "unavailable" as const,
+    }));
+    const service = authService();
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      authServiceFactory: () => service,
+      enterAuthenticatedMode,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    expect(await controller.handleBack()).toBe(true);
+    expect(controller.route).toBe("modes");
+    focusAndClick(root, '[data-mode="classic_4x4_pow2_undo"]');
+    focusAndClick(root, '[data-action="auth-open-register"]');
+    expect(controller.route).toBe("auth-register");
+    expect(await controller.handleBack()).toBe(true);
+    expect(controller.route).toBe("auth-login");
+    focusAndClick(root, '[data-action="auth-open-reset"]');
+    expect(controller.route).toBe("auth-reset");
+    expect(await controller.handleBack()).toBe(true);
+    expect(controller.route).toBe("auth-login");
+    focusAndClick(
+      root.querySelector('[data-app-view="auth-login"]')!,
+      '[data-action="cancel-auth"]',
+    );
+    expect(controller.route).toBe("modes");
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="open-auth-gate"]');
+    setAuthInput(root, "auth-login", "email", "player@example.com");
+    setAuthInput(root, "auth-login", "password", "Password123!");
+    submitAuth(root, "auth-login");
+    await vi.waitFor(() => expect(controller.route).toBe("me"));
+    expect(enterAuthenticatedMode).not.toHaveBeenCalled();
+    controller.destroy();
+  });
+
+  it("executes the two-stage registration contract", async () => {
+    const harness = runtimeHarness();
+    const service = authService();
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      authServiceFactory: () => service,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="open-auth-gate"]');
+    focusAndClick(root, '[data-action="auth-open-register"]');
+    setAuthInput(root, "auth-register", "email", "Player@Example.com");
+    setAuthInput(root, "auth-register", "nickname", "Next Player");
+    setAuthInput(root, "auth-register", "password", "Password123!");
+    submitAuth(root, "auth-register");
+
+    await vi.waitFor(() =>
+      expect(controller.route).toBe("auth-register-verify"),
+    );
+    expect(service.registerStart).toHaveBeenCalledWith({
+      email: "Player@Example.com",
+      nickname: "Next Player",
+      password: "Password123!",
+    });
+    expect(root.querySelector("[data-auth-register-email]")?.textContent).toBe(
+      "player@example.com",
+    );
+    expect(
+      root.querySelector<HTMLInputElement>(
+        '[data-app-view="auth-register"] input[name="password"]',
+      )?.value,
+    ).toBe("");
+    setAuthInput(root, "auth-register-verify", "code", "204826");
+    submitAuth(root, "auth-register-verify");
+
+    await vi.waitFor(() => expect(controller.route).toBe("me"));
+    expect(service.registerVerify).toHaveBeenCalledWith({
+      email: "player@example.com",
+      code: "204826",
+    });
+    expect(root.querySelector("[data-account-title]")?.textContent).toBe(
+      "Next Player",
+    );
+    controller.destroy();
+  });
+
+  it("executes the two-stage password reset contract", async () => {
+    const harness = runtimeHarness();
+    const service = authService();
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      authServiceFactory: () => service,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="open-auth-gate"]');
+    focusAndClick(root, '[data-action="auth-open-reset"]');
+    setAuthInput(root, "auth-reset", "email", "Player@Example.com");
+    submitAuth(root, "auth-reset");
+
+    await vi.waitFor(() => expect(controller.route).toBe("auth-reset-verify"));
+    expect(service.passwordResetStart).toHaveBeenCalledWith({
+      email: "Player@Example.com",
+    });
+    setAuthInput(root, "auth-reset-verify", "code", "204826");
+    setAuthInput(root, "auth-reset-verify", "newPassword", "NewPassword123!");
+    submitAuth(root, "auth-reset-verify");
+
+    await vi.waitFor(() => expect(controller.route).toBe("auth-login"));
+    expect(service.passwordResetVerify).toHaveBeenCalledWith({
+      email: "player@example.com",
+      code: "204826",
+      newPassword: "NewPassword123!",
+    });
+    expect(
+      root.querySelector<HTMLInputElement>(
+        '[data-app-view="auth-login"] input[name="email"]',
+      )?.value,
+    ).toBe("player@example.com");
+    expect(
+      root.querySelector<HTMLInputElement>(
+        '[data-app-view="auth-reset-verify"] input[name="newPassword"]',
+      )?.value,
+    ).toBe("");
+    controller.destroy();
+  });
+
+  it("disables repeated login submission and maps a structured error", async () => {
+    const harness = runtimeHarness();
+    const loginResult = deferred<AccountSessionV1>();
+    const login = vi.fn(() => loginResult.promise);
+    const service = authService({ login });
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      authServiceFactory: () => service,
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(root, '[data-action="open-auth-gate"]');
+    setAuthInput(root, "auth-login", "email", "player@example.com");
+    setAuthInput(root, "auth-login", "password", "Password123!");
+    submitAuth(root, "auth-login");
+    submitAuth(root, "auth-login");
+    await vi.waitFor(() => expect(login).toHaveBeenCalledTimes(1));
+    expect(
+      root.querySelector<HTMLButtonElement>(
+        '[data-app-view="auth-login"] [data-auth-submit]',
+      )?.disabled,
+    ).toBe(true);
+    loginResult.resolve(accountSession());
+    await vi.waitFor(() => expect(controller.route).toBe("me"));
+
+    const failingService = authService({
+      login: vi.fn(async () => {
+        throw new MobileAuthError("http_error", {
+          status: 401,
+          serverCode: "INVALID_CREDENTIALS",
+        });
+      }),
+    });
+    controller.destroy();
+    const next = mountController(runtimeHarness(), {
+      networkMode: "online",
+      authServiceFactory: () => failingService,
+    });
+    focusAndClick(next.root, '[data-app-bottom-nav] [data-nav="me"]');
+    focusAndClick(next.root, '[data-action="open-auth-gate"]');
+    setAuthInput(next.root, "auth-login", "email", "player@example.com");
+    setAuthInput(next.root, "auth-login", "password", "wrong-password");
+    submitAuth(next.root, "auth-login");
+    await vi.waitFor(() =>
+      expect(
+        next.root.querySelector<HTMLElement>(
+          '[data-app-view="auth-login"] [data-auth-error]',
+        )?.dataset.errorCode,
+      ).toBe("INVALID_CREDENTIALS"),
+    );
+    expect(
+      next.root.querySelector('[data-app-view="auth-login"] [data-auth-error]')
+        ?.textContent,
+    ).toBe("邮箱或密码不正确。");
+    next.controller.destroy();
+  });
+
+  it("does not render restricted-release wording on auth pages", () => {
+    const zh = renderAppTemplate(createTranslator("zh-CN"));
+    const en = renderAppTemplate(createTranslator("en"));
+    expect(`${zh}\n${en}`).not.toMatch(/beta|内测|邀请|受邀|invite/iu);
   });
 });
 
