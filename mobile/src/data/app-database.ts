@@ -95,6 +95,14 @@ interface StoredOutboxBase {
   updatedAt: number;
 }
 
+export interface RankedSessionStartFingerprint {
+  rankedSessionId: string;
+  challengeId: string;
+  seed: number;
+  startedAtMs: number;
+  expiresAtEpochSeconds: number;
+}
+
 export type StoredOutboxItem =
   | (StoredOutboxBase & {
       kind: "record.submit";
@@ -104,7 +112,10 @@ export type StoredOutboxItem =
   | (StoredOutboxBase & {
       kind: "ranked.session_start";
       clientRecordId: null;
-      payload: { modeKey: AppModeKey };
+      payload: {
+        modeKey: AppModeKey;
+        frozen?: RankedSessionStartFingerprint;
+      };
     })
   | (StoredOutboxBase & {
       kind: "ranked.attempt";
@@ -851,6 +862,39 @@ function isStableReference(value: unknown): value is string {
   return typeof value === "string" && /^[A-Za-z0-9:_-]{1,160}$/u.test(value);
 }
 
+function isRankedStartFingerprint(
+  value: unknown,
+): value is RankedSessionStartFingerprint {
+  return (
+    hasExactKeys(value, [
+      "rankedSessionId",
+      "challengeId",
+      "seed",
+      "startedAtMs",
+      "expiresAtEpochSeconds",
+    ]) &&
+    isStableReference(value.rankedSessionId) &&
+    isStableReference(value.challengeId) &&
+    isNonNegativeSafeInteger(value.seed) &&
+    value.seed <= 0xffffffff &&
+    isNonNegativeSafeInteger(value.startedAtMs) &&
+    isNonNegativeSafeInteger(value.expiresAtEpochSeconds)
+  );
+}
+
+function sameRankedStartFingerprint(
+  left: RankedSessionStartFingerprint,
+  right: RankedSessionStartFingerprint,
+): boolean {
+  return (
+    left.rankedSessionId === right.rankedSessionId &&
+    left.challengeId === right.challengeId &&
+    left.seed === right.seed &&
+    left.startedAtMs === right.startedAtMs &&
+    left.expiresAtEpochSeconds === right.expiresAtEpochSeconds
+  );
+}
+
 function assertValidOutbox(item: StoredOutboxItem): void {
   assertOwnerKey(item.ownerKey);
   requireNonEmptyText(item.operationId, "operationId");
@@ -886,8 +930,11 @@ function assertValidOutbox(item: StoredOutboxItem): void {
     case "ranked.session_start":
       if (
         item.clientRecordId !== null ||
-        !hasExactKeys(item.payload, ["modeKey"]) ||
-        !isAppModeKey(item.payload.modeKey)
+        (!hasExactKeys(item.payload, ["modeKey"]) &&
+          !hasExactKeys(item.payload, ["modeKey", "frozen"])) ||
+        !isAppModeKey(item.payload.modeKey) ||
+        ("frozen" in item.payload &&
+          !isRankedStartFingerprint(item.payload.frozen))
       ) {
         throw new AppDatabaseError("invalid_outbox_payload");
       }
@@ -1902,6 +1949,64 @@ export class AppDatabase {
     }
   }
 
+  async getOrCreateRankedStartIntent(
+    candidate: Extract<StoredOutboxItem, { kind: "ranked.session_start" }>,
+  ): Promise<Extract<StoredOutboxItem, { kind: "ranked.session_start" }>> {
+    assertValidOutbox(candidate);
+    if (candidate.kind !== "ranked.session_start") {
+      throw new AppDatabaseError("invalid_outbox_payload");
+    }
+    if (candidate.ownerKey === "guest") {
+      throw new AppDatabaseError("guest_outbox_forbidden");
+    }
+    const database = await this.#database();
+    const transaction = database.transaction(
+      [STORES.cache, STORES.outbox],
+      "readwrite",
+    );
+    const completion = transactionCompletion(transaction);
+    try {
+      await assertOwnerVisible(transaction, candidate.ownerKey);
+      const store = transaction.objectStore(STORES.outbox);
+      const rows = await requestResult<StoredOutboxItem[]>(
+        store.index("by_owner").getAll(this.#keyRange.only(candidate.ownerKey)),
+      );
+      for (const row of rows) {
+        assertCurrentSchemaRow(row, "corrupt_outbox");
+        assertValidOutbox(row);
+      }
+      const matching = rows.filter(
+        (
+          row,
+        ): row is Extract<StoredOutboxItem, { kind: "ranked.session_start" }> =>
+          row.kind === "ranked.session_start" &&
+          row.payload.modeKey === candidate.payload.modeKey,
+      );
+      if (matching.length > 1) {
+        throw new AppDatabaseError("ranked_start_intent_conflict");
+      }
+      if (matching[0]) {
+        await completion;
+        return cloneValue(matching[0]);
+      }
+      const operationCollision = await requestResult<
+        StoredOutboxItem | undefined
+      >(store.get(candidate.operationId));
+      if (operationCollision) {
+        assertCurrentSchemaRow(operationCollision, "corrupt_outbox");
+        assertValidOutbox(operationCollision);
+        throw new AppDatabaseError("operation_id_conflict");
+      }
+      store.add(cloneValue(candidate));
+      await completion;
+      return cloneValue(candidate);
+    } catch (error) {
+      abortTransaction(transaction);
+      await completion.catch(() => undefined);
+      throw error;
+    }
+  }
+
   async enqueueOutbox(item: StoredOutboxItem): Promise<"created" | "existing"> {
     assertValidOutbox(item);
     if (item.ownerKey === "guest") {
@@ -1931,6 +2036,59 @@ export class AppDatabase {
       store.add(cloneValue(item));
       await completion;
       return "created";
+    } catch (error) {
+      abortTransaction(transaction);
+      await completion.catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async freezeRankedStartIntent(
+    ownerKey: AppOwnerKey,
+    operationId: string,
+    frozen: RankedSessionStartFingerprint,
+  ): Promise<Extract<StoredOutboxItem, { kind: "ranked.session_start" }>> {
+    assertOwnerKey(ownerKey);
+    requireNonEmptyText(operationId, "operationId");
+    if (!isRankedStartFingerprint(frozen)) {
+      throw new AppDatabaseError("invalid_ranked_start_fingerprint");
+    }
+    const database = await this.#database();
+    const transaction = database.transaction(
+      [STORES.cache, STORES.outbox],
+      "readwrite",
+    );
+    const completion = transactionCompletion(transaction);
+    try {
+      await assertOwnerVisible(transaction, ownerKey);
+      const store = transaction.objectStore(STORES.outbox);
+      const existing = await requestResult<StoredOutboxItem | undefined>(
+        store.get(operationId),
+      );
+      if (
+        !existing ||
+        existing.ownerKey !== ownerKey ||
+        existing.kind !== "ranked.session_start"
+      ) {
+        throw new AppDatabaseError("ranked_start_intent_missing");
+      }
+      assertCurrentSchemaRow(existing, "corrupt_outbox");
+      assertValidOutbox(existing);
+      if (existing.payload.frozen) {
+        if (!sameRankedStartFingerprint(existing.payload.frozen, frozen)) {
+          throw new AppDatabaseError("ranked_start_response_conflict");
+        }
+        await completion;
+        return cloneValue(existing);
+      }
+      const next = {
+        ...existing,
+        payload: { ...existing.payload, frozen: cloneValue(frozen) },
+      };
+      assertValidOutbox(next);
+      store.put(next);
+      await completion;
+      return cloneValue(next);
     } catch (error) {
       abortTransaction(transaction);
       await completion.catch(() => undefined);

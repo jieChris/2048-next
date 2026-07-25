@@ -731,6 +731,39 @@ describe("mobile AppDatabase", () => {
     expect(await database.listOutbox(owner)).toEqual([]);
   });
 
+  it("atomically reuses one ranked start intent per owner and mode across database instances", async () => {
+    const { database, factory, name } = createDatabase(
+      "ranked-start-intent-single-flight",
+    );
+    const secondDatabase = new AppDatabase({
+      factory,
+      keyRange: IDBKeyRange,
+      name,
+    });
+    const owner = "user:44" as const;
+    const firstCandidate = sessionStartOutbox(
+      owner,
+      "ranked-start:atomic-candidate-1",
+    );
+    const secondCandidate = {
+      ...sessionStartOutbox(owner, "ranked-start:atomic-candidate-2"),
+      createdAt: 11,
+      updatedAt: 11,
+      nextAttemptAt: 11,
+    };
+
+    const [first, second] = await Promise.all([
+      database.getOrCreateRankedStartIntent(firstCandidate),
+      secondDatabase.getOrCreateRankedStartIntent(secondCandidate),
+    ]);
+
+    expect(first.operationId).toBe(second.operationId);
+    expect([firstCandidate.operationId, secondCandidate.operationId]).toContain(
+      first.operationId,
+    );
+    expect(await database.listOutbox(owner)).toEqual([first]);
+  });
+
   for (const faultPoint of [
     "clear.after_saves",
     "clear.after_records",
