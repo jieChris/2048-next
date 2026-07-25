@@ -6,6 +6,7 @@ import {
   createAppController,
   type AppController,
   type AppNetworkMode,
+  type AppTopRoute,
 } from "./app/app-controller";
 import { MOBILE_BUILD_FLAGS } from "./app/build-flags";
 import {
@@ -24,11 +25,24 @@ import {
 import { AppDatabase } from "./data/app-database";
 import { MobileCloudData } from "./data/mobile-cloud-data";
 import { ClientDiagnostics } from "./diagnostics/client-diagnostics";
-import { createTranslator, resolveSystemLocale } from "./i18n";
+import {
+  createTranslator,
+  LOCALE_STORAGE_KEY,
+  resolveLocale,
+  resolveLocalePreference,
+  type AppLocalePreference,
+} from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
 import { saveDiagnosticExport } from "./platform/diagnostic-export";
+import { GameFeedback } from "./platform/game-feedback";
 import { saveReplayRecord } from "./platform/replay-share";
 import { createPlatformSecureStorage } from "./platform/secure-storage";
+import {
+  BGM_STORAGE_KEY,
+  HAPTICS_STORAGE_KEY,
+  resolveTogglePreference,
+  SOUND_EFFECTS_STORAGE_KEY,
+} from "./preferences";
 import {
   createPreviewPrivacyRecord,
   parsePreviewPrivacyRecord,
@@ -86,7 +100,7 @@ async function diagnosticPlatformInfo() {
 }
 
 const appRoot = requireAppRoot();
-const themePreference = resolveThemePreference(safeRead(THEME_STORAGE_KEY));
+let themePreference = resolveThemePreference(safeRead(THEME_STORAGE_KEY));
 const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
 
 function syncTheme(): void {
@@ -100,14 +114,27 @@ function syncTheme(): void {
 syncTheme();
 darkMedia.addEventListener("change", syncTheme);
 
-const locale = resolveSystemLocale(window.navigator.languages);
-const t = createTranslator(locale);
+let localePreference = resolveLocalePreference(safeRead(LOCALE_STORAGE_KEY));
+let currentLocale = resolveLocale(
+  localePreference,
+  window.navigator.languages,
+);
+let t = createTranslator(currentLocale);
+let soundEffectsEnabled = resolveTogglePreference(
+  safeRead(SOUND_EFFECTS_STORAGE_KEY),
+  true,
+);
+let hapticsEnabled = resolveTogglePreference(
+  safeRead(HAPTICS_STORAGE_KEY),
+  true,
+);
+let bgmEnabled = resolveTogglePreference(safeRead(BGM_STORAGE_KEY), false);
 const initialNetworkMode = resolveNetworkMode(
   parsePreviewPrivacyRecord(safeRead(PREVIEW_PRIVACY_STORAGE_KEY))?.choice ??
     null,
 );
 let currentNetworkMode = initialNetworkMode;
-document.documentElement.lang = locale;
+document.documentElement.lang = currentLocale;
 appRoot.innerHTML = renderAppTemplate(t);
 appRoot.setAttribute("aria-busy", "true");
 
@@ -140,6 +167,18 @@ async function start(): Promise<void> {
   try {
     const secureStorage = createPlatformSecureStorage();
     const database = new AppDatabase();
+    const gameFeedback = new GameFeedback({
+      soundEffects: soundEffectsEnabled,
+      haptics: hapticsEnabled,
+      bgm: bgmEnabled,
+    });
+    const syncGameFeedback = (): void => {
+      gameFeedback.update({
+        soundEffects: soundEffectsEnabled,
+        haptics: hapticsEnabled,
+        bgm: bgmEnabled,
+      });
+    };
     let diagnosticsEnabled = safeRead(AUTO_DIAGNOSTICS_STORAGE_KEY) !== "false";
     let deletionReceipt: AccountDeletionReceipt | null = null;
     try {
@@ -228,58 +267,106 @@ async function start(): Promise<void> {
     ) {
       clearAccountDeletionReceipt(window.localStorage);
     }
-    controller = createAppController({
-      root: appRoot,
-      runtime,
-      t,
-      locale,
-      networkMode: initialNetworkMode,
-      initialAccountSession: runtime.accountSession,
-      authServiceFactory: getAuthService,
-      async enterAuthenticatedMode(modeKey, session) {
-        const online = currentNetworkMode === "online";
-        const opened = await runtime.enterAuthenticatedMode(modeKey, session, {
-          online,
-          ...(online
-            ? {
-                gateway: createHttpRankedSessionGateway({
-                  apiBase: MOBILE_BUILD_FLAGS.apiBase,
-                  timeoutMs: 8_000,
-                }),
-                refreshSession: async () => (await getAuthService()).refresh(),
-              }
-            : {}),
-        });
-        return opened.status === "ready"
-          ? { status: "entered" }
-          : { status: "unavailable" };
-      },
-      onNetworkModeChange(mode) {
-        currentNetworkMode = mode;
-        safeWrite(
-          PREVIEW_PRIVACY_STORAGE_KEY,
-          JSON.stringify(createPreviewPrivacyRecord(mode, Date.now())),
-        );
-        if (mode === "online") {
-          void runtime.flushAccountRecordOutbox().catch(() => undefined);
-          void diagnostics.flush().catch(() => undefined);
-        }
-      },
-      diagnosticsEnabled,
-      onDiagnosticsEnabledChange(enabled) {
-        diagnosticsEnabled = enabled;
-        safeWrite(AUTO_DIAGNOSTICS_STORAGE_KEY, String(enabled));
-        if (enabled) void diagnostics.flush().catch(() => undefined);
-      },
-      async onExportDiagnostics() {
-        await saveDiagnosticExport(await diagnostics.buildExport());
-      },
-      onShareReplay: saveReplayRecord,
-      onAccountSessionChange(session) {
-        diagnosticsAccountSession = session;
-      },
-      cloudData,
-    });
+    const mountController = (initialRoute?: AppTopRoute): void => {
+      controller?.destroy();
+      currentLocale = resolveLocale(
+        localePreference,
+        window.navigator.languages,
+      );
+      t = createTranslator(currentLocale);
+      document.documentElement.lang = currentLocale;
+      appRoot.innerHTML = renderAppTemplate(t);
+      controller = createAppController({
+        root: appRoot,
+        runtime,
+        t,
+        locale: currentLocale,
+        initialRoute,
+        networkMode: currentNetworkMode,
+        initialAccountSession: diagnosticsAccountSession,
+        authServiceFactory: getAuthService,
+        async enterAuthenticatedMode(modeKey, session) {
+          const online = currentNetworkMode === "online";
+          const opened = await runtime.enterAuthenticatedMode(modeKey, session, {
+            online,
+            ...(online
+              ? {
+                  gateway: createHttpRankedSessionGateway({
+                    apiBase: MOBILE_BUILD_FLAGS.apiBase,
+                    timeoutMs: 8_000,
+                  }),
+                  refreshSession: async () => (await getAuthService()).refresh(),
+                }
+              : {}),
+          });
+          return opened.status === "ready"
+            ? { status: "entered" }
+            : { status: "unavailable" };
+        },
+        onNetworkModeChange(mode) {
+          currentNetworkMode = mode;
+          safeWrite(
+            PREVIEW_PRIVACY_STORAGE_KEY,
+            JSON.stringify(createPreviewPrivacyRecord(mode, Date.now())),
+          );
+          if (mode === "online") {
+            void runtime.flushAccountRecordOutbox().catch(() => undefined);
+            void diagnostics.flush().catch(() => undefined);
+          }
+        },
+        themePreference,
+        localePreference,
+        soundEffectsEnabled,
+        hapticsEnabled,
+        bgmEnabled,
+        onThemePreferenceChange(preference) {
+          themePreference = preference;
+          safeWrite(THEME_STORAGE_KEY, preference);
+          syncTheme();
+        },
+        onLocalePreferenceChange(preference: AppLocalePreference) {
+          localePreference = preference;
+          safeWrite(LOCALE_STORAGE_KEY, preference);
+          mountController("me");
+        },
+        onSoundEffectsEnabledChange(enabled) {
+          soundEffectsEnabled = enabled;
+          safeWrite(SOUND_EFFECTS_STORAGE_KEY, String(enabled));
+          syncGameFeedback();
+        },
+        onHapticsEnabledChange(enabled) {
+          hapticsEnabled = enabled;
+          safeWrite(HAPTICS_STORAGE_KEY, String(enabled));
+          syncGameFeedback();
+        },
+        onBgmEnabledChange(enabled) {
+          bgmEnabled = enabled;
+          safeWrite(BGM_STORAGE_KEY, String(enabled));
+          syncGameFeedback();
+        },
+        onGameTransition(transition, finalTerminal) {
+          gameFeedback.consume(transition, finalTerminal);
+        },
+        onPendingTerminalFinished() {
+          gameFeedback.finishPendingTerminal();
+        },
+        diagnosticsEnabled,
+        onDiagnosticsEnabledChange(enabled) {
+          diagnosticsEnabled = enabled;
+          safeWrite(AUTO_DIAGNOSTICS_STORAGE_KEY, String(enabled));
+          if (enabled) void diagnostics.flush().catch(() => undefined);
+        },
+        async onExportDiagnostics() {
+          await saveDiagnosticExport(await diagnostics.buildExport());
+        },
+        onShareReplay: saveReplayRecord,
+        onAccountSessionChange(session) {
+          diagnosticsAccountSession = session;
+        },
+        cloudData,
+      });
+    };
+    mountController();
     appRoot.removeAttribute("aria-busy");
 
     const flushAccountRecords = (): void => {
@@ -292,9 +379,11 @@ async function start(): Promise<void> {
 
     await bindAndroidAppLifecycle({
       async onPause() {
+        gameFeedback.pause();
         await controller?.pause();
       },
       onResume() {
+        gameFeedback.resume();
         controller?.resume();
         flushAccountRecords();
       },

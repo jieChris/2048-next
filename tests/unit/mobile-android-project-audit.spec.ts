@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermissionBoundary,
   assertSecureStorageSource,
+  assertSystemHapticsSource,
   DYNAMIC_RECEIVER_PERMISSION_SUFFIX
 } from "../../scripts/android-project-audit.mjs";
 
@@ -24,6 +25,14 @@ const validSecureStoragePluginSource = `
   @PluginMethod storage.set(call.getString("key"), call.getString("value"));
   @PluginMethod storage.delete(call.getString("key"));
 `;
+const validSystemHapticsPluginSource = `
+  @CapacitorPlugin(name = "Next2048SystemHaptics")
+  @PluginMethod
+  if ("merge".equals(kind)) {}
+  if ("milestone".equals(kind)) {}
+  if ("finish".equals(kind)) {}
+  view.performHapticFeedback(feedback);
+`;
 
 function mergedManifest(options: {
   applicationId?: string;
@@ -33,8 +42,7 @@ function mergedManifest(options: {
 } = {}): string {
   const applicationId = options.applicationId ?? "cn.next2048.app.debug";
   const platformPermissions = options.platformPermissions ?? [
-    "android.permission.INTERNET",
-    "android.permission.VIBRATE"
+    "android.permission.INTERNET"
   ];
   const customPermission = options.customPermission ??
     `${applicationId}${DYNAMIC_RECEIVER_PERMISSION_SUFFIX}`;
@@ -50,13 +58,13 @@ function mergedManifest(options: {
 }
 
 describe("Android merged-permission audit", () => {
-  it("accepts only the two approved platform permissions plus the app-scoped signature permission", () => {
+  it("accepts only Internet plus the app-scoped signature permission", () => {
     expect(assertPermissionBoundary({
       manifest: mergedManifest(),
       applicationId: "cn.next2048.app.debug",
       label: "fixture"
     })).toEqual({
-      platformPermissions: ["android.permission.INTERNET", "android.permission.VIBRATE"],
+      platformPermissions: ["android.permission.INTERNET"],
       customPermission: `cn.next2048.app.debug${DYNAMIC_RECEIVER_PERMISSION_SUFFIX}`
     });
   });
@@ -135,5 +143,28 @@ describe("Android secure-storage source audit", () => {
         'getSharedPreferences("plaintext", 0).edit();'
       )
     })).toThrow(/secure-storage plugin/u);
+  });
+});
+
+describe("Android system-haptics source audit", () => {
+  it("requires the system view path without bypassing the global haptic setting", () => {
+    expect(() => assertSystemHapticsSource({
+      mainActivity: "registerPlugin(Next2048SystemHapticsPlugin.class);",
+      systemHapticsPlugin: validSystemHapticsPluginSource
+    })).not.toThrow();
+  });
+
+  it("rejects direct vibrator use or ignored global settings", () => {
+    expect(() => assertSystemHapticsSource({
+      mainActivity: "registerPlugin(Next2048SystemHapticsPlugin.class);",
+      systemHapticsPlugin: `${validSystemHapticsPluginSource}\nVibrator vibrator;`
+    })).toThrow(/global feedback setting/u);
+    expect(() => assertSystemHapticsSource({
+      mainActivity: "registerPlugin(Next2048SystemHapticsPlugin.class);",
+      systemHapticsPlugin: validSystemHapticsPluginSource.replace(
+        "view.performHapticFeedback(feedback);",
+        "view.performHapticFeedback(feedback, FLAG_IGNORE_GLOBAL_SETTING);"
+      )
+    })).toThrow(/Android view feedback path|global feedback setting/u);
   });
 });

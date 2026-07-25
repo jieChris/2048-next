@@ -227,11 +227,10 @@ Capacitor 没有官方安全存储插件。首版在 `android/` 内实现一个�
 - `@capacitor/core`、`@capacitor/android`、`@capacitor/cli`
 - `@capacitor/app`
 - `@capacitor/status-bar`
-- `@capacitor/haptics`
 - `@capacitor/filesystem`
 - `@capacitor/share`
 
-不增加 Network、Preferences、Keyboard、SplashScreen、Browser、推送、统计或更新插件。真实请求结果决定网络状态；Android 模板启动屏与 `adjustResize` 先覆盖启动和键盘需求。
+触觉通过仓库内单方法 `Next2048SystemHaptics` bridge 调用 Android View `performHapticFeedback`，不绕过系统触觉开关，也不增加权限。该偏差及官方插件不满足产品规则的证据记录于 `execution-notes.md`。不增加 Network、Preferences、Keyboard、SplashScreen、Browser、推送、统计或更新插件。真实请求结果决定网络状态；Android 模板启动屏与 `adjustResize` 先覆盖启动和键盘需求。
 
 回放分享只把版本化 `ReplayRecord` JSON 写入 Cache，再交给系统分享；不申请外部存储权限，完成或取消后清理临时文件。
 

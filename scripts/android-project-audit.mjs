@@ -13,13 +13,11 @@ const projectRoot = path.resolve(__dirname, "..");
 const APPROVED_PLUGINS = Object.freeze([
   "@capacitor/app",
   "@capacitor/filesystem",
-  "@capacitor/haptics",
   "@capacitor/share",
   "@capacitor/status-bar"
 ]);
 const APPROVED_PERMISSIONS = Object.freeze([
-  "android.permission.INTERNET",
-  "android.permission.VIBRATE"
+  "android.permission.INTERNET"
 ]);
 const DYNAMIC_RECEIVER_PERMISSION_SUFFIX =
   ".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION";
@@ -92,6 +90,34 @@ function assertSecureStorageSource({
     !/\b(?:SharedPreferences|getSharedPreferences|Log\.)\b/u.test(pluginCode),
     "secure-storage plugin must delegate persistence without a plaintext side channel"
   );
+}
+
+function assertSystemHapticsSource({ mainActivity, systemHapticsPlugin }) {
+  const activityCode = stripJavaComments(mainActivity);
+  const pluginCode = stripJavaComments(systemHapticsPlugin);
+  invariant(
+    /\bregisterPlugin\s*\(\s*Next2048SystemHapticsPlugin\.class\s*\)\s*;/u.test(activityCode),
+    "the system-haptics plugin must be registered explicitly"
+  );
+  invariant(
+    /@CapacitorPlugin\s*\(\s*name\s*=\s*"Next2048SystemHaptics"\s*\)/u.test(pluginCode),
+    "the system-haptics plugin name drifted"
+  );
+  invariant(
+    (pluginCode.match(/@PluginMethod\b/gu) ?? []).length === 1,
+    "the system-haptics plugin must expose only impact"
+  );
+  invariant(
+    /performHapticFeedback\s*\(\s*feedback\s*\)/u.test(pluginCode),
+    "system haptics must use the Android view feedback path"
+  );
+  invariant(
+    !/FLAG_IGNORE_GLOBAL_SETTING|\bVibrator(?:Manager)?\b|VibrationEffect/u.test(pluginCode),
+    "system haptics must respect the Android global feedback setting"
+  );
+  for (const kind of ["merge", "milestone", "finish"]) {
+    invariant(pluginCode.includes(`"${kind}"`), `system haptics is missing ${kind}`);
+  }
 }
 
 function assertExactValues(actual, expected, label) {
@@ -249,6 +275,11 @@ async function auditAndroidProject({
     secureStorage,
     secureStoragePlugin
   });
+  const systemHapticsPlugin = await readFile(
+    path.join(rootDir, "android", "app", "src", "main", "java", "cn", "next2048", "app", "Next2048SystemHapticsPlugin.java"),
+    "utf8"
+  );
+  assertSystemHapticsSource({ mainActivity, systemHapticsPlugin });
 
   const copiedWebAudit = await auditMobileBoundary({
     mobileDir: path.join(rootDir, "mobile"),
@@ -414,6 +445,7 @@ export {
   assertExactValues,
   assertPermissionBoundary,
   assertSecureStorageSource,
+  assertSystemHapticsSource,
   auditAndroidProject,
   resolveApkAnalyzer,
   runAndroidProjectAudit,

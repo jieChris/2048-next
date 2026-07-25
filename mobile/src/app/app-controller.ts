@@ -2,6 +2,7 @@ import {
   isAppModeKey,
   type AppModeKey,
   type GameDirection,
+  type GameTransition,
   type ReplayRecord,
 } from "../../../src/contracts";
 import { getBestTileValue } from "../../../src/core/engine";
@@ -41,7 +42,8 @@ import {
   type ReplayTimeline,
 } from "../game/replay-timeline";
 import type { GuestGameSession } from "../game/guest-session";
-import type { Translator } from "../i18n";
+import type { AppLocalePreference, Translator } from "../i18n";
+import type { ThemePreference } from "../theme";
 import type { GuestAppRuntime } from "./app-runtime";
 
 export type AppNetworkMode = "undecided" | "offline" | "online";
@@ -88,6 +90,7 @@ export interface AppControllerOptions {
   runtime: GuestAppRuntime;
   t: Translator;
   locale: "zh-CN" | "en";
+  initialRoute?: AppTopRoute;
   networkMode: AppNetworkMode;
   onNetworkModeChange(mode: Exclude<AppNetworkMode, "undecided">): void;
   authServiceFactory?: MobileAuthServiceFactory;
@@ -97,7 +100,22 @@ export interface AppControllerOptions {
     session: AccountSessionV1,
   ) => Promise<AuthenticatedModeEntryResult>;
   diagnosticsEnabled?: boolean;
+  themePreference?: ThemePreference;
+  localePreference?: AppLocalePreference;
+  soundEffectsEnabled?: boolean;
+  hapticsEnabled?: boolean;
+  bgmEnabled?: boolean;
   onDiagnosticsEnabledChange?: (enabled: boolean) => void;
+  onThemePreferenceChange?: (preference: ThemePreference) => void;
+  onLocalePreferenceChange?: (preference: AppLocalePreference) => void;
+  onSoundEffectsEnabledChange?: (enabled: boolean) => void;
+  onHapticsEnabledChange?: (enabled: boolean) => void;
+  onBgmEnabledChange?: (enabled: boolean) => void;
+  onGameTransition?: (
+    transition: GameTransition,
+    finalTerminal: boolean,
+  ) => void;
+  onPendingTerminalFinished?: () => void;
   onExportDiagnostics?: () => Promise<void>;
   onShareReplay?: (replay: ReplayRecord) => Promise<void>;
   onAccountSessionChange?: (session: AccountSessionV1 | null) => void;
@@ -247,6 +265,18 @@ class MobileAppController implements AppController {
     AppControllerOptions["enterAuthenticatedMode"]
   > | null;
   readonly #onDiagnosticsEnabledChange: (enabled: boolean) => void;
+  readonly #onThemePreferenceChange: (preference: ThemePreference) => void;
+  readonly #onLocalePreferenceChange: (
+    preference: AppLocalePreference,
+  ) => void;
+  readonly #onSoundEffectsEnabledChange: (enabled: boolean) => void;
+  readonly #onHapticsEnabledChange: (enabled: boolean) => void;
+  readonly #onBgmEnabledChange: (enabled: boolean) => void;
+  readonly #onGameTransition: (
+    transition: GameTransition,
+    finalTerminal: boolean,
+  ) => void;
+  readonly #onPendingTerminalFinished: () => void;
   readonly #onExportDiagnostics: () => Promise<void>;
   readonly #onShareReplay: (replay: ReplayRecord) => Promise<void>;
   readonly #onAccountSessionChange: (session: AccountSessionV1 | null) => void;
@@ -317,6 +347,19 @@ class MobileAppController implements AppController {
     this.#enterAuthenticatedMode = options.enterAuthenticatedMode ?? null;
     this.#onDiagnosticsEnabledChange =
       options.onDiagnosticsEnabledChange ?? (() => undefined);
+    this.#onThemePreferenceChange =
+      options.onThemePreferenceChange ?? (() => undefined);
+    this.#onLocalePreferenceChange =
+      options.onLocalePreferenceChange ?? (() => undefined);
+    this.#onSoundEffectsEnabledChange =
+      options.onSoundEffectsEnabledChange ?? (() => undefined);
+    this.#onHapticsEnabledChange =
+      options.onHapticsEnabledChange ?? (() => undefined);
+    this.#onBgmEnabledChange =
+      options.onBgmEnabledChange ?? (() => undefined);
+    this.#onGameTransition = options.onGameTransition ?? (() => undefined);
+    this.#onPendingTerminalFinished =
+      options.onPendingTerminalFinished ?? (() => undefined);
     this.#onExportDiagnostics =
       options.onExportDiagnostics ?? (() => Promise.resolve());
     this.#onShareReplay =
@@ -344,7 +387,10 @@ class MobileAppController implements AppController {
       "[data-app-bottom-nav]",
     );
     this.#status = requireElement(this.#root, "[data-app-status]");
-    this.#route = this.#networkMode === "undecided" ? "privacy" : "home";
+    this.#route =
+      this.#networkMode === "undecided"
+        ? "privacy"
+        : options.initialRoute ?? "home";
 
     this.#onClick = (event) => {
       const target = event.target;
@@ -404,6 +450,36 @@ class MobileAppController implements AppController {
         this.#updateLeaderboardQuery();
         void this.#loadLeaderboard();
       }
+      if (target.matches("[data-theme-preference]")) {
+        const value = target.value;
+        if (value === "system" || value === "light" || value === "dark") {
+          this.#onThemePreferenceChange(value);
+        }
+      }
+      if (target.matches("[data-locale-preference]")) {
+        const value = target.value;
+        if (value === "system" || value === "zh-CN" || value === "en") {
+          this.#onLocalePreferenceChange(value);
+        }
+      }
+      if (
+        target instanceof HTMLInputElement &&
+        target.matches("[data-sound-effects-enabled]")
+      ) {
+        this.#onSoundEffectsEnabledChange(target.checked);
+      }
+      if (
+        target instanceof HTMLInputElement &&
+        target.matches("[data-haptics-enabled]")
+      ) {
+        this.#onHapticsEnabledChange(target.checked);
+      }
+      if (
+        target instanceof HTMLInputElement &&
+        target.matches("[data-bgm-enabled]")
+      ) {
+        this.#onBgmEnabledChange(target.checked);
+      }
     };
     this.#onSubmit = (event) => {
       const form = event.target;
@@ -441,6 +517,26 @@ class MobileAppController implements AppController {
       this.#root,
       "[data-diagnostics-enabled]",
     ).checked = options.diagnosticsEnabled ?? true;
+    requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-theme-preference]",
+    ).value = options.themePreference ?? "system";
+    requireElement<HTMLSelectElement>(
+      this.#root,
+      "[data-locale-preference]",
+    ).value = options.localePreference ?? "system";
+    requireElement<HTMLInputElement>(
+      this.#root,
+      "[data-sound-effects-enabled]",
+    ).checked = options.soundEffectsEnabled ?? true;
+    requireElement<HTMLInputElement>(
+      this.#root,
+      "[data-haptics-enabled]",
+    ).checked = options.hapticsEnabled ?? true;
+    requireElement<HTMLInputElement>(
+      this.#root,
+      "[data-bgm-enabled]",
+    ).checked = options.bgmEnabled ?? false;
     this.#renderRecordSummaries();
     this.#renderAccountDeletionReceipt();
     this.#showRoute(this.#route);
@@ -1476,6 +1572,7 @@ class MobileAppController implements AppController {
     performance.mark("app-input-start");
     try {
       const result = this.#runtime.moveActiveSession(direction);
+      this.#onGameTransition(result.transition, result.terminal !== null);
       this.#updateGameReadouts();
       const animation =
         this.#gameBoard?.apply(result.transition) ?? Promise.resolve();
@@ -1608,6 +1705,7 @@ class MobileAppController implements AppController {
           "[data-pending-terminal-dialog]",
         );
         if (dialog.open) this.#closeModal(dialog);
+        this.#onPendingTerminalFinished();
         this.#selectedRecord = record;
         this.#renderResult(record);
         this.#hideStatus();

@@ -15,7 +15,7 @@
 3. App 本地数据使用独立、版本化 IndexedDB。Token 与排位 Token 只进入最小 Android Keystore AES-GCM bridge。退出账号通过 owner 不可见标记和启动续清实现跨存储逻辑原子性。
 4. App 直接调用 Node/PostgreSQL `2048-game-api`。账号、回放验证、排行榜、成就和删号继续由后端权威管理；App 不调用 `2048-ranked` 的 `/ranked/*` 产品接口。
 5. 排位新局在棋盘展示前以稳定 operation ID 幂等取得并安全保存服务端 `started_at/seed/token`。失败则从一开始创建 normal 局；棋盘可操作后所有输入纯本地执行。
-6. 首版只引入 Capacitor 核心、Android、App、StatusBar、Haptics、Filesystem 与 Share；不引入 React、路由库、SQLite、Network/Preferences、WorkManager、推送、统计或更新框架。
+6. 首版只引入 Capacitor 核心、Android、App、StatusBar、Filesystem 与 Share；触觉使用遵守 Android 系统开关的单方法原生桥，不依赖直接振动的 Haptics 插件。不引入 React、路由库、SQLite、Network/Preferences、WorkManager、推送、统计或更新框架。
 7. Android 使用 `cn.next2048.app`、minSdk 29、竖屏、独立 debug 包名。release 不允许远程 `server.url`、明文流量、WebView 调试、外部存储或通知权限。
 
 ## 影响面

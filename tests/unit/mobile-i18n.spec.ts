@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   APP_MESSAGES,
   createTranslator,
+  resolveLocale,
+  resolveLocalePreference,
   resolveSystemLocale,
   type AppLocale
 } from "../../mobile/src/i18n";
@@ -26,6 +28,16 @@ describe("mobile i18n", () => {
     expect(Object.keys(APP_MESSAGES.en).sort()).toEqual(
       Object.keys(APP_MESSAGES["zh-CN"]).sort()
     );
+  });
+
+  it("persists a system, Chinese, or English locale preference", () => {
+    expect(resolveLocalePreference(null)).toBe("system");
+    expect(resolveLocalePreference("fr")).toBe("system");
+    expect(resolveLocalePreference("zh-CN")).toBe("zh-CN");
+    expect(resolveLocalePreference("en")).toBe("en");
+    expect(resolveLocale("system", ["en-US"])).toBe("en");
+    expect(resolveLocale("system", ["ja-JP"])).toBe("zh-CN");
+    expect(resolveLocale("zh-CN", ["en-US"])).toBe("zh-CN");
   });
 
   it("translates the approved privacy and empty-home shell copy", () => {

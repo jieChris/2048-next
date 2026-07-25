@@ -205,21 +205,39 @@ export function renderAppTemplate(t: Translator): string {
               <span><strong>${t("me.achievementsTitle")}</strong><small>${t("me.achievementsBody")}</small></span>
               <span aria-hidden="true">→</span>
             </button>
-            <div class="setting-link setting-link--static">
+            <label class="setting-link setting-select">
               <span class="setting-link__code" aria-hidden="true">S1</span>
-              <span><strong>${t("me.appearanceTitle")}</strong><small>${t("me.settingsBody")}</small></span>
-              <output>${t("me.systemValue")}</output>
-            </div>
-            <div class="setting-link setting-link--static">
+              <span><strong>${t("me.appearanceTitle")}</strong><small>${t("me.appearanceBody")}</small></span>
+              <select data-theme-preference aria-label="${t("me.appearanceTitle")}">
+                <option value="system">${t("me.themeSystem")}</option>
+                <option value="light">${t("me.themeLight")}</option>
+                <option value="dark">${t("me.themeDark")}</option>
+              </select>
+            </label>
+            <label class="setting-link setting-select">
               <span class="setting-link__code" aria-hidden="true">S2</span>
-              <span><strong>${t("me.languageTitle")}</strong><small>${t("me.settingsTitle")}</small></span>
-              <output data-language-value>简 / EN</output>
-            </div>
-            <div class="setting-link setting-link--static">
+              <span><strong>${t("me.languageTitle")}</strong><small>${t("me.languageBody")}</small></span>
+              <select data-locale-preference aria-label="${t("me.languageTitle")}">
+                <option value="system">${t("me.languageSystem")}</option>
+                <option value="zh-CN">${t("me.languageChinese")}</option>
+                <option value="en">${t("me.languageEnglish")}</option>
+              </select>
+            </label>
+            <label class="setting-link setting-toggle">
               <span class="setting-link__code" aria-hidden="true">S3</span>
-              <span><strong>${t("me.soundTitle")}</strong><small>${t("me.hapticsTitle")}</small></span>
-              <output>${t("me.onValue")}</output>
-            </div>
+              <span><strong>${t("me.soundTitle")}</strong><small>${t("me.soundBody")}</small></span>
+              <input type="checkbox" data-sound-effects-enabled>
+            </label>
+            <label class="setting-link setting-toggle">
+              <span class="setting-link__code" aria-hidden="true">S4</span>
+              <span><strong>${t("me.hapticsTitle")}</strong><small>${t("me.hapticsBody")}</small></span>
+              <input type="checkbox" data-haptics-enabled>
+            </label>
+            <label class="setting-link setting-toggle">
+              <span class="setting-link__code" aria-hidden="true">S5</span>
+              <span><strong>${t("me.bgmTitle")}</strong><small>${t("me.bgmBody")}</small></span>
+              <input type="checkbox" data-bgm-enabled>
+            </label>
             <label class="setting-link setting-toggle">
               <span class="setting-link__code" aria-hidden="true">D1</span>
               <span><strong>${t("diagnostics.title")}</strong><small>${t("diagnostics.body")}</small></span>

@@ -28,7 +28,6 @@ const approvedCapacitorPackages = [
   "@capacitor/cli",
   "@capacitor/core",
   "@capacitor/filesystem",
-  "@capacitor/haptics",
   "@capacitor/share",
   "@capacitor/status-bar"
 ] as const;
@@ -42,7 +41,6 @@ const approvedCapacitorVersions: Record<
   "@capacitor/cli": "8.4.2",
   "@capacitor/core": "8.4.2",
   "@capacitor/filesystem": "8.1.2",
-  "@capacitor/haptics": "8.0.2",
   "@capacitor/share": "8.0.1",
   "@capacitor/status-bar": "8.0.3"
 };

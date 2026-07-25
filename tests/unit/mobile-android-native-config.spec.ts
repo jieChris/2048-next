@@ -117,7 +117,7 @@ describe("Android native foundation", () => {
     );
   });
 
-  it("declares only internet and vibration permissions", () => {
+  it("declares only internet permission", () => {
     const manifests = [
       readProjectFile("android/app/src/main/AndroidManifest.xml"),
       readProjectFile("android/app/src/debug/AndroidManifest.xml")
@@ -126,10 +126,7 @@ describe("Android native foundation", () => {
       .map((match) => match[1])
       .sort();
 
-    expect(permissions).toEqual([
-      "android.permission.INTERNET",
-      "android.permission.VIBRATE"
-    ]);
+    expect(permissions).toEqual(["android.permission.INTERNET"]);
   });
 
   it("shares only the dedicated replay and diagnostic cache subtrees", () => {

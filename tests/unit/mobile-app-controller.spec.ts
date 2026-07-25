@@ -248,12 +248,25 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
 type ControllerOverrides = Partial<
   Pick<
     AppControllerOptions,
+    | "initialRoute"
     | "networkMode"
     | "authServiceFactory"
     | "initialAccountSession"
     | "enterAuthenticatedMode"
     | "diagnosticsEnabled"
+    | "themePreference"
+    | "localePreference"
+    | "soundEffectsEnabled"
+    | "hapticsEnabled"
+    | "bgmEnabled"
     | "onDiagnosticsEnabledChange"
+    | "onThemePreferenceChange"
+    | "onLocalePreferenceChange"
+    | "onSoundEffectsEnabledChange"
+    | "onHapticsEnabledChange"
+    | "onBgmEnabledChange"
+    | "onGameTransition"
+    | "onPendingTerminalFinished"
     | "onExportDiagnostics"
     | "onShareReplay"
     | "onAccountSessionChange"
@@ -459,6 +472,54 @@ describe("mobile app controller helpers", () => {
 });
 
 describe("mobile app controller navigation", () => {
+  it("binds appearance, locale, sound, haptics, and BGM controls to persisted preference callbacks", () => {
+    const onThemePreferenceChange = vi.fn();
+    const onLocalePreferenceChange = vi.fn();
+    const onSoundEffectsEnabledChange = vi.fn();
+    const onHapticsEnabledChange = vi.fn();
+    const onBgmEnabledChange = vi.fn();
+    const { controller, root } = mountController(runtimeHarness(), {
+      initialRoute: "me",
+      themePreference: "dark",
+      localePreference: "zh-CN",
+      soundEffectsEnabled: false,
+      hapticsEnabled: true,
+      bgmEnabled: false,
+      onThemePreferenceChange,
+      onLocalePreferenceChange,
+      onSoundEffectsEnabledChange,
+      onHapticsEnabledChange,
+      onBgmEnabledChange,
+    });
+    const change = (selector: string, value: string | boolean) => {
+      const input = root.querySelector<HTMLInputElement | HTMLSelectElement>(
+        selector,
+      );
+      if (!input) throw new Error(`missing_preference_control:${selector}`);
+      if (input instanceof HTMLInputElement) input.checked = Boolean(value);
+      else input.value = String(value);
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    expect(controller.route).toBe("me");
+    expect(root.querySelector<HTMLSelectElement>("[data-theme-preference]")?.value)
+      .toBe("dark");
+    expect(root.querySelector<HTMLInputElement>("[data-sound-effects-enabled]")?.checked)
+      .toBe(false);
+    change("[data-theme-preference]", "light");
+    change("[data-locale-preference]", "en");
+    change("[data-sound-effects-enabled]", true);
+    change("[data-haptics-enabled]", false);
+    change("[data-bgm-enabled]", true);
+
+    expect(onThemePreferenceChange).toHaveBeenCalledWith("light");
+    expect(onLocalePreferenceChange).toHaveBeenCalledWith("en");
+    expect(onSoundEffectsEnabledChange).toHaveBeenCalledWith(true);
+    expect(onHapticsEnabledChange).toHaveBeenCalledWith(false);
+    expect(onBgmEnabledChange).toHaveBeenCalledWith(true);
+    controller.destroy();
+  });
+
   it("continues a guest achievement intent after sign-in and renders the account snapshot", async () => {
     const readAchievementsCache = vi.fn(async () => ({
       fetchedAt: 100,
@@ -764,7 +825,11 @@ describe("mobile app controller navigation", () => {
       terminal: Promise.resolve(terminalRecord),
     });
     const onShareReplay = vi.fn(async () => undefined);
-    const { controller, root } = mountController(harness, { onShareReplay });
+    const onGameTransition = vi.fn();
+    const { controller, root } = mountController(harness, {
+      onShareReplay,
+      onGameTransition,
+    });
 
     focusAndClick(root, '[data-action="enter-standard"]');
     await vi.waitFor(() => expect(controller.route).toBe("game"));
@@ -772,6 +837,7 @@ describe("mobile app controller navigation", () => {
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
     );
     await vi.waitFor(() => expect(controller.route).toBe("result"));
+    expect(onGameTransition).toHaveBeenCalledWith(transition, true);
     focusAndClick(root, "[data-result-share-replay]");
     await vi.waitFor(() =>
       expect(onShareReplay).toHaveBeenCalledWith(terminalRecord.replay),
@@ -1227,10 +1293,12 @@ describe("mobile app controller navigation", () => {
       return { status: "entered" as const };
     });
     harness.confirmActivePendingTerminal.mockResolvedValue(finalized);
+    const onPendingTerminalFinished = vi.fn();
     const { controller, root } = mountController(harness, {
       networkMode: "online",
       initialAccountSession: accountSession(),
       enterAuthenticatedMode,
+      onPendingTerminalFinished,
     });
 
     focusAndClick(root, '[data-app-bottom-nav] [data-nav="modes"]');
@@ -1247,6 +1315,7 @@ describe("mobile app controller navigation", () => {
 
     await vi.waitFor(() => expect(controller.route).toBe("result"));
     expect(harness.confirmActivePendingTerminal).toHaveBeenCalledTimes(1);
+    expect(onPendingTerminalFinished).toHaveBeenCalledTimes(1);
     expect(root.querySelector("#result-title")?.textContent).toBe("经典 4×4");
     controller.destroy();
   });

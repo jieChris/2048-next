@@ -76,9 +76,21 @@ const ZH_CN_MESSAGES = {
   "me.settingsTitle": "基础设置",
   "me.settingsBody": "外观、语言、声音与触觉",
   "me.appearanceTitle": "外观",
+  "me.appearanceBody": "跟随系统或手动选择浅色、深色",
+  "me.themeSystem": "跟随系统",
+  "me.themeLight": "浅色",
+  "me.themeDark": "深色",
   "me.languageTitle": "语言",
+  "me.languageBody": "跟随系统或手动选择界面语言",
+  "me.languageSystem": "跟随系统",
+  "me.languageChinese": "简体中文",
+  "me.languageEnglish": "English",
   "me.soundTitle": "短音效",
+  "me.soundBody": "操作、合并、里程碑与结束反馈",
   "me.hapticsTitle": "触觉反馈",
+  "me.hapticsBody": "仅在合并、里程碑与结束时轻触反馈",
+  "me.bgmTitle": "背景音乐",
+  "me.bgmBody": "默认关闭，开启后才加载本地音乐",
   "me.systemValue": "跟随系统",
   "me.onValue": "开启",
   "achievements.back": "返回我的",
@@ -389,9 +401,21 @@ const EN_MESSAGES: Record<MessageKey, string> = {
   "me.settingsTitle": "Basic settings",
   "me.settingsBody": "Appearance, language, sound, and haptics",
   "me.appearanceTitle": "Appearance",
+  "me.appearanceBody": "Follow the system or choose light or dark",
+  "me.themeSystem": "Follow system",
+  "me.themeLight": "Light",
+  "me.themeDark": "Dark",
   "me.languageTitle": "Language",
+  "me.languageBody": "Follow the system or choose the interface language",
+  "me.languageSystem": "Follow system",
+  "me.languageChinese": "简体中文",
+  "me.languageEnglish": "English",
   "me.soundTitle": "Sound effects",
+  "me.soundBody": "Move, merge, milestone, and finish feedback",
   "me.hapticsTitle": "Haptic feedback",
+  "me.hapticsBody": "Light feedback for merges, milestones, and finishes only",
+  "me.bgmTitle": "Background music",
+  "me.bgmBody": "Off by default; local music loads only after enabling",
   "me.systemValue": "Follow system",
   "me.onValue": "On",
   "achievements.back": "Back to Me",
@@ -640,6 +664,17 @@ export const APP_MESSAGES = {
 } as const;
 
 export type AppLocale = keyof typeof APP_MESSAGES;
+export type AppLocalePreference = "system" | AppLocale;
+
+export const LOCALE_STORAGE_KEY = "2048-next.app.locale-v1";
+
+export function resolveLocalePreference(
+  value: string | null,
+): AppLocalePreference {
+  return value === "zh-CN" || value === "en" || value === "system"
+    ? value
+    : "system";
+}
 
 export function resolveSystemLocale(
   languages: readonly string[] = typeof navigator === "undefined"
@@ -650,6 +685,15 @@ export function resolveSystemLocale(
   return primaryLanguage === "en" || primaryLanguage.startsWith("en-")
     ? "en"
     : "zh-CN";
+}
+
+export function resolveLocale(
+  preference: AppLocalePreference,
+  languages?: readonly string[],
+): AppLocale {
+  return preference === "system"
+    ? resolveSystemLocale(languages)
+    : preference;
 }
 
 export type Translator = (key: MessageKey) => string;

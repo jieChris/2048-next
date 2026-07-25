@@ -1101,6 +1101,17 @@ h2 {
   accent-color: var(--precision-lapis);
 }
 
+.setting-select select {
+  width: min(124px, 34vw);
+  min-height: 40px;
+  padding: 7px 28px 7px 9px;
+  border: 1px solid var(--precision-line);
+  border-radius: 6px;
+  background: var(--precision-panel-raised);
+  color: var(--precision-ink);
+  font-size: 0.72rem;
+}
+
 .leaderboard-dialog {
   width: min(100vw, 540px);
   max-width: none;

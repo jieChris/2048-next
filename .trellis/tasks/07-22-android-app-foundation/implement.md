@@ -159,7 +159,7 @@ npm run test:node
 
 ### 3.2 Capacitor 与 Android
 
-- [x] 精确锁定同一 Capacitor 8 稳定版本线和 App/StatusBar/Haptics/Filesystem/Share 官方插件。
+- [x] 精确锁定同一 Capacitor 8 稳定版本线和 App/StatusBar/Filesystem/Share 官方插件；触觉改用遵守系统开关的单方法原生桥，偏差已记录。
 - [x] 创建 `capacitor.config.ts` 并执行一次 `cap add android`；提交 Gradle Wrapper、Android manifest 和受控原生工程。
 - [x] 更新 `.gitignore`：忽略 `dist-app`、`local.properties`、Gradle/build 目录、keystore 和签名属性。
 - [x] 配置 release `cn.next2048.app`、debug `.debug` 后缀和 `2048 NEXT Dev` 名称。
@@ -293,9 +293,9 @@ npm run test:node
 
 ### 声音、触觉与诊断
 
-- [ ] 短音效与触觉从 GameTransition effects 触发，不进入核心规则。
-- [ ] 不对每次滑动震动；尊重系统设置，三个开关独立持久化。
-- [ ] BGM 默认关闭、单一编码、失去音频焦点/后台暂停。
+- [x] 短音效与触觉从 GameTransition effects 触发，不进入核心规则。
+- [x] 不对每次滑动震动；尊重系统设置，三个开关独立持久化。
+- [x] BGM 默认关闭、单一编码、失去音频焦点/后台暂停。
 - [x] 自动诊断仅在隐私同意和开关开启后发送；离线产生项永不追传。
 - [x] 手动诊断导出不含账号凭据、棋盘或动作。
 
