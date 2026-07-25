@@ -122,6 +122,26 @@ describe("OpenAPI contract", () => {
     expect(generatedTypes).toContain("AchievementEventRequest");
   });
 
+  it("publishes achievement client and mode completion metadata", () => {
+    const spec = readSpec();
+    const generatedTypes = readGeneratedTypes();
+    const achievement = readSchema(spec, "Achievement");
+    const createRequest = readSchema(spec, "AchievementCreateRequest");
+    const updateRequest = readSchema(spec, "AchievementUpdateRequest");
+
+    expect(achievement).toContain("completable_clients");
+    expect(achievement).toContain("required_mode_keys");
+    expect(achievement).toContain("enum: [web, android]");
+    expect(achievement).toContain("- completable_clients");
+    expect(achievement).toContain("- required_mode_keys");
+    expect(createRequest).toContain("completable_clients");
+    expect(createRequest).toContain("required_mode_keys");
+    expect(updateRequest).toContain("completable_clients");
+    expect(updateRequest).toContain("required_mode_keys");
+    expect(generatedTypes).toContain('completable_clients: ("web" | "android")[];');
+    expect(generatedTypes).toContain("required_mode_keys: string[];");
+  });
+
   it("documents the existing token refresh contract without inventing a refresh-token route", () => {
     const spec = readSpec();
     const generatedTypes = readGeneratedTypes();

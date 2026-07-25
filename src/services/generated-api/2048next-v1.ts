@@ -2913,6 +2913,8 @@ export interface components {
             status: "draft" | "active" | "archived";
             sort_order?: number;
             rules?: components["schemas"]["AchievementRule"][];
+            completable_clients: ("web" | "android")[];
+            required_mode_keys: string[];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -2970,6 +2972,8 @@ export interface components {
             status: "draft" | "active" | "archived";
             sort_order?: number;
             rules?: components["schemas"]["AchievementRule"][];
+            completable_clients?: ("web" | "android")[];
+            required_mode_keys?: string[];
         };
         AchievementUpdateRequest: {
             series_id?: string;
@@ -2983,6 +2987,8 @@ export interface components {
             status?: "draft" | "active" | "archived";
             sort_order?: number;
             rules?: components["schemas"]["AchievementRule"][];
+            completable_clients?: ("web" | "android")[];
+            required_mode_keys?: string[];
         };
         AchievementGrantRequest: {
             user_id: number;

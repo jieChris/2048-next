@@ -2345,7 +2345,14 @@ components:
     Achievement:
       type: object
       additionalProperties: false
-      required: [id, name, description, icon_url, status]
+      required:
+        - id
+        - name
+        - description
+        - icon_url
+        - status
+        - completable_clients
+        - required_mode_keys
       properties:
         id:
           type: string
@@ -2376,6 +2383,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AchievementRule"
+        completable_clients:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [web, android]
+        required_mode_keys:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
         created_at:
           type: string
           format: date-time
@@ -2501,6 +2520,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AchievementRule"
+        completable_clients:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [web, android]
+        required_mode_keys:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
 
     AchievementUpdateRequest:
       type: object
@@ -2533,6 +2564,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AchievementRule"
+        completable_clients:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [web, android]
+        required_mode_keys:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
 
     AchievementGrantRequest:
       type: object
