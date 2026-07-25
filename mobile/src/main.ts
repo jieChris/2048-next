@@ -23,7 +23,7 @@ import {
   type AccountDeletionReceipt,
 } from "./auth/account-deletion-receipt";
 import { AppDatabase } from "./data/app-database";
-import { MobileCloudData } from "./data/mobile-cloud-data";
+import type { MobileCloudData } from "./data/mobile-cloud-data";
 import { ClientDiagnostics } from "./diagnostics/client-diagnostics";
 import {
   createTranslator,
@@ -33,9 +33,7 @@ import {
   type AppLocalePreference,
 } from "./i18n";
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
-import { saveDiagnosticExport } from "./platform/diagnostic-export";
 import { GameFeedback } from "./platform/game-feedback";
-import { saveReplayRecord } from "./platform/replay-share";
 import { createPlatformSecureStorage } from "./platform/secure-storage";
 import {
   BGM_STORAGE_KEY,
@@ -254,12 +252,24 @@ async function start(): Promise<void> {
     });
     activeRuntime = runtime;
     diagnosticsAccountSession = runtime.accountSession;
-    const cloudData = new MobileCloudData({
-      database,
-      apiBase: MOBILE_BUILD_FLAGS.apiBase,
-      getAuthService,
-      timeoutMs: 8_000,
-    });
+    let cloudDataPromise: Promise<MobileCloudData> | null = null;
+    const getCloudData = (): Promise<MobileCloudData> => {
+      cloudDataPromise ??= import("./data/mobile-cloud-data")
+        .then(
+          ({ MobileCloudData }) =>
+            new MobileCloudData({
+              database,
+              apiBase: MOBILE_BUILD_FLAGS.apiBase,
+              getAuthService,
+              timeoutMs: 8_000,
+            }),
+        )
+        .catch((error) => {
+          cloudDataPromise = null;
+          throw error;
+        });
+      return cloudDataPromise;
+    };
     if (
       deletionReceipt &&
       Date.parse(deletionReceipt.dueAt) <= Date.now() &&
@@ -357,13 +367,19 @@ async function start(): Promise<void> {
           if (enabled) void diagnostics.flush().catch(() => undefined);
         },
         async onExportDiagnostics() {
+          const { saveDiagnosticExport } = await import(
+            "./platform/diagnostic-export"
+          );
           await saveDiagnosticExport(await diagnostics.buildExport());
         },
-        onShareReplay: saveReplayRecord,
+        async onShareReplay(replay) {
+          const { saveReplayRecord } = await import("./platform/replay-share");
+          await saveReplayRecord(replay);
+        },
         onAccountSessionChange(session) {
           diagnosticsAccountSession = session;
         },
-        cloudData,
+        cloudDataFactory: getCloudData,
       });
     };
     mountController();

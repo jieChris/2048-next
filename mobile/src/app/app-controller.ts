@@ -36,11 +36,7 @@ import type {
   MobileCloudData,
 } from "../data/mobile-cloud-data";
 import { mountBoard, type BoardView } from "../game/board-view";
-import {
-  buildReplayTimeline,
-  resolveReplayProgress,
-  type ReplayTimeline,
-} from "../game/replay-timeline";
+import type { ReplayTimeline } from "../game/replay-timeline";
 import type { GuestGameSession } from "../game/guest-session";
 import type { AppLocalePreference, Translator } from "../i18n";
 import type { ThemePreference } from "../theme";
@@ -86,6 +82,29 @@ type NavigationKind =
   | "pending-terminal-undo"
   | "pending-terminal-confirm";
 
+type ReplayTimelineModule = typeof import("../game/replay-timeline");
+let replayTimelineModulePromise: Promise<ReplayTimelineModule> | null = null;
+
+function loadReplayTimelineModule(): Promise<ReplayTimelineModule> {
+  replayTimelineModulePromise ??= import("../game/replay-timeline");
+  return replayTimelineModulePromise;
+}
+
+type AppCloudData = Pick<
+  MobileCloudData,
+  | "readHistoryCache"
+  | "refreshHistory"
+  | "deleteRecord"
+  | "restoreRecord"
+  | "readLeaderboardCache"
+  | "refreshLeaderboard"
+  | "readReplayCache"
+  | "refreshReplay"
+> &
+  Partial<
+    Pick<MobileCloudData, "readAchievementsCache" | "refreshAchievements">
+  >;
+
 export interface AppControllerOptions {
   root: HTMLElement;
   runtime: GuestAppRuntime;
@@ -120,23 +139,8 @@ export interface AppControllerOptions {
   onExportDiagnostics?: () => Promise<void>;
   onShareReplay?: (replay: ReplayRecord) => Promise<void>;
   onAccountSessionChange?: (session: AccountSessionV1 | null) => void;
-  cloudData?: Pick<
-    MobileCloudData,
-    | "readHistoryCache"
-    | "refreshHistory"
-    | "deleteRecord"
-    | "restoreRecord"
-    | "readLeaderboardCache"
-    | "refreshLeaderboard"
-    | "readReplayCache"
-    | "refreshReplay"
-  > &
-    Partial<
-      Pick<
-        MobileCloudData,
-        "readAchievementsCache" | "refreshAchievements"
-      >
-    >;
+  cloudData?: AppCloudData;
+  cloudDataFactory?: () => Promise<AppCloudData>;
 }
 
 export interface AppController {
@@ -281,7 +285,7 @@ class MobileAppController implements AppController {
   readonly #onExportDiagnostics: () => Promise<void>;
   readonly #onShareReplay: (replay: ReplayRecord) => Promise<void>;
   readonly #onAccountSessionChange: (session: AccountSessionV1 | null) => void;
-  readonly #cloudData: AppControllerOptions["cloudData"];
+  readonly #cloudDataFactory: (() => Promise<AppCloudData>) | null;
   readonly #views: Map<AppRoute, HTMLElement>;
   readonly #bottomNavigation: HTMLElement;
   readonly #status: HTMLElement;
@@ -309,6 +313,7 @@ class MobileAppController implements AppController {
   #gameBoard: BoardView | null = null;
   #replayBoard: BoardView | null = null;
   #replayTimeline: ReplayTimeline | null = null;
+  #replayTimelineModule: ReplayTimelineModule | null = null;
   #replayRecord: ReplayRecord | null = null;
   #replayIndex = 0;
   #replayTimer: number | null = null;
@@ -331,6 +336,7 @@ class MobileAppController implements AppController {
     targetTile: 2048,
     page: 1,
   };
+  #cloudDataPromise: Promise<AppCloudData> | null = null;
 
   constructor(options: AppControllerOptions) {
     this.#root = options.root;
@@ -369,7 +375,11 @@ class MobileAppController implements AppController {
       options.onShareReplay ?? (() => Promise.resolve());
     this.#onAccountSessionChange =
       options.onAccountSessionChange ?? (() => undefined);
-    this.#cloudData = options.cloudData;
+    this.#cloudDataFactory =
+      options.cloudDataFactory ??
+      (options.cloudData
+        ? () => Promise.resolve(options.cloudData as AppCloudData)
+        : null);
     this.#recordOwner = options.initialAccountSession
       ? "account-active"
       : "guest";
@@ -551,6 +561,17 @@ class MobileAppController implements AppController {
 
   get route(): AppRoute {
     return this.#route;
+  }
+
+  #getCloudData(): Promise<AppCloudData | null> {
+    if (!this.#cloudDataFactory) return Promise.resolve(null);
+    if (!this.#cloudDataPromise) {
+      this.#cloudDataPromise = this.#cloudDataFactory().catch((error) => {
+        this.#cloudDataPromise = null;
+        throw error;
+      });
+    }
+    return this.#cloudDataPromise;
   }
 
   notifyAccountDeletionCancelled(): void {
@@ -1191,14 +1212,22 @@ class MobileAppController implements AppController {
       this.#root,
       "[data-leaderboard-dialog]",
     );
-    if (!this.#cloudData || !dialog.open) return;
+    if (!this.#cloudDataFactory || !dialog.open) return;
     const query = { ...this.#leaderboardQuery };
     const status = requireElement<HTMLElement>(
       this.#root,
       "[data-leaderboard-status]",
     );
     status.textContent = this.#t("leaderboard.loading");
-    const cached = await this.#cloudData.readLeaderboardCache(query).catch(
+    const cloudData = await this.#getCloudData().catch(() => null);
+    if (!cloudData) {
+      if (epoch === this.#leaderboardRequestEpoch && dialog.open) {
+        status.textContent = this.#t("leaderboard.unavailable");
+        this.#renderLeaderboard({ rows: [] });
+      }
+      return;
+    }
+    const cached = await cloudData.readLeaderboardCache(query).catch(
       () => null,
     );
     if (epoch !== this.#leaderboardRequestEpoch || !dialog.open) return;
@@ -1210,7 +1239,7 @@ class MobileAppController implements AppController {
       );
     }
     try {
-      const refreshed = await this.#cloudData.refreshLeaderboard(query);
+      const refreshed = await cloudData.refreshLeaderboard(query);
       if (epoch !== this.#leaderboardRequestEpoch || !dialog.open) return;
       this.#renderLeaderboard(refreshed.value);
       status.textContent = this.#t("leaderboard.updated").replace(
@@ -1267,7 +1296,6 @@ class MobileAppController implements AppController {
 
   async #loadAchievements(): Promise<void> {
     const epoch = ++this.#achievementsRequestEpoch;
-    const cloudData = this.#cloudData;
     const session = this.#authTask.session;
     const status = requireElement<HTMLElement>(
       this.#root,
@@ -1275,12 +1303,18 @@ class MobileAppController implements AppController {
     );
     this.#renderAchievements({ earned: [], available: [] });
     status.textContent = this.#t("achievements.loading");
-    if (
-      !session ||
-      !cloudData?.readAchievementsCache ||
-      !cloudData.refreshAchievements
-    ) {
+    if (!session || !this.#cloudDataFactory) {
       status.textContent = this.#t("achievements.unavailable");
+      return;
+    }
+    const cloudData = await this.#getCloudData().catch(() => null);
+    if (!cloudData?.readAchievementsCache || !cloudData.refreshAchievements) {
+      if (
+        epoch === this.#achievementsRequestEpoch &&
+        this.#route === "achievements"
+      ) {
+        status.textContent = this.#t("achievements.unavailable");
+      }
       return;
     }
     const cached = await cloudData.readAchievementsCache(session.user.id).catch(
@@ -1927,16 +1961,18 @@ class MobileAppController implements AppController {
   #deleteSelectedRecord(): Promise<void> {
     const cloud = this.#selectedCloudRecord;
     const session = this.#authTask.session;
-    if (cloud && session && this.#cloudData) {
+    if (cloud && session && this.#cloudDataFactory) {
       return this.#runNavigation("delete-record", async (epoch) => {
         try {
+          const cloudData = await this.#getCloudData();
+          if (!cloudData) throw new Error("cloud_data_unavailable");
           if (cloud.deletedAt) {
-            await this.#cloudData!.restoreRecord({
+            await cloudData.restoreRecord({
               userId: session.user.id,
               recordId: cloud.id,
             });
           } else {
-            await this.#cloudData!.deleteRecord({
+            await cloudData.deleteRecord({
               userId: session.user.id,
               recordId: cloud.id,
             });
@@ -1986,19 +2022,24 @@ class MobileAppController implements AppController {
     const cloudRecord = this.#selectedCloudRecord;
     try {
       if (localRecord) {
+        const replayTimelineModule = await loadReplayTimelineModule();
         this.#presentReplay(
           localRecord.replay,
-          buildReplayTimeline({
+          replayTimelineModule.buildReplayTimeline({
             replay: localRecord.replay,
             finalSnapshot: localRecord.finalSnapshot,
           }),
+          replayTimelineModule,
           source,
         );
         return;
       }
       if (!cloudRecord || cloudRecord.deletedAt) return;
       this.#showStatus(this.#t("status.replayLoading"), "info", 0);
-      const replay = await this.#loadCloudReplay(cloudRecord);
+      const [replay, replayTimelineModule] = await Promise.all([
+        this.#loadCloudReplay(cloudRecord),
+        loadReplayTimelineModule(),
+      ]);
       if (
         this.#route !== "detail" ||
         this.#selectedCloudRecord?.id !== cloudRecord.id
@@ -2007,7 +2048,12 @@ class MobileAppController implements AppController {
       }
       this.#presentReplay(
         replay,
-        this.#buildCloudReplayTimeline(cloudRecord, replay),
+        this.#buildCloudReplayTimeline(
+          cloudRecord,
+          replay,
+          replayTimelineModule,
+        ),
+        replayTimelineModule,
         source,
       );
       this.#hideStatus();
@@ -2028,29 +2074,34 @@ class MobileAppController implements AppController {
 
   async #loadCloudReplay(record: CachedHistoryRow): Promise<ReplayRecord> {
     const session = this.#authTask.session;
-    if (!session || !this.#cloudData) throw new Error("cloud_replay_unavailable");
+    if (!session || !this.#cloudDataFactory) {
+      throw new Error("cloud_replay_unavailable");
+    }
+    const cloudData = await this.#getCloudData();
+    if (!cloudData) throw new Error("cloud_replay_unavailable");
     const input = { userId: session.user.id, recordId: record.id };
-    const cached = await this.#cloudData.readReplayCache(input).catch(
+    const cached = await cloudData.readReplayCache(input).catch(
       () => null,
     );
     if (cached) {
       if (this.#networkMode === "online") {
-        void this.#cloudData.refreshReplay(input).catch(() => undefined);
+        void cloudData.refreshReplay(input).catch(() => undefined);
       }
       return cached.value;
     }
     if (this.#networkMode !== "online") {
       throw new Error("cloud_replay_offline");
     }
-    return (await this.#cloudData.refreshReplay(input)).value;
+    return (await cloudData.refreshReplay(input)).value;
   }
 
   #buildCloudReplayTimeline(
     record: CachedHistoryRow,
     replay: ReplayRecord,
+    replayTimelineModule: ReplayTimelineModule,
   ): ReplayTimeline {
-    const timeline = buildReplayTimeline({ replay });
-    const finalFrame = timeline.frames.at(-1);
+    const timeline = replayTimelineModule.buildReplayTimeline({ replay });
+    const finalFrame = timeline.frames[timeline.frames.length - 1];
     if (!finalFrame) throw new Error("cloud_replay_empty");
     const boardSum = finalFrame.board
       .flat()
@@ -2071,12 +2122,14 @@ class MobileAppController implements AppController {
   #presentReplay(
     replay: ReplayRecord,
     timeline: ReplayTimeline,
+    replayTimelineModule: ReplayTimelineModule,
     source: ReplaySourceRoute,
   ): void {
     const initialFrame = timeline.frames[0];
     if (!initialFrame) throw new Error("replay_timeline_empty");
     this.#clearReplaySurface();
     this.#replayTimeline = timeline;
+    this.#replayTimelineModule = replayTimelineModule;
     this.#replayRecord = replay;
     this.#replaySource = source;
     this.#replayIndex = 0;
@@ -2116,7 +2169,8 @@ class MobileAppController implements AppController {
         const cloud = this.#selectedCloudRecord;
         if (cloud) {
           replay = await this.#loadCloudReplay(cloud);
-          this.#buildCloudReplayTimeline(cloud, replay);
+          const replayTimelineModule = await loadReplayTimelineModule();
+          this.#buildCloudReplayTimeline(cloud, replay, replayTimelineModule);
         }
       }
       if (!replay) throw new Error("replay_share_unavailable");
@@ -2183,8 +2237,12 @@ class MobileAppController implements AppController {
 
   #setReplayIndex(requestedIndex: number): void {
     const timeline = this.#replayTimeline;
-    if (!timeline) return;
-    const progress = resolveReplayProgress(timeline, requestedIndex);
+    const replayTimelineModule = this.#replayTimelineModule;
+    if (!timeline || !replayTimelineModule) return;
+    const progress = replayTimelineModule.resolveReplayProgress(
+      timeline,
+      requestedIndex,
+    );
     this.#replayIndex = progress.index;
     const frame = timeline.frames[progress.index];
     if (frame) this.#replayBoard?.render({ board: frame.board });
@@ -2309,7 +2367,7 @@ class MobileAppController implements AppController {
 
   async #loadCloudHistory(): Promise<void> {
     const query = this.#cloudHistoryQuery();
-    if (!query || !this.#cloudData) return;
+    if (!query || !this.#cloudDataFactory) return;
     const epoch = ++this.#cloudHistoryRequestEpoch;
     const status = requireElement<HTMLElement>(
       this.#root,
@@ -2317,7 +2375,14 @@ class MobileAppController implements AppController {
     );
     status.hidden = false;
     status.textContent = this.#t("records.loadingCloud");
-    const cached = await this.#cloudData.readHistoryCache(query).catch(
+    const cloudData = await this.#getCloudData().catch(() => null);
+    if (!cloudData) {
+      if (epoch === this.#cloudHistoryRequestEpoch) {
+        status.textContent = this.#t("records.cloudUnavailable");
+      }
+      return;
+    }
+    const cached = await cloudData.readHistoryCache(query).catch(
       () => null,
     );
     if (epoch !== this.#cloudHistoryRequestEpoch) return;
@@ -2333,7 +2398,7 @@ class MobileAppController implements AppController {
       return;
     }
     try {
-      const refreshed = await this.#cloudData.refreshHistory(query);
+      const refreshed = await cloudData.refreshHistory(query);
       if (epoch !== this.#cloudHistoryRequestEpoch) return;
       this.#cloudHistory = refreshed.value;
       this.#cloudHistoryFetchedAt = refreshed.fetchedAt;
@@ -2819,6 +2884,7 @@ class MobileAppController implements AppController {
     this.#replayBoard?.destroy();
     this.#replayBoard = null;
     this.#replayTimeline = null;
+    this.#replayTimelineModule = null;
     this.#replayRecord = null;
     this.#replayIndex = 0;
   }

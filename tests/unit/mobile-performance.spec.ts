@@ -33,4 +33,19 @@ describe("mobile performance instrumentation", () => {
     );
     expect(source).toContain('import("./performance/debug-frame-sampler")');
   });
+
+  it("keeps cloud data, replay, and export features out of the static entry graph", () => {
+    const main = readFileSync("mobile/src/main.ts", "utf8");
+    const controller = readFileSync("mobile/src/app/app-controller.ts", "utf8");
+    expect(main).toContain('import("./data/mobile-cloud-data")');
+    expect(main).toContain('import("./platform/replay-share")');
+    expect(main).toMatch(/import\(\s*"\.\/platform\/diagnostic-export"\s*\)/u);
+    expect(main).not.toContain(
+      'import { MobileCloudData } from "./data/mobile-cloud-data"',
+    );
+    expect(controller).toContain('import("../game/replay-timeline")');
+    expect(controller).not.toMatch(
+      /import\s*\{[^}]*buildReplayTimeline[^}]*\}\s*from\s*"\.\.\/game\/replay-timeline"/su,
+    );
+  });
 });

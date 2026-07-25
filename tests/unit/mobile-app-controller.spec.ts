@@ -787,6 +787,13 @@ describe("mobile app controller navigation", () => {
     ).toBe(false);
     focusAndClick(root, '[data-action="open-replay"]');
     await vi.waitFor(() => expect(controller.route).toBe("replay"));
+    focusAndClick(
+      root.querySelector('[data-app-view="replay"]')!,
+      '[data-action="replay-next"]',
+    );
+    expect(
+      root.querySelector<HTMLInputElement>("[data-replay-progress]")?.value,
+    ).toBe("1");
     expect(refreshReplay).toHaveBeenCalledWith({
       userId: 42,
       recordId: "cloud-replay",

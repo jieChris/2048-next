@@ -5,14 +5,20 @@ import { gzipSync } from "node:zlib";
 
 const DIST_ROOT = path.resolve("dist-app");
 const BUDGETS = {
-  initialJsBytes: 360 * 1024,
-  initialJsGzipBytes: 100 * 1024,
+  initialJsBytes: 320 * 1024,
+  initialJsGzipBytes: 90 * 1024,
   initialCssBytes: 45 * 1024,
   initialCssGzipBytes: 12 * 1024,
   distBytes: 5 * 1024 * 1024,
   bgmBytes: 4 * 1024 * 1024,
   debugApkBytes: 16 * 1024 * 1024,
 };
+const REQUIRED_LAZY_CHUNKS = [
+  "mobile-cloud-data-",
+  "replay-timeline-",
+  "replay-share-",
+  "diagnostic-export-",
+];
 
 function fail(message) {
   throw new Error(`[mobile-performance-budget] ${message}`);
@@ -55,6 +61,19 @@ export async function auditMobilePerformanceBudget(options = {}) {
     entryAsset(html, /<link[^>]+href="([^"]+\.css)"/u, "CSS"),
   );
   const files = await walkFiles(DIST_ROOT);
+  const lazyChunks = Object.fromEntries(
+    REQUIRED_LAZY_CHUNKS.map((prefix) => {
+      const matches = files.filter((file) =>
+        path.basename(file).startsWith(prefix) && file.endsWith(".js")
+      );
+      if (matches.length !== 1) {
+        fail(`expected one ${prefix} lazy chunk, found ${matches.length}`);
+      }
+      const filename = path.basename(matches[0]);
+      if (html.includes(filename)) fail(`${prefix} lazy chunk leaked into the first-load HTML`);
+      return [prefix.slice(0, -1), filename];
+    }),
+  );
   const hasDebugSampler = (
     await Promise.all(
       files
@@ -90,7 +109,7 @@ export async function auditMobilePerformanceBudget(options = {}) {
     debugApkBytes = (await stat(path.resolve(options.debugApk))).size;
     assertBudget(debugApkBytes, BUDGETS.debugApkBytes, "debug APK");
   }
-  const report = { success: true, initialJs, initialCss, distBytes, bgmBytes, debugApkBytes, hasDebugSampler, budgets: BUDGETS };
+  const report = { success: true, initialJs, initialCss, distBytes, bgmBytes, debugApkBytes, hasDebugSampler, lazyChunks, budgets: BUDGETS };
   console.log(JSON.stringify(report));
   return report;
 }
