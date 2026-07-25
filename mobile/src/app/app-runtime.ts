@@ -16,6 +16,7 @@ import {
   APP_DATABASE_SCHEMA_VERSION,
   type AppDatabase,
   AppDatabaseError,
+  type AppOwnerKey,
   type SaveReadResult,
   type StoredDiagnostic,
   type StoredGameRecord,
@@ -23,6 +24,7 @@ import {
 } from "../data/app-database";
 import {
   OwnerCleanupWorkGate,
+  clearConfirmedOwner,
   restoreOwnerCleanupAtStartup,
   type OwnerCleanupStartupResult,
 } from "../data/owner-cleanup";
@@ -55,8 +57,10 @@ export type GuestAppRuntimeDatabase = GuestSessionDatabase &
   Pick<
     AppDatabase,
     | "open"
+    | "beginOwnerClear"
     | "listPendingOwnerClears"
     | "completeOwnerClear"
+    | "listSaves"
     | "getRecord"
     | "listRecords"
     | "deleteGuestRecord"
@@ -102,6 +106,19 @@ export interface HttpRankedSessionGatewayOptions {
   fetchLike?: FetchLike;
   timeoutMs?: number;
 }
+
+export interface AccountLogoutSummary {
+  ownerKey: AccountOwnerKey;
+  unfinishedSaves: number;
+  pendingRecords: number;
+  pendingOperations: number;
+  requiresConfirmation: boolean;
+  flushTimedOut: boolean;
+}
+
+export type AccountLogoutResult =
+  | { status: "cleared"; summary: AccountLogoutSummary }
+  | { status: "cleanup_pending"; summary: AccountLogoutSummary; error: unknown };
 
 function cloneValue<T>(value: T): T {
   if (typeof structuredClone === "function") return structuredClone(value);
@@ -204,10 +221,10 @@ export class GuestAppRuntime {
   readonly #secureStorage: Pick<SecureStorage, "get" | "set" | "delete">;
   readonly #sessionOptions: GuestSessionOptions;
   readonly #clockSources: SessionClockSources;
-  readonly #workGate: OwnerCleanupWorkGate;
+  #workGate: OwnerCleanupWorkGate;
   readonly #startup: OwnerCleanupStartupResult;
-  readonly #accountSession: AccountSessionV1 | null;
-  readonly #accountSessionError: unknown | null;
+  #accountSession: AccountSessionV1 | null;
+  #accountSessionError: unknown | null;
   readonly #recordSync: GuestAppRuntimeOptions["recordSync"];
   #guestSave: SaveReadResult;
   #guestRecords: StoredGameRecord[];
@@ -401,6 +418,65 @@ export class GuestAppRuntime {
     return this.flushAccountRecordOutbox(operationId);
   }
 
+  async prepareAccountLogout(waitMs = 3_000): Promise<AccountLogoutSummary | null> {
+    if (!Number.isSafeInteger(waitMs) || waitMs < 0 || waitMs > 30_000) {
+      throw new Error("invalid_logout_wait");
+    }
+    const session = await loadAccountSession(this.#secureStorage);
+    if (!session) return null;
+    let flushTimedOut = false;
+    if (this.#recordSync?.enabled()) {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      await Promise.race([
+        this.flushAccountRecordOutbox().catch(() => null),
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => {
+            flushTimedOut = true;
+            resolve(null);
+          }, waitMs);
+        }),
+      ]);
+      if (timer !== null) clearTimeout(timer);
+    }
+    return this.#readAccountLogoutSummary(
+      accountOwnerKey(session),
+      flushTimedOut,
+    );
+  }
+
+  async confirmAccountLogout(): Promise<AccountLogoutResult | null> {
+    const session = await loadAccountSession(this.#secureStorage);
+    if (!session) return null;
+    const ownerKey = accountOwnerKey(session);
+    let summary = await this.#readAccountLogoutSummary(ownerKey, false);
+    try {
+      await clearConfirmedOwner({
+        ownerKey,
+        createdAt: Math.max(0, Math.floor(this.#clockSources.wallNow())),
+        database: this.#database,
+        secureStorage: this.#secureStorage,
+        workGate: this.#workGate,
+        clearMemoryAuth: () => {
+          if (this.#activeSession?.currentSave.ownerKey === ownerKey) {
+            this.#activeSession = null;
+            this.#activeRankedOrchestrator = null;
+          }
+          this.#accountSession = null;
+          this.#accountSessionError = null;
+        },
+      });
+      this.#workGate = new OwnerCleanupWorkGate();
+      summary = { ...summary, flushTimedOut: false };
+      return { status: "cleared", summary };
+    } catch (error) {
+      const pending = await this.#database
+        .listPendingOwnerClears()
+        .catch(() => [] as AppOwnerKey[]);
+      if (!pending.includes(ownerKey)) throw error;
+      return { status: "cleanup_pending", summary, error };
+    }
+  }
+
   async getAccountRecord(
     clientRecordId: string,
   ): Promise<StoredGameRecord | null> {
@@ -410,6 +486,29 @@ export class GuestAppRuntime {
       accountOwnerKey(session),
       clientRecordId,
     );
+  }
+
+  async #readAccountLogoutSummary(
+    ownerKey: AccountOwnerKey,
+    flushTimedOut: boolean,
+  ): Promise<AccountLogoutSummary> {
+    const [saves, outbox] = await Promise.all([
+      this.#database.listSaves(ownerKey),
+      this.#database.listOutbox(ownerKey),
+    ]);
+    const pendingRecords = outbox.filter(
+      (item) => item.kind === "record.submit",
+    ).length;
+    const pendingOperations = outbox.length - pendingRecords;
+    return {
+      ownerKey,
+      unfinishedSaves: saves.length,
+      pendingRecords,
+      pendingOperations,
+      requiresConfirmation:
+        saves.length > 0 || pendingRecords > 0 || pendingOperations > 0,
+      flushTimedOut,
+    };
   }
 
   async enterGuestStandard(): Promise<OpenGuestStandardSessionResult> {

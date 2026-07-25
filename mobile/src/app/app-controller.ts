@@ -47,6 +47,8 @@ type NavigationKind =
   | "terminal"
   | "retry-terminal"
   | "retry-record-upload"
+  | "logout-prepare"
+  | "logout-confirm"
   | "restart"
   | "leave"
   | "result-home"
@@ -535,6 +537,15 @@ class MobileAppController implements AppController {
         break;
       case "result-home":
         await this.#returnHomeFromResult();
+        break;
+      case "request-account-logout":
+        await this.#requestAccountLogout();
+        break;
+      case "cancel-account-logout":
+        this.#closeNamedDialog("[data-account-logout-dialog]");
+        break;
+      case "confirm-account-logout":
+        await this.#confirmAccountLogout();
         break;
       case "close-detail":
         this.#showRoute(this.#detailSource);
@@ -1516,6 +1527,82 @@ class MobileAppController implements AppController {
       this.#selectedRecord = current;
       this.#renderResult(current);
     });
+  }
+
+  #requestAccountLogout(): Promise<void> {
+    return this.#runNavigation("logout-prepare", async (epoch) => {
+      try {
+        const summary = await this.#runtime.prepareAccountLogout();
+        if (!this.#isNavigationCurrent(epoch)) return;
+        if (!summary) {
+          this.#authTask.signOut();
+          return;
+        }
+        if (!summary.requiresConfirmation) {
+          await this.#completeAccountLogout(epoch);
+          return;
+        }
+        const copy = this.#t("logout.summary")
+          .replace("{records}", this.#numberFormat.format(summary.pendingRecords))
+          .replace("{saves}", this.#numberFormat.format(summary.unfinishedSaves))
+          .replace(
+            "{operations}",
+            this.#numberFormat.format(summary.pendingOperations),
+          );
+        this.#setText("[data-account-logout-summary]", copy);
+        requireElement<HTMLElement>(
+          this.#root,
+          "[data-account-logout-timeout]",
+        ).hidden = !summary.flushTimedOut;
+        this.#openModal(
+          requireElement(this.#root, "[data-account-logout-dialog]"),
+        );
+      } catch {
+        if (this.#isNavigationCurrent(epoch)) {
+          this.#showStatus(this.#t("logout.error"), "error", 5_000);
+        }
+      }
+    });
+  }
+
+  #confirmAccountLogout(): Promise<void> {
+    return this.#runNavigation("logout-confirm", async (epoch) => {
+      const confirm = requireElement<HTMLButtonElement>(
+        this.#root,
+        '[data-action="confirm-account-logout"]',
+      );
+      confirm.disabled = true;
+      try {
+        await this.#completeAccountLogout(epoch);
+      } finally {
+        confirm.disabled = false;
+      }
+    });
+  }
+
+  async #completeAccountLogout(epoch: number): Promise<void> {
+    try {
+      const result = await this.#runtime.confirmAccountLogout();
+      if (!this.#isNavigationCurrent(epoch)) return;
+      this.#authTask.signOut();
+      const dialog = requireElement<HTMLDialogElement>(
+        this.#root,
+        "[data-account-logout-dialog]",
+      );
+      if (dialog.open) this.#closeModal(dialog);
+      this.#renderRecordSummaries();
+      this.#showStatus(
+        result?.status === "cleanup_pending"
+          ? this.#t("logout.pending")
+          : this.#t("logout.success"),
+        result?.status === "cleanup_pending" ? "error" : "success",
+        result?.status === "cleanup_pending" ? 0 : 4_000,
+      );
+    } catch {
+      if (this.#isNavigationCurrent(epoch)) {
+        this.#showStatus(this.#t("logout.error"), "error", 5_000);
+      }
+    }
   }
 
   #renderDetail(record: StoredGameRecord): void {

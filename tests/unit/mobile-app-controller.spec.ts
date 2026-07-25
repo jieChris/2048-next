@@ -145,6 +145,8 @@ interface RuntimeHarness {
   readonly getGuestRecord: ReturnType<typeof vi.fn>;
   readonly getAccountRecord: ReturnType<typeof vi.fn>;
   readonly retryAccountRecordSubmit: ReturnType<typeof vi.fn>;
+  readonly prepareAccountLogout: ReturnType<typeof vi.fn>;
+  readonly confirmAccountLogout: ReturnType<typeof vi.fn>;
   get activeSession(): GuestGameSession | null;
   setActiveSession(value: GuestGameSession | null): void;
 }
@@ -178,6 +180,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     records.find((record) => record.clientRecordId === clientRecordId) ?? null,
   );
   const retryAccountRecordSubmit = vi.fn(async () => null);
+  const prepareAccountLogout = vi.fn(async () => null);
+  const confirmAccountLogout = vi.fn(async () => null);
   const runtime = {
     get guestSave() {
       return { status: "missing" as const };
@@ -199,6 +203,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     getAccountRecord,
     flushAccountRecordOutbox: vi.fn(async () => null),
     retryAccountRecordSubmit,
+    prepareAccountLogout,
+    confirmAccountLogout,
     refreshGuestSummary: vi.fn(async () => undefined),
     deleteGuestRecord: vi.fn(async () => true),
     pauseActiveSession: vi.fn(async () => undefined),
@@ -216,6 +222,8 @@ function runtimeHarness(records: StoredGameRecord[] = []): RuntimeHarness {
     getGuestRecord,
     getAccountRecord,
     retryAccountRecordSubmit,
+    prepareAccountLogout,
+    confirmAccountLogout,
     get activeSession() {
       return activeSession;
     },
@@ -808,6 +816,63 @@ describe("mobile app controller navigation", () => {
       "account-upload-retry",
     );
     expect(retry?.hidden).toBe(true);
+    controller.destroy();
+  });
+
+  it("cancels logout without mutation, then confirms owner cleanup with visible counts", async () => {
+    const harness = runtimeHarness();
+    const summary = {
+      ownerKey: "user:42" as const,
+      unfinishedSaves: 2,
+      pendingRecords: 1,
+      pendingOperations: 3,
+      requiresConfirmation: true,
+      flushTimedOut: false,
+    };
+    harness.prepareAccountLogout.mockResolvedValue(summary);
+    harness.confirmAccountLogout.mockResolvedValue({
+      status: "cleared",
+      summary,
+    });
+    const { controller, root } = mountController(harness, {
+      networkMode: "online",
+      initialAccountSession: accountSession(),
+    });
+
+    focusAndClick(root, '[data-app-bottom-nav] [data-nav="me"]');
+    const logout = root.querySelector<HTMLButtonElement>(
+      '[data-action="request-account-logout"]',
+    );
+    expect(logout?.hidden).toBe(false);
+    logout?.click();
+    const dialog = root.querySelector<HTMLDialogElement>(
+      "[data-account-logout-dialog]",
+    );
+    await vi.waitFor(() => expect(dialog?.open).toBe(true));
+    expect(
+      root.querySelector("[data-account-logout-summary]")?.textContent,
+    ).toContain("未上传记录 1 条 · 未结束模式 2 个 · 其他同步任务 3 个");
+
+    focusAndClick(root, '[data-action="cancel-account-logout"]');
+    expect(dialog?.open).toBe(false);
+    expect(harness.confirmAccountLogout).not.toHaveBeenCalled();
+    expect(root.querySelector("[data-account-title]")?.textContent).toBe(
+      "Next Player",
+    );
+
+    logout?.click();
+    await vi.waitFor(() => expect(dialog?.open).toBe(true));
+    focusAndClick(root, '[data-action="confirm-account-logout"]');
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-account-title]")?.textContent).toBe(
+        "当前为游客",
+      ),
+    );
+    expect(harness.confirmAccountLogout).toHaveBeenCalledTimes(1);
+    expect(logout?.hidden).toBe(true);
+    expect(
+      root.querySelector<HTMLElement>("[data-app-status]")?.textContent,
+    ).toContain("已退出账号，并清除该账号的本机数据。");
     controller.destroy();
   });
 

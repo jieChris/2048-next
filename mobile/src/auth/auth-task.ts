@@ -130,6 +130,12 @@ export class MobileAuthTask {
     this.#clearIssues();
   }
 
+  signOut(): void {
+    this.#session = null;
+    this.clearIntent();
+    this.renderAccountState();
+  }
+
   async submit(
     form: HTMLFormElement,
     route: AuthTaskRoute,
@@ -227,6 +233,9 @@ export class MobileAuthTask {
     const login = this.#root.querySelector<HTMLButtonElement>(
       '[data-action="open-auth-gate"]',
     );
+    const logout = this.#root.querySelector<HTMLButtonElement>(
+      '[data-action="request-account-logout"]',
+    );
     const modeIdentity = this.#root.querySelector<HTMLElement>(
       "[data-mode-identity]",
     );
@@ -244,6 +253,7 @@ export class MobileAuthTask {
         : this.#t("me.guestBody");
     }
     if (login) login.hidden = session !== null;
+    if (logout) logout.hidden = session === null;
     if (modeIdentity) {
       modeIdentity.textContent =
         session?.user.nickname ?? this.#t("records.guestOwner");

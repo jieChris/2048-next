@@ -13,10 +13,12 @@ import {
   type AuthenticatedModeRuntimeDatabase,
 } from "../../mobile/src/app/app-runtime";
 import {
+  loadAccountSession,
   saveAccountSession,
   serializeAccountSessionEnvelope,
   type AccountSessionV1,
 } from "../../mobile/src/auth/account-session";
+import { MobileAuthError } from "../../mobile/src/auth/auth-service";
 import { ACCOUNT_SESSION_SECURE_KEY } from "../../mobile/src/data/owner-cleanup";
 import { OwnerCleanupWorkGate } from "../../mobile/src/data/owner-cleanup";
 import { GUEST_STANDARD_MODE_KEY } from "../../mobile/src/game/guest-session";
@@ -87,8 +89,10 @@ function runtimeDatabase(
   return {
     name: database.name,
     open: database.open.bind(database),
+    beginOwnerClear: database.beginOwnerClear.bind(database),
     listPendingOwnerClears: database.listPendingOwnerClears.bind(database),
     completeOwnerClear: database.completeOwnerClear.bind(database),
+    listSaves: database.listSaves.bind(database),
     getSave: database.getSave.bind(database),
     startNewGame: database.startNewGame.bind(database),
     putSave: database.putSave.bind(database),
@@ -695,6 +699,92 @@ describe("mobile guest app runtime", () => {
       database.getRecord("user:7", record.clientRecordId),
     ).resolves.toMatchObject({ source: "normal", uploadStatus: "uploaded" });
     await expect(database.listOutbox("user:7")).resolves.toEqual([]);
+  });
+
+  it("reports remaining records and per-mode saves after a bounded logout flush", async () => {
+    const database = createDatabase("account-logout-summary");
+    await seedSave(database, "user:7", {
+      clientRecordId: "logout-terminal",
+      board: [
+        [2, 2, 8, 16],
+        [32, 64, 128, 256],
+        [64, 128, 256, 512],
+        [128, 256, 512, 1024],
+      ],
+    });
+    await seedSave(database, "user:7", {
+      clientRecordId: "logout-three-save",
+      modeKey: "board_3x3_pow2_no_undo",
+    });
+    const storage = createMemorySecureStorage();
+    const account = accountSession();
+    await saveAccountSession(storage, account);
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+      recordSync: {
+        enabled: () => true,
+        getAuthService: async () => ({
+          submitRecord: async () => {
+            throw new MobileAuthError("network_error", {
+              networkError: "offline",
+            });
+          },
+        }),
+      },
+    });
+    await runtime.enterAuthenticatedMode(GUEST_STANDARD_MODE_KEY, account, {
+      online: false,
+    });
+    await runtime.moveActiveSession(3).terminal;
+
+    await expect(runtime.prepareAccountLogout(100)).resolves.toMatchObject({
+      ownerKey: "user:7",
+      unfinishedSaves: 1,
+      pendingRecords: 1,
+      pendingOperations: 0,
+      requiresConfirmation: true,
+      flushTimedOut: false,
+    });
+    await expect(loadAccountSession(storage)).resolves.toMatchObject({
+      user: { id: 7 },
+    });
+  });
+
+  it("clears one account owner, preserves guest data, and allows a fresh same-user login", async () => {
+    const database = createDatabase("account-logout-clear");
+    await seedSave(database, "guest", { clientRecordId: "guest-preserved" });
+    await seedSave(database, "user:7", { clientRecordId: "account-cleared" });
+    const storage = createMemorySecureStorage();
+    const account = accountSession();
+    await saveAccountSession(storage, account);
+    const runtime = await bootstrapGuestAppRuntime({
+      database,
+      secureStorage: storage,
+    });
+
+    await expect(runtime.confirmAccountLogout()).resolves.toMatchObject({
+      status: "cleared",
+      summary: { unfinishedSaves: 1 },
+    });
+    await expect(loadAccountSession(storage)).resolves.toBeNull();
+    await expect(database.listSaves("user:7")).resolves.toEqual([]);
+    await expect(database.listOutbox("user:7")).resolves.toEqual([]);
+    await expect(database.listPendingOwnerClears()).resolves.toEqual([]);
+    await expect(database.getSave("guest", GUEST_STANDARD_MODE_KEY)).resolves.toMatchObject(
+      { status: "ok", save: { clientRecordId: "guest-preserved" } },
+    );
+
+    const relogin = {
+      ...accountSession(),
+      persistentIdentity: { userId: 7, establishedAtMs: 2_000 },
+    };
+    await saveAccountSession(storage, relogin);
+    await expect(
+      runtime.enterAuthenticatedMode(GUEST_STANDARD_MODE_KEY, relogin, {
+        online: false,
+      }),
+    ).resolves.toMatchObject({ status: "ready", gameKind: "normal" });
   });
 
   it("routes account save work through the owner cleanup gate", async () => {

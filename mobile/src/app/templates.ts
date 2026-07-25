@@ -188,6 +188,7 @@ export function renderAppTemplate(t: Translator): string {
               <p data-account-body>${t("me.guestBody")}</p>
             </div>
             <button class="action-button action-button--secondary" type="button" data-action="open-auth-gate">${t("me.loginAction")}</button>
+            <button class="danger-button" type="button" data-action="request-account-logout" hidden>${t("me.logoutAction")}</button>
           </section>
           <div class="settings-list">
             <button class="setting-link" type="button" data-action="open-achievements-gate">
@@ -505,6 +506,20 @@ export function renderAppTemplate(t: Translator): string {
           <div class="dialog-actions dialog-actions--split">
             <button class="action-button action-button--secondary" type="button" data-action="cancel-delete">${t("delete.cancel")}</button>
             <button class="danger-button" type="button" data-action="confirm-delete">${t("delete.confirm")}</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="app-dialog app-dialog--compact" data-account-logout-dialog aria-labelledby="account-logout-title">
+        <div class="dialog-plate">
+          <p class="eyebrow">${t("logout.eyebrow")}</p>
+          <h2 id="account-logout-title">${t("logout.title")}</h2>
+          <p>${t("logout.body")}</p>
+          <p data-account-logout-summary></p>
+          <p data-account-logout-timeout hidden>${t("logout.timeout")}</p>
+          <div class="dialog-actions dialog-actions--split">
+            <button class="action-button action-button--secondary" type="button" data-action="cancel-account-logout">${t("logout.cancel")}</button>
+            <button class="danger-button" type="button" data-action="confirm-account-logout">${t("logout.confirm")}</button>
           </div>
         </div>
       </dialog>

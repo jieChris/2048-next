@@ -129,6 +129,7 @@ async function start(): Promise<void> {
             privacy:
               privacy ?? createPreviewPrivacyRecord("offline", Date.now()),
             secureStorage,
+            timeoutMs: 8_000,
             onAuthenticatedSession() {
               void activeRuntime
                 ?.flushAccountRecordOutbox()
