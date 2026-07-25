@@ -40,6 +40,12 @@ describe("Android release candidate workflow", () => {
     expect(workflow).toContain("environment: android-release");
     expect(workflow).toContain("NEXT2048_RELEASE_KEYSTORE_BASE64");
     expect(workflow).toContain("NEXT2048_RELEASE_CERT_SHA256");
+    expect(workflow).toContain("version_code:");
+    expect(workflow).toContain("version_name:");
+    expect(workflow).toContain("ORG_GRADLE_PROJECT_NEXT2048_VERSION_CODE");
+    expect(workflow).toContain("ORG_GRADLE_PROJECT_NEXT2048_VERSION_NAME");
+    expect(workflow).toContain("NEXT2048_EXPECTED_VERSION_CODE");
+    expect(workflow).toContain("NEXT2048_EXPECTED_VERSION_NAME");
     expect(workflow).toContain("npm run android:release");
     expect(workflow).toContain("artifacts/android-release");
     expect(workflow).not.toMatch(/google-play|play console|deploy/u);

@@ -70,6 +70,18 @@ describe("Android native foundation", () => {
     );
   });
 
+  it("accepts explicit release versions and isolates the upgrade rehearsal build", () => {
+    const appGradle = compact(readProjectFile("android/app/build.gradle"));
+
+    expect(appGradle).toContain("NEXT2048_VERSION_CODE");
+    expect(appGradle).toContain("NEXT2048_VERSION_NAME");
+    expect(appGradle).toContain("versionCode appVersionCode");
+    expect(appGradle).toContain("versionName appVersionName");
+    expect(appGradle).toMatch(
+      /upgradeTest\s*\{[^}]*initWith release[^}]*applicationIdSuffix\s+["']\.upgrade["'][^}]*debuggable true/u
+    );
+  });
+
   it("locks the activity to portrait with hardware acceleration", () => {
     const manifest = compact(
       readProjectFile("android/app/src/main/AndroidManifest.xml")

@@ -2,6 +2,17 @@ name: Android Release Candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: Monotonically increasing Android versionCode
+        required: true
+        default: "1"
+        type: string
+      version_name:
+        description: Public Android versionName
+        required: true
+        default: "1.0"
+        type: string
 
 permissions:
   contents: read
@@ -78,6 +89,10 @@ jobs:
           ORG_GRADLE_PROJECT_NEXT2048_RELEASE_STORE_PASSWORD: ${{ secrets.NEXT2048_RELEASE_STORE_PASSWORD }}
           ORG_GRADLE_PROJECT_NEXT2048_RELEASE_KEY_ALIAS: ${{ secrets.NEXT2048_RELEASE_KEY_ALIAS }}
           ORG_GRADLE_PROJECT_NEXT2048_RELEASE_KEY_PASSWORD: ${{ secrets.NEXT2048_RELEASE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_NEXT2048_VERSION_CODE: ${{ inputs.version_code }}
+          ORG_GRADLE_PROJECT_NEXT2048_VERSION_NAME: ${{ inputs.version_name }}
+          NEXT2048_EXPECTED_VERSION_CODE: ${{ inputs.version_code }}
+          NEXT2048_EXPECTED_VERSION_NAME: ${{ inputs.version_name }}
           NEXT2048_RELEASE_CERT_SHA256: ${{ secrets.NEXT2048_RELEASE_CERT_SHA256 }}
         run: npm run android:release
 

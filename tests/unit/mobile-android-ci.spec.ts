@@ -22,6 +22,8 @@ describe("Android CI", () => {
     expect(workflow).toContain("git diff --exit-code -- android");
     expect(workflow).toContain("api-level: [29, 36]");
     expect(workflow).toContain("npm run android:smoke:emulator");
+    expect(workflow).toContain("npm run android:smoke:upgrade");
+    expect(workflow).toContain("android-upgrade-smoke-api-29.json");
     expect(workflow).not.toContain("deploy-self-hosted");
   });
 });

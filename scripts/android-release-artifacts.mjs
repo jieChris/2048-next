@@ -121,6 +121,18 @@ async function verifyAndroidReleaseArtifacts({
   if (!Number.isSafeInteger(versionCode) || versionCode < 1) fail("invalid versionCode");
   const versionName = run(apkanalyzer, ["manifest", "version-name", apk]);
   if (!versionName) fail("missing versionName");
+  if (
+    process.env.NEXT2048_EXPECTED_VERSION_CODE &&
+    String(versionCode) !== process.env.NEXT2048_EXPECTED_VERSION_CODE
+  ) {
+    fail(`versionCode mismatch: ${versionCode} != ${process.env.NEXT2048_EXPECTED_VERSION_CODE}`);
+  }
+  if (
+    process.env.NEXT2048_EXPECTED_VERSION_NAME &&
+    versionName !== process.env.NEXT2048_EXPECTED_VERSION_NAME
+  ) {
+    fail(`versionName mismatch: ${versionName} != ${process.env.NEXT2048_EXPECTED_VERSION_NAME}`);
+  }
 
   const output = path.resolve(outputPath);
   await rm(output, { recursive: true, force: true });

@@ -14,11 +14,27 @@ def releaseSigningValues = releaseSigningPropertyNames.collectEntries { property
 def missingReleaseSigningProperties = releaseSigningPropertyNames.findAll { propertyName ->
     !releaseSigningValues[propertyName]
 }
+def appVersionCodeText = providers.gradleProperty('NEXT2048_VERSION_CODE').orElse('1').get().trim()
+def appVersionName = providers.gradleProperty('NEXT2048_VERSION_NAME').orElse('1.0').get().trim()
+def appVersionCode
+try {
+    appVersionCode = Integer.parseInt(appVersionCodeText)
+} catch (NumberFormatException error) {
+    throw new GradleException('NEXT2048_VERSION_CODE must be a positive 32-bit integer', error)
+}
+if (appVersionCode < 1) {
+    throw new GradleException('NEXT2048_VERSION_CODE must be a positive 32-bit integer')
+}
+if (!(appVersionName ==~ /[0-9A-Za-z][0-9A-Za-z._-]{0,63}/)) {
+    throw new GradleException('NEXT2048_VERSION_NAME must contain 1-64 safe version characters')
+}
 def releasePackagingTaskNames = [
     'assembleRelease',
     'bundleRelease',
     'packageRelease',
-    'signReleaseBundle'
+    'signReleaseBundle',
+    'assembleUpgradeTest',
+    'packageUpgradeTest'
 ] as Set
 def appProject = project
 def releaseMobileBuildFlagsFile = file('src/main/assets/public/mobile-build-flags.json')
@@ -88,8 +104,8 @@ android {
         applicationId "cn.next2048.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -118,6 +134,13 @@ android {
             }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        upgradeTest {
+            initWith release
+            applicationIdSuffix ".upgrade"
+            versionNameSuffix "-upgrade"
+            debuggable true
+            matchingFallbacks = ['release']
         }
     }
 }
