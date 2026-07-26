@@ -291,3 +291,26 @@
 - [x] GitHub pages Smoke 首轮在 `212/225` 后暴露异步重开测试假设；本机稳定复现，改为点击真实 `GameDialog` 确认并等待新 `client_record_id`，专项 `--repeat-each=20` 为 `20/20`，未放宽产品去重。
 - [x] 完整重开提交文件 `13/13` 进一步验证普通同内容换 ID 仍去重、rescue 同回放换稳定 ID 仍可形成不同记录；对应单元集合 `54/54` 通过。
 - [x] 初始化/持久化/重开三项竞态 Smoke 合并高重复运行 `--repeat-each=20`，最终 `60/60` 通过。
+
+## 2026-07-26 Goal 完成审计与当前提交设备证据
+
+- Draft PR `#197` 当前 head 为 `aa1134688ae901136083a83b1a3275d4c6cc585b`，保持 Draft/Open/Clean，未合并。第二轮 GitHub 检查全部成功：Android/App `5m15s`、pages `6m21s`、Refactor `2m43s`、history `51s`、index-ui `54s`、Quality Audit、Diagnostics Index 与 Release Ready；PR 条件按设计跳过 main/nightly 专属 API 29/API 36 emulator 与 signed upgrade jobs。
+- 使用当前提交重新执行 `android:sync:debug`，终端默认 JDK 17 按冻结的 Java 21 toolchain 在编译前拒绝；显式使用 Android Studio JBR 21 后 `:app:assembleDebug` 成功。APK 为 `13,692,660` 字节，SHA-256 `27e674cc81333151b6e22ad7a32fcac0b7a1041dc2701ac972005af5ad86c04d`。
+- 当前 APK 在本机 API 29 / Android 10 ARM64 模拟器重新通过完整离线生命周期 Smoke：冷启动 `471ms`、HOME 热恢复 `33ms`、force-stop 后冷启动 `431ms`，真实 ADB 滑动后棋盘在后台与进程重启后保持一致，`externalResources=[]`。报告为 `artifacts/android-emulator-smoke-api-29.json`。
+- 同一 APK 在全新冷启动的 API 36 / Android 16 ARM64 模拟器重新通过：冷启动 `1046ms`、force-stop 后冷启动 `1217ms`，棋盘恢复一致，`externalResources=[]`。报告为 `artifacts/android-emulator-smoke-api-36.json`；测试后精确关闭本轮新增的 API 36 emulator，原 API 29 emulator 保持不变。
+- 一加 7 Pro 真机对同一 APK执行 `adb install -r` 成功，未清除 App 数据；force-stop 后冷启动 `703ms`。包信息继续为 `cn.next2048.app.debug`、`versionCode=1`、`versionName=1.0-debug`、min/target `29/36`，`INTERNET granted=true`。
+
+### 未完成项的权威状态
+
+| 实施清单项 | 当前证据 | 结论 / 所需外部条件 |
+| --- | --- | --- |
+| 生产 Backend Ready 三项 | 生产只读审计证明线上仍缺当前后端提交、迁移、OpenAPI、权威 rank、删号接口与三份公开页面 | 未完成；必须先获得生产后端部署/迁移及公开 Web 部署的单独批准 |
+| Android 10/4GB 与高刷正式候选 | API 29 模拟器、Android 12 一加 7 Pro 90Hz non-debuggable 一次性测试签名 trace 已通过；无 Android 10/4GB 实体真机与正式 signer 候选 | 部分完成；不能以模拟器或一次性证书替代正式真机矩阵 |
+| main/nightly API 29/API 36 | workflow、脚本和本地双 API 实跑通过；PR job 按设计 skipped | 未完成；workflow 需进入默认分支后由 main/nightly 实际运行，当前未获 PR 合并授权 |
+| app-signing key 与 Play App Signing 方案 | 只有一次性测试证书和 unsigned fail-closed 门禁 | 未完成；需要用户决定正式密钥托管/备份和 Play 方案 |
+| Play 内部测试上传与 signer 对比 | 无上传授权，未触发 | 未完成；必须单独授权 |
+| 受保护正式候选 workflow | workflow 已实现，但没有正式签名 secrets/Environment 批准 | 未完成；需要正式密钥与受保护运行授权 |
+| 正式同签名覆盖升级 | API 29 一次性测试证书的同签名保留 DB/Keystore、错签拒绝已通过 | 仅测试证书证据；正式 signer 确定后必须重跑 |
+| 官网发布页实际展示 | 页面/政策源和构建门禁存在，生产站点只读审计仍为 404 | 未完成；公开 Web 部署需单独授权 |
+
+结论：首版代码基底、功能、合同、自动测试、debug APK、双 API 模拟器、现有真机 UI/90Hz 证据已经完成；Goal 仍不能标记 complete，因为生产 Backend Ready、正式 signer 候选、Android 10/4GB 实体机、main/nightly 默认分支实跑和分发链路的权威证据仍缺失，且其中多项明确受用户单独授权约束。
