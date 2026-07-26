@@ -187,6 +187,8 @@ function loadOnlineLeaderboardRuntime(options: {
   disableOnlineLeaderboard?: boolean;
   apiBases?: string[];
   storage?: MemoryStorage;
+  navigatorLike?: Record<string, unknown>;
+  documentReadyState?: string;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
@@ -196,9 +198,11 @@ function loadOnlineLeaderboardRuntime(options: {
     fetchCalls.push({ url, init });
     return options.fetchImpl(url, init);
   });
+  const documentLike = createDocumentStub();
+  documentLike.readyState = options.documentReadyState || "complete";
   const windowLike: Record<string, unknown> = {
     __DISABLE_ONLINE_LEADERBOARD__: options.disableOnlineLeaderboard !== false,
-    document: createDocumentStub(),
+    document: documentLike,
     localStorage: storage,
     location: {
       hostname: "2048next.cn",
@@ -206,6 +210,7 @@ function loadOnlineLeaderboardRuntime(options: {
       pathname: "/2048.html"
     },
     URLSearchParams,
+    navigator: options.navigatorLike,
     game_manager: options.manager,
     ApiSharedUtils: {
       toText(value: unknown) {
@@ -279,6 +284,28 @@ function collectTextContent(node: unknown): string {
 }
 
 describe("online leaderboard terminal submission", () => {
+  it("starts terminal submit polling before DOMContentLoaded", async () => {
+    const manager = createTerminatedManager({
+      serialize: vi.fn(() => ""),
+      serializeV3: vi.fn(() => null)
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      disableOnlineLeaderboard: false,
+      documentReadyState: "loading",
+      fetchImpl: async (url) => {
+        if (url.endsWith("/score")) {
+          return createJsonResponse({ success: true });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/score"))).toBe(true);
+  });
+
   it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {
     const runtime = loadOnlineLeaderboardRuntime({
       manager: createTerminatedManager(),
@@ -1510,6 +1537,132 @@ describe("online leaderboard terminal submission", () => {
     expect(retryRuntime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(2);
     expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
     expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBeNull();
+  });
+
+  it("deduplicates legacy pending and queued states by client record id", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager();
+    const pendingPayload = {
+      mode_key: MODE_KEY,
+      score: 4096,
+      client_record_id: "rec_client_1",
+      replay_string: "replay-v1"
+    };
+    storage.setItem(
+      PENDING_RECORD_KEY,
+      JSON.stringify({
+        signature: "legacy-current-signature",
+        payload: pendingPayload,
+        ownerUserId: "7",
+        createdAt: Date.now(),
+        lastAttemptAt: 0,
+        retryCount: 0
+      })
+    );
+    storage.setItem(
+      PENDING_RECORD_QUEUE_KEY,
+      JSON.stringify([
+        {
+          signature: "legacy-queued-signature",
+          payload: pendingPayload,
+          ownerUserId: "7",
+          createdAt: Date.now(),
+          lastAttemptAt: 0,
+          retryCount: 0
+        }
+      ])
+    );
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "record-deduped" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    await flushRuntimePromises();
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(1);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBeNull();
+    expect(storage.getItem(LAST_RECORD_SUBMIT_KEY)).toBe("client_record_id|rec_client_1");
+  });
+
+  it("serializes pending record retry across page instances", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      PENDING_RECORD_KEY,
+      JSON.stringify({
+        signature: "client_record_id|rec_shared_page",
+        payload: {
+          mode_key: MODE_KEY,
+          score: 4096,
+          client_record_id: "rec_shared_page",
+          replay_string: "replay-shared-page"
+        },
+        ownerUserId: "7",
+        createdAt: Date.now(),
+        lastAttemptAt: 0,
+        retryCount: 0
+      })
+    );
+    let lockTail = Promise.resolve<unknown>(undefined);
+    const navigatorLike = {
+      locks: {
+        request(
+          _name: string,
+          _options: Record<string, unknown>,
+          callback: () => unknown
+        ) {
+          const result = lockTail.then(callback);
+          lockTail = result.then(() => undefined, () => undefined);
+          return result;
+        }
+      }
+    };
+    let recordCalls = 0;
+    const fetchImpl = async (url: string) => {
+      if (url.endsWith("/records")) {
+        recordCalls += 1;
+        return createJsonResponse({ success: true, data: { id: "record-shared-page" } });
+      }
+      return createJsonResponse({ success: true, data: [] });
+    };
+    const firstManager = createTerminatedManager({
+      clientRecordId: "rec_shared_page",
+      serialize: vi.fn(() => "replay-shared-page")
+    });
+    const secondManager = createTerminatedManager({
+      clientRecordId: "rec_shared_page",
+      serialize: vi.fn(() => "replay-shared-page")
+    });
+    loadOnlineLeaderboardRuntime({
+      manager: firstManager,
+      storage,
+      navigatorLike,
+      fetchImpl
+    });
+    loadOnlineLeaderboardRuntime({
+      manager: secondManager,
+      storage,
+      navigatorLike,
+      fetchImpl
+    });
+
+    (firstManager.move as { call: (thisArg: unknown) => void }).call(firstManager);
+    (secondManager.move as { call: (thisArg: unknown) => void }).call(secondManager);
+    await flushRuntimePromises();
+    await flushRuntimePromises();
+
+    expect(recordCalls).toBe(1);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
   });
 
   it("keeps a terminal record pending when auth was cleared before the game-over submit runs", async () => {

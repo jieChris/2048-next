@@ -246,3 +246,43 @@
 - 为取得 GitHub 托管 Android build 证据，创建仅供验证的 Draft PR `#197`，未合并或部署。首次 Android run `30189850849` 的 App unit `348/348`、production `1/1`、production build、资源预算和移动边界均通过，但 Linux Chromium 在 320×568 Smoke 中把两个居中且高度不同的对局操作按钮 top 差计算为 `1.5px`，超过测试写死的 `1px`；其余 `23/24` 通过，Android Gradle 与 APK 上传因前置失败跳过。DOM/CSS 核对确认这是 Flex 居中下的跨平台子像素舍入，不是换行、重叠或越界；测试容差最小调整为 `2px`，本机同一用例连续 `10/10` 通过，没有修改产品布局或扩大其他几何断言。
 - 修正后的 Android run `30190015148` 在 GitHub 托管 Ubuntu/JDK 21/SDK 36 上以 `5m07s` 全部通过：`Verify App`、完整 Android project gate、tracked Capacitor drift 拒绝和 debug APK 上传均成功；PR 条件按设计跳过 main/nightly 专属 API 29/API 36 emulator 与 upgrade jobs。并行 Smoke run `30190015169` 的 Refactor、quality、history、index-ui 均通过，但 pages 分片 `224/225` 暴露一份旧 leaderboard background-refresh fixture 未提供权威 `rank`，页面按新合同正确显示 `--`，测试却仍断言不得出现占位。只为 stable/fresh 两份模拟服务端响应补 `rank: 1`，没有恢复数组位置排名；该专项本机连续 `5/5` 通过，等待云端重跑。
 - 第三轮 Android run `30190264487` 再次全部通过。Smoke run `30190264480` 已证明 leaderboard background-refresh 修复通过，但 pages 分片另在 `224/225` 暴露语言审计自身的初始化竞态：测试在 18 次导航循环中重复注册 `page.addInitScript`，Playwright 不保证累积脚本顺序，英文轮最后的 Practice Board 偶发被旧中文脚本覆盖。改为只注册一次 API route，在每个语言轮次直接写同源 `localStorage` 后再逐页导航；未依赖并非所有 legacy 页面都会维护的 `<html lang>`。中英文九页审计本机连续 `3/3` 通过，产品 i18n 代码未改动。
+
+## Bug Analysis: 终局记录在初始化、刷新与多页面生命周期交错时重复或延迟提交
+
+### 1. Root Cause Category
+
+- **Category**: B / D / E - 跨层合同、测试覆盖缺口与隐式时序假设
+- **Specific Cause**: 浏览器端已经拥有服务端幂等键 `client_record_id`，但当前 pending、队列、最后处理标记仍可能按由模式、seed、回放和运行时状态派生的旧 signature 识别同一终局；单页 `recordSubmitLock` 不能覆盖 reload 期间旧页与新页并发。与此同时，提交钩子只在在线 runtime 的后续初始化阶段绑定，`GameManager` 创建窗口可能早于绑定；刷新任务运行期间的 wake 被任务结束时的普通定时覆盖；Smoke 只等待请求次数，没有等待请求完成后的 localStorage 微任务落定。
+
+### 2. Why Fixes Failed
+
+1. **只在 `init()` 绑定提交钩子**：覆盖常规加载顺序，但没有覆盖 runtime 与 `GameManager` 互换先后。
+2. **运行中直接重新 `schedule()`**：新 timer 会在当前 callback 的 `finally` 中被普通轮询 timer 清除，wake 实际延迟到下一周期。
+3. **只依赖页内锁和旧 signature**：单页内可以防重入，但 reload 的两个 document 各有独立内存锁；同一 `client_record_id` 还可能以不同旧 signature 同时存在于 current 与 queue。
+4. **生命周期统一触发 keepalive retry**：已持久化 pending 被旧页再次上传，扩大 reload 并发窗口；新终局与已有 pending 没有区分。
+5. **测试只轮询请求计数**：最后一个网络响应后的 pending 清理仍在后续微任务中，测试读取 localStorage 可能早于真实状态收敛。
+
+### 3. Prevention Mechanisms
+
+| Priority | Mechanism | Specific Action | Status |
+| --- | --- | --- | --- |
+| P0 | Architecture | 非空 `client_record_id` 作为 current、queue、last-handled 的首要身份 | DONE |
+| P0 | Runtime | 使用原生 Web Locks 串行同源页面 `/records` retry，并在锁内重读 pending | DONE |
+| P0 | Initialization | `GameManager` 创建后主动绑定在线钩子， eligible polling 不等待 DOMContentLoaded | DONE |
+| P0 | Scheduler | 运行中 wake 写入 `rerunRequested`，任务结束后立即重跑 | DONE |
+| P0 | Lifecycle | pagehide 跳过已有 durable pending；新发现终局仍先持久化并可 keepalive | DONE |
+| P0 | Test Coverage | 增加初始化顺序、scheduler wake、多签名同 ID、跨页锁与重复 Smoke 回归 | DONE |
+| P1 | Documentation | 在 `frontend-api-boundary.md` 固化跨页面 exactly-once 浏览器合同 | DONE |
+
+### 4. Systematic Expansion
+
+- **Similar Issues**: `/score` 与 `/stone-2k` 仍使用各自旧身份和单页锁；只有在它们出现稳定 operation/client ID 合同时才采用同样跨页去重，不提前制造通用抽象。
+- **Design Improvement**: 浏览器负责持久化、串行和重试，服务端唯一约束继续作为最终幂等权威；两层使用同一个稳定 ID，不让页面派生状态成为业务身份。
+- **Process Improvement**: 涉及 unload/reload、共享 storage 或 scheduler 的修复，除单元测试外必须有重复 Smoke，并等待持久化终态而非只等待请求计数。
+
+### 5. Knowledge Capture
+
+- [x] 更新 `.trellis/spec/frontend-api-boundary.md`。
+- [x] 仓库不存在 `src/templates/markdown/spec/`，无模板可同步。
+- [x] 新增并扩展对应单元与 Smoke 回归。
+- [x] 2026-07-26 恢复 Goal 后，目标两项 Smoke `--repeat-each=20` 共 `40/40` 通过。

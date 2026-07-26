@@ -95,6 +95,7 @@ export const homeCoreScripts = [
   gameDialogRuntimeUrl,
   seedrandomUrl,
   animframePolyfillUrl,
+  coreStorageRuntimeUrl,
   coreBootstrapRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
@@ -123,6 +124,7 @@ export const homeCoreScripts = [
 export const cappedCoreScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
+  coreStorageRuntimeUrl,
   coreBootstrapRuntimeUrl,
   cappedInputManagerUrl,
   themeManagerUrl,
@@ -190,7 +192,6 @@ export const homeSettingsAndPanelScripts = [
   coreMobileTopButtonsPageHostRuntimeUrl,
   coreMobileViewportRuntimeUrl,
   coreMobileViewportPageHostRuntimeUrl,
-  coreStorageRuntimeUrl,
   coreBgmRuntimeUrl,
   coreNightModeRuntimeUrl,
 ] as const;

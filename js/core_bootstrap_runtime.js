@@ -5,6 +5,7 @@
 
   var DEFAULT_MODE_KEY = "standard_4x4_pow2_no_undo";
   var DEFAULT_BOARD_SIZE = 4;
+  var UI_LANGUAGE_KEY = "ui_language_v1";
   var DUPLICATE_MODE_MESSAGE_ZH = "\u975e\u6cd5\u64cd\u4f5c\uff1a\u4e00\u4e2a\u6a21\u5f0f\u53ea\u80fd\u5f00\u4e00\u4e2a\u9875\u9762";
   var DUPLICATE_MODE_MESSAGE_EN = "Illegal operation: each mode can only be open in one page.";
 
@@ -69,6 +70,15 @@
     }
 
     global.game_manager = manager;
+    var onlineRuntime = global.OnlineLeaderboardRuntime;
+    if (
+      onlineRuntime &&
+      typeof onlineRuntime.bindImmediateOnlineSubmitHooks === "function"
+    ) {
+      try {
+        onlineRuntime.bindImmediateOnlineSubmitHooks(manager);
+      } catch (_errOnlineHooks) {}
+    }
     if (
       global.AdminRescueClientRuntime &&
       typeof global.AdminRescueClientRuntime.scheduleCheck === "function"
@@ -101,6 +111,19 @@
         language = String(i18n.getLanguage() || "").toLowerCase();
       }
     } catch (_errI18n) {}
+    if (!language) {
+      try {
+        var storageRuntime = global.CoreStorageRuntime;
+        var storage = storageRuntime.resolveStorageByName({
+          windowLike: global,
+          storageName: "localStorage"
+        });
+        language = String(storageRuntime.safeReadStorageItem({
+          storageLike: storage,
+          key: UI_LANGUAGE_KEY
+        }) || "").toLowerCase();
+      } catch (_errStorage) {}
+    }
     if (!language) {
       try {
         var root = global.document.documentElement;

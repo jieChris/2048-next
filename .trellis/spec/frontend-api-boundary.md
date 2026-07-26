@@ -147,3 +147,38 @@ if (!getAuthToken()) return;
 // The first real upload still records retryCount as the first network attempt.
 writePendingRecordSubmitSignature(signature, pendingState, payload);
 ```
+
+## Scenario: Exactly-Once Record Submission Across Lifecycle and Pages
+
+### 1. Scope / Trigger
+
+- Trigger: a terminal record can be observed by startup polling, a wrapped game-manager method, `pagehide`/`beforeunload`, or another same-origin game page during reload or duplicate-page recovery.
+- Affected state: the active pending record, the queued pending records, the last handled signature, the in-memory upload lock, and the shared backend `client_record_id` idempotency contract.
+
+### 2. Stable Identity
+
+- A non-empty `client_record_id` is the primary browser-side identity of a terminal record. Current pending state, queued state, last-handled state, and lifecycle retries must compare it before any legacy derived signature.
+- Replay fingerprints, score, mode, seed, and move count are only a compatibility fallback for old payloads that do not contain `client_record_id`; they must not create a second identity for a modern record.
+- Success or permanent rejection must remove every current/queued state with the same `client_record_id`. Authentication and transient failures keep the durable state.
+
+### 3. Initialization and Lifecycle Ordering
+
+- Online submit hooks must bind when `GameManager` is created even if the online runtime initialized first; DOM readiness is not a valid prerequisite for terminal persistence.
+- Online polling may start before `DOMContentLoaded` when the page is eligible for online autoload, so a terminal game present during reload is not left unobserved.
+- `pagehide`/`beforeunload` must not upload a terminal record that is already durable pending state. A newly observed terminal record may still use keepalive after first being persisted.
+- A scheduler wake received while its callback is running must be latched and rerun immediately after the callback settles. The normal interval/backoff reschedule must not overwrite that wake.
+
+### 4. Cross-Page Serialization
+
+- The in-memory upload lock prevents re-entry only inside one page. When native Web Locks are available, record retry must additionally take one same-origin exclusive lock and re-read pending storage inside the lock before sending.
+- If Web Locks are unavailable, the backend `client_record_id` uniqueness contract remains the authoritative duplicate barrier; the browser must still preserve one durable payload and must never mutate its ID between retries.
+- A page acquiring the lock after another page completed the upload must observe cleared pending storage and make no second request.
+
+### 5. Tests Required
+
+- Unit: manager creation after online-runtime load binds terminal hooks immediately.
+- Unit: eligible polling starts before `DOMContentLoaded`.
+- Unit: wake during an active refresh causes an immediate second callback.
+- Unit: legacy signatures with the same `client_record_id` collapse to one current/queued item and one request.
+- Unit: two page runtimes sharing storage and a Web Lock issue one `/records` request.
+- Smoke: reload/lifecycle retry clears pending state and writes last-handled state; repeat the scenario enough times to expose ordering races.

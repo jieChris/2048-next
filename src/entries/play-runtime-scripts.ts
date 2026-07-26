@@ -1,6 +1,7 @@
 import seedrandomUrl from "../../js/seedrandom.js?url";
 import animframePolyfillUrl from "../../js/animframe_polyfill.js?url";
 import gameDialogRuntimeUrl from "../../js/game_dialog_runtime.js?url";
+import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import coreBootstrapRuntimeUrl from "../../js/core_bootstrap_runtime.js?url";
 import keyboardInputManagerUrl from "../../js/keyboard_input_manager.js?url";
 import themeManagerUrl from "../../js/theme_manager.js?url";
@@ -44,7 +45,6 @@ import coreGameManagerModeRulesHelpersRuntimeUrl from "../../js/core_game_manage
 import coreGameManagerStaticRuntimeUrl from "../../js/core_game_manager_static_runtime.js?url";
 import coreGameManagerBindingsRuntimeUrl from "../../js/core_game_manager_bindings_runtime.js?url";
 import gameManagerUrl from "../../js/game_manager.js?url";
-import coreStorageRuntimeUrl from "../../js/core_storage_runtime.js?url";
 import playApplicationUrl from "../../js/play_application.js?url";
 import coreCappedTimerScrollRuntimeUrl from "../../js/core_capped_timer_scroll_runtime.js?url";
 import cappedTimerScrollUrl from "../../js/capped_timer_scroll.js?url";
@@ -94,6 +94,7 @@ export const playLegacyScripts = [
   seedrandomUrl,
   animframePolyfillUrl,
   gameDialogRuntimeUrl,
+  coreStorageRuntimeUrl,
   coreBootstrapRuntimeUrl,
   keyboardInputManagerUrl,
   themeManagerUrl,
@@ -137,7 +138,6 @@ export const playLegacyScripts = [
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
   gameManagerUrl,
-  coreStorageRuntimeUrl,
   playApplicationUrl,
   coreCappedTimerScrollRuntimeUrl,
   cappedTimerScrollUrl,

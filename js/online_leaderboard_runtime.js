@@ -23,6 +23,7 @@
   var RECORD_SUBMIT_PENDING_QUEUE_LIMIT = 20;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
+  var RECORD_SUBMIT_BROWSER_LOCK_NAME = "2048-next-record-submit-v1";
   var STONE_2K_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var STONE_2K_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var STONE_2K_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
@@ -938,6 +939,20 @@ function shouldAutoLoadOnlineLeaderboard() {
     return payload;
   }
 
+  function resolveRecordSubmitClientRecordId(payload) {
+    return toText(payload && payload.client_record_id).trim();
+  }
+
+  function hasSameRecordSubmitClientRecordId(leftPayload, rightPayload) {
+    var clientRecordId = resolveRecordSubmitClientRecordId(leftPayload);
+    return !!clientRecordId && clientRecordId === resolveRecordSubmitClientRecordId(rightPayload);
+  }
+
+  function buildRecordSubmitClientSignature(payload) {
+    var clientRecordId = resolveRecordSubmitClientRecordId(payload);
+    return clientRecordId ? "client_record_id|" + clientRecordId : "";
+  }
+
   function buildPendingSubmitState(rawValue, ttlMs, payloadNormalizer) {
     var raw = toText(rawValue).trim();
     if (!raw) return null;
@@ -1021,7 +1036,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     var normalized = normalizePendingRecordSubmitStateObject(state);
     if (!normalized || !normalized.payload) return;
     var queue = readPendingRecordSubmitQueue().filter(function (item) {
-      return item.signature !== normalized.signature;
+      return item.signature !== normalized.signature &&
+        !hasSameRecordSubmitClientRecordId(item.payload, normalized.payload);
     });
     queue.push(normalized);
     writePendingRecordSubmitQueue(queue);
@@ -1048,6 +1064,14 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!next) return null;
     safeSetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY, JSON.stringify(next));
     return next;
+  }
+
+  function removeMatchingPendingRecordSubmitQueueStates(state) {
+    if (!state) return;
+    writePendingRecordSubmitQueue(readPendingRecordSubmitQueue().filter(function (item) {
+      return item.signature !== state.signature &&
+        !hasSameRecordSubmitClientRecordId(item.payload, state.payload);
+    }));
   }
 
   function promoteAndRetryNextPendingRecordSubmit(options) {
@@ -3562,17 +3586,15 @@ async function refreshLeaderboard(modeLike) {
   }
 
   function buildRecordSubmitSignature(manager, payload) {
+    var clientSignature = buildRecordSubmitClientSignature(payload);
+    if (clientSignature) return clientSignature;
     var modeKey = toText(payload && payload.mode_key).trim() || (manager && manager.modeKey ? String(manager.modeKey) : "unknown");
     var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
     var score = Math.floor(Number(payload && payload.score) || 0);
     var moveCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
     var replayString = toText(payload && payload.replay_string);
-    var rescueReplayString = toText(manager && manager.rescueReplayString).trim();
-    var clientRecordId = rescueReplayString && replayString.trim() === rescueReplayString
-      ? toText(payload && payload.client_record_id).trim()
-      : "";
     var replayFingerprint = buildReplaySubmitFingerprint(replayString);
-    return [modeKey, seed, clientRecordId, replayFingerprint, String(score), String(moveCount)].join("|");
+    return [modeKey, seed, replayFingerprint, String(score), String(moveCount)].join("|");
   }
 
   function shouldSkipLegacyScoreSubmit(manager) {
@@ -3699,12 +3721,12 @@ async function refreshLeaderboard(modeLike) {
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
     var pendingState = readPendingRecordSubmitState();
     var pendingSignature = pendingState ? pendingState.signature : "";
-    if (
-      recordSubmitLock &&
-      pendingState &&
-      toText(pendingState.payload && pendingState.payload.client_record_id).trim() ===
-        toText(payload.client_record_id).trim()
-    ) return;
+    if (pendingState && hasSameRecordSubmitClientRecordId(pendingState.payload, payload)) {
+      cleanupRankedStateAfterRecordSubmit(manager, payload);
+      if (opts.skipExistingPendingRetry === true) return;
+      await retryPendingRecordSubmit(opts);
+      return;
+    }
     if (signature && signature === lastSignature) return;
     if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
     if (signature && pendingSignature && signature !== pendingSignature) {
@@ -3713,6 +3735,7 @@ async function refreshLeaderboard(modeLike) {
       writePendingRecordSubmitSignature(signature, pendingState, payload, { durabilityOnly: true });
     }
     cleanupRankedStateAfterRecordSubmit(manager, payload);
+    if (opts.skipExistingPendingRetry === true && pendingState) return;
     await retryPendingRecordSubmit(opts);
   }
 
@@ -3771,7 +3794,7 @@ async function refreshLeaderboard(modeLike) {
     return result;
   }
 
-  async function retryPendingRecordSubmit(options) {
+  async function retryPendingRecordSubmitOwned(options) {
     if (recordSubmitLock) return null;
     if (!getAuthToken()) return null;
     var pendingState = readPendingRecordSubmitState();
@@ -3804,7 +3827,11 @@ async function refreshLeaderboard(modeLike) {
     if (result && result.success) {
       notifyAchievementUnlocks(result);
       writeLastRecordSubmitResult(pendingState.payload, result, true);
-      safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY, pendingState.signature);
+      safeSetStorage(
+        STORAGE_LAST_RECORD_SUBMIT_KEY,
+        buildRecordSubmitClientSignature(pendingState.payload) || pendingState.signature
+      );
+      removeMatchingPendingRecordSubmitQueueStates(pendingState);
       clearPendingRecordSubmitSignature();
       promoteAndRetryNextPendingRecordSubmit(opts);
       var currentManager = global.game_manager;
@@ -3823,11 +3850,30 @@ async function refreshLeaderboard(modeLike) {
       return result;
     }
     if (!isTransientSubmitResult(result, errorText)) {
-      markRecordSubmitSignatureHandled(pendingState.signature);
+      markRecordSubmitSignatureHandled(
+        buildRecordSubmitClientSignature(pendingState.payload) || pendingState.signature
+      );
+      removeMatchingPendingRecordSubmitQueueStates(pendingState);
       clearPendingRecordSubmitSignature();
       promoteAndRetryNextPendingRecordSubmit(opts);
     }
     return result;
+  }
+
+  function retryPendingRecordSubmit(options) {
+    var lockManager = global.navigator && global.navigator.locks;
+    if (!lockManager || typeof lockManager.request !== "function") {
+      return retryPendingRecordSubmitOwned(options);
+    }
+    try {
+      return lockManager.request(
+        RECORD_SUBMIT_BROWSER_LOCK_NAME,
+        { mode: "exclusive" },
+        function () { return retryPendingRecordSubmitOwned(options); }
+      );
+    } catch (_errBrowserLock) {
+      return retryPendingRecordSubmitOwned(options);
+    }
   }
 
   async function retryPendingStone2kSubmit(options) {
@@ -4055,8 +4101,8 @@ async function refreshLeaderboard(modeLike) {
     manager[methodName] = wrapped;
   }
 
-  function bindImmediateOnlineSubmitHooks() {
-    var manager = global.game_manager;
+  function bindImmediateOnlineSubmitHooks(managerLike) {
+    var manager = managerLike || global.game_manager;
     if (!manager || manager.replayMode) return;
     if (manager.needsRankedCheckpointRestore) {
       scheduleRankedCheckpointRestore(manager, { reason: "bind" });
@@ -4075,7 +4121,11 @@ async function refreshLeaderboard(modeLike) {
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return;
     runPromiseSafely(function () {
-      return maybeSubmitRecordOnGameOver({ keepalive: true, manager: manager });
+      return maybeSubmitRecordOnGameOver({
+        keepalive: true,
+        manager: manager,
+        skipExistingPendingRetry: true
+      });
     });
     runPromiseSafely(function () {
       return maybeSubmitScoreOnGameOver({ keepalive: true, manager: manager });
@@ -4289,6 +4339,11 @@ function init() {
     startPolling();
   }
 
+  if (shouldAutoLoadOnlineLeaderboard()) {
+    bindImmediateOnlineSubmitHooks();
+    startPolling();
+  }
+
   global.OnlineLeaderboardRuntime = {
     refreshLeaderboard: refreshLeaderboard,
     refreshTimerLeaderboardPanel: refreshTimerLeaderboardPanel,
@@ -4306,7 +4361,8 @@ function init() {
     syncAccountBestScoreForCurrentMode: syncAccountBestScoreForCurrentMode,
     hasLocalRankedCheckpointMirror: hasRankedCheckpointLocalMirror,
     scheduleRankedCheckpointRestore: scheduleRankedCheckpointRestore,
-    persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide
+    persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide,
+    bindImmediateOnlineSubmitHooks: bindImmediateOnlineSubmitHooks
   };
 
   if (global.document.readyState === "loading") {

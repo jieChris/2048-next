@@ -94,6 +94,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect
       .poll(() => scoreCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(2);
+    await page.waitForFunction(() => (
+      !window.localStorage.getItem("online_pending_score_submit_v1") &&
+      !!window.localStorage.getItem("online_last_submit_signature_v1")
+    ));
 
     const finalSnapshot = await page.evaluate(() => ({
       pending: String(window.localStorage.getItem("online_pending_score_submit_v1") || ""),
@@ -219,6 +223,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect
       .poll(() => recordCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(2);
+    await page.waitForFunction(() => (
+      !window.localStorage.getItem("online_pending_record_submit_signature_v1") &&
+      !!window.localStorage.getItem("online_last_record_submit_signature_v1")
+    ));
 
     const finalSnapshot = await page.evaluate(() => ({
       pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
@@ -328,6 +336,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect
       .poll(() => recordCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(1);
+    await page.waitForFunction(() => (
+      !window.localStorage.getItem("online_pending_record_submit_signature_v1") &&
+      !!window.localStorage.getItem("online_last_record_submit_signature_v1")
+    ));
 
     const finalSnapshot = await page.evaluate(() => ({
       pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
