@@ -897,6 +897,7 @@ describe("online leaderboard terminal submission", () => {
   it("fetches enough timer leaderboard rows to render the authenticated player's own rank below top 10", async () => {
     const storage = new MemoryStorage();
     const topRows = Array.from({ length: 10 }, (_, index) => ({
+      rank: index + 1,
       user_id: index + 1,
       nickname: `Top${index + 1}`,
       score: 10000 - index
@@ -927,6 +928,7 @@ describe("online leaderboard terminal submission", () => {
     const fullRows = [
       ...topRows,
       {
+        rank: 11,
         user_id: 42,
         nickname: "Hui",
         score: 3492
