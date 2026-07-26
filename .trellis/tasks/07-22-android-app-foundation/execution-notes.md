@@ -253,6 +253,7 @@
 
 - **Category**: B / D / E - 跨层合同、测试覆盖缺口与隐式时序假设
 - **Specific Cause**: 浏览器端已经拥有服务端幂等键 `client_record_id`，但当前 pending、队列、最后处理标记仍可能按由模式、seed、回放和运行时状态派生的旧 signature 识别同一终局；单页 `recordSubmitLock` 不能覆盖 reload 期间旧页与新页并发。与此同时，提交钩子只在在线 runtime 的后续初始化阶段绑定，`GameManager` 创建窗口可能早于绑定；刷新任务运行期间的 wake 被任务结束时的普通定时覆盖；Smoke 只等待请求次数，没有等待请求完成后的 localStorage 微任务落定。
+- **Compatibility Constraint**: `client_record_id` 是主身份，但普通实时对局的既有合同还要求同一 seed/回放/分数在 ID 被意外重置时继续去重。因此成功/永久处理同时保存内容指纹作为次级损坏保险；rescue 恢复记录可能由不同稳定 ID 合法复用同一恢复回放，pending state 显式携带禁用内容指纹标记并跨队列/重试保留。
 
 ### 2. Why Fixes Failed
 
@@ -261,6 +262,7 @@
 3. **只依赖页内锁和旧 signature**：单页内可以防重入，但 reload 的两个 document 各有独立内存锁；同一 `client_record_id` 还可能以不同旧 signature 同时存在于 current 与 queue。
 4. **生命周期统一触发 keepalive retry**：已持久化 pending 被旧页再次上传，扩大 reload 并发窗口；新终局与已有 pending 没有区分。
 5. **测试只轮询请求计数**：最后一个网络响应后的 pending 清理仍在后续微任务中，测试读取 localStorage 可能早于真实状态收敛。
+6. **重开 Smoke 把异步确认/准备误当同步完成**：用例设置 `window.confirm`，但页面实际使用 `GameDialog.confirm`；它既没有点击确认，也只看到 next ranked token/seed 已切换就人工制造下一终局，因此真实 `setup()` 从未执行，manager 仍持有旧局 `client_record_id`。旧派生 signature 因分数和回放变化错误放行第二次上传，稳定 ID 去重后才暴露该测试假设。用例现点击真实确认按钮，并等待新局非终局且产生不同 ID 后再继续。
 
 ### 3. Prevention Mechanisms
 
@@ -286,3 +288,6 @@
 - [x] 仓库不存在 `src/templates/markdown/spec/`，无模板可同步。
 - [x] 新增并扩展对应单元与 Smoke 回归。
 - [x] 2026-07-26 恢复 Goal 后，目标两项 Smoke `--repeat-each=20` 共 `40/40` 通过。
+- [x] GitHub pages Smoke 首轮在 `212/225` 后暴露异步重开测试假设；本机稳定复现，改为点击真实 `GameDialog` 确认并等待新 `client_record_id`，专项 `--repeat-each=20` 为 `20/20`，未放宽产品去重。
+- [x] 完整重开提交文件 `13/13` 进一步验证普通同内容换 ID 仍去重、rescue 同回放换稳定 ID 仍可形成不同记录；对应单元集合 `54/54` 通过。
+- [x] 初始化/持久化/重开三项竞态 Smoke 合并高重复运行 `--repeat-each=20`，最终 `60/60` 通过。

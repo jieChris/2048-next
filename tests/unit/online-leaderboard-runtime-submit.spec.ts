@@ -17,6 +17,7 @@ const PENDING_RECORD_KEY = "online_pending_record_submit_signature_v1";
 const PENDING_RECORD_QUEUE_KEY = "online_pending_record_submit_queue_v1";
 const PENDING_SCORE_KEY = "online_pending_score_submit_v1";
 const LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
+const LAST_RECORD_SUBMIT_FINGERPRINT_KEY = "online_last_record_submit_fingerprint_v1";
 const LAST_RECORD_RESULT_KEY = "online_last_record_submit_result_v1";
 const BEST_SCORE_KEY = `bestScoreByMode:${MODE_KEY}`;
 const TIMER_LEADERBOARD_CACHE_KEY = `timer_leaderboard_cache:v1:${MODE_KEY}|all`;
@@ -1663,6 +1664,32 @@ describe("online leaderboard terminal submission", () => {
 
     expect(recordCalls).toBe(1);
     expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+  });
+
+  it("keeps content fingerprint dedupe when the same record is reassigned a client id", async () => {
+    const storage = new MemoryStorage();
+    const manager = createTerminatedManager({ clientRecordId: "rec_original" });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "record-original" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    await flushRuntimePromises();
+    manager.clientRecordId = "rec_reassigned";
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.filter((call) => call.url.endsWith("/records"))).toHaveLength(1);
+    expect(storage.getItem(LAST_RECORD_SUBMIT_KEY)).toBe("client_record_id|rec_original");
+    expect(storage.getItem(LAST_RECORD_SUBMIT_FINGERPRINT_KEY)).toBeTruthy();
   });
 
   it("keeps a terminal record pending when auth was cleared before the game-over submit runs", async () => {

@@ -159,6 +159,8 @@ writePendingRecordSubmitSignature(signature, pendingState, payload);
 
 - A non-empty `client_record_id` is the primary browser-side identity of a terminal record. Current pending state, queued state, last-handled state, and lifecycle retries must compare it before any legacy derived signature.
 - Replay fingerprints, score, mode, seed, and move count are only a compatibility fallback for old payloads that do not contain `client_record_id`; they must not create a second identity for a modern record.
+- After a normal live record is handled, keep its content fingerprint as a secondary corruption guard. If the same seed/replay/score is presented again under a different `client_record_id`, treat it as the same terminal record; a legitimate restarted game must first complete setup and receive both a new ID and new game content.
+- Rescue-recovered records are the exception: distinct recovered sessions can legitimately reuse the same rescue replay string, so their durable pending state disables content-fingerprint dedupe and relies on stable `client_record_id`. Persist the content signature and this exception flag with the pending item across queueing and retry; do not reconstruct them later from whichever manager happens to be active.
 - Success or permanent rejection must remove every current/queued state with the same `client_record_id`. Authentication and transient failures keep the durable state.
 
 ### 3. Initialization and Lifecycle Ordering
@@ -182,3 +184,4 @@ writePendingRecordSubmitSignature(signature, pendingState, payload);
 - Unit: legacy signatures with the same `client_record_id` collapse to one current/queued item and one request.
 - Unit: two page runtimes sharing storage and a Web Lock issue one `/records` request.
 - Smoke: reload/lifecycle retry clears pending state and writes last-handled state; repeat the scenario enough times to expose ordering races.
+- Smoke: a restart test must wait until setup has produced a different non-empty `client_record_id` before simulating the next terminal state. Changing score/replay while the old ID is still active is still the same record and must remain deduplicated.

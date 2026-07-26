@@ -9,6 +9,7 @@
   var STORAGE_LAST_SUBMIT_KEY = "online_last_submit_signature_v1";
   var STORAGE_PENDING_SCORE_SUBMIT_KEY = "online_pending_score_submit_v1";
   var STORAGE_LAST_RECORD_SUBMIT_KEY = "online_last_record_submit_signature_v1";
+  var STORAGE_LAST_RECORD_SUBMIT_FINGERPRINT_KEY = "online_last_record_submit_fingerprint_v1";
   var STORAGE_PENDING_RECORD_SUBMIT_KEY = "online_pending_record_submit_signature_v1";
   var STORAGE_PENDING_RECORD_QUEUE_KEY = "online_pending_record_submit_queue_v1";
   var STORAGE_LAST_RECORD_SUBMIT_RESULT_KEY = "online_last_record_submit_result_v1";
@@ -976,7 +977,9 @@ function shouldAutoLoadOnlineLeaderboard() {
           createdAt: createdAt > 0 ? createdAt : (lastAttemptAt > 0 ? lastAttemptAt : now),
           lastAttemptAt: lastAttemptAt,
           retryCount: retryCount,
-          ownerUserId: ownerUserId || ""
+          ownerUserId: ownerUserId || "",
+          contentSignature: toText(parsed.contentSignature).trim(),
+          contentFingerprintDisabled: parsed.contentFingerprintDisabled === true
         };
       }
     } catch (_err) {
@@ -1043,7 +1046,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     writePendingRecordSubmitQueue(queue);
   }
 
-  function enqueuePendingRecordSubmitPayload(signature, payload) {
+  function enqueuePendingRecordSubmitPayload(signature, payload, options) {
     var text = toText(signature).trim();
     var normalizedPayload = normalizePendingRecordSubmitPayload(payload);
     if (!text || !normalizedPayload) return;
@@ -1053,7 +1056,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       ownerUserId: toText(getUserId()).trim() || "",
       createdAt: Date.now(),
       lastAttemptAt: 0,
-      retryCount: 0
+      retryCount: 0,
+      contentSignature: toText(options && options.contentSignature).trim(),
+      contentFingerprintDisabled: !!(options && options.contentFingerprintDisabled === true)
     });
   }
 
@@ -1228,7 +1233,13 @@ function shouldAutoLoadOnlineLeaderboard() {
         lastAttemptAt: durabilityOnly ? (hadPreviousAttempt ? Math.floor(Number(previous.lastAttemptAt)) : 0) : now,
         retryCount: hadPreviousAttempt && !durabilityOnly
           ? Math.max(0, Math.floor(Number(previous.retryCount) || 0)) + 1
-          : Math.max(0, Math.floor(Number(previous && previous.retryCount) || 0))
+          : Math.max(0, Math.floor(Number(previous && previous.retryCount) || 0)),
+        contentFingerprintDisabled: previous
+          ? previous.contentFingerprintDisabled === true
+          : !!(options && options.contentFingerprintDisabled === true),
+        contentSignature: previous && toText(previous.contentSignature).trim()
+          ? toText(previous.contentSignature).trim()
+          : toText(options && options.contentSignature).trim()
       })
     );
   }
@@ -3585,16 +3596,44 @@ async function refreshLeaderboard(modeLike) {
     return [modeKey, seed, replayFingerprint, String(score)].join("|");
   }
 
-  function buildRecordSubmitSignature(manager, payload) {
-    var clientSignature = buildRecordSubmitClientSignature(payload);
-    if (clientSignature) return clientSignature;
+  function buildRecordSubmitContentSignature(manager, payload) {
     var modeKey = toText(payload && payload.mode_key).trim() || (manager && manager.modeKey ? String(manager.modeKey) : "unknown");
-    var seed = manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless";
+    var payloadSeed = payload && payload.initial_seed != null
+      ? payload.initial_seed
+      : (payload && payload.seed != null ? payload.seed : null);
+    var seed = payloadSeed != null
+      ? String(payloadSeed)
+      : (manager && manager.initialSeed != null ? String(manager.initialSeed) : "seedless");
     var score = Math.floor(Number(payload && payload.score) || 0);
-    var moveCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
+    var replay = payload && payload.replay && typeof payload.replay === "object" ? payload.replay : null;
+    var moveCount = Array.isArray(replay && replay.actions)
+      ? replay.actions.length
+      : (Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0);
     var replayString = toText(payload && payload.replay_string);
     var replayFingerprint = buildReplaySubmitFingerprint(replayString);
     return [modeKey, seed, replayFingerprint, String(score), String(moveCount)].join("|");
+  }
+
+  function buildRecordSubmitSignature(manager, payload) {
+    return buildRecordSubmitClientSignature(payload) || buildRecordSubmitContentSignature(manager, payload);
+  }
+
+  function shouldDisableRecordSubmitContentFingerprint(manager, payload) {
+    var rescueReplayString = toText(manager && manager.rescueReplayString).trim();
+    return !!rescueReplayString && rescueReplayString === toText(payload && payload.replay_string).trim();
+  }
+
+  function markRecordSubmitStateHandled(state) {
+    if (!state) return;
+    markRecordSubmitSignatureHandled(
+      buildRecordSubmitClientSignature(state.payload) || state.signature
+    );
+    if (state.contentFingerprintDisabled === true) return;
+    var contentSignature = toText(state.contentSignature).trim() ||
+      buildRecordSubmitContentSignature(null, state.payload);
+    if (contentSignature) {
+      safeSetStorage(STORAGE_LAST_RECORD_SUBMIT_FINGERPRINT_KEY, contentSignature);
+    }
   }
 
   function shouldSkipLegacyScoreSubmit(manager) {
@@ -3718,7 +3757,12 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var signature = buildRecordSubmitSignature(manager, payload);
+    var contentFingerprintDisabled = shouldDisableRecordSubmitContentFingerprint(manager, payload);
+    var contentSignature = contentFingerprintDisabled
+      ? ""
+      : buildRecordSubmitContentSignature(manager, payload);
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
+    var lastContentSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_FINGERPRINT_KEY));
     var pendingState = readPendingRecordSubmitState();
     var pendingSignature = pendingState ? pendingState.signature : "";
     if (pendingState && hasSameRecordSubmitClientRecordId(pendingState.payload, payload)) {
@@ -3728,11 +3772,22 @@ async function refreshLeaderboard(modeLike) {
       return;
     }
     if (signature && signature === lastSignature) return;
+    if (
+      contentSignature &&
+      (contentSignature === lastSignature || contentSignature === lastContentSignature)
+    ) return;
     if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
     if (signature && pendingSignature && signature !== pendingSignature) {
-      enqueuePendingRecordSubmitPayload(signature, payload);
+      enqueuePendingRecordSubmitPayload(signature, payload, {
+        contentSignature: contentSignature,
+        contentFingerprintDisabled: contentFingerprintDisabled
+      });
     } else if (signature && !pendingSignature) {
-      writePendingRecordSubmitSignature(signature, pendingState, payload, { durabilityOnly: true });
+      writePendingRecordSubmitSignature(signature, pendingState, payload, {
+        durabilityOnly: true,
+        contentSignature: contentSignature,
+        contentFingerprintDisabled: contentFingerprintDisabled
+      });
     }
     cleanupRankedStateAfterRecordSubmit(manager, payload);
     if (opts.skipExistingPendingRetry === true && pendingState) return;
@@ -3827,10 +3882,7 @@ async function refreshLeaderboard(modeLike) {
     if (result && result.success) {
       notifyAchievementUnlocks(result);
       writeLastRecordSubmitResult(pendingState.payload, result, true);
-      safeSetStorage(
-        STORAGE_LAST_RECORD_SUBMIT_KEY,
-        buildRecordSubmitClientSignature(pendingState.payload) || pendingState.signature
-      );
+      markRecordSubmitStateHandled(pendingState);
       removeMatchingPendingRecordSubmitQueueStates(pendingState);
       clearPendingRecordSubmitSignature();
       promoteAndRetryNextPendingRecordSubmit(opts);
@@ -3850,9 +3902,7 @@ async function refreshLeaderboard(modeLike) {
       return result;
     }
     if (!isTransientSubmitResult(result, errorText)) {
-      markRecordSubmitSignatureHandled(
-        buildRecordSubmitClientSignature(pendingState.payload) || pendingState.signature
-      );
+      markRecordSubmitStateHandled(pendingState);
       removeMatchingPendingRecordSubmitQueueStates(pendingState);
       clearPendingRecordSubmitSignature();
       promoteAndRetryNextPendingRecordSubmit(opts);

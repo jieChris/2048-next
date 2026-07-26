@@ -149,6 +149,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.restart();
       manager.rankCheckpointApplying = false;
     }, modeKey);
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
+    await page.locator("#game-dialog-confirm").click();
+    await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
 
     await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     await expect
@@ -183,6 +186,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterRestartSession.initialSeed).toBe(nextSession.seed);
     expect(afterRestartSession.managerToken).toBe("next-ranked-token");
     expect(afterRestartSession.activeToken).toBe("next-ranked-token");
+
+    const firstClientRecordId = String(recordPayloads[0]?.client_record_id || "");
+    expect(firstClientRecordId).not.toBe("");
+    await expect
+      .poll(
+        async () =>
+          page.evaluate((previousClientRecordId) => {
+            const manager = (window as any).game_manager;
+            const currentClientRecordId = String(manager?.clientRecordId || "");
+            return !!(
+              manager &&
+              manager.rankedRestartPreparing !== true &&
+              manager.over !== true &&
+              manager.sessionSubmitDone !== true &&
+              currentClientRecordId &&
+              currentClientRecordId !== previousClientRecordId
+            );
+          }, firstClientRecordId),
+        { timeout: 5000 }
+      )
+      .toBe(true);
 
     await page.evaluate(async (injectedModeKey) => {
       const manager = (window as any).game_manager;
