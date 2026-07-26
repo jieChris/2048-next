@@ -2,6 +2,7 @@
 
 ## Route Deviation
 
+- 2026-07-26 11:48 +0800，真机采样结束后按计划执行 `svc power stayon false`，但一加 Android 12 ROM 静默忽略该 shell 调用，`stay_on_while_plugged_in` 仍为 `7`；直接写 global setting 又被 `WRITE_SECURE_SETTINGS` 拒绝。采用最保守回退：不 Root、不授予 shell 特权、不绕过系统安全，打开系统“开发者选项”，通过可见的“充电时屏幕不休眠”开关恢复关闭，并核对 switch `checked=false`、global setting `0` 后返回 App。未改变其他开发者选项或系统刷新率设置。
 - 2026-07-26 03:26 +0800，为补齐本机 API 36 模拟器矩阵，首次通过旧 `sdkmanager` 下载 `system-images;android-36;google_apis;arm64-v8a` 时，Google 仓库在连续多轮等待后仍未返回 package manifest。采用最保守回退：中止旧进程，不使用第三方镜像、未知来源 system image 或手工拼装 AVD；改用 Android Studio 当前推荐的官方 `android sdk` CLI 后成功从 `dl.google.com` 安装同一官方镜像，并建立 `2048_NEXT_API_36` AVD。路线偏离只限于官方 SDK 工具的迁移，未改变代码、镜像来源或验收标准。
 - 已批准设计原计划使用 Capacitor 官方 Haptics 插件，但核对 8.0.2 Android 源码确认其通过 `Vibrator/VibrationEffect` 直接振动，无法可靠遵守用户已确认的系统“触觉反馈”开关。采用最保守回退：移除未使用的官方 Haptics 依赖及其 `VIBRATE` 权限，改为单方法 `Next2048SystemHaptics` 原生桥，仅调用 Activity decor view 的 `performHapticFeedback`，不设置 `FLAG_IGNORE_GLOBAL_SETTING`，由 Android 系统决定是否执行；App 仍只在合并、里程碑和结束反馈时调用，不对每次滑动触发。影响是已批准的 Capacitor 官方插件集合从五个缩减为四个，并增加一个仓库内可审计的无权限桥；未新增第三方依赖、权限或后台能力，若未来官方插件提供可验证的系统设置遵循能力，可删除该桥并恢复官方实现。
 - 为闭合阶段 2.2B 的真实 PostgreSQL 门禁，本机通过 Homebrew 安装 `postgresql@17` 17.10；公式下载与安装完成，但 post-install `initdb` 被 macOS 系统策略拒绝加载 `icu4c@78` 的动态库，报告代码签名无效。采用最保守回退：不关闭系统安全策略、不对第三方动态库强制改签、不把 mock 当真实数据库；最终使用隔离的受信 PostgreSQL 17.10 运行时 `/tmp/2048-next-pg17-runtime` 建立仓库外测试集群并完成迁移、回填、索引和账号删除真实验证。未修改系统安全策略、未启动生产服务、未接触生产数据。
