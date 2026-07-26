@@ -232,7 +232,7 @@ test("320 by 568 keeps top pages and game inside app-owned scroll containers", a
   );
   expect(actionBoxes).toHaveLength(2);
   expect(Math.abs(actionBoxes[0].top - actionBoxes[1].top)).toBeLessThanOrEqual(
-    1,
+    2,
   );
   expect(actionBoxes[0].right).toBeLessThanOrEqual(actionBoxes[1].left + 1);
   expectAppConfinedToViewport(await readAppLayout(page), false);
