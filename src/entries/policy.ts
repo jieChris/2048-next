@@ -55,7 +55,7 @@ function render(): void {
     "[data-policy-status]",
     locale === "en"
       ? `Unapproved draft. Release blockers: ${POLICY_APPROVAL_BLOCKERS.join(", ")}.`
-      : `未批准草案。公开发行前仍须补齐：运营主体、联系邮箱、生产托管信息、生效日期。`,
+      : `未批准草案。公开发行前仍须补齐：运营主体、境外生产主服务器服务商及所在国家/地区、生效日期。`,
   );
   setText(
     "[data-policy-peer]",

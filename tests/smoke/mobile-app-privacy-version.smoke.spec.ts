@@ -85,7 +85,7 @@ test("a document-only revision does not invalidate current consent", async ({ pa
     .locator('[data-app-view="me"] [data-action="open-policies"]')
     .click();
   await expect(page.locator("[data-app-view='policies']")).toContainText(
-    "unapproved-draft.1",
+    "unapproved-draft.2",
   );
   await expect(page.getByRole("heading", { name: "开始之前" })).toBeHidden();
 });

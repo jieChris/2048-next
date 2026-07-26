@@ -13,14 +13,13 @@ import {
 
 describe("shared mobile and web policy bundle", () => {
   it("keeps the release gate closed until the approval metadata is complete", () => {
-    expect(POLICY_BUNDLE_VERSION).toBe("unapproved-draft.1");
+    expect(POLICY_BUNDLE_VERSION).toBe("unapproved-draft.2");
     expect(POLICY_CONSENT_VERSION).toBe("unapproved-draft");
     expect(PREVIEW_POLICY_VERSION).toBe(POLICY_CONSENT_VERSION);
     expect(PREVIEW_POLICY_VERSION).not.toBe(POLICY_BUNDLE_VERSION);
     expect(POLICY_EFFECTIVE_DATE).toBeNull();
     expect(POLICY_APPROVAL_BLOCKERS).toEqual([
       "operator_identity",
-      "contact_email",
       "production_hosting_provider",
       "effective_date",
     ]);
@@ -32,9 +31,12 @@ describe("shared mobile and web policy bundle", () => {
     expect(privacy).toContain("INTERNET");
     expect(privacy).toContain("Resend");
     expect(privacy).toContain("Turnstile");
+    expect(privacy).toContain("华为云中国大陆上海区域");
+    expect(privacy).toContain("1203214493@qq.com");
     expect(privacy).toContain("30 天");
     expect(privacy).toContain("72 小时");
     expect(terms).toContain("3-day restoration period");
+    expect(terms).toContain("1203214493@qq.com");
     expect(terms).toContain("unique consecutive ranks");
   });
 

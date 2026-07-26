@@ -12,12 +12,14 @@ test("public privacy and terms pages render the same unapproved policy bundle", 
   await page.goto("/privacy.html");
   await expect(page.locator("body")).toHaveAttribute("data-ready", "1");
   await expect(page.getByRole("heading", { name: "2048 NEXT 隐私政策" })).toBeVisible();
-  await expect(page.locator("[data-policy-version]")).toHaveText("unapproved-draft.1");
+  await expect(page.locator("[data-policy-version]")).toHaveText("unapproved-draft.2");
   await expect(page.locator("[data-policy-date]")).toHaveText("尚未生效");
   await expect(page.locator("[data-policy-status]")).toContainText("运营主体");
-  await expect(page.locator("[data-policy-status]")).toContainText("生产托管信息");
+  await expect(page.locator("[data-policy-status]")).toContainText("境外生产主服务器");
   await expect(page.locator("[data-policy-content]")).toContainText("INTERNET");
   await expect(page.locator("[data-policy-content]")).toContainText("Resend");
+  await expect(page.locator("[data-policy-content]")).toContainText("华为云中国大陆上海区域");
+  await expect(page.locator("[data-policy-content]")).toContainText("1203214493@qq.com");
   await expect(page.getByRole("link", { name: "账号删除" })).toHaveAttribute(
     "href",
     "account-deletion.html",
