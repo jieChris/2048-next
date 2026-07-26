@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  createMobileAuthService,
-  MobileAuthError,
-} from "../../mobile/src/auth/auth-service";
+import { createMobileAuthService } from "../../mobile/src/auth/auth-service";
 import {
   MOBILE_BUILD_FLAGS,
   MOBILE_PRODUCTION_API_BASE,
@@ -12,16 +9,18 @@ import { createMemorySecureStorage } from "../../mobile/src/platform/secure-stor
 import { createPreviewPrivacyRecord } from "../../mobile/src/privacy";
 
 describe("production mobile auth composition", () => {
-  it("freezes the API base and keeps the unapproved policy fully offline", () => {
+  it("freezes the API base and accepts the current approved policy", () => {
     expect(import.meta.env.MODE).toBe("production");
     expect(MOBILE_BUILD_FLAGS).toEqual({
       apiBase: MOBILE_PRODUCTION_API_BASE,
       allowApiBaseOverride: false,
       allowDebugLoopbackHttp: false,
-      allowUnapprovedPolicyOnline: false,
     });
 
-    const clientFactory = vi.fn();
+    const clientFactory = vi.fn(() => ({
+      request: vi.fn(),
+      requestResult: vi.fn(),
+    }));
     expect(() =>
       createMobileAuthService({
         apiBase: "https://api.example.test/api",
@@ -32,7 +31,7 @@ describe("production mobile auth composition", () => {
     ).toThrow(
       expect.objectContaining({
         name: "MobileAuthError",
-        code: "privacy_online_required",
+        code: "invalid_api_base",
       }),
     );
     expect(() =>
@@ -41,7 +40,10 @@ describe("production mobile auth composition", () => {
         secureStorage: createMemorySecureStorage(),
         clientFactory,
       }),
-    ).toThrow(MobileAuthError);
-    expect(clientFactory).not.toHaveBeenCalled();
+    ).not.toThrow();
+    expect(clientFactory).toHaveBeenCalledTimes(1);
+    expect(clientFactory.mock.calls[0][0]).toMatchObject({
+      bases: [MOBILE_PRODUCTION_API_BASE],
+    });
   });
 });

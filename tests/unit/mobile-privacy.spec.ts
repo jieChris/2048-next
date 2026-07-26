@@ -7,16 +7,16 @@ import {
   PREVIEW_PRIVACY_STORAGE_KEY
 } from "../../mobile/src/privacy";
 
-describe("mobile preview privacy record", () => {
-  it("uses an explicit preview-only key and unapproved policy marker", () => {
+describe("mobile privacy record", () => {
+  it("uses the approved policy version without migrating the stable storage key", () => {
     expect(PREVIEW_PRIVACY_STORAGE_KEY).toContain("preview");
-    expect(PREVIEW_POLICY_VERSION).toBe("unapproved-draft");
+    expect(PREVIEW_POLICY_VERSION).toBe("2026-08-01");
 
     expect(createPreviewPrivacyRecord("offline", 1_784_779_200_000)).toEqual({
       schema: 1,
       choice: "offline",
       decidedAt: 1_784_779_200_000,
-      policyVersion: "unapproved-draft"
+      policyVersion: "2026-08-01"
     });
   });
 

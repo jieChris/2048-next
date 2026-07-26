@@ -7,7 +7,7 @@ test("startup, top navigation, game entry, and input first frame stay inside loc
     localStorage.setItem(key, JSON.stringify({
       schema: 1,
       choice: "offline",
-      policyVersion: "unapproved-draft",
+      policyVersion: "2026-08-01",
       decidedAt: Date.now(),
     }));
   }, { key: PRIVACY_KEY });

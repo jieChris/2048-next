@@ -12,17 +12,13 @@ import {
 } from "../../src/policies/2048-next-policy";
 
 describe("shared mobile and web policy bundle", () => {
-  it("keeps the release gate closed until the approval metadata is complete", () => {
-    expect(POLICY_BUNDLE_VERSION).toBe("unapproved-draft.2");
-    expect(POLICY_CONSENT_VERSION).toBe("unapproved-draft");
+  it("publishes the approved policy metadata", () => {
+    expect(POLICY_BUNDLE_VERSION).toBe("2026-08-01.1");
+    expect(POLICY_CONSENT_VERSION).toBe("2026-08-01");
     expect(PREVIEW_POLICY_VERSION).toBe(POLICY_CONSENT_VERSION);
     expect(PREVIEW_POLICY_VERSION).not.toBe(POLICY_BUNDLE_VERSION);
-    expect(POLICY_EFFECTIVE_DATE).toBeNull();
-    expect(POLICY_APPROVAL_BLOCKERS).toEqual([
-      "operator_identity",
-      "production_hosting_provider",
-      "effective_date",
-    ]);
+    expect(POLICY_EFFECTIVE_DATE).toBe("2026-08-01");
+    expect(POLICY_APPROVAL_BLOCKERS).toEqual([]);
   });
 
   it("renders the verified data, permission, provider, retention, and deletion rules", () => {
@@ -32,7 +28,11 @@ describe("shared mobile and web policy bundle", () => {
     expect(privacy).toContain("Resend");
     expect(privacy).toContain("Turnstile");
     expect(privacy).toContain("华为云中国大陆上海区域");
+    expect(privacy).toContain("Color Cross");
+    expect(privacy).toContain("美国芝加哥");
+    expect(privacy).toContain("单独同意上述个人信息出境处理");
     expect(privacy).toContain("1203214493@qq.com");
+    expect(privacy).toContain("自然人王世杰");
     expect(privacy).toContain("30 天");
     expect(privacy).toContain("72 小时");
     expect(terms).toContain("3-day restoration period");

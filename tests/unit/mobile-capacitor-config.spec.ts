@@ -120,7 +120,6 @@ describe("mobile Capacitor configuration", () => {
       apiBase: MOBILE_PRODUCTION_API_BASE,
       allowApiBaseOverride: false,
       allowDebugLoopbackHttp: false,
-      allowUnapprovedPolicyOnline: false,
     });
   });
 });

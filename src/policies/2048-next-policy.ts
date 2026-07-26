@@ -14,19 +14,15 @@ export interface PolicyDocument {
   readonly sections: readonly PolicySection[];
 }
 
-export const POLICY_BUNDLE_VERSION = "unapproved-draft.2" as const;
-export const POLICY_CONSENT_VERSION = "unapproved-draft" as const;
-export const POLICY_EFFECTIVE_DATE: string | null = null;
-export const POLICY_APPROVAL_BLOCKERS = [
-  "operator_identity",
-  "production_hosting_provider",
-  "effective_date",
-] as const;
+export const POLICY_BUNDLE_VERSION = "2026-08-01.1" as const;
+export const POLICY_CONSENT_VERSION = "2026-08-01" as const;
+export const POLICY_EFFECTIVE_DATE = "2026-08-01" as const;
+export const POLICY_APPROVAL_BLOCKERS = [] as const;
 
 const PRIVACY_ZH: PolicyDocument = {
   title: "2048 NEXT 隐私政策",
   shortTitle: "隐私政策",
-  intro: "本政策说明 2048 NEXT 网页版与 Android App 在本地离线体验、账号联网功能、游戏记录、排行榜、成就和稳定性诊断中如何处理信息。当前文本尚未生效，正式版本必须补齐运营主体、境外生产主服务器服务商及所在国家/地区和生效日期，并经用户明确批准。",
+  intro: "本政策说明 2048 NEXT 网页版与 Android App 在本地离线体验、账号联网功能、游戏记录、排行榜、成就和稳定性诊断中如何处理信息。本版本已经运营者批准，自 2026 年 8 月 1 日起生效。",
   sections: [
     {
       title: "一、适用范围与基本原则",
@@ -81,7 +77,8 @@ const PRIVACY_ZH: PolicyDocument = {
       items: [
         "Resend：用于发送注册和密码重置邮件，会接收收件邮箱、验证码、用途和有效期。",
         "Cloudflare：网站可能使用其 DNS、CDN、WAF 等网络安全与加速能力；网页版注册或密码重置页面可能使用 Turnstile 人机验证并处理必要的网络与浏览器信号。Android App 的公开账号流程不嵌入 Turnstile。",
-        "服务器托管与备份：账号、游戏数据库和回放由 2048-game-api 的受控 PostgreSQL 与服务器私有存储处理。后端服务器备份保存在华为云中国大陆上海区域；生产主服务器位于境外，其服务商及所在国家/地区仍需在发布前补充。",
+        "服务器托管与备份：账号、游戏数据库和回放由 2048-game-api 的受控 PostgreSQL 与服务器私有存储处理。生产主服务器由 Color Cross 提供，位于美国芝加哥；后端服务器备份保存在华为云中国大陆上海区域。",
+        "个人信息出境：当你选择“同意并继续”并使用联网功能时，第三节所列、为相应功能所必需的信息会传输至美国芝加哥的生产主服务器处理。该选择同时表示你已阅读本政策，并单独同意上述个人信息出境处理。你可以拒绝并选择仅离线体验；拒绝不会影响游客标准 4×4 和其他本地功能。",
       ],
     },
     {
@@ -118,7 +115,7 @@ const PRIVACY_ZH: PolicyDocument = {
       paragraphs: [
         "我们采用 HTTPS、密码哈希、Android Keystore、Token 版本撤销、权限最小化、回放验证、访问控制、速率限制和数据隔离等措施。任何系统均无法保证绝对安全；发生影响你权益的安全事件时，我们会依法采取补救与通知措施。",
         "只有处理目的、信息范围、共享对象或权利规则发生实质变化时，App 才会在下一次联网前重新请求确认。普通排版或说明更新不会反复打断用户。",
-        "政策与协议内容责任人为王世杰，联系邮箱为 1203214493@qq.com。当前草案尚缺运营主体法定姓名或名称、境外生产主服务器服务商及所在国家/地区和生效日期，因此不能作为已生效政策或公开发行候选文本。",
+        "2048 NEXT 由自然人王世杰运营，政策与协议内容责任人为王世杰，联系邮箱为 1203214493@qq.com。你可以通过该邮箱请求访问、更正、删除或解释个人信息处理。",
       ],
     },
   ],
@@ -127,7 +124,7 @@ const PRIVACY_ZH: PolicyDocument = {
 const PRIVACY_EN: PolicyDocument = {
   title: "2048 NEXT Privacy Policy",
   shortTitle: "Privacy Policy",
-  intro: "This policy explains how the 2048 NEXT website and Android App handle information for offline play, account features, game records, leaderboards, achievements, and stability diagnostics. This draft is not effective. The operator identity, overseas production host and country or region, and effective date must be completed and explicitly approved before release.",
+  intro: "This policy explains how the 2048 NEXT website and Android App handle information for offline play, account features, game records, leaderboards, achievements, and stability diagnostics. The operator has approved this version, effective August 1, 2026.",
   sections: [
     {
       title: "1. Scope and principles",
@@ -172,7 +169,8 @@ const PRIVACY_EN: PolicyDocument = {
       items: [
         "Resend sends registration and password-reset email and receives the destination email, code, purpose, and expiry.",
         "Cloudflare may provide website DNS, CDN, WAF, and related network security or acceleration. Web registration or password-reset pages may use Turnstile and process necessary network and browser signals. The Android public account flow does not embed Turnstile.",
-        "Server hosting and backups: account and game databases and replays are processed by controlled PostgreSQL and private server storage used by 2048-game-api. Backend server backups are stored in the Huawei Cloud Shanghai region in mainland China. The production primary server is outside mainland China; its provider and country or region must be completed before release.",
+        "Server hosting and backups: account and game databases and replays are processed by controlled PostgreSQL and private server storage used by 2048-game-api. The production primary server is provided by Color Cross in Chicago, United States. Backend server backups are stored in the Huawei Cloud Shanghai region in mainland China.",
+        "Cross-border personal-information processing: when you choose Agree and continue and use online features, the information listed in Section 3 that is necessary for the requested feature is transferred to and processed by the production primary server in Chicago, United States. This choice confirms that you have read this policy and separately consent to that cross-border processing. You may decline and continue offline; declining does not affect Guest Standard 4×4 or other local features.",
       ],
     },
     {
@@ -207,7 +205,7 @@ const PRIVACY_EN: PolicyDocument = {
       paragraphs: [
         "We use HTTPS, password hashing, Android Keystore, token-version revocation, least privilege, replay verification, access control, rate limiting, and data isolation. No system can guarantee absolute security; if an incident affects your rights, we will take remedial and notification steps required by law.",
         "The App asks again before the next online action only when purposes, data scope, sharing, or user rights materially change. Formatting or explanatory edits do not repeatedly interrupt users.",
-        "The policy and terms content contact is 王世杰, at 1203214493@qq.com. This draft is still missing the operator's legal identity, the overseas production primary-server provider and country or region, and the effective date, so it cannot serve as an effective policy or public release candidate.",
+        "2048 NEXT is operated by the individual 王世杰, who is also responsible for the policy and terms content. Contact: 1203214493@qq.com. You may use this address to request access, correction, deletion, or an explanation of personal-information processing.",
       ],
     },
   ],
@@ -216,7 +214,7 @@ const PRIVACY_EN: PolicyDocument = {
 const TERMS_ZH: PolicyDocument = {
   title: "2048 NEXT 用户协议",
   shortTitle: "用户协议",
-  intro: "本协议适用于 2048 NEXT 网页版与 Android App。当前文本尚未生效，正式版本必须补齐运营主体、境外生产主服务器服务商及所在国家/地区和生效日期，并经用户明确批准。",
+  intro: "本协议适用于 2048 NEXT 网页版与 Android App。本版本已经运营者批准，自 2026 年 8 月 1 日起生效。",
   sections: [
     {
       title: "一、服务内容",
@@ -290,7 +288,7 @@ const TERMS_ZH: PolicyDocument = {
       paragraphs: [
         "协议发生实质变化时，会以版本化文本和合理方式提示；继续使用受变更影响的联网功能前会按适用规则请求确认。",
         "本协议适用中华人民共和国法律。争议应先友好协商；协商不成的，提交有管辖权的人民法院处理。",
-        "政策与协议内容责任人为王世杰，联系邮箱为 1203214493@qq.com。当前草案尚缺运营主体法定姓名或名称、境外生产主服务器服务商及所在国家/地区和生效日期，因此不能作为已生效协议或公开发行候选文本。",
+        "2048 NEXT 由自然人王世杰运营，政策与协议内容责任人为王世杰，联系邮箱为 1203214493@qq.com。",
       ],
     },
   ],
@@ -299,7 +297,7 @@ const TERMS_ZH: PolicyDocument = {
 const TERMS_EN: PolicyDocument = {
   title: "2048 NEXT Terms of Service",
   shortTitle: "Terms of Service",
-  intro: "These terms apply to the 2048 NEXT website and Android App. This draft is not effective. The operator identity, overseas production host and country or region, and effective date must be completed and explicitly approved before release.",
+  intro: "These terms apply to the 2048 NEXT website and Android App. The operator has approved this version, effective August 1, 2026.",
   sections: [
     {
       title: "1. Service",
@@ -369,7 +367,7 @@ const TERMS_EN: PolicyDocument = {
       paragraphs: [
         "Material changes are presented through versioned text and reasonable notice, and consent is requested where required before continued use of affected online features.",
         "These terms are governed by the laws of the People's Republic of China. Disputes should first be resolved through good-faith discussion and otherwise submitted to a court with lawful jurisdiction.",
-        "The policy and terms content contact is 王世杰, at 1203214493@qq.com. This draft is still missing the operator's legal identity, the overseas production primary-server provider and country or region, and the effective date, so it cannot serve as effective terms or a public release candidate.",
+        "2048 NEXT is operated by the individual 王世杰, who is also responsible for the policy and terms content. Contact: 1203214493@qq.com.",
       ],
     },
   ],

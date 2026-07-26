@@ -22,7 +22,7 @@ test("mobile settings apply immediately, keep the Me route, and persist without 
   await page.getByRole("button", { name: "隐私政策与用户协议" }).click();
   const policies = page.locator('[data-app-view="policies"]');
   await expect(policies).toBeVisible();
-  await expect(policies).toContainText("unapproved-draft");
+  await expect(policies).toContainText("2026-08-01.1");
   await expect(policies).toContainText("Resend");
   await policies.getByRole("button", { name: "返回" }).click();
   await expect(page.locator('[data-app-view="me"]')).toBeVisible();

@@ -17,7 +17,7 @@
     "build:app:android-debug": "tsc -p tsconfig.app.json && vite build --config vite.app.config.ts --mode android-debug",
     "android:sync:debug": "npm run build:app:android-debug && cap sync android && node scripts/android-build-mode-audit.mjs android-debug",
     "android:sync:release": "npm run build:app && cap sync android && node scripts/android-build-mode-audit.mjs production",
-    "android:release": "npm run android:sync:release && npm run audit:app-performance && cd android && ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease && cd .. && node scripts/android-release-artifacts.mjs",
+    "android:release": "npm run android:sync:release && npm run audit:app-performance && npm run audit:mobile-boundary -- --release-candidate && cd android && ./gradlew --no-daemon :app:assembleRelease :app:bundleRelease && cd .. && node scripts/android-release-artifacts.mjs",
     "preview": "npm run build && node scripts/preview-cloud-api.mjs",
     "preview:raw": "vite preview --open",
     "audit:game-manager": "node scripts/game-manager-audit.mjs",

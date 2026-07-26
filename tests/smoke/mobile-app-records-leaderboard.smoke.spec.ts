@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function signIn(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await page.getByRole("button", { name: "我的", exact: true }).click();
   await page.getByRole("button", { name: "登录或注册" }).click();
   const login = page.locator('[data-app-view="auth-login"]');
@@ -180,7 +180,7 @@ test("leaderboard keeps backend ranks, scope filters, cache refresh, and game in
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await page.locator('[data-app-bottom-nav] [data-nav="records"]').click();
   await page.locator('[data-app-view="records"] [data-action="open-leaderboard"]')
     .click();

@@ -749,7 +749,6 @@ describe("mobile auth service", () => {
       apiBase: MOBILE_PRODUCTION_API_BASE,
       allowApiBaseOverride: false,
       allowDebugLoopbackHttp: false,
-      allowUnapprovedPolicyOnline: false,
     });
     expect(resolveMobileAuthApiBase(undefined, production)).toBe(
       MOBILE_PRODUCTION_API_BASE,
@@ -767,13 +766,12 @@ describe("mobile auth service", () => {
     );
   });
 
-  it("keeps API and draft-policy overrides inside explicit debug/test modes", () => {
+  it("keeps API overrides inside explicit debug/test modes", () => {
     for (const mode of ["production", "staging"]) {
       expect(resolveMobileBuildFlags(mode)).toMatchObject({
         apiBase: MOBILE_PRODUCTION_API_BASE,
         allowApiBaseOverride: false,
         allowDebugLoopbackHttp: false,
-        allowUnapprovedPolicyOnline: false,
       });
     }
     for (const mode of ["development", "test", "android-debug"]) {
@@ -782,7 +780,6 @@ describe("mobile auth service", () => {
         apiBase: MOBILE_PRODUCTION_API_BASE,
         allowApiBaseOverride: true,
         allowDebugLoopbackHttp: true,
-        allowUnapprovedPolicyOnline: true,
       });
       expect(
         resolveMobileAuthApiBase("http://localhost:3000/api/", buildFlags),
@@ -790,25 +787,9 @@ describe("mobile auth service", () => {
     }
   });
 
-  it("hard-rejects the unapproved draft before production constructs HTTP", () => {
-    const production = resolveMobileBuildFlags("production");
-
+  it("accepts the current approved online choice", () => {
     expect(() =>
-      validateMobileOnlinePrivacy(
-        createPreviewPrivacyRecord("online", 1),
-        production,
-      ),
-    ).toThrow(
-      expect.objectContaining({
-        name: "MobileAuthError",
-        code: "privacy_online_required",
-      }),
-    );
-    expect(() =>
-      validateMobileOnlinePrivacy(
-        createPreviewPrivacyRecord("online", 1),
-        resolveMobileBuildFlags("test"),
-      ),
+      validateMobileOnlinePrivacy(createPreviewPrivacyRecord("online", 1)),
     ).not.toThrow();
   });
 });

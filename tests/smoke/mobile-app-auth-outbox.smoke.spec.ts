@@ -41,7 +41,7 @@ test("account logout cancels safely, then clears only the account owner", async 
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
 
   await page.getByRole("button", { name: "开始标准 4×4" }).click();
   await page.locator('[data-action="leave-game"]').click();
@@ -167,7 +167,7 @@ test("account deletion stores only its receipt and password login cancels within
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await page.getByRole("button", { name: "我的", exact: true }).click();
   await page.getByRole("button", { name: "登录或注册" }).click();
   let login = page.locator('[data-app-view="auth-login"]');

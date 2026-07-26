@@ -140,7 +140,7 @@ test("offline privacy choice opens the empty mobile home without business reques
   expect(previewRecord).toMatchObject({
     schema: 1,
     choice: "offline",
-    policyVersion: "unapproved-draft",
+    policyVersion: "2026-08-01",
   });
   expect(previewRecord).toHaveProperty("decidedAt", expect.any(Number));
   expect(
@@ -512,7 +512,7 @@ test("auth task pages stay inside the 320dp short-screen scroll container", asyn
   await page.locator('[data-app-bottom-nav] [data-nav="modes"]').click();
   await page.locator('[data-mode="classic_4x4_pow2_undo"]').click();
   await page.getByRole("button", { name: "查看联网说明" }).click();
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
   });

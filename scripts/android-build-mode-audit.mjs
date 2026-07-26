@@ -7,13 +7,12 @@ if (expectedMode !== "android-debug" && expectedMode !== "production") {
 }
 
 const expected = {
-  schema: 2,
+  schema: 3,
   mode: expectedMode,
-  policyVersion: "unapproved-draft",
+  policyVersion: "2026-08-01",
   apiBase: "https://2048next.cn/api",
   allowApiBaseOverride: expectedMode === "android-debug",
   allowDebugLoopbackHttp: expectedMode === "android-debug",
-  allowUnapprovedPolicyOnline: expectedMode === "android-debug",
 };
 const root = process.cwd();
 const paths = [

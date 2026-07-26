@@ -100,8 +100,9 @@ function expectStatus(result, status, label) {
 async function verifyMobileBuildBase() {
   const manifestPath = path.join(projectRoot, "dist-app", "mobile-build-flags.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8").catch(() => fail("run npm run build:app before this verifier")));
-  assert(manifest.schema === 2, "mobile build-flags schema mismatch");
+  assert(manifest.schema === 3, "mobile build-flags schema mismatch");
   assert(manifest.mode === "production", "dist-app is not a production-mode build");
+  assert(manifest.policyVersion === "2026-08-01", "release policy version is not approved");
   assert(manifest.apiBase === "https://2048next.cn/api", "release API base is not frozen to https://2048next.cn/api");
   assert(manifest.allowApiBaseOverride === false, "release build permits API base override");
   assert(manifest.allowDebugLoopbackHttp === false, "release build permits loopback HTTP");

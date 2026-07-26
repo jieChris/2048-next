@@ -35,7 +35,7 @@ test("an offline online-intent can cancel back to its source or accept and resum
 
   await page.getByRole("button", { name: /经典 4×4/ }).click();
   await page.getByRole("button", { name: "查看联网说明" }).click();
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await expect(page.locator('[data-app-view="auth-login"]')).toBeVisible();
   await expect(
     page.getByText("登录后将继续进入刚才选择的模式。"),
@@ -72,7 +72,7 @@ test("a document-only revision does not invalidate current consent", async ({ pa
       JSON.stringify({
         schema: 1,
         choice: "offline",
-        policyVersion: "unapproved-draft",
+        policyVersion: "2026-08-01",
         decidedAt: Date.now(),
       }),
     );
@@ -85,7 +85,7 @@ test("a document-only revision does not invalidate current consent", async ({ pa
     .locator('[data-app-view="me"] [data-action="open-policies"]')
     .click();
   await expect(page.locator("[data-app-view='policies']")).toContainText(
-    "unapproved-draft.2",
+    "2026-08-01.1",
   );
   await expect(page.getByRole("heading", { name: "开始之前" })).toBeHidden();
 });

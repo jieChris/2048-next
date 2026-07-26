@@ -269,7 +269,6 @@ function jsonBody(value: JsonRecord): RequestInit {
 
 export function validateMobileOnlinePrivacy(
   privacy: PreviewPrivacyRecord,
-  buildFlags: MobileBuildFlags,
 ): PreviewPrivacyRecord {
   let validatedPrivacy: PreviewPrivacyRecord | null = null;
   try {
@@ -282,9 +281,7 @@ export function validateMobileOnlinePrivacy(
   if (
     !validatedPrivacy ||
     validatedPrivacy.choice !== "online" ||
-    validatedPrivacy.policyVersion !== PREVIEW_POLICY_VERSION ||
-    (PREVIEW_POLICY_VERSION === "unapproved-draft" &&
-      !buildFlags.allowUnapprovedPolicyOnline)
+    validatedPrivacy.policyVersion !== PREVIEW_POLICY_VERSION
   ) {
     throw new MobileAuthError("privacy_online_required");
   }
@@ -294,7 +291,7 @@ export function validateMobileOnlinePrivacy(
 export function createMobileAuthService(
   options: MobileAuthServiceOptions,
 ): MobileAuthService {
-  validateMobileOnlinePrivacy(options.privacy, MOBILE_BUILD_FLAGS);
+  validateMobileOnlinePrivacy(options.privacy);
   const apiBase = resolveMobileAuthApiBase(options.apiBase, MOBILE_BUILD_FLAGS);
   const createClient = options.clientFactory ?? createJsonApiClient;
   const timeoutMs = options.timeoutMs ?? DEFAULT_MOBILE_AUTH_TIMEOUT_MS;

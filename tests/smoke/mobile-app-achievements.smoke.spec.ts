@@ -109,7 +109,7 @@ test("achievement page resumes after login, filters challenges, and keeps its of
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await page.getByRole("button", { name: "我的", exact: true }).click();
   await page.locator('[data-action="open-achievements-gate"]').click();
 

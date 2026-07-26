@@ -1,6 +1,5 @@
 import {
   getPolicyDocument,
-  POLICY_APPROVAL_BLOCKERS,
   POLICY_BUNDLE_VERSION,
   POLICY_EFFECTIVE_DATE,
   renderPolicyDocumentHtml,
@@ -54,8 +53,8 @@ function render(): void {
   setText(
     "[data-policy-status]",
     locale === "en"
-      ? `Unapproved draft. Release blockers: ${POLICY_APPROVAL_BLOCKERS.join(", ")}.`
-      : `未批准草案。公开发行前仍须补齐：运营主体、境外生产主服务器服务商及所在国家/地区、生效日期。`,
+      ? "Approved version. Effective August 1, 2026."
+      : "已批准版本，2026 年 8 月 1 日生效。",
   );
   setText(
     "[data-policy-peer]",

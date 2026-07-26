@@ -512,7 +512,7 @@ test("locked modes preserve their target through privacy into auth without reque
   expect(dialogMetrics.bottom).toBeLessThanOrEqual(568);
   await page.getByRole("button", { name: "查看联网说明" }).click();
   await expect(page.getByRole("heading", { name: "开始之前" })).toBeVisible();
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   const auth = page.locator('[data-app-view="auth-login"]');
   await expect(auth).toBeVisible();
   await expect(

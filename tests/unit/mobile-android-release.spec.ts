@@ -55,6 +55,9 @@ describe("Android release candidate workflow", () => {
     expect(packageJson.scripts["android:release"]).toContain(
       "android-release-artifacts.mjs",
     );
+    expect(packageJson.scripts["android:release"]).toContain(
+      "audit:mobile-boundary -- --release-candidate",
+    );
     expect(
       readFileSync("scripts/android-release-artifacts.mjs", "utf8"),
     ).toContain('"--untracked-files=no"');

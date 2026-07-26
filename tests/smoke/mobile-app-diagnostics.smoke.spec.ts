@@ -62,7 +62,7 @@ test("online diagnostics upload redacted data, respect the toggle, and export lo
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "预览联网入口" }).click();
+  await page.getByRole("button", { name: "同意并继续" }).click();
   await expect(page.locator('[data-app-view="home"]')).toBeVisible();
   await dispatchSeriousError(
     page,
