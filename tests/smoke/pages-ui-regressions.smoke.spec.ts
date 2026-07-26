@@ -152,12 +152,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "/Practice_board.html"
     ];
 
+    await routeI18nAuditApi(page);
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+
     for (const lang of ["zh", "en"] as const) {
+      await page.evaluate((value) => {
+        window.localStorage.setItem("ui_language_v1", value);
+      }, lang);
+
       for (const target of pages) {
-        await routeI18nAuditApi(page);
-        await page.addInitScript((value) => {
-          window.localStorage.setItem("ui_language_v1", value);
-        }, lang);
         const response = await page.goto(target, { waitUntil: "domcontentloaded" });
         expect(response, `${target} response should exist`).not.toBeNull();
         expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
