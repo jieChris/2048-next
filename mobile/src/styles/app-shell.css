@@ -105,6 +105,10 @@ button:disabled {
   outline-offset: 3px;
 }
 
+:where(h1, h2, h3)[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 [hidden] {
   display: none !important;
 }

@@ -1,4 +1,6 @@
 import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 
 import "./styles/app-shell.css";
 
@@ -35,6 +37,7 @@ import {
 import { bindAndroidAppLifecycle } from "./platform/app-lifecycle";
 import { GameFeedback } from "./platform/game-feedback";
 import { createPlatformSecureStorage } from "./platform/secure-storage";
+import { setSystemBarsAppearance } from "./platform/system-bars";
 import {
   BGM_STORAGE_KEY,
   HAPTICS_STORAGE_KEY,
@@ -83,6 +86,15 @@ function themeColor(theme: ResolvedTheme): string {
   return theme === "dark" ? "#0e2025" : "#f3ede1";
 }
 
+function syncStatusBar(theme: ResolvedTheme): void {
+  if (Capacitor.getPlatform() !== "android") return;
+  void Promise.all([
+    StatusBar.setBackgroundColor({ color: themeColor(theme) }),
+    StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light }),
+    setSystemBarsAppearance(theme),
+  ]).catch(() => undefined);
+}
+
 const AUTO_DIAGNOSTICS_STORAGE_KEY =
   "2048-next.app.auto-diagnostics-v1";
 
@@ -107,6 +119,7 @@ function syncTheme(): void {
   document
     .querySelector<HTMLMetaElement>("[data-app-theme-color]")
     ?.setAttribute("content", themeColor(theme));
+  syncStatusBar(theme);
 }
 
 syncTheme();

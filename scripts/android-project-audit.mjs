@@ -120,6 +120,36 @@ function assertSystemHapticsSource({ mainActivity, systemHapticsPlugin }) {
   }
 }
 
+function assertSystemBarsSource({ mainActivity, systemBarsPlugin }) {
+  const activityCode = stripJavaComments(mainActivity);
+  const pluginCode = stripJavaComments(systemBarsPlugin);
+  invariant(
+    /\bregisterPlugin\s*\(\s*Next2048SystemBarsPlugin\.class\s*\)\s*;/u.test(activityCode),
+    "the system-bars plugin must be registered explicitly"
+  );
+  invariant(
+    /@CapacitorPlugin\s*\(\s*name\s*=\s*"Next2048SystemBars"\s*\)/u.test(pluginCode),
+    "the system-bars plugin name drifted"
+  );
+  invariant(
+    (pluginCode.match(/@PluginMethod\b/gu) ?? []).length === 1,
+    "the system-bars plugin must expose only setAppearance"
+  );
+  for (const pattern of [
+    /setNavigationBarColor\s*\(/u,
+    /APPEARANCE_LIGHT_NAVIGATION_BARS/u,
+    /SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR/u,
+    /"light"\.equals\s*\(\s*theme\s*\)/u,
+    /"dark"\.equals\s*\(\s*theme\s*\)/u
+  ]) {
+    invariant(pattern.test(pluginCode), `system-bars implementation is missing ${pattern}`);
+  }
+  invariant(
+    !/FLAG_FULLSCREEN|IMMERSIVE|hide\s*\(/u.test(pluginCode),
+    "system-bars appearance must not hide Android system UI"
+  );
+}
+
 function assertExactValues(actual, expected, label) {
   const normalizedActual = sortedUnique(actual);
   const normalizedExpected = sortedUnique(expected);
@@ -280,6 +310,11 @@ async function auditAndroidProject({
     "utf8"
   );
   assertSystemHapticsSource({ mainActivity, systemHapticsPlugin });
+  const systemBarsPlugin = await readFile(
+    path.join(rootDir, "android", "app", "src", "main", "java", "cn", "next2048", "app", "Next2048SystemBarsPlugin.java"),
+    "utf8"
+  );
+  assertSystemBarsSource({ mainActivity, systemBarsPlugin });
 
   const copiedWebAudit = await auditMobileBoundary({
     mobileDir: path.join(rootDir, "mobile"),
@@ -445,6 +480,7 @@ export {
   assertExactValues,
   assertPermissionBoundary,
   assertSecureStorageSource,
+  assertSystemBarsSource,
   assertSystemHapticsSource,
   auditAndroidProject,
   resolveApkAnalyzer,

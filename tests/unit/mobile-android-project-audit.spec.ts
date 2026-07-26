@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermissionBoundary,
   assertSecureStorageSource,
+  assertSystemBarsSource,
   assertSystemHapticsSource,
   DYNAMIC_RECEIVER_PERMISSION_SUFFIX
 } from "../../scripts/android-project-audit.mjs";
@@ -32,6 +33,15 @@ const validSystemHapticsPluginSource = `
   if ("milestone".equals(kind)) {}
   if ("finish".equals(kind)) {}
   view.performHapticFeedback(feedback);
+`;
+const validSystemBarsPluginSource = `
+  @CapacitorPlugin(name = "Next2048SystemBars")
+  @PluginMethod
+  if ("light".equals(theme)) {}
+  if ("dark".equals(theme)) {}
+  window.setNavigationBarColor(color);
+  WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+  View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
 `;
 
 function mergedManifest(options: {
@@ -166,5 +176,21 @@ describe("Android system-haptics source audit", () => {
         "view.performHapticFeedback(feedback, FLAG_IGNORE_GLOBAL_SETTING);"
       )
     })).toThrow(/Android view feedback path|global feedback setting/u);
+  });
+});
+
+describe("Android system-bars source audit", () => {
+  it("requires theme-aware navigation-bar colors without hiding system UI", () => {
+    expect(() => assertSystemBarsSource({
+      mainActivity: "registerPlugin(Next2048SystemBarsPlugin.class);",
+      systemBarsPlugin: validSystemBarsPluginSource
+    })).not.toThrow();
+  });
+
+  it("rejects immersive or fullscreen system-bar behavior", () => {
+    expect(() => assertSystemBarsSource({
+      mainActivity: "registerPlugin(Next2048SystemBarsPlugin.class);",
+      systemBarsPlugin: `${validSystemBarsPluginSource}\nFLAG_FULLSCREEN;`
+    })).toThrow(/must not hide Android system UI/u);
   });
 });

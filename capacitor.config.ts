@@ -14,7 +14,9 @@ const config: CapacitorConfig = {
       insetsHandling: "css"
     },
     StatusBar: {
-      overlaysWebView: false
+      overlaysWebView: false,
+      style: "LIGHT",
+      backgroundColor: "#f3ede1"
     }
   }
 };

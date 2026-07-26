@@ -21,6 +21,10 @@ const mobileTokens = readFileSync(
   resolve(process.cwd(), "mobile/src/styles/tokens.css"),
   "utf8"
 );
+const mobileMain = readFileSync(
+  resolve(process.cwd(), "mobile/src/main.ts"),
+  "utf8"
+);
 
 const approvedCapacitorPackages = [
   "@capacitor/android",
@@ -84,10 +88,14 @@ describe("mobile Capacitor configuration", () => {
           insetsHandling: "css"
         },
         StatusBar: {
-          overlaysWebView: false
+          overlaysWebView: false,
+          style: "LIGHT",
+          backgroundColor: "#f3ede1"
         }
       }
     });
+    expect(mobileMain).toContain("StatusBar.setBackgroundColor");
+    expect(mobileMain).toContain("theme === \"dark\" ? Style.Dark : Style.Light");
   });
 
   it("consumes Capacitor safe-area values with browser env fallbacks", () => {

@@ -126,6 +126,9 @@ test("offline privacy choice opens the empty mobile home without business reques
   await expect(
     page.getByRole("heading", { name: "今天继续一局" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "今天继续一局" }),
+  ).toHaveCSS("outline-style", "none");
   await expect(page.getByText("仅离线", { exact: true })).toBeVisible();
   await expect(page.locator("[data-app-bottom-nav] button")).toHaveCount(4);
   await expect(page.locator("[data-app-shell]")).toHaveAttribute(
