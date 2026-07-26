@@ -1237,8 +1237,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         body: JSON.stringify({
           success: true,
           data: holdBackgroundRefresh
-            ? [{ user_id: 7, nickname: "FreshUser", score: 8192 }]
-            : [{ user_id: 7, nickname: "StableUser", score: 4096 }]
+            ? [{ user_id: 7, nickname: "FreshUser", score: 8192, rank: 1 }]
+            : [{ user_id: 7, nickname: "StableUser", score: 4096, rank: 1 }]
         })
       });
     });
