@@ -12,6 +12,8 @@ describe("self-hosted nginx cache policy", () => {
     expect(config).toContain('max-age=31536000, immutable');
     expect(config).toContain('add_header X-Content-Type-Options nosniff always;');
     expect(config).toContain('add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;');
+    expect(config).toContain('~^/downloads/android/beta/ "*";');
+    expect(config).toContain('add_header Access-Control-Allow-Origin $android_beta_cors_origin always;');
     expect(config).not.toContain('Cloudflare-CDN-Cache-Control "no-store"');
   });
 
