@@ -2,14 +2,14 @@
   "schema": 1,
   "channel": "beta",
   "applicationId": "cn.next2048.app",
-  "versionCode": 5,
-  "versionName": "1.0-beta.5",
-  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.5.apk",
-  "sha256": "8779e1465ebd488a5046468916fa6e43ef72f46203c5826004f08b6ac35e87b6",
-  "bytes": 9371396,
-  "publishedAt": "2026-07-29T12:57:29.920Z",
+  "versionCode": 7,
+  "versionName": "1.0-beta.7",
+  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.7.apk",
+  "sha256": "62385c510c1c356b50f6d4afb17c0ad261daee07c77dd43cd75eaa6bada5cf16",
+  "bytes": 9371728,
+  "publishedAt": "2026-07-29T13:26:40.150Z",
   "notes": {
-    "zh-CN": "修复 Android 10 WebView 更新检查，并完成官网应用内升级链验证。",
-    "en": "Fixes Android 10 WebView update checks and completes the official in-app upgrade path."
+    "zh-CN": "修复应用内更新下载目录和 Android 原生元数据校验。",
+    "en": "Fixes the in-app update download directory and Android native metadata validation."
   }
 }
