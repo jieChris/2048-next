@@ -200,7 +200,7 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3; do
             if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-              "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}' '/tmp/2048-next-nginx-${RELEASE_ID}.conf'" <<'REMOTE'
+              "sudo -n bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}' '/tmp/2048-next-nginx-${RELEASE_ID}.conf'" <<'REMOTE'
             set -euo pipefail
             deploy_root="$1"
             artifact_name="$2"
