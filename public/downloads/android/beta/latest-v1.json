@@ -2,14 +2,14 @@
   "schema": 1,
   "channel": "beta",
   "applicationId": "cn.next2048.app",
-  "versionCode": 4,
-  "versionName": "1.0-beta.4",
-  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.4.apk",
-  "sha256": "f35921c508d578bc3b372c8ba3235ab6438d856596aaf686b58cc38882e38cfc",
+  "versionCode": 5,
+  "versionName": "1.0-beta.5",
+  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.5.apk",
+  "sha256": "8779e1465ebd488a5046468916fa6e43ef72f46203c5826004f08b6ac35e87b6",
   "bytes": 9371396,
-  "publishedAt": "2026-07-29T12:42:49.981Z",
+  "publishedAt": "2026-07-29T12:57:29.920Z",
   "notes": {
-    "zh-CN": "修复 Android 10 WebView 无法检查更新的问题，并包含当前最新修复。",
-    "en": "Fixes update checks on the Android 10 WebView and includes the latest fixes."
+    "zh-CN": "修复 Android 10 WebView 更新检查，并完成官网应用内升级链验证。",
+    "en": "Fixes Android 10 WebView update checks and completes the official in-app upgrade path."
   }
 }
