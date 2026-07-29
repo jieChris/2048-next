@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "channel": "beta",
+  "applicationId": "cn.next2048.app",
+  "versionCode": 2,
+  "versionName": "1.0-beta.2",
+  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.2.apk",
+  "sha256": "56b346a1fb38f3de2baf4980dc8bd850a98be238a87ab5ee7aa3cadac4f9b1cf",
+  "bytes": 9371312,
+  "publishedAt": "2026-07-29T11:05:49.801Z",
+  "notes": {
+    "zh-CN": "新增官网自动检查与应用内下载更新，并包含当前最新的界面与功能修复。",
+    "en": "Adds official update checks and in-app downloads, plus the latest UI and feature fixes."
+  }
+}
