@@ -2,14 +2,14 @@
   "schema": 1,
   "channel": "beta",
   "applicationId": "cn.next2048.app",
-  "versionCode": 7,
-  "versionName": "1.0-beta.7",
-  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.7.apk",
-  "sha256": "62385c510c1c356b50f6d4afb17c0ad261daee07c77dd43cd75eaa6bada5cf16",
-  "bytes": 9371728,
-  "publishedAt": "2026-07-29T13:26:40.150Z",
+  "versionCode": 9,
+  "versionName": "1.0-beta.9",
+  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.9.apk",
+  "sha256": "38857ff1185f6985228da943ced4e2b1fdea1e6b237dc4d26af6a9265f6653f9",
+  "bytes": 9371976,
+  "publishedAt": "2026-07-29T14:09:51.646Z",
   "notes": {
-    "zh-CN": "修复应用内更新下载目录和 Android 原生元数据校验。",
-    "en": "Fixes the in-app update download directory and Android native metadata validation."
+    "zh-CN": "修复 Android 10 应用内更新的下载、元数据与签名兼容问题。",
+    "en": "Fixes Android 10 in-app update download, metadata, and signer compatibility."
   }
 }
