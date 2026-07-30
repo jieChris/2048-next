@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const PRELOAD_SOURCE = readFileSync(resolve(__dirname, "../../public/js/beta_access_preload.js"), "utf8");
+const GATE_TEST_START_MS = 1785388500000;
+const GATE_TEST_END_MS = 1785389100000;
+const GATE_RELEASE_AT_MS = 1785513600000;
 
 interface PreloadWindowLike {
   location: {
@@ -34,6 +37,46 @@ function createWindowLike(dom: JSDOM, pathname: string, search = "", hostname = 
 }
 
 describe("public/js/beta_access_preload", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(GATE_RELEASE_AT_MS - 1);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("bypasses during the test window and restores at its end", () => {
+    vi.setSystemTime(GATE_TEST_START_MS);
+    const openDom = createDom();
+    const openWindow = createWindowLike(openDom, "/play.html");
+
+    runPreload(openWindow, openDom.window.document);
+
+    expect(openDom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+    expect(openWindow.location.replace).not.toHaveBeenCalled();
+
+    vi.setSystemTime(GATE_TEST_END_MS);
+    const restoredDom = createDom();
+    const restoredWindow = createWindowLike(restoredDom, "/play.html");
+
+    runPreload(restoredWindow, restoredDom.window.document);
+
+    expect(restoredDom.window.document.documentElement.getAttribute("data-beta-access-pending")).toBe("1");
+    expect(restoredWindow.location.replace).toHaveBeenCalled();
+  });
+
+  it("stops marking or redirecting production pages at the permanent release boundary", () => {
+    vi.setSystemTime(GATE_RELEASE_AT_MS);
+    const dom = createDom();
+    const windowLike = createWindowLike(dom, "/play.html");
+
+    runPreload(windowLike, dom.window.document);
+
+    expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
+    expect(windowLike.location.replace).not.toHaveBeenCalled();
+  });
+
   it("marks the page pending WITHOUT hiding it and bounces tokenless visitors to login from <head>", () => {
     const dom = createDom();
     const windowLike = createWindowLike(dom, "/play.html", "?mode_key=board_3x3_pow2_no_undo");
@@ -83,6 +126,7 @@ describe("public/js/beta_access_preload", () => {
   });
 
   it("can force the gate on a local host for gate regression tests", () => {
+    vi.setSystemTime(GATE_RELEASE_AT_MS);
     const dom = createDom();
     const localWindow = createWindowLike(dom, "/play.html", "", "127.0.0.1");
     dom.window.localStorage.setItem("2048_beta_access_force_gate_local_v1", "1");

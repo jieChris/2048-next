@@ -11,6 +11,11 @@ import {
 export const ACTIVE_BETA_NOTICE_VERSION = "beta_notice_2026_06_26_v1";
 export const BETA_ACCESS_SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
 export const BETA_ACCESS_LOCAL_FORCE_GATE_KEY = "2048_beta_access_force_gate_local_v1";
+// 2026-07-30 13:15:00–13:25:00 Asia/Shanghai (UTC+8).
+export const BETA_ACCESS_GATE_TEST_START_MS = 1785388500000;
+export const BETA_ACCESS_GATE_TEST_END_MS = 1785389100000;
+// 2026-08-01 00:00:00 Asia/Shanghai (UTC+8).
+export const BETA_ACCESS_GATE_RELEASE_AT_MS = 1785513600000;
 // Mirrored by public/js/beta_access_preload.js (GATE_PAGE_VERSION) — keep in sync
 // so the preload's no-token redirect builds the exact same login URL.
 const BETA_GATE_PAGE_VERSION = "20260627-02";
@@ -71,16 +76,27 @@ function isLocalDevelopmentHost(windowLike: Window | null): boolean {
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
 }
 
+function shouldForceBetaGateForLocalDevelopment(windowLike: Window | null, storageLike: Storage | null): boolean {
+  if (!isLocalDevelopmentHost(windowLike)) return false;
+  try {
+    return storageLike?.getItem(BETA_ACCESS_LOCAL_FORCE_GATE_KEY) === "1";
+  } catch (_err) {
+    return false;
+  }
+}
+
+export function isBetaAccessGateOpen(nowMs = Date.now()): boolean {
+  return (
+    (nowMs >= BETA_ACCESS_GATE_TEST_START_MS && nowMs < BETA_ACCESS_GATE_TEST_END_MS)
+    || nowMs >= BETA_ACCESS_GATE_RELEASE_AT_MS
+  );
+}
+
 export function shouldBypassBetaGateForLocalDevelopment(
   windowLike: Window | null,
   storageLike: Storage | null
 ): boolean {
-  if (!isLocalDevelopmentHost(windowLike)) return false;
-  try {
-    return storageLike?.getItem(BETA_ACCESS_LOCAL_FORCE_GATE_KEY) !== "1";
-  } catch (_err) {
-    return true;
-  }
+  return isLocalDevelopmentHost(windowLike) && !shouldForceBetaGateForLocalDevelopment(windowLike, storageLike);
 }
 
 function resolveCurrentPageHref(windowLike: Window | null): string {
@@ -225,6 +241,10 @@ export async function runBetaAccessGate(
 
   const storageLike = options.storageLike === undefined ? windowLike?.localStorage || null : options.storageLike;
   if (shouldBypassBetaGateForLocalDevelopment(windowLike, storageLike)) {
+    revealProtectedDocument(documentLike);
+    return { allowed: true };
+  }
+  if (isBetaAccessGateOpen() && !shouldForceBetaGateForLocalDevelopment(windowLike, storageLike)) {
     revealProtectedDocument(documentLike);
     return { allowed: true };
   }

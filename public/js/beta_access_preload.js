@@ -4,19 +4,33 @@
   var LOCAL_FORCE_GATE_KEY = "2048_beta_access_force_gate_local_v1";
   var AUTH_TOKEN_KEY = "2048_auth_token_v1";
   var GATE_PAGE_VERSION = "20260627-02";
+  // 2026-07-30 13:15:00–13:25:00 Asia/Shanghai (UTC+8).
+  var GATE_TEST_START_MS = 1785388500000;
+  var GATE_TEST_END_MS = 1785389100000;
+  // 2026-08-01 00:00:00 Asia/Shanghai (UTC+8).
+  var GATE_RELEASE_AT_MS = 1785513600000;
 
   function isLocalDevelopmentHost() {
     var hostname = String(window.location && window.location.hostname || "").toLowerCase();
     return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1" || hostname === "[::1]";
   }
 
-  function shouldBypassForLocalDevelopment() {
+  function shouldForceGateForLocalDevelopment() {
     if (!isLocalDevelopmentHost()) return false;
     try {
-      return !window.localStorage || window.localStorage.getItem(LOCAL_FORCE_GATE_KEY) !== "1";
+      return Boolean(window.localStorage && window.localStorage.getItem(LOCAL_FORCE_GATE_KEY) === "1");
     } catch (_err) {
-      return true;
+      return false;
     }
+  }
+
+  function shouldBypassForLocalDevelopment() {
+    return isLocalDevelopmentHost() && !shouldForceGateForLocalDevelopment();
+  }
+
+  function isGateOpen() {
+    var now = Date.now();
+    return (now >= GATE_TEST_START_MS && now < GATE_TEST_END_MS) || now >= GATE_RELEASE_AT_MS;
   }
 
   var path = String(window.location && window.location.pathname || "").split("/").pop();
@@ -27,6 +41,7 @@
     "cache-reset.html": true
   };
   if (exempt[path] || shouldBypassForLocalDevelopment()) return;
+  if (isGateOpen() && !shouldForceGateForLocalDevelopment()) return;
 
   // Mark the document so the async access gate knows this page is beta-gated.
   // Unlike earlier revisions, the page is NOT hidden while the /access/me check
