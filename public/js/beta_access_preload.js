@@ -4,9 +4,9 @@
   var LOCAL_FORCE_GATE_KEY = "2048_beta_access_force_gate_local_v1";
   var AUTH_TOKEN_KEY = "2048_auth_token_v1";
   var GATE_PAGE_VERSION = "20260627-02";
-  // 2026-07-30 13:15:00–13:25:00 Asia/Shanghai (UTC+8).
-  var GATE_TEST_START_MS = 1785388500000;
-  var GATE_TEST_END_MS = 1785389100000;
+  // 2026-07-30 13:50:00–14:10:00 Asia/Shanghai (UTC+8).
+  var GATE_TEST_START_MS = 1785390600000;
+  var GATE_TEST_END_MS = 1785391800000;
   // 2026-08-01 00:00:00 Asia/Shanghai (UTC+8).
   var GATE_RELEASE_AT_MS = 1785513600000;
 

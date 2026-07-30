@@ -46,7 +46,7 @@ describe("bootstrap: access-gate", () => {
     vi.restoreAllMocks();
   });
 
-  it("opens for the ten-minute test window, restores, then releases permanently", async () => {
+  it("opens for the scheduled experience window, restores, then releases permanently", async () => {
     expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_START_MS - 1)).toBe(false);
     expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_START_MS)).toBe(true);
     expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_END_MS - 1)).toBe(true);

@@ -5,6 +5,7 @@
 - Local `npm run verify:release` passed from frontend commit `2c78dcf0`.
 - API typecheck, beta-access unit tests, container health check, and production `/api/health` passed at commit `718573f`.
 - Production frontend serves the scheduled gate-window constants from the active release.
+- A second public experience window is scheduled for 2026-07-30 13:50–14:10 Asia/Shanghai.
 
 ## Route Deviation
 
