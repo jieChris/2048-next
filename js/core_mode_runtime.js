@@ -50,7 +50,7 @@
     if (!Number.isInteger(cells) || cells <= 0) return null;
 
     if (normalizeRuleset(ruleset) === "fibonacci") {
-      var targetIndex = cells + 2;
+      var targetIndex = cells * 2;
       var a = 1;
       var b = 2;
       if (targetIndex <= 1) return 1;

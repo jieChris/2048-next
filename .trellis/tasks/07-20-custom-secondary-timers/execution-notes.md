@@ -15,7 +15,9 @@
 - 仓库架构文档明确把 `public/js/legacy_index_nomodule_loader.js` 留给独立 legacy-browser policy；本任务保持该边界，现代模块入口覆盖当前页面与 Playwright 验证路径。
 - 规则层原有按棋盘尺寸计算计时器槽位的未完成实现可以直接复用；补齐了模式应用接线、显式封顶值、动态 DOM 行和主题同步，未新增第二套计时器模型。
 - 母计时器最大值按棋盘理论容量计算：pow2 使用 `2^(width*height+1)`，因此标准 4x4 结束于 `131072`；显式 `max_tile` 只会进一步缩小该列表。
-- Fibonacci 母计时器同样包含理论终点，例如 4x4 结束于 `4181`。
+- Fibonacci 原容量公式把每个新等级都视为额外占用一格，错误地将 3x3 截在 `144`；按 `1/2` 均可直接生成、相邻数合并的最少占格递推，9 格可达第 18 项 `4181`，下一项 `6765` 至少需要 10 格。
+- Fibonacci 母计时器按合成容量生成；通常包含理论终点，4x4 按产品规则结束于理论最大值 `3524578` 的前一项 `2178309`。
+- 练习板原先直接读取理论最大值并保留 4x4 Fibonacci 固定 `1597` 分支，导致摆盘预选块与母计时器终点不一致；现直接复用 `getTimerMilestoneValues()` 的最后一项，四种 Fibonacci 棋盘分别结束于 `1597`、`4181`、`75025`、`2178309`。
 - 模式接线的降级分支不再复制规则层的棋盘容量算法；正常路径统一调用 `CoreRulesRuntime.getTimerSlotIdsForBoard()`，运行时缺失时仅保留默认槽位并应用显式封顶过滤，使 game-manager helper 回到审计上限以内。
 - 原 `palette.html` 沿用为分类设置页，入口统一改名为“设置”；自定义子计时器编辑器从游戏设置弹窗移入计时器分类，并使用原生 `details` 默认收起，避免新增页面或折叠状态脚本。
 - 设置页按“计时器”和“外观与配色”分组，规则保存继续直接复用 `parseCustomSecondaryTimerRules`、`readCustomSecondaryTimerRuleText` 和 `writeCustomSecondaryTimerRuleText`。
@@ -47,3 +49,4 @@
 - 应用内浏览器实测 `32～64` 生成两个分组且未自动保存；390px 窄屏下生成器宽 316px、页面 `scrollWidth` 为 390px，无横向溢出。
 - 5×5 上限收紧回归：目标页面 smoke 1 项通过，确认存在 `67108864` 且不存在 `134217728`；`npx tsc --noEmit` 与 `git diff --check` 通过。
 - 计时器开关尺寸恢复：宿主单测 10 项、目标设置页 smoke 1 项通过，`npx tsc --noEmit`、runtime `node --check` 与 `git diff --check` 通过；应用内浏览器 1108px 视口实测计时器、背景音乐、胜利提示卡片均宽 242px，计时器行无内联宽度。
+- Fibonacci 容量与练习板预选块校正：核心规则 29 项、相关页面 Smoke 17 项、`npx tsc --noEmit`、4 个 runtime `node --check` 与完整 `npm run verify:release` 门禁全部通过。

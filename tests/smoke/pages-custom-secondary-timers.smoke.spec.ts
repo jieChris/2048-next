@@ -217,9 +217,10 @@ test.describe("custom secondary timers", () => {
       { path: "/play.html?mode_key=board_3x4_pow2_no_undo", modeKey: "board_3x4_pow2_no_undo", lastSlot: 8192, lastMilestone: 8192, count: 9 },
       { path: "/play.html?mode_key=board_5x5_pow2_no_undo", modeKey: "board_5x5_pow2_no_undo", lastSlot: 67108864, lastMilestone: 67108864, count: 22 },
       { path: "/play.html?mode_key=capped_4x4_pow2_64_no_undo", modeKey: "capped_4x4_pow2_64_no_undo", lastSlot: 64, lastMilestone: 64, count: 2 },
-      { path: "/play.html?mode_key=fib_4x2_no_undo", modeKey: "fib_4x2_no_undo", lastSlot: 512, lastMilestone: 89, count: 5 },
-      { path: "/play.html?mode_key=fib_4x3_no_undo", modeKey: "fib_4x3_no_undo", lastSlot: 8192, lastMilestone: 610, count: 9 },
-      { path: "/play.html?mode_key=fib_4x4_no_undo", modeKey: "fib_4x4_no_undo", lastSlot: 131072, lastMilestone: 4181, count: 13 }
+      { path: "/play.html?mode_key=fib_4x2_no_undo", modeKey: "fib_4x2_no_undo", lastSlot: 32768, lastMilestone: 1597, count: 11 },
+      { path: "/play.html?mode_key=fib_3x3_no_undo", modeKey: "fib_3x3_no_undo", lastSlot: 131072, lastMilestone: 4181, count: 13 },
+      { path: "/play.html?mode_key=fib_4x3_no_undo", modeKey: "fib_4x3_no_undo", lastSlot: 8388608, lastMilestone: 75025, count: 19 },
+      { path: "/play.html?mode_key=fib_4x4_no_undo", modeKey: "fib_4x4_no_undo", lastSlot: 1073741824, lastMilestone: 2178309, count: 26 }
     ];
 
     for (const expected of cases) {
