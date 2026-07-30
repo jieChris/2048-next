@@ -2,14 +2,14 @@
   "schema": 1,
   "channel": "beta",
   "applicationId": "cn.next2048.app",
-  "versionCode": 10,
-  "versionName": "1.0-beta.10",
-  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.10.apk",
-  "sha256": "3f975d10ca85ecd67acdb79413d111cf143400699b92692c8e57695ea989b724",
-  "bytes": 9373284,
-  "publishedAt": "2026-07-29T16:57:49.561Z",
+  "versionCode": 11,
+  "versionName": "1.0-beta.11",
+  "apkUrl": "https://2048next.cn/downloads/android/beta/2048-next-1.0-beta.11.apk",
+  "sha256": "07796fe3b37a486e1706cb35849a39d2e4c1d90089a8bc6cc7f3aced55d19c41",
+  "bytes": 9384686,
+  "publishedAt": "2026-07-30T03:00:54.588Z",
   "notes": {
-    "zh-CN": "应用内更新切换为 Gitee 主源、GitHub 备用源，并完成最新功能与问题修复。",
-    "en": "Moves in-app updates to Gitee with GitHub fallback and includes the latest fixes."
+    "zh-CN": "修复登录后排位开局不可用，并包含排行榜、返回来源与计时器更新。",
+    "en": "Fixes ranked game start after sign-in and includes leaderboard, return navigation, and timer updates."
   }
 }
