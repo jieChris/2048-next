@@ -54,8 +54,8 @@
       requireResetNewPassword: "请输入新密码",
       requireChangeFields: "请输入当前密码和新密码",
       requireLogin: "请先登录后再修改密码",
-      turnstileMissingConfig: "",
-      turnstileRequired: "",
+      turnstileMissingConfig: "未配置 Turnstile site key，请联系管理员",
+      turnstileRequired: "请先完成人机验证",
       invalidEmail: "请输入正确的邮箱格式",
       invalidPassword: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
       codeSent: "验证码已发送，请查收邮箱",
@@ -90,8 +90,8 @@
       requireResetNewPassword: "Please enter new password",
       requireChangeFields: "Please enter current and new passwords",
       requireLogin: "Please sign in before changing password",
-      turnstileMissingConfig: "",
-      turnstileRequired: "",
+      turnstileMissingConfig: "Turnstile site key is not configured",
+      turnstileRequired: "Please complete human verification",
       invalidEmail: "Please enter a valid email address",
       invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
       codeSent: "Verification code sent. Please check your email.",
@@ -446,12 +446,27 @@
       setTip(t("invalidEmail"), "err");
       return;
     }
+    if (!turnstileSiteKey) {
+      setTip(t("turnstileMissingConfig"), "err");
+      return;
+    }
+    if (turnstileWidgetId == null && !tryRenderTurnstileWidget()) {
+      setTip(t("turnstileRequired"), "err");
+      return;
+    }
+    if (!turnstileToken) {
+      setTip(t("turnstileRequired"), "err");
+      return;
+    }
     setResetActionsEnabled(false);
     try {
       var result = await apiRequest("/password/reset/start", {
         method: "POST",
         body: {
-          email: email
+          email: email,
+          turnstile_token: turnstileToken,
+          turnstileToken: turnstileToken,
+          captchaToken: turnstileToken
         }
       });
       resetTurnstileToken();

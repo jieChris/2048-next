@@ -56,7 +56,7 @@
       turnstileRequired: "\u8bf7\u5148\u5b8c\u6210\u4eba\u673a\u9a8c\u8bc1",
       codeSent: "\u9a8c\u8bc1\u7801\u5df2\u53d1\u9001\uff0c\u8bf7\u67e5\u6536\u90ae\u7bb1\u540e\u8f93\u5165\u9a8c\u8bc1\u7801\u518d\u70b9\u51fb\u6ce8\u518c",
       invalidEmail: "\u8bf7\u8f93\u5165\u6b63\u786e\u7684\u90ae\u7bb1\u683c\u5f0f",
-      invalidPassword: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
+      invalidPassword: "\u5bc6\u7801\u9700\u4e3a10-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
       invalidNickname: "\u6635\u79f0\u9700\u4e3a2-10\u4f4d\uff0c\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
       nicknameTaken: "\u6635\u79f0\u5df2\u88ab\u5360\u7528\uff0c\u8bf7\u66f4\u6362",
       nicknameUnavailableInline: "\u5f53\u524d\u6635\u79f0\u4e0d\u53ef\u7528\uff0c\u8bf7\u66f4\u6362\u6635\u79f0",
@@ -91,7 +91,7 @@
       turnstileRequired: "Please complete human verification",
       codeSent: "Verification code sent. Enter it and click Register again.",
       invalidEmail: "Please enter a valid email address",
-      invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      invalidPassword: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       invalidNickname: "Nickname must be 2-10 chars and use letters/numbers/spaces/_/-/Chinese only",
       nicknameTaken: "Nickname already exists",
       nicknameUnavailableInline: "Nickname unavailable, please choose another",
@@ -105,7 +105,8 @@
   var ERROR_CODE_COPY = {
     zh: {
       INVALID_EMAIL: "\u90ae\u7bb1\u683c\u5f0f\u4e0d\u6b63\u786e",
-      WEAK_PASSWORD: "\u5bc6\u7801\u9700\u4e3a8-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
+      WEAK_PASSWORD: "\u5bc6\u7801\u9700\u4e3a10-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
+      INVALID_PASSWORD: "\u5bc6\u7801\u9700\u4e3a10-16\u4f4d\uff0c\u4e14\u81f3\u5c11\u5305\u542b\u5b57\u6bcd/\u6570\u5b57/\u7b26\u53f7\u4e2d\u7684\u4e24\u79cd",
       EMPTY: "\u6635\u79f0\u4e0d\u80fd\u4e3a\u7a7a",
       LENGTH: "\u6635\u79f0\u957f\u5ea6\u9700\u5728 2-10 \u4e2a\u5b57\u7b26",
       CHARS: "\u6635\u79f0\u4ec5\u652f\u6301\u4e2d\u6587\u3001\u5b57\u6bcd\u3001\u6570\u5b57\u3001\u7a7a\u683c\u3001\u4e0b\u5212\u7ebf\u548c\u77ed\u6a2a\u7ebf",
@@ -135,7 +136,8 @@
     },
     en: {
       INVALID_EMAIL: "Invalid email format",
-      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      WEAK_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
+      INVALID_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       EMPTY: "Nickname cannot be empty",
       LENGTH: "Nickname length must be 2-10 characters",
       CHARS: "Nickname supports letters, numbers, spaces, underscores and hyphens only",
@@ -297,7 +299,7 @@
 
   function isValidRegisterPassword(passwordLike) {
     var password = toText(passwordLike);
-    if (password.length < 8 || password.length > 16) return false;
+    if (password.length < 10 || password.length > 16) return false;
     if (/\s/.test(password)) return false;
     var groups = 0;
     if (/[A-Za-z]/.test(password)) groups += 1;
