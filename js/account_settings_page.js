@@ -475,7 +475,7 @@
   async function login(payload) {
     var requestOptions = {
       method: "POST",
-      body: payload,
+      body: Object.assign({}, payload, { client: "web" }),
       timeoutMs: AUTH_API_TIMEOUT_MS
     };
     var result = await apiRequest("/login", requestOptions);

@@ -2116,7 +2116,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function login(payload) {
-    return apiRequest("/login", { method: "POST", body: payload });
+    return apiRequest("/login", { method: "POST", body: Object.assign({}, payload, { client: "web" }) });
   }
 
   // Keep raw score/record submission on a private token so the runtime no longer

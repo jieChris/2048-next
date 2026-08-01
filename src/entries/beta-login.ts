@@ -238,7 +238,7 @@ async function submitLogin(): Promise<void> {
   try {
     const payload = await api().request("/login", {
       method: "POST",
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, client: "web" })
     });
     if (payload.success === false || !toText(payload.token).trim()) {
       setTip(t("loginFailed") + authError(payload, t("loginFallback")), "err");

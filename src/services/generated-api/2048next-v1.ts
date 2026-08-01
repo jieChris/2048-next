@@ -2301,6 +2301,8 @@ export interface components {
             /** Format: email */
             email?: string;
             password: string;
+            /** @enum {string} */
+            client?: "web";
             captcha?: string;
         } & {
             [key: string]: unknown;

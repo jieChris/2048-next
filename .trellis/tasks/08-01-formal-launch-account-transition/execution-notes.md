@@ -3,6 +3,7 @@
 - Persist one-time achievement unlocks returned by login across the beta-login redirect.
 - Install the existing global achievement toast on direct pages and show login unlocks immediately on account login pages.
 - Render `beta_pioneer` with the standard “成就达成 / Achievement Unlocked” heading.
+- Mark Web login requests with `client: web` so the shared API consumes this Web presentation only for the intended client.
 
 ## Validation
 
