@@ -14,6 +14,7 @@ const PAGE_ENTRY_SPECS = [
   { htmlFile: "play.html", entryFile: "play.ts", pageId: "play", architecture: "manifest-bootstrap" },
   { htmlFile: "replay.html", entryFile: "replay.ts", pageId: "replay", architecture: "manifest-bootstrap" },
   { htmlFile: "account.html", entryFile: "account.ts", pageId: "account", architecture: "manifest-bootstrap" },
+  { htmlFile: "leaderboard_4x4.html", entryFile: "leaderboard-4x4.ts", pageId: "leaderboard-4x4", architecture: "manifest-bootstrap" },
   { htmlFile: "account_settings.html", entryFile: "account-settings.ts", pageId: "account-settings", architecture: "manifest-bootstrap" },
   { htmlFile: "register.html", entryFile: "register.ts", pageId: "register", architecture: "manifest-bootstrap" },
   { htmlFile: "password.html", entryFile: "password.ts", pageId: "password", architecture: "manifest-bootstrap" },

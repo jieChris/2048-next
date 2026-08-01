@@ -989,13 +989,34 @@ document.addEventListener("DOMContentLoaded", function () {
         theoreticalMaxTile = null;
       }
     }
+    if (
+      ruleset === "fibonacci" &&
+      rulesRuntime &&
+      typeof rulesRuntime.getTimerMilestoneValues === "function"
+    ) {
+      var timerMilestones = rulesRuntime.getTimerMilestoneValues(
+        ruleset,
+        [],
+        width,
+        height,
+        explicitMaxTile
+      );
+      var timerMaxTile = Number(
+        Array.isArray(timerMilestones) && timerMilestones.length > 0
+          ? timerMilestones[timerMilestones.length - 1]
+          : 0
+      );
+      if (Number.isFinite(timerMaxTile) && timerMaxTile > 0) {
+        theoreticalMaxTile = Math.floor(timerMaxTile);
+      }
+    }
 
     if (explicitMaxTile !== null && theoreticalMaxTile !== null) {
       return Math.min(explicitMaxTile, Math.floor(theoreticalMaxTile));
     }
     if (explicitMaxTile !== null) return explicitMaxTile;
     if (width === 4 && height === 4) {
-      return ruleset === "fibonacci" ? 1597 : 32768;
+      return ruleset === "fibonacci" ? 2178309 : 32768;
     }
     if (theoreticalMaxTile !== null) return Math.floor(theoreticalMaxTile);
     return ruleset === "fibonacci" ? 1597 : 32768;

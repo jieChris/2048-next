@@ -1,0 +1,18 @@
+# Execution Notes
+
+## Route Deviation
+
+- 2026-07-28：Trellis 说明指定的 `.trellis/scripts/task.py` 在当前仓库不存在，无法使用模板命令创建任务。已按现有任务目录结构手工建立本任务的 `prd.md`、`design.md` 和 `implement.md`；未改动产品代码或数据库。
+- 2026-07-29：本机 Playwright 缓存缺少项目锁定的 Chromium 1208。仅为本地验证临时复用现有 Chromium 1234 的缓存目录；未修改项目依赖、配置或产物。成就页 Smoke 已通过。
+- 2026-07-29：Trellis `trellis-before-dev` 指定的 `.trellis/scripts/get_context.py` 在当前仓库不存在。已改为直接读取任务文档、`.trellis/spec/index.md`、`smoke-testing.md` 与 `frontend-api-boundary.md` 后继续；未扩大本次徽章视觉同步范围。
+- 2026-07-29：本地 `2048-game-api` 缺少 `DATABASE_URL`、`AUTH_TOKEN_SECRET`、`RANKED_SESSION_SECRET` 与 `AUTH_SYNC_SECRET`，无法启动真实目录接口。视觉验收改用不落盘的内存 HTTP 预览直接调用生产 `achievementIconMarkupFor`，覆盖三级里程碑、五级竞速和三个特殊徽章；预览未写入仓库或构建入口。
+
+## Verification
+
+- 前端：`tsc --noEmit`、成就系列与提示队列单测、成就页 Smoke 通过。
+- 后端：`test/node/achievements.spec.ts` 与 TypeScript 类型检查通过。
+- 视觉：已在 1280×900 与 390×844 截图检查系列卡、五级详情轨道和移动端横向滚动。
+- 徽章同步：新参数化 SVG 单测、彩蛋提示单测、成就页 4 项 Smoke、`npm run build` 通过；已在桌面与 390×844 移动视窗检查星级、竞速右侧缺口、特殊徽章和开壳方向。
+- 彩蛋轮廓修正：完整蛋与上下壳改为顶部收窄、下半部外扩后收圆的卵形，并按开壳终态校准参考图比例；裂口上移以缩短上壳、增大下壳占比，共用裂口与 `-15deg` 动画保持不变，相关 28 项单测、类型检查、生产构建及移动端大图检查通过。
+- 彩蛋内圈留白：蛋壳与星光主体围绕中心统一缩放至 `82%`，外圈和内圈尺寸不变，确保开壳终态完整位于内圈并保留稳定空白；相关单测、类型检查、生产构建与移动端详情检查通过。
+- 彩蛋详情重播：详情弹层使用原生 `dialog[open]` 状态触发 0.8 秒开壳动画；关闭后状态自动移除，因此每次重新打开都会从完整蛋重播至既有 `-15deg` 开壳终态，不改徽章 SVG 与比例。勋章页样式缓存键同步提升至 `v23`，避免旧 CSS 缓存导致动画规则未加载；已在移动端预览连续执行两轮“打开、关闭、再打开”，两次均从完整蛋状态开始播放。

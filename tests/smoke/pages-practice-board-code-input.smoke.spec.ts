@@ -450,5 +450,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "4194304", "8388608", "16777216", "33554432", "67108864"
     ]);
     await expect(page.locator("#selection-grid .selection-tile.tile-super")).toHaveCount(10);
+
+    for (const fibonacciMode of [
+      { modeKey: "fib_4x2_no_undo", maxTile: "1597" },
+      { modeKey: "fib_3x3_no_undo", maxTile: "4181" },
+      { modeKey: "fib_4x3_no_undo", maxTile: "75025" },
+      { modeKey: "fib_4x4_no_undo", maxTile: "2178309" }
+    ]) {
+      await chooseMode(fibonacciMode.modeKey);
+      await expect(page.locator("#selection-page-status")).toHaveText("1 / 2");
+      await page.locator("#selection-page-next").click();
+      await expect(page.locator("#selection-grid .selection-tile").last()).toHaveText(
+        fibonacciMode.maxTile
+      );
+    }
+    await expect(page.locator('.selection-tile[data-value="3524578"]')).toHaveCount(0);
+    expect(
+      await page.locator("#selection-grid .selection-tile").last().evaluate((tile) => {
+        const label = tile.querySelector<HTMLElement>(".tile-inner");
+        return Boolean(label && label.scrollWidth <= label.clientWidth);
+      })
+    ).toBe(true);
   });
 });

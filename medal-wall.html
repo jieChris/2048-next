@@ -13,7 +13,7 @@
   <link href="style/main.css?v=20260721-leaderboard-rank-colors-v1" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
   <link href="style/achievement_unlock_showcase.css?v=20260708-achievements-toast" rel="stylesheet" type="text/css">
-  <link href="style/achievements_page.css?v=20260707-achievements-redesign" rel="stylesheet" type="text/css">
+  <link href="style/achievements_page.css?v=20260729-fullscreen-medal-viewer-v23" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -29,9 +29,6 @@
         </div>
       </div>
       <span id="achievements-user-name" class="achievements-header-user" aria-live="polite">游客</span>
-      <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="account.html">排行榜</a>
-      </nav>
     </header>
 
     <section class="achievements-overview">
@@ -39,9 +36,7 @@
         <div class="panel-head achievements-panel-head">
           <div>
             <h2>收集进度</h2>
-            <p id="achievements-summary-copy">正在读取成就数据。</p>
           </div>
-          <span id="achievements-status" class="panel-pill">加载中</span>
         </div>
         <div id="achievements-stats" class="achievements-stats" aria-live="polite"></div>
       </section>
@@ -52,7 +47,7 @@
             <h2>展示成就</h2>
             <p>最多展示三个已获得成就。</p>
           </div>
-          <button id="achievements-edit-showcase" class="replay-button" type="button">编辑展示</button>
+          <button id="achievements-edit-showcase" class="replay-button" type="button">编辑</button>
         </div>
         <div id="achievements-showcase" class="achievements-showcase" aria-live="polite"></div>
         <div id="achievements-showcase-actions" class="achievements-showcase-actions" hidden>
@@ -67,27 +62,32 @@
         <div class="achievements-wall-head">
           <div>
             <h2>成就勋章墙</h2>
-            <p>已点亮和未点亮的成就会同时展示，已点亮成就排在前方。</p>
           </div>
         </div>
         <div class="achievements-filter-row" role="group" aria-label="成就筛选">
           <button class="achievement-filter is-active" type="button" data-filter="all">全部</button>
           <button class="achievement-filter" type="button" data-filter="earned">已获得</button>
           <button class="achievement-filter" type="button" data-filter="locked">未获得</button>
+          <button class="achievement-filter" type="button" data-filter="upgrading">可升级</button>
+          <button class="achievement-filter" type="button" data-filter="complete">已集齐</button>
           <button class="achievement-filter" type="button" data-filter="event">活动</button>
+          <button class="achievement-filter" type="button" data-filter="hidden" hidden>隐藏</button>
           <button class="achievement-filter" type="button" data-filter="milestone">里程碑</button>
           <button class="achievement-filter" type="button" data-filter="speedrun">竞速</button>
         </div>
         <div id="achievements-list" class="achievements-list" aria-live="polite"></div>
       </section>
-
-      <aside id="achievement-detail" class="card-surface achievement-detail" aria-live="polite">
-        <div class="achievement-detail-empty">选择一个成就查看详情。</div>
-      </aside>
     </section>
 
     <p id="achievements-tip" class="achievements-tip" aria-live="polite"></p>
   </main>
+
+  <dialog id="achievement-family-dialog" class="achievement-family-dialog" aria-labelledby="achievement-family-dialog-title">
+    <div class="achievement-family-dialog-frame">
+      <button id="achievement-family-dialog-close" class="achievement-family-dialog-close" type="button" aria-label="关闭">&times;</button>
+      <div id="achievement-family-dialog-content"></div>
+    </div>
+  </dialog>
 
   <script type="module" src="./src/entries/achievements.ts"></script>
 </body>

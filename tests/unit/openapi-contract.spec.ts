@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import type { components } from "../../src/services/generated-api/2048next-v1";
 
 const root = process.cwd();
 const specPath = resolve(root, "openapi/2048next.v1.yaml");
@@ -17,6 +18,59 @@ function readSpec(): string {
 }
 
 describe("OpenAPI contract", () => {
+  it("types the isolated classic 4x4 showcase rows", () => {
+    const row: components["schemas"]["LeaderboardShowcaseEntry"] = {
+      rank: 1,
+      user_id: 42,
+      nickname: "TopPlayer",
+      score: 120000,
+      max_tile: 8192,
+      board_sum: 32764,
+      duration_ms: 654321
+    };
+
+    expect(row).toMatchObject({ rank: 1, score: 120000, max_tile: 8192, board_sum: 32764 });
+  });
+
+  it("types the initial insufficient-data rating response", () => {
+    const stats: components["schemas"]["UserRecordStats"] = {
+      rating: { value: null, status: "insufficient_data" }
+    };
+
+    expect(stats.rating).toEqual({ value: null, status: "insufficient_data" });
+  });
+
+  it("types ranked attempt capability versions without client-authoritative outcome fields", () => {
+    const start: components["schemas"]["RankedSessionStartRequest"] = {
+      mode_key: "standard_4x4_pow2_no_undo",
+      attempt_schema_version: 1
+    };
+    const attempt: components["schemas"]["RankedSessionAttemptRequest"] = {
+      event: "abandon",
+      mode_key: "standard_4x4_pow2_no_undo",
+      ranked_session_token: "ranked-token",
+      replay_string: "verified-replay",
+      reason: "restart",
+      attempt_schema_version: 1
+    };
+    const record: components["schemas"]["GameRecordSubmitRequest"] = {
+      score: 0,
+      mode_key: "standard_4x4_pow2_no_undo",
+      record_schema_version: 1
+    };
+    const session: components["schemas"]["RankedSession"] = {
+      status: "created",
+      record_era: "official_v1"
+    };
+
+    expect({ start, attempt, record, session }).toMatchObject({
+      start: { attempt_schema_version: 1 },
+      attempt: { event: "abandon", attempt_schema_version: 1 },
+      record: { record_schema_version: 1 },
+      session: { status: "created", record_era: "official_v1" }
+    });
+  });
+
   it("publishes a versioned OpenAPI contract for core and upcoming achievement APIs", () => {
     const spec = readSpec();
 
@@ -30,8 +84,10 @@ describe("OpenAPI contract", () => {
       "/user/me:",
       "/user/nickname:",
       "/leaderboard:",
+      "/leaderboard/standard-4x4-no-undo:",
       "/records:",
       "/ranked-session/start:",
+      "/ranked-session/attempt:",
       "/ranked-checkpoint:",
       "/relay/cases:",
       "/relay/cases/{caseId}/snapshot:",
@@ -53,8 +109,10 @@ describe("OpenAPI contract", () => {
       "ApiEnvelope:",
       "User:",
       "LeaderboardEntry:",
+      "LeaderboardShowcaseEntry:",
       "GameRecord:",
       "RankedSession:",
+      "RankedSessionAttemptRequest:",
       "RankedCheckpoint:",
       "RelayCase:",
       "RescueOffer:",

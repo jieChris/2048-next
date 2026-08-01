@@ -663,6 +663,7 @@ describe("contracts: UserRecordEntry type shape", () => {
     const entry: UserRecordEntry = {
       id: "rec_001",
       user_id: 5,
+      record_era: "official_v1",
       mode_bucket: "standard_no_undo",
       mode_key: "standard_4x4_pow2_no_undo",
       score: 8000,
@@ -675,8 +676,27 @@ describe("contracts: UserRecordEntry type shape", () => {
       min_steps_2048: 604
     };
     expect(entry.id).toBe("rec_001");
+    expect(entry.record_era).toBe("official_v1");
     expect(entry.score).toBe(8000);
     expect(entry.deleted_at).toBeNull();
     expect(entry.min_steps_2048).toBe(604);
+  });
+
+  it("accepts beta records as a distinct era", () => {
+    const entry: UserRecordEntry = {
+      id: "rec_beta_001",
+      user_id: 5,
+      record_era: "beta",
+      mode_bucket: "standard_no_undo",
+      mode_key: "standard_4x4_pow2_no_undo",
+      score: 4096,
+      best_tile: 512,
+      duration_ms: 120000,
+      ended_at: "2026-03-14T00:00:00Z",
+      end_reason: "game_over",
+      deleted_at: null,
+      created_at: "2026-03-14T00:00:00Z"
+    };
+    expect(entry.record_era).toBe("beta");
   });
 });

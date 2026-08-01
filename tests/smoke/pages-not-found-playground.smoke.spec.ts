@@ -4,11 +4,13 @@ test("404 playground submits the hidden lost-page achievement event", async ({
   page,
 }) => {
   let requestBody: unknown = null;
+  let authHeader = "";
   await page.addInitScript(() => {
     localStorage.setItem("2048_auth_token_v1", "smoke-token");
   });
   await page.route("**/api/user/me/achievement-events", async (route) => {
     requestBody = route.request().postDataJSON();
+    authHeader = route.request().headers().authorization || "";
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -37,6 +39,7 @@ test("404 playground submits the hidden lost-page achievement event", async ({
   await expect(page.locator(".unlock-toast-title")).toHaveText("隐藏成就");
   await expect(page.locator(".unlock-toast-name")).toHaveText("你也曾迷路");
   expect(requestBody).toEqual({ event_id: "lost_page_visited" });
+  expect(authHeader).toBe("Bearer smoke-token");
 });
 
 test("404 playground drags matching tiles together and resets", async ({

@@ -1,4 +1,5 @@
 import { achievementIconMarkupFor } from "../services/achievement-icons";
+import { highestAchievementPerFamily } from "../services/achievement-families";
 import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
 
 interface AchievementToastWindowLike {
@@ -262,9 +263,16 @@ export function installAchievementUnlockToastRuntime(options: {
       const raw = Array.isArray(items) ? items : [items];
       const achievements = raw.map(unwrapAchievement).filter((item): item is Record<string, unknown> => !!item);
       if (achievements.length <= 0) return;
+      const highestPerFamily = highestAchievementPerFamily(achievements.map((achievement) => ({
+        ...achievement,
+        id: achievementId(achievement),
+        seriesId: achievement.series_id ?? achievement.seriesId,
+        level: achievement.level,
+        sortOrder: achievement.sort_order ?? achievement.sortOrder
+      })));
       const clearTimer = windowLike.clearTimeout || clearTimeout;
       if (!showing && timer) clearTimer(timer);
-      queue = queue.concat(achievements).slice(-10);
+      queue = queue.concat(highestPerFamily).slice(-10);
       if (!showing) showNext(windowLike, documentLike);
     }
   };

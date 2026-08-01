@@ -1,10 +1,14 @@
 import { JSDOM } from "jsdom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BETA_ACCESS_EXEMPT_PAGE_IDS,
+  BETA_ACCESS_GATE_RELEASE_AT_MS,
+  BETA_ACCESS_GATE_TEST_END_MS,
+  BETA_ACCESS_GATE_TEST_START_MS,
   BETA_ACCESS_LOCAL_FORCE_GATE_KEY,
   BETA_ACCESS_SMOKE_BYPASS_KEY,
+  isBetaAccessGateOpen,
   runBetaAccessGate,
   shouldRunBetaAccessGate
 } from "../../src/bootstrap/access-gate";
@@ -32,8 +36,40 @@ function createWindowLike(dom: JSDOM, pathname = "/play.html", search = "?mode_k
 }
 
 describe("bootstrap: access-gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(BETA_ACCESS_GATE_RELEASE_AT_MS - 1);
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("opens for the ten-minute test window, restores, then releases permanently", async () => {
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_START_MS - 1)).toBe(false);
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_START_MS)).toBe(true);
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_END_MS - 1)).toBe(true);
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_TEST_END_MS)).toBe(false);
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_RELEASE_AT_MS - 1)).toBe(false);
+    expect(isBetaAccessGateOpen(BETA_ACCESS_GATE_RELEASE_AT_MS)).toBe(true);
+
+    vi.setSystemTime(BETA_ACCESS_GATE_TEST_START_MS);
+    const dom = createDom();
+    const windowLike = createWindowLike(dom);
+    const fetchLike = vi.fn();
+
+    const result = await runBetaAccessGate("play", {
+      documentLike: dom.window.document,
+      windowLike,
+      storageLike: dom.window.localStorage,
+      fetchLike
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(fetchLike).not.toHaveBeenCalled();
+    expect(windowLike.location.replace).not.toHaveBeenCalled();
+    expect(dom.window.document.documentElement.hasAttribute("data-beta-access-pending")).toBe(false);
   });
 
   it("only exempts standalone beta/admin utility pages", () => {
@@ -191,6 +227,7 @@ describe("bootstrap: access-gate", () => {
     const forcedLocalWindow = createWindowLike(forcedLocalDom, "/play.html", "");
     forcedLocalWindow.location.hostname = "127.0.0.1";
     forcedLocalDom.window.localStorage.setItem(BETA_ACCESS_LOCAL_FORCE_GATE_KEY, "1");
+    vi.setSystemTime(BETA_ACCESS_GATE_RELEASE_AT_MS);
 
     const forcedLocalResult = await runBetaAccessGate("play", {
       documentLike: forcedLocalDom.window.document,
@@ -202,6 +239,7 @@ describe("bootstrap: access-gate", () => {
     expect(forcedLocalResult.allowed).toBe(false);
     expect(forcedLocalWindow.location.replace).toHaveBeenCalled();
 
+    vi.setSystemTime(BETA_ACCESS_GATE_RELEASE_AT_MS - 1);
     const productionDom = createDom();
     const productionWindow = createWindowLike(productionDom);
     productionDom.window.localStorage.setItem(BETA_ACCESS_SMOKE_BYPASS_KEY, "1");

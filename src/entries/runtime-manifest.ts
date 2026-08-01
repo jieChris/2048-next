@@ -90,6 +90,12 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     capabilities: ["account"]
   },
   {
+    pageId: "leaderboard-4x4",
+    htmlFile: "leaderboard_4x4.html",
+    capabilities: ["account"],
+    devOnly: true
+  },
+  {
     pageId: "achievements",
     htmlFile: "medal-wall.html",
     capabilities: ["account"]

@@ -278,9 +278,25 @@ body[data-page="palette-hub"].palette-swatch-open {
   font-size: 12px;
 }
 
+.custom-secondary-timer-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 286px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.custom-secondary-timer-editor-column {
+  min-width: 0;
+}
+
+.custom-secondary-timer-editor-column .custom-secondary-timer-label {
+  margin-top: 0;
+}
+
 #custom-secondary-timer-rules {
   width: 100%;
-  min-height: 150px;
+  min-height: 270px;
   margin-top: 8px;
   padding: 10px;
   box-sizing: border-box;
@@ -305,6 +321,126 @@ body[data-page="palette-hub"].palette-swatch-open {
 
 .custom-secondary-timer-actions .replay-button {
   min-width: 104px;
+}
+
+.custom-secondary-timer-preview {
+  min-width: 0;
+  padding: 12px 10px 10px;
+  border: 1px solid var(--app-border-structure);
+  border-radius: 12px;
+  background: var(--app-surface-board);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--app-text-on-board) 8%, transparent);
+}
+
+.custom-secondary-timer-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 5px 9px;
+}
+
+.custom-secondary-timer-preview-head strong {
+  color: var(--app-text-on-board);
+  font-size: 14px;
+}
+
+.custom-secondary-timer-preview-head small {
+  color: var(--app-text-on-board-muted);
+  font-size: 11px;
+}
+
+.custom-secondary-timer-preview-list {
+  max-height: 330px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.custom-secondary-timer-preview-group + .custom-secondary-timer-preview-group {
+  margin-top: 3px;
+}
+
+.custom-secondary-timer-preview-parent,
+.custom-secondary-timer-preview-child {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 0 9px 15px;
+}
+
+.custom-secondary-timer-preview-parent {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.custom-secondary-timer-preview-parent::after {
+  content: "";
+  position: absolute;
+  right: 11px;
+  top: 17px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--app-text-muted);
+  border-bottom: 2px solid var(--app-text-muted);
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.custom-secondary-timer-preview-parent[aria-expanded="true"]::after {
+  transform: translateY(3px) rotate(225deg);
+}
+
+.custom-secondary-timer-preview-parent:focus-visible {
+  outline: 2px solid var(--enamel-button-teal);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.custom-secondary-timer-preview-child {
+  padding-left: calc(15px + (var(--timer-preview-level, 1) * 10px));
+}
+
+.custom-secondary-timer-preview .timertile {
+  float: none;
+  width: 42px;
+  height: 42px;
+  margin: 0;
+}
+
+.custom-secondary-timer-preview .custom-secondary-timer-preview-time {
+  width: auto;
+  min-width: 0;
+  padding-right: 18px;
+  background: var(--app-surface-tile);
+  color: var(--app-text);
+  font-size: 13px;
+}
+
+.custom-secondary-timer-preview-child .custom-secondary-timer-preview-time {
+  padding-right: 0;
+  color: var(--app-text-muted);
+}
+
+.custom-secondary-timer-preview-empty {
+  margin: 0;
+  padding: 28px 18px;
+  border: 1px dashed color-mix(in srgb, var(--app-text-on-board-muted) 42%, transparent);
+  border-radius: 9px;
+  color: var(--app-text-on-board-muted);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.custom-secondary-timer-preview-empty[hidden] {
+  display: none;
 }
 
 @media (max-width: 760px) and (pointer: coarse) {
@@ -1292,6 +1428,19 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-nav-btn:h
 
   .custom-secondary-timer-generator .replay-button {
     grid-column: 1 / -1;
+  }
+
+  .custom-secondary-timer-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #custom-secondary-timer-rules {
+    min-height: 220px;
+  }
+
+  .custom-secondary-timer-preview {
+    width: min(286px, 100%);
+    box-sizing: border-box;
   }
 
   .palette-toolbar {

@@ -2,7 +2,7 @@ import {
   installAchievementUnlockToastRuntime,
   type AchievementUnlockToastRuntime,
 } from "../bootstrap/achievement-unlock-toast";
-import { readAuthToken, type JsonRecord } from "../services/api-client";
+import { readAuthToken } from "../services/api-client";
 import {
   createAchievementsService,
   type AchievementsService,
@@ -228,12 +228,6 @@ function requiredElement<T extends HTMLElement>(id: string): T {
   return element as T;
 }
 
-function toRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonRecord)
-    : {};
-}
-
 export async function submitLostPageAchievement(options: {
   runtime?: AchievementUnlockToastRuntime | null;
   service?: Pick<AchievementsService, "grantMyAchievementEvent">;
@@ -252,8 +246,7 @@ export async function submitLostPageAchievement(options: {
     .catch(() => null);
   if (!payload || payload.success !== true || payload.newly_granted === false)
     return;
-  const data = toRecord(payload.data);
-  options.runtime?.showAchievementUnlockToast(data);
+  options.runtime?.showAchievementUnlockToast(payload);
 }
 
 function bootstrap(): void {

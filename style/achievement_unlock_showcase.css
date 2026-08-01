@@ -254,7 +254,7 @@
 
 .unlock-toast--easter-egg .achievement-easter-egg-top {
   transform-box: view-box;
-  transform-origin: 20px 49px;
+  transform-origin: 19px 47px;
   animation: unlock-easter-egg-top-shell 3.6s ease both;
 }
 
@@ -347,7 +347,7 @@
   }
   32%, 100% {
     opacity: 1;
-    transform: rotate(-10deg);
+    transform: rotate(-15deg);
   }
 }
 

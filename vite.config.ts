@@ -214,6 +214,7 @@ export default defineConfig(({ mode }) => {
           beta_login: resolve(__dirname, "beta-login.html"),
           beta_access: resolve(__dirname, "beta-access.html"),
           account: resolve(__dirname, "account.html"),
+          leaderboard_4x4: resolve(__dirname, "leaderboard_4x4.html"),
           admin: resolve(__dirname, "admin.html"),
           account_settings: resolve(__dirname, "account_settings.html"),
           register: resolve(__dirname, "register.html"),

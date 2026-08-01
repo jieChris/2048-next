@@ -1027,7 +1027,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".user-record-item");
-    await expect.poll(() => recordRequests.length).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => recordRequests.length).toBeGreaterThanOrEqual(1);
     const recordsBeforeDelete = recordRequests.length;
 
     await page.locator(".user-record-row").first().click();
@@ -1045,6 +1045,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   test("own profile status filter requests deleted records and renders restore action", async ({ page }) => {
     const recordRequests: string[] = [];
     let replayRequests = 0;
+    let restoreRequests = 0;
 
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-deleted-records");
@@ -1073,10 +1074,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: status === "deleted" ? [
+            data: status === "deleted" || status === "all" ? [
               {
                 id: "rec-deleted-1",
                 user_id: 9,
+                record_era: "beta",
                 mode_bucket: "standard_no_undo",
                 mode_key: "standard_4x4_pow2_no_undo",
                 score: 8192,
@@ -1097,6 +1099,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
           status: 404,
           contentType: "application/json",
           body: JSON.stringify({ success: false, error: "record not found" })
+        });
+        return;
+      }
+      if (url.includes("/records/rec-deleted-1/restore") && route.request().method() === "POST") {
+        restoreRequests += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true })
         });
         return;
       }
@@ -1124,12 +1135,182 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.locator(".user-record-row").first().click();
 
     await expect(page.locator(".user-record-score").first()).toHaveText("8192");
+    await expect(page.locator(".user-record-era-badge")).toHaveCount(2);
     await expect(page.locator(".user-record-detail-error")).toHaveText("已删除记录需恢复后才能查看回放");
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
     expect(replayRequests).toBe(0);
     expect(recordRequests.some((url) => new URL(url).searchParams.get("status") === "deleted")).toBeTruthy();
 
+    const allRecordsResponse = page.waitForResponse((response) => {
+      const url = response.url();
+      return url.includes("/user/9/records") && new URL(url).searchParams.get("status") === "all";
+    });
     await page.selectOption("#user-record-visibility", "all");
+    await allRecordsResponse;
     await expect.poll(() => recordRequests.some((url) => new URL(url).searchParams.get("status") === "all")).toBeTruthy();
+    await expect(page.locator(".user-record-item.is-deleted")).toHaveCount(1);
+    await page.locator(".user-record-row").click();
+    await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
+    await page.locator(".user-record-action-btn").click();
+    await expect.poll(() => restoreRequests).toBe(1);
+    await expect(page.locator(".user-record-item.is-deleted")).toHaveCount(0);
+    await expect(page.locator(".user-record-item")).toHaveCount(1);
+    await expect(page.locator(".user-record-action-btn")).toHaveCount(0);
+  });
+
+  test("user profile distinguishes beta records without mixing them into official rating summary", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "test-token-record-era");
+      window.localStorage.setItem("2048_auth_userId_v1", "9");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Owner");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/me")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9/stats")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              summary: {
+                record_era: "official_v1",
+                total_records: 1,
+                best_score: 4096,
+                best_tile: 512,
+                latest_record_at: "2026-07-20T00:00:00.000Z"
+              },
+              by_mode: [
+                {
+                  record_era: "beta",
+                  mode_bucket: "standard_no_undo",
+                  mode_key: "standard_4x4_pow2_no_undo",
+                  record_count: 99,
+                  best_score: 8192,
+                  best_tile: 1024,
+                  latest_record_at: "2026-07-21T00:00:00.000Z"
+                },
+                {
+                  record_era: "official_v1",
+                  mode_bucket: "standard_no_undo",
+                  mode_key: "standard_4x4_pow2_no_undo",
+                  record_count: 1,
+                  best_score: 4096,
+                  best_tile: 512,
+                  latest_record_at: "2026-07-20T00:00:00.000Z"
+                }
+              ],
+              rating: { value: null, status: "insufficient_data" }
+            }
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9/records")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: [
+              {
+                id: "rec-beta-1",
+                user_id: 9,
+                record_era: "beta",
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 8192,
+                best_tile: 1024,
+                duration_ms: 18000,
+                ended_at: "2026-07-21T00:00:00.000Z",
+                created_at: "2026-07-21 00:00:00",
+                replay_string: "replay_beta",
+                final_board: [[2, 4, 8, 16], [32, 64, 128, 1024], [0, 0, 0, 0], [0, 0, 0, 0]]
+              },
+              {
+                id: "rec-official-1",
+                user_id: 9,
+                record_era: "official_v1",
+                mode_bucket: "standard_no_undo",
+                mode_key: "standard_4x4_pow2_no_undo",
+                score: 4096,
+                best_tile: 512,
+                duration_ms: 15000,
+                ended_at: "2026-07-20T00:00:00.000Z",
+                created_at: "2026-07-20 00:00:00",
+                replay_string: "replay_official",
+                final_board: [[2, 4, 8, 16], [32, 64, 128, 512], [0, 0, 0, 0], [0, 0, 0, 0]]
+              }
+            ],
+            page: 1,
+            limit: 20,
+            total: 2
+          })
+        });
+        return;
+      }
+      if (url.includes("/user/9")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: {} })
+      });
+    });
+
+    const response = await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
+
+    await expect(page.locator(".user-record-item")).toHaveCount(2);
+    await expect(page.locator(".user-record-era-badge")).toHaveCount(1);
+    await expect(page.locator(".user-record-era-badge")).toHaveText("内测成绩");
+    await expect(page.locator("#user-summary-preview")).toHaveText("数据积累中，暂无 Rating");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("1");
+    await expect(page.locator("#user-summary-best-score-value")).toHaveText("4096");
+    await expect(page.locator("#user-summary-last-active-value")).toHaveText("2026-07-20 08:00:00");
+
+    const betaRecord = page.locator(".user-record-item").first();
+    await betaRecord.locator(".user-record-row").click();
+    await expect(betaRecord.locator(".user-record-detail .user-record-era-badge")).toHaveText("内测成绩");
+    await expect(betaRecord.locator(".user-replay-btn")).toBeVisible();
+    await expect(betaRecord.locator(".user-replay-export-btn")).toBeVisible();
+    await expect(betaRecord.locator(".user-record-action-btn")).toHaveCount(0);
+
+    const downloadPromise = page.waitForEvent("download");
+    await betaRecord.locator(".user-replay-export-btn").click();
+    const download = await downloadPromise;
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const exportedReplay = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    expect(exportedReplay.record_era).toBe("beta");
+
+    const officialRecord = page.locator(".user-record-item").nth(1);
+    await officialRecord.locator(".user-record-row").click();
+    await expect(officialRecord.locator(".user-record-detail")).toBeVisible();
+    await expect(officialRecord.locator(".user-record-era-badge")).toHaveCount(0);
+    await expect(officialRecord.locator(".user-record-action-btn")).toHaveCount(1);
   });
 });

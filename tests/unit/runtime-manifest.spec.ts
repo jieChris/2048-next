@@ -10,8 +10,8 @@ import {
 import { resolveHomeFamilyScriptsByCapabilities } from "../../src/entries/home-family-shared";
 
 describe("runtime-manifest: PAGE_MANIFESTS", () => {
-  it("has 19 page entries", () => {
-    expect(PAGE_MANIFESTS.length).toBe(19);
+  it("has 20 page entries", () => {
+    expect(PAGE_MANIFESTS.length).toBe(20);
   });
 
   it("all entries have unique pageId", () => {
@@ -35,6 +35,7 @@ describe("runtime-manifest: PAGE_MANIFESTS", () => {
     expect(PAGE_MANIFESTS.some((entry) => entry.pageId === "register")).toBe(true);
     expect(PAGE_MANIFESTS.some((entry) => entry.pageId === "password")).toBe(true);
     expect(PAGE_MANIFESTS.some((entry) => entry.pageId === "user-profile")).toBe(true);
+    expect(PAGE_MANIFESTS.some((entry) => entry.pageId === "leaderboard-4x4")).toBe(true);
   });
 });
 
@@ -55,6 +56,7 @@ describe("runtime-manifest: getPageManifest", () => {
     expect(getPageManifest("register")?.htmlFile).toBe("register.html");
     expect(getPageManifest("password")?.htmlFile).toBe("password.html");
     expect(getPageManifest("user-profile")?.htmlFile).toBe("user.html");
+    expect(getPageManifest("leaderboard-4x4")?.htmlFile).toBe("leaderboard_4x4.html");
   });
 
   it("returns undefined for unknown page", () => {

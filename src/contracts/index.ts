@@ -833,6 +833,7 @@ export interface RecordSubmitResponse {
 export interface UserRecordEntry {
   id: string;
   user_id: number;
+  record_era: "beta" | "official_v1";
   mode_bucket: string;
   mode_key: string;
   score: number;

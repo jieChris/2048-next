@@ -15,6 +15,14 @@ describe("self-hosted nginx cache policy", () => {
     expect(config).not.toContain('Cloudflare-CDN-Cache-Control "no-store"');
   });
 
+  it("only permits same-origin framing for the embedded breakout easter egg", () => {
+    const config = readFileSync("deploy/nginx/2048-next.nginx.conf.example", "utf8");
+
+    expect(config).toContain('~^/easter-eggs/breakout(?:/|$) SAMEORIGIN;');
+    expect(config).toContain('default DENY;');
+    expect(config).toContain('add_header X-Frame-Options $frame_options always;');
+  });
+
   it("publishes the repo nginx config during self-hosted deploy", () => {
     const workflow = readFileSync(".github/workflows/deploy-self-hosted.yml", "utf8");
 

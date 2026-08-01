@@ -34,7 +34,19 @@
   var RANKED_CHECKPOINT_CLEAR_MARKER_KEY_PREFIX = "ranked_checkpoint_cleared_at:v1:";
   var RANKED_SESSION_ACTIVE_KEY_PREFIX = "ranked_session_active:v1:";
   var RANKED_SESSION_PREFETCH_KEY_PREFIX = "ranked_session_prefetch:v1:";
+  var RANKED_ATTEMPT_SCHEMA_VERSION = 1;
+  var RECORD_SCHEMA_VERSION = 1;
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
+  var RANKED_RESTART_ATTEMPT_PERSIST_FAILED = { rankedRestartAttemptPersistFailed: true };
+  var RANKED_NAVIGATION_LINK_IDS = {
+    "home-title-link": true,
+    "home-user-display": true,
+    "toolkit-account-link": true,
+    "toolkit-palette-link": true,
+    "top-modes-btn": true,
+    "top-practice-btn": true,
+    "top-user-profile-btn": true
+  };
   var BREAKOUT_EASTER_EGG_GAME_URL = "./easter-eggs/breakout/index.html";
   var BREAKOUT_EASTER_EGG_TRIGGER_COUNT = 19;
 
@@ -216,6 +228,7 @@
   var pollingVisibilityBound = false;
   var pollingUsingScheduler = false;
   var lifecycleSubmitFlushBound = false;
+  var rankedNavigationAttemptBound = false;
   var authBestScoreSyncBound = false;
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
@@ -392,6 +405,74 @@ function shouldAutoLoadOnlineLeaderboard() {
       mode_key: rankedContext.modeKey,
       ranked_session_token: rankedContext.token
     };
+  }
+
+  function flushRankedAttemptOutbox(options) {
+    var runtime = getRankedSessionRuntime();
+    if (!runtime || typeof runtime.flushAttemptOutbox !== "function") {
+      return Promise.resolve(false);
+    }
+    return runtime.flushAttemptOutbox(options || {});
+  }
+
+  function queueRankedAttemptForManager(manager, eventName, reason) {
+    if (!shouldUseRankedCheckpoint(manager) || manager.rankCheckpointApplying === true) return false;
+    if (Math.floor(Number(manager.successfulMoveCount) || 0) <= 0) return false;
+    if (eventName === "abandon" && isSessionTerminated(manager)) return false;
+    var rankedContext = resolveRankedSubmitContextForManager(manager);
+    var challengeId = toText(rankedContext && rankedContext.challengeId).trim().toLowerCase();
+    if (!rankedContext || !challengeId) return false;
+    var replayPayload = resolveRecordReplayPayload(manager);
+    if (!replayPayload.replayString) return false;
+    var runtime = getRankedSessionRuntime();
+    if (!runtime || typeof runtime.enqueueAttempt !== "function") return false;
+    var attempt = {
+      challenge_id: challengeId,
+      event: eventName,
+      mode_key: rankedContext.modeKey,
+      ranked_session_token: rankedContext.token,
+      replay_string: replayPayload.replayString,
+      attempt_schema_version: RANKED_ATTEMPT_SCHEMA_VERSION
+    };
+    if (eventName === "abandon") attempt.reason = reason === "navigation" ? "navigation" : "restart";
+    var queued = runtime.enqueueAttempt(attempt);
+    if (!queued) return false;
+    runPromiseSafely(function () {
+      return flushRankedAttemptOutbox();
+    });
+    return true;
+  }
+
+  function shouldPersistRankedAbandon(manager) {
+    return !!(
+      shouldUseRankedCheckpoint(manager) &&
+      manager.rankCheckpointApplying !== true &&
+      Math.floor(Number(manager.successfulMoveCount) || 0) > 0 &&
+      !isSessionTerminated(manager)
+    );
+  }
+
+  function persistRankedAbandonForAction(manager, reason) {
+    if (!shouldPersistRankedAbandon(manager)) return true;
+    return queueRankedAttemptForManager(manager, "abandon", reason);
+  }
+
+  function notifyRankedAttemptPersistenceBlocked(manager) {
+    if (manager) manager.rankedAttemptPersistenceError = "attempt_outbox_persist_failed";
+    if (typeof global.alert !== "function") return;
+    var isEnglish = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).trim().toLowerCase() === "en";
+    global.alert(isEnglish
+      ? "Could not save this ranked attempt. Please retry before leaving the game."
+      : "暂时无法保存本局排位记录，请重试后再离开游戏。");
+  }
+
+  function maybeQueueRankedBeginAttempt(manager) {
+    if (!manager || Math.floor(Number(manager.successfulMoveCount) || 0) <= 0) return false;
+    var challengeId = resolveRankedChallengeIdForManager(manager).toLowerCase();
+    if (!challengeId || manager.rankedAttemptBeginQueuedChallengeId === challengeId) return false;
+    if (!queueRankedAttemptForManager(manager, "begin")) return false;
+    manager.rankedAttemptBeginQueuedChallengeId = challengeId;
+    return true;
   }
 
   function shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload) {
@@ -590,6 +671,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return err === RANKED_RESTART_SETUP_DEFERRED;
   }
 
+  function isRankedRestartAttemptPersistFailedError(err) {
+    return err === RANKED_RESTART_ATTEMPT_PERSIST_FAILED;
+  }
+
   function markRankedRestartPreparationDone(manager) {
     if (manager) manager.rankedRestartPreparing = false;
   }
@@ -667,6 +752,11 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function beginAsyncRankedRestartAfterConfirmation(manager, original, thisArg, args, modeKey, runtime) {
     if (!(manager && typeof manager.setup === "function")) {
+      if (!persistRankedAbandonForAction(manager, "restart")) {
+        notifyRankedAttemptPersistenceBlocked(manager);
+        markRankedRestartPreparationDone(manager);
+        return;
+      }
       Promise.resolve()
         .then(function () {
           return runtime.startNextSession(modeKey);
@@ -702,19 +792,67 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
 
     var originalSetup = manager.setup;
+    var originalClearSavedGameState = typeof manager.clearSavedGameState === "function"
+      ? manager.clearSavedGameState
+      : null;
+    var actuator = manager.actuator && typeof manager.actuator === "object" ? manager.actuator : null;
+    var originalActuatorContinue = actuator && typeof actuator.continue === "function"
+      ? actuator.continue
+      : null;
     var restartSnapshot = snapshotRankedRestartManagerState(manager);
+    var abandonRequired = shouldPersistRankedAbandon(manager);
     var setupIntercepted = false;
     var restored = false;
+    var clearRestored = false;
+    var continueRestored = false;
+    var abandonPersisted = false;
+    function persistAbandonBeforeRestart() {
+      if (abandonPersisted || !abandonRequired) return true;
+      abandonPersisted = queueRankedAttemptForManager(manager, "abandon", "restart");
+      return abandonPersisted;
+    }
+    function restoreActuatorContinue() {
+      if (!continueRestored && originalActuatorContinue && actuator.continue === rankedRestartActuatorContinueInterceptor) {
+        actuator.continue = originalActuatorContinue;
+      }
+      continueRestored = true;
+    }
+    function restoreClearSavedGameState() {
+      if (!clearRestored && originalClearSavedGameState && manager.clearSavedGameState === rankedRestartClearSavedGameStateInterceptor) {
+        manager.clearSavedGameState = originalClearSavedGameState;
+      }
+      clearRestored = true;
+    }
     function restoreSetup() {
       if (!restored && manager.setup === rankedRestartSetupInterceptor) {
         manager.setup = originalSetup;
       }
       restored = true;
+      restoreClearSavedGameState();
+      restoreActuatorContinue();
+    }
+    function requirePersistedAbandon() {
+      if (persistAbandonBeforeRestart()) return;
+      restoreSetup();
+      restoreRankedRestartManagerState(manager, restartSnapshot);
+      notifyRankedAttemptPersistenceBlocked(manager);
+      throw RANKED_RESTART_ATTEMPT_PERSIST_FAILED;
+    }
+    function rankedRestartActuatorContinueInterceptor() {
+      requirePersistedAbandon();
+      restoreActuatorContinue();
+      return originalActuatorContinue.apply(this, arguments);
+    }
+    function rankedRestartClearSavedGameStateInterceptor() {
+      requirePersistedAbandon();
+      restoreClearSavedGameState();
+      return originalClearSavedGameState.apply(this, arguments);
     }
     function rankedRestartSetupInterceptor() {
       setupIntercepted = true;
       var setupThisArg = this || manager;
       var setupArgs = Array.prototype.slice.call(arguments);
+      requirePersistedAbandon();
       restoreSetup();
       continueRankedRestartAfterSetupIntent(
         manager,
@@ -728,6 +866,12 @@ function shouldAutoLoadOnlineLeaderboard() {
       throw RANKED_RESTART_SETUP_DEFERRED;
     }
     manager.setup = rankedRestartSetupInterceptor;
+    if (originalClearSavedGameState) {
+      manager.clearSavedGameState = rankedRestartClearSavedGameStateInterceptor;
+    }
+    if (originalActuatorContinue) {
+      actuator.continue = rankedRestartActuatorContinueInterceptor;
+    }
 
     var result;
     try {
@@ -735,6 +879,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     } catch (err) {
       restoreSetup();
       if (isRankedRestartSetupDeferredError(err)) {
+        return;
+      }
+      if (isRankedRestartAttemptPersistFailedError(err)) {
+        markRankedRestartPreparationDone(manager);
         return;
       }
       markRankedRestartPreparationDone(manager);
@@ -756,6 +904,10 @@ function shouldAutoLoadOnlineLeaderboard() {
       function (err) {
         restoreSetup();
         if (isRankedRestartSetupDeferredError(err)) {
+          return;
+        }
+        if (isRankedRestartAttemptPersistFailedError(err)) {
+          markRankedRestartPreparationDone(manager);
           return;
         }
         markRankedRestartPreparationDone(manager);
@@ -3018,6 +3170,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     var rankedVerification = buildRankedVerificationPayload(manager);
 
     return {
+      record_schema_version: RECORD_SCHEMA_VERSION,
       mode: modeBucket || toText(manager.mode).trim() || modeKey,
       mode_key: modeKey,
       mode_bucket: modeBucket || undefined,
@@ -3984,6 +4137,9 @@ async function refreshLeaderboard(modeLike) {
 
     var wrapped = function () {
       var currentManager = this || manager;
+      if (methodName === "move" && currentManager.rankedRestartBlockedUntilSessionReady === true) {
+        return;
+      }
       if (timing === "before") {
         var isRestartMethod =
           methodName === "restart" ||
@@ -4037,6 +4193,7 @@ async function refreshLeaderboard(modeLike) {
       if (timing === "after") {
         triggerImmediateOnlineSubmit();
         if (methodName === "move" && currentManager.rankCheckpointApplying !== true) {
+          maybeQueueRankedBeginAttempt(currentManager);
           persistRankedCheckpointLocalMirror(currentManager);
           scheduleRankedCheckpointSave(currentManager, { reason: "move" });
         }
@@ -4065,6 +4222,9 @@ async function refreshLeaderboard(modeLike) {
   }
 
   function flushTerminalSubmitOnPageHide() {
+    runPromiseSafely(function () {
+      return flushRankedAttemptOutbox({ keepalive: true });
+    });
     var manager = global.game_manager;
     if (!manager || manager.replayMode) return;
     runPromiseSafely(function () {
@@ -4083,6 +4243,29 @@ async function refreshLeaderboard(modeLike) {
     lifecycleSubmitFlushBound = true;
     global.addEventListener("pagehide", flushTerminalSubmitOnPageHide);
     global.addEventListener("beforeunload", flushTerminalSubmitOnPageHide);
+  }
+
+  function bindRankedNavigationAttemptPersistence() {
+    if (rankedNavigationAttemptBound || !global.document || typeof global.document.addEventListener !== "function") return;
+    rankedNavigationAttemptBound = true;
+    global.document.addEventListener("click", function (eventLike) {
+      if (!eventLike || eventLike.defaultPrevented) return;
+      if (eventLike.button != null && eventLike.button !== 0) return;
+      if (eventLike.metaKey || eventLike.ctrlKey || eventLike.shiftKey || eventLike.altKey) return;
+      var target = eventLike.target;
+      if (target && target.nodeType === 3) target = target.parentElement;
+      if (!target || typeof target.closest !== "function") return;
+      var anchor = target.closest("a[href]");
+      if (!anchor) return;
+      var anchorId = toText(anchor.id).trim();
+      var isTitleLink = typeof anchor.closest === "function" && !!anchor.closest(".title");
+      if (!RANKED_NAVIGATION_LINK_IDS[anchorId] && !isTitleLink) return;
+      var manager = global.game_manager;
+      if (persistRankedAbandonForAction(manager, "navigation")) return;
+      if (typeof eventLike.preventDefault === "function") eventLike.preventDefault();
+      if (typeof eventLike.stopImmediatePropagation === "function") eventLike.stopImmediatePropagation();
+      notifyRankedAttemptPersistenceBlocked(manager);
+    }, true);
   }
 
   function bindModeIntroRefresh() {
@@ -4199,6 +4382,7 @@ async function refreshLeaderboard(modeLike) {
       await maybeSubmitRecordOnGameOver();
       await maybeSubmitScoreOnGameOver();
       await maybeSubmitStone2kRun();
+      await flushRankedAttemptOutbox();
       await maybeSaveRankedCheckpoint(global.game_manager, {}).catch(function () {});
 
       if (
@@ -4261,6 +4445,7 @@ function init() {
     bindLanguageSync();
     bindAuthBestScoreSync();
     bindLifecycleSubmitFlush();
+    bindRankedNavigationAttemptPersistence();
     bindModeIntroRefresh();
     ensureTimerLeaderboardPanel();
     syncTimerLeaderboardViewMode();
