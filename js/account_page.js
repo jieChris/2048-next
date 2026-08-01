@@ -597,6 +597,11 @@
       safeRemoveStorage(STORAGE_USER_ID_KEY);
     }
     safeSetStorage(STORAGE_NICKNAME_KEY, toText(payload && payload.nickname));
+    var achievements = payload && Array.isArray(payload.achievements) ? payload.achievements : [];
+    var runtime = global.AchievementUnlockToastRuntime;
+    if (achievements.length > 0 && runtime && typeof runtime.showAchievementUnlockToasts === "function") {
+      runtime.showAchievementUnlockToasts(achievements);
+    }
   }
 
   function clearAuth() {

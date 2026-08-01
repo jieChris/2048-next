@@ -2664,6 +2664,8 @@ export interface components {
                 "application/json": components["schemas"]["ApiEnvelope"] & {
                     token?: string;
                     user?: components["schemas"]["User"];
+                    /** @description One-time achievement unlocks to show after this authentication response. */
+                    achievements?: components["schemas"]["UserAchievement"][];
                 };
             };
         };

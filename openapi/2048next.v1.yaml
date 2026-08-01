@@ -1317,6 +1317,11 @@ components:
                     type: string
                   user:
                     $ref: "#/components/schemas/User"
+                  achievements:
+                    type: array
+                    description: One-time achievement unlocks to show after this authentication response.
+                    items:
+                      $ref: "#/components/schemas/UserAchievement"
     UserResponse:
       description: User profile result.
       content:
