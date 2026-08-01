@@ -13,6 +13,95 @@ async function stubApi(page: import("@playwright/test").Page) {
 }
 
 test.describe("custom secondary timers", () => {
+  test("previews the saved rule hierarchy beside the editor and expands by parent", async ({ page }) => {
+    await page.addInitScript((storageKey) => {
+      window.localStorage.removeItem(storageKey);
+      window.localStorage.setItem("ui_language_v1", "zh");
+    }, STORAGE_KEY);
+
+    const response = await page.goto("/palette.html#timer-settings", { waitUntil: "domcontentloaded" });
+    expect(response?.ok()).toBeTruthy();
+    await page.locator("#custom-secondary-timer-editor summary").click();
+
+    const input = page.locator("#custom-secondary-timer-rules");
+    const preview = page.locator("#custom-secondary-timer-preview");
+    const ruleText = [
+      "32",
+      "32+2",
+      "32+4",
+      "32+8",
+      "32+8+4",
+      "32+16",
+      "32+16+2",
+      "32+16+4",
+      "32+16+8"
+    ].join("\n");
+
+    await expect(preview.locator("[data-timer-preview-parent]")).toHaveCount(0);
+    await expect(preview).toContainText("保存规则后");
+    await input.fill(ruleText);
+    await expect(preview.locator("[data-timer-preview-parent]")).toHaveCount(0);
+
+    await page.locator("#custom-secondary-timer-save").click();
+    const parent = preview.locator("[data-timer-preview-parent='32']");
+    const childGroup = preview.locator("#custom-secondary-timer-preview-children-pow2-32");
+    const children = preview.locator("[data-timer-preview-child='32']");
+    await expect(parent).toHaveCount(1);
+    await expect(parent).toHaveAttribute("aria-expanded", "false");
+    await expect(children).toHaveCount(8);
+    await expect(childGroup).toBeHidden();
+
+    await parent.click();
+    await expect(parent).toHaveAttribute("aria-expanded", "true");
+    await expect(childGroup).toBeVisible();
+    expect(await children.evaluateAll((nodes) => nodes.map((node) => ({
+      label: node.querySelector(".custom-secondary-timer-preview-legend")?.textContent,
+      level: node.getAttribute("data-timer-preview-level")
+    })))).toEqual([
+      { label: "2", level: "1" },
+      { label: "4", level: "1" },
+      { label: "8", level: "1" },
+      { label: "4", level: "2" },
+      { label: "16", level: "1" },
+      { label: "2", level: "2" },
+      { label: "4", level: "2" },
+      { label: "8", level: "2" }
+    ]);
+    const indent = await page.evaluate(() => {
+      const level1 = document.querySelector<HTMLElement>("[data-timer-preview-rule='32+8'] .custom-secondary-timer-preview-legend");
+      const level2 = document.querySelector<HTMLElement>("[data-timer-preview-rule='32+8+4'] .custom-secondary-timer-preview-legend");
+      return (level2?.getBoundingClientRect().left || 0) - (level1?.getBoundingClientRect().left || 0);
+    });
+    expect(indent).toBe(10);
+
+    const layout = await page.evaluate(() => {
+      const inputRect = document.getElementById("custom-secondary-timer-rules")?.getBoundingClientRect();
+      const previewRect = document.getElementById("custom-secondary-timer-preview")?.getBoundingClientRect();
+      return {
+        inputRight: inputRect?.right || 0,
+        previewLeft: previewRect?.left || 0
+      };
+    });
+    expect(layout.previewLeft).toBeGreaterThan(layout.inputRight);
+
+    await input.fill("32\n32+2");
+    await expect(children).toHaveCount(8);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileLayout = await page.evaluate(() => {
+      const inputRect = document.getElementById("custom-secondary-timer-rules")?.getBoundingClientRect();
+      const previewRect = document.getElementById("custom-secondary-timer-preview")?.getBoundingClientRect();
+      return {
+        inputBottom: inputRect?.bottom || 0,
+        previewTop: previewRect?.top || 0,
+        previewRight: previewRect?.right || 0,
+        viewportWidth: document.documentElement.clientWidth
+      };
+    });
+    expect(mobileLayout.previewTop).toBeGreaterThan(mobileLayout.inputBottom);
+    expect(mobileLayout.previewRight).toBeLessThanOrEqual(mobileLayout.viewportWidth);
+  });
+
   test("saves whole-rule configs for the next game and renders exact/covered states", async ({ page }) => {
     await stubApi(page);
     await page.addInitScript((storageKey) => {
@@ -66,6 +155,8 @@ test.describe("custom secondary timers", () => {
 
     await settingsPage.locator("[data-timer-family='fibonacci']").click();
     await expect(settingsPage.locator("#custom-secondary-timer-rules")).toHaveAttribute("placeholder", "13\n13+1\n13+2");
+    await expect(settingsPage.locator("#custom-secondary-timer-range-end option[value='2178309']")).toHaveCount(1);
+    await expect(settingsPage.locator("#custom-secondary-timer-range-end option[value='3524578']")).toHaveCount(0);
     await settingsPage.locator("#custom-secondary-timer-generate").click();
     await expect(settingsPage.locator("#custom-secondary-timer-rules")).toHaveValue([
       "13", "13+1", "13+2", "13+3", "13+5", "13+8", "13+8+1", "13+8+2", "13+8+3", "13+8+5"
@@ -78,7 +169,7 @@ test.describe("custom secondary timers", () => {
     await expect(settingsPage.locator("#custom-secondary-timer-note")).toContainText("第 2 行");
     expect(await settingsPage.evaluate((storageKey) => window.localStorage.getItem(storageKey), STORAGE_KEY)).toBeNull();
 
-    const ruleText = "32\n32+2\n32+4";
+    const ruleText = "32\n32+2\n32+4\n32+16+2";
     await settingsPage.locator("#custom-secondary-timer-rules").fill(ruleText);
     await settingsPage.locator("#custom-secondary-timer-save").click();
     await expect(settingsPage.locator("#custom-secondary-timer-rules")).not.toHaveAttribute("aria-invalid", "true");
@@ -132,6 +223,13 @@ test.describe("custom secondary timers", () => {
         activeRuleText: String(manager.customSecondaryTimerRuleText || ""),
         rules: Array.from(document.querySelectorAll("#timerbox [data-secondary-rule]"))
           .map((node) => node.getAttribute("data-secondary-rule")),
+        hierarchy: Array.from(document.querySelectorAll<HTMLElement>("#timerbox [data-secondary-rule]"))
+          .map((row) => ({
+            rule: row.getAttribute("data-secondary-rule"),
+            label: row.querySelector(".timer-secondary-legend")?.textContent,
+            paddingLeft: row.style.paddingLeft,
+            title: row.querySelector(".timer-secondary-legend")?.getAttribute("title")
+          })),
         legacyRowCount: document.querySelectorAll(
           "#timerbox [id^='timer-row-secondary-']:not([id^='timer-row-secondary-rule-'])"
         ).length,
@@ -141,7 +239,12 @@ test.describe("custom secondary timers", () => {
     });
 
     expect(snapshot.activeRuleText).toBe(ruleText);
-    expect(snapshot.rules).toEqual(["32+2", "32+4"]);
+    expect(snapshot.rules).toEqual(["32+2", "32+4", "32+16+2"]);
+    expect(snapshot.hierarchy).toEqual([
+      { rule: "32+2", label: "2", paddingLeft: "5px", title: "32+2" },
+      { rule: "32+4", label: "4", paddingLeft: "5px", title: "32+4" },
+      { rule: "32+16+2", label: "2", paddingLeft: "10px", title: "32+16+2" }
+    ]);
     expect(snapshot.legacyRowCount).toBe(0);
     expect(snapshot.covered).toMatchObject({
       text: "00:12 ↑",
@@ -217,9 +320,10 @@ test.describe("custom secondary timers", () => {
       { path: "/play.html?mode_key=board_3x4_pow2_no_undo", modeKey: "board_3x4_pow2_no_undo", lastSlot: 8192, lastMilestone: 8192, count: 9 },
       { path: "/play.html?mode_key=board_5x5_pow2_no_undo", modeKey: "board_5x5_pow2_no_undo", lastSlot: 67108864, lastMilestone: 67108864, count: 22 },
       { path: "/play.html?mode_key=capped_4x4_pow2_64_no_undo", modeKey: "capped_4x4_pow2_64_no_undo", lastSlot: 64, lastMilestone: 64, count: 2 },
-      { path: "/play.html?mode_key=fib_4x2_no_undo", modeKey: "fib_4x2_no_undo", lastSlot: 512, lastMilestone: 89, count: 5 },
-      { path: "/play.html?mode_key=fib_4x3_no_undo", modeKey: "fib_4x3_no_undo", lastSlot: 8192, lastMilestone: 610, count: 9 },
-      { path: "/play.html?mode_key=fib_4x4_no_undo", modeKey: "fib_4x4_no_undo", lastSlot: 131072, lastMilestone: 4181, count: 13 }
+      { path: "/play.html?mode_key=fib_4x2_no_undo", modeKey: "fib_4x2_no_undo", lastSlot: 32768, lastMilestone: 1597, count: 11 },
+      { path: "/play.html?mode_key=fib_3x3_no_undo", modeKey: "fib_3x3_no_undo", lastSlot: 131072, lastMilestone: 4181, count: 13 },
+      { path: "/play.html?mode_key=fib_4x3_no_undo", modeKey: "fib_4x3_no_undo", lastSlot: 8388608, lastMilestone: 75025, count: 19 },
+      { path: "/play.html?mode_key=fib_4x4_no_undo", modeKey: "fib_4x4_no_undo", lastSlot: 1073741824, lastMilestone: 2178309, count: 26 }
     ];
 
     for (const expected of cases) {

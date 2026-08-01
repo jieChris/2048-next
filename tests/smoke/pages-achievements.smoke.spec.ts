@@ -64,6 +64,54 @@ const achievementCatalog = [
     rules: [{ type: "max_tile_within_duration", params: { tile: 2048, duration_ms: 300000 } }]
   },
   {
+    id: "speed_2048_under_240s",
+    name: "4 分钟内 2048",
+    description: "在合法 ranked 对局中用 4 分钟内达到 2048。",
+    name_i18n: { "zh-CN": "4 分钟内 2048", en: "2048 in 4 minutes" },
+    description_i18n: { "zh-CN": "在合法 ranked 对局中用 4 分钟内达到 2048。", en: "Reach 2048 within 4 minutes in a valid ranked game." },
+    icon_url: "",
+    status: "active",
+    level: 2,
+    series_id: "speed-2048",
+    rules: [{ type: "max_tile_within_duration", params: { tile: 2048, duration_ms: 240000 } }]
+  },
+  {
+    id: "speed_2048_under_180s",
+    name: "3 分钟内 2048",
+    description: "在合法 ranked 对局中用 3 分钟内达到 2048。",
+    name_i18n: { "zh-CN": "3 分钟内 2048", en: "2048 in 3 minutes" },
+    description_i18n: { "zh-CN": "在合法 ranked 对局中用 3 分钟内达到 2048。", en: "Reach 2048 within 3 minutes in a valid ranked game." },
+    icon_url: "",
+    status: "active",
+    level: 3,
+    series_id: "speed-2048",
+    rules: [{ type: "max_tile_within_duration", params: { tile: 2048, duration_ms: 180000 } }]
+  },
+  {
+    id: "speed_2048_under_120s",
+    name: "2 分钟内 2048",
+    description: "在合法 ranked 对局中用 2 分钟内达到 2048。",
+    name_i18n: { "zh-CN": "2 分钟内 2048", en: "2048 in 2 minutes" },
+    description_i18n: { "zh-CN": "在合法 ranked 对局中用 2 分钟内达到 2048。", en: "Reach 2048 within 2 minutes in a valid ranked game." },
+    icon_url: "",
+    status: "active",
+    level: 4,
+    series_id: "speed-2048",
+    rules: [{ type: "max_tile_within_duration", params: { tile: 2048, duration_ms: 120000 } }]
+  },
+  {
+    id: "speed_2048_under_60s",
+    name: "1 分钟内 2048",
+    description: "在合法 ranked 对局中用 1 分钟内达到 2048。",
+    name_i18n: { "zh-CN": "1 分钟内 2048", en: "2048 in 1 minute" },
+    description_i18n: { "zh-CN": "在合法 ranked 对局中用 1 分钟内达到 2048。", en: "Reach 2048 within 1 minute in a valid ranked game." },
+    icon_url: "",
+    status: "active",
+    level: 5,
+    series_id: "speed-2048",
+    rules: [{ type: "max_tile_within_duration", params: { tile: 2048, duration_ms: 60000 } }]
+  },
+  {
     id: "beta_pioneer",
     name: "内测先锋",
     description: "感谢参与 2048next.cn 内测并帮助打磨早期体验的玩家。",
@@ -95,6 +143,40 @@ const acceptedAccessPayload = {
   }
 };
 
+const hiddenAchievementCatalog = [
+  ...achievementCatalog,
+  {
+    id: "lost_page_visited",
+    name: "你也曾迷路",
+    description: "你也曾迷路，但好在你又回来了。",
+    name_i18n: { "zh-CN": "你也曾迷路", en: "You Were Lost Too" },
+    description_i18n: {
+      "zh-CN": "你也曾迷路，但好在你又回来了。",
+      en: "You were lost too, but thankfully you found your way back."
+    },
+    icon_url: "",
+    status: "active",
+    level: 1,
+    series_id: "community-lost-page",
+    rules: [{ type: "manual_grant", params: { hidden: true, no_level: true } }]
+  },
+  {
+    id: "hidden_unearned",
+    name: "还没发现的秘密",
+    description: "未达成时不应显示。",
+    name_i18n: { "zh-CN": "还没发现的秘密", en: "Undiscovered Secret" },
+    description_i18n: {
+      "zh-CN": "未达成时不应显示。",
+      en: "Should stay hidden until unlocked."
+    },
+    icon_url: "",
+    status: "active",
+    level: 1,
+    series_id: "community-hidden",
+    rules: [{ type: "manual_grant", params: { hidden: true, no_level: true } }]
+  }
+];
+
 test.describe("Achievements pages", () => {
   test.beforeEach(async ({ page }) => {
     await mockAcceptedBetaAccess(page);
@@ -116,7 +198,7 @@ test.describe("Achievements pages", () => {
         return;
       }
       if (path === "/api/achievements") {
-        await route.fulfill({ json: { success: true, data: achievementCatalog } });
+        await route.fulfill({ json: { success: true, data: hiddenAchievementCatalog } });
         return;
       }
       if (path === "/api/user/me/achievements") {
@@ -158,43 +240,114 @@ test.describe("Achievements pages", () => {
     await expect(page.locator("a#achievements-user-link")).toHaveCount(0);
     await expect(page.locator("#achievements-user-name")).not.toHaveAttribute("href", /.*/u);
     await expect(page.getByRole("heading", { name: "成就勋章墙" })).toBeVisible();
-    await expect(page.locator("#achievements-status")).toHaveText("已加载");
-    await expect(page.locator("#achievements-summary-copy")).toHaveText("已收集 2 / 5 个成就。");
-    await expect(page.getByRole("button", { name: /首次 2048/ })).toBeVisible();
+    await expect(page.locator("#achievements-status")).toHaveCount(0);
+    await expect(page.locator("#achievements-summary-copy")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "隐藏", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /2048 里程碑/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /活动冠军/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /第 200 次 2048/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /5 分钟内 2048/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /2048 竞速/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /内测先锋/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /首次 2048/ }).locator(".achievement-badge svg")).toBeVisible();
-    await expect(page.getByRole("button", { name: /5 分钟内 2048/ }).locator(".achievement-badge svg")).toBeVisible();
-    await expect(page.locator("#achievements-list .achievement-card").first()).toContainText("已点亮");
-    await expect(page.locator("#achievements-list .achievement-card").last()).toContainText("未点亮");
+    await expect(page.getByRole("button", { name: /2048 里程碑/ }).locator(".achievement-badge svg")).toBeVisible();
+    await expect(page.getByRole("button", { name: /2048 竞速/ }).locator(".achievement-badge svg")).toBeVisible();
+    await expect(page.locator("#achievements-list .achievement-family-card")).toHaveCount(4);
+    await expect(page.locator("#achievements-list .achievement-family-card").first()).toContainText("已完成1/2");
+    await expect(page.locator("#achievements-list .achievement-family-card").last()).toContainText("未点亮");
 
-    await page.getByRole("button", { name: /首次 2048/ }).click();
-    await expect(page.locator("#achievements-unlock-toast-host .unlock-toast--codepen-milestone")).toBeVisible();
-    await expect(page.locator("#achievements-unlock-toast-host")).toContainText("里程碑进度");
+    await page.getByRole("button", { name: /2048 里程碑/ }).click();
+    await expect(page.locator("#achievement-family-dialog")).toBeVisible();
+    const dialogBox = await page.locator("#achievement-family-dialog").boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox?.x).toBe(0);
+    expect(dialogBox?.y).toBe(0);
+    expect(dialogBox?.width).toBe(page.viewportSize()?.width);
+    expect(dialogBox?.height).toBe(page.viewportSize()?.height);
+    await expect(page.locator("#achievement-family-dialog-title")).toHaveCSS("color", "rgb(255, 255, 255)");
+    await expect(page.locator("#achievement-family-dialog")).toContainText("首次 2048");
+    await expect(page.locator(".achievement-preview-status")).toHaveText("已达成");
+    await expect(page.locator("#achievement-family-dialog .achievement-tier")).toHaveCount(2);
+    await expect(page.locator("#achievement-family-dialog .achievement-tier").nth(1)).toHaveAttribute("aria-label", /第 200 次 2048/u);
+    await page.locator("#achievement-family-dialog .achievement-tier").nth(1).click();
+    await expect(page.locator("#achievement-family-dialog-title")).toHaveText("第 200 次 2048");
+    await expect(page.locator(".achievement-preview-status")).toHaveText("未达成");
+    await page.locator(".achievement-family-dialog-frame").click({ position: { x: 10, y: 320 } });
+    await expect(page.locator("#achievement-family-dialog")).not.toBeVisible();
 
-    await page.getByRole("button", { name: "里程碑" }).click();
-    await expect(page.getByRole("button", { name: /首次 2048/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /第 200 次 2048/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /5 分钟内 2048/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "里程碑", exact: true }).click();
+    await expect(page.getByRole("button", { name: /2048 里程碑/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /2048 竞速/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /活动冠军/ })).toHaveCount(0);
-    await page.getByRole("button", { name: "竞速" }).click();
-    await expect(page.getByRole("button", { name: /5 分钟内 2048/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /首次 2048/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "竞速", exact: true }).click();
+    await expect(page.getByRole("button", { name: /2048 竞速/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /2048 里程碑/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /活动冠军/ })).toHaveCount(0);
-    await page.getByRole("button", { name: "活动" }).click();
+    await page.getByRole("button", { name: "活动", exact: true }).click();
     await expect(page.getByRole("button", { name: /活动冠军/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /内测先锋/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /5 分钟内 2048/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /2048 竞速/ })).toHaveCount(0);
     await page.getByRole("button", { name: "全部" }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+    expect(await page.locator("#achievements-list").evaluate((node) =>
+      getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/u).length
+    )).toBe(2);
 
-    await page.getByRole("button", { name: "编辑展示" }).click();
+    await page.getByRole("button", { name: "编辑" }).click();
     await page.getByRole("button", { name: /活动冠军/ }).click();
     await page.getByRole("button", { name: "保存展示" }).click();
 
     await expect(page.locator("#achievements-tip")).toHaveText("展示成就已保存。");
     expect(showcaseRequests).toEqual([{ achievement_ids: ["ach_first_2048", "ach_event_champion"] }]);
+  });
+
+  test("reveals the hidden category only after earning a hidden achievement", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/access/me") {
+        await route.fulfill({ json: acceptedAccessPayload });
+        return;
+      }
+      if (path === "/api/achievements") {
+        await route.fulfill({ json: { success: true, data: hiddenAchievementCatalog } });
+        return;
+      }
+      if (path === "/api/user/me/achievements") {
+        await route.fulfill({
+          json: {
+            success: true,
+            data: [
+              {
+                achievement: hiddenAchievementCatalog.find((item) => item.id === "lost_page_visited"),
+                earned_at: "2026-07-23T08:30:00.000Z",
+                source: "event"
+              }
+            ]
+          }
+        });
+        return;
+      }
+      if (path === "/api/user/me/achievement-showcase") {
+        await route.fulfill({ json: { success: true, data: [] } });
+        return;
+      }
+      await route.fulfill({ status: 404, json: { success: false, error: "not_found" } });
+    });
+
+    await page.goto("/medal-wall.html", { waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("button", { name: "隐藏" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /还没发现的秘密/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "隐藏", exact: true }).click();
+    await expect(page.getByRole("button", { name: /你也曾迷路/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /活动冠军/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /还没发现的秘密/ })).toHaveCount(0);
+    await page.getByRole("button", { name: "活动", exact: true }).click();
+    await expect(page.getByRole("button", { name: /你也曾迷路/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /活动冠军/ })).toBeVisible();
   });
 
   test("renders achievement names and static page copy in English", async ({ page }) => {
@@ -245,19 +398,17 @@ test.describe("Achievements pages", () => {
     await expect(page).toHaveTitle("2048 Achievements");
     await expect(page.getByRole("heading", { name: "Achievements", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Medal Wall" })).toBeVisible();
-    await expect(page.locator("#achievements-status")).toHaveText("Loaded");
-    await expect(page.locator("#achievements-summary-copy")).toHaveText("Collected 1 / 5 achievements.");
-    await expect(page.getByRole("button", { name: /First 2048/ })).toBeVisible();
+    await expect(page.locator("#achievements-status")).toHaveCount(0);
+    await expect(page.locator("#achievements-summary-copy")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /2048 Milestone/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Event Champion/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /200th 2048/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /2048 in 5 minutes/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /2048 Speedrun/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Beta Pioneer/ })).toBeVisible();
-    await expect(page.locator("#achievements-list .achievement-card").first()).toContainText("Unlocked");
-    await expect(page.locator("#achievements-list .achievement-card").last()).toContainText("Locked");
+    await expect(page.locator("#achievements-list .achievement-family-card").first()).toContainText("Completed 1/2");
+    await expect(page.locator("#achievements-list .achievement-family-card").last()).toContainText("Locked");
 
-    await page.getByRole("button", { name: /First 2048/ }).click();
-    await expect(page.locator("#achievements-unlock-toast-host .unlock-toast--codepen-milestone")).toBeVisible();
-    await expect(page.locator("#achievements-unlock-toast-host")).toContainText("Milestone Progress");
+    await page.getByRole("button", { name: /2048 Milestone/ }).click();
+    await expect(page.locator("#achievement-family-dialog")).toContainText("First 2048");
   });
 
   test("keeps super-admin achievement management on the admin page", async ({ page }) => {

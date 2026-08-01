@@ -412,10 +412,40 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
 }
 
 .user-record-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   overflow: hidden;
   text-align: left;
+  white-space: nowrap;
+}
+
+.user-record-mode-label {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.user-record-era-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 19px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--workshop-line);
+  border-radius: 999px;
+  background: var(--workshop-panel-soft);
+  color: var(--workshop-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.user-record-mode > .user-record-era-badge {
+  margin-left: 0;
 }
 
 .user-record-score,
@@ -487,6 +517,13 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
   margin-bottom: 8px;
   font-size: 12px;
   color: var(--workshop-muted);
+}
+
+.user-record-detail-meta-copy {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
 }
 
 .user-record-detail-actions {

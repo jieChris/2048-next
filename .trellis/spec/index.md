@@ -6,4 +6,4 @@ Read these specs before changing API, account, leaderboard, replay, ranked sessi
 
 - `frontend-api-boundary.md` - frontend responsibilities and API access rules.
 - `cross-repo-architecture.md` - required boundaries between `2048-next`, `2048-game-api`, and `2048-ranked`.
-
+- `smoke-testing.md` - deterministic Playwright smoke-test setup, synchronization, and assertion rules.

@@ -104,13 +104,14 @@ describe("core rules: getTheoreticalMaxTile", () => {
     expect(getTheoreticalMaxTile(4, 3, "pow2")).toBe(8192);
   });
 
-  it("computes fibonacci cap for 4x4", () => {
-    expect(getTheoreticalMaxTile(4, 4, "fibonacci")).toBe(4181);
+  it("computes fibonacci cap from the two directly spawnable base ranks", () => {
+    expect(getTheoreticalMaxTile(3, 3, "fibonacci")).toBe(4181);
+    expect(getTheoreticalMaxTile(4, 4, "fibonacci")).toBe(3524578);
   });
 
   it("computes fibonacci caps for rectangular boards", () => {
-    expect(getTheoreticalMaxTile(4, 2, "fibonacci")).toBe(89);
-    expect(getTheoreticalMaxTile(4, 3, "fibonacci")).toBe(610);
+    expect(getTheoreticalMaxTile(4, 2, "fibonacci")).toBe(1597);
+    expect(getTheoreticalMaxTile(4, 3, "fibonacci")).toBe(75025);
   });
 
   it("returns null for invalid size", () => {
@@ -231,22 +232,7 @@ describe("core rules: getTimerMilestoneValues", () => {
       4096,
       8192
     ]);
-    expect(getTimerMilestoneValues("fibonacci", [32, 64, 128, 256, 512], 3, 3)).toEqual([
-      13,
-      21,
-      34,
-      55,
-      89,
-      144
-    ]);
-    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 2), 4, 2)).toEqual([
-      13,
-      21,
-      34,
-      55,
-      89
-    ]);
-    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 3), 4, 3)).toEqual([
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 3, 3), 3, 3)).toEqual([
       13,
       21,
       34,
@@ -255,8 +241,28 @@ describe("core rules: getTimerMilestoneValues", () => {
       144,
       233,
       377,
-      610
+      610,
+      987,
+      1597,
+      2584,
+      4181
     ]);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 2), 4, 2)).toEqual([
+      13,
+      21,
+      34,
+      55,
+      89,
+      144,
+      233,
+      377,
+      610,
+      987,
+      1597
+    ]);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 3), 4, 3).at(-1)).toBe(75025);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 4), 4, 4).at(-1)).toBe(2178309);
+    expect(getTimerMilestoneValues("fibonacci", getTimerSlotIdsForBoard("fibonacci", 4, 4), 4, 4)).not.toContain(3524578);
   });
 });
 

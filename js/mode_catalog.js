@@ -147,8 +147,8 @@
     if (!Number.isInteger(cells) || cells <= 0) return null;
 
     if (ruleset === "fibonacci") {
-      // Fibonacci board uses 1,2 starts; 4x4 theoretical top is 4181.
-      var targetIndex = cells + 2;
+      // Fibonacci board uses 1,2 starts; 4x4 theoretical top is 3524578.
+      var targetIndex = cells * 2;
       var a = 1;
       var b = 2;
       if (targetIndex <= 1) return 1;

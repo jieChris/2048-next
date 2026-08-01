@@ -25,6 +25,17 @@ const FIBONACCI_MILESTONES = [13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597,
 const FIRST_TIMER_SLOT_VALUE = 32;
 const MAX_SAFE_TIMER_SLOT_VALUE = 4503599627370496;
 
+function getFibonacciTileAtRank(rank: number): number {
+  let previous = 1;
+  let current = 2;
+  for (let currentRank = 3; currentRank <= rank; currentRank++) {
+    const next = previous + current;
+    previous = current;
+    current = next;
+  }
+  return rank <= 1 ? 1 : current;
+}
+
 export function normalizeSpawnTable(
   spawnTable: SpawnTableItem[] | null | undefined,
   ruleset: Ruleset
@@ -53,17 +64,7 @@ export function getTheoreticalMaxTile(width: number, height: number, ruleset: Ru
   if (!Number.isInteger(cells) || cells <= 0) return null;
 
   if (ruleset === "fibonacci") {
-    const targetIndex = cells + 2;
-    let a = 1;
-    let b = 2;
-    if (targetIndex <= 1) return 1;
-    if (targetIndex === 2) return 2;
-    for (let i = 3; i <= targetIndex; i++) {
-      const next = a + b;
-      a = b;
-      b = next;
-    }
-    return b;
+    return getFibonacciTileAtRank(cells * 2);
   }
 
   return Math.pow(2, cells + 1);
@@ -75,7 +76,13 @@ function resolveTimerMaxTile(
   ruleset: Ruleset,
   maxTileOverride?: number | null
 ): number | null {
-  const theoreticalMax = getTheoreticalMaxTile(width, height, ruleset);
+  let theoreticalMax = getTheoreticalMaxTile(width, height, ruleset);
+  if (ruleset === "fibonacci" && Math.floor(Number(width)) === 4 && Math.floor(Number(height)) === 4) {
+    // Product rule: the 4x4 timer stops one Fibonacci milestone before the absolute maximum.
+    theoreticalMax = getFibonacciTileAtRank(
+      Math.floor(Number(width)) * Math.floor(Number(height)) * 2 - 1
+    );
+  }
   const override = Number(maxTileOverride);
   if (!Number.isFinite(override) || override <= 0) return theoreticalMax;
   return theoreticalMax === null ? Math.floor(override) : Math.min(theoreticalMax, Math.floor(override));

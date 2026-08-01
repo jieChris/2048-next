@@ -279,6 +279,160 @@ function collectTextContent(node: unknown): string {
 }
 
 describe("online leaderboard terminal submission", () => {
+  it("queues begin once after the first successful ranked move", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-first-move",
+      seed: 123,
+      ranked_session_token: "first-move-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    const originalMove = vi.fn(function (this: Record<string, unknown>) {
+      this.successfulMoveCount = Number(this.successfulMoveCount || 0) + 1;
+    });
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "first-move-token",
+      challengeId: "ranked-first-move",
+      successfulMoveCount: 0,
+      move: originalMove
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const enqueueAttempt = vi.fn(() => true);
+    const flushAttemptOutbox = vi.fn(async () => true);
+    runtime.windowLike.RankedSessionRuntime = { enqueueAttempt, flushAttemptOutbox };
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(originalMove).toHaveBeenCalledTimes(2);
+    expect(enqueueAttempt).toHaveBeenCalledTimes(1);
+    expect(enqueueAttempt).toHaveBeenCalledWith({
+      challenge_id: "ranked-first-move",
+      event: "begin",
+      mode_key: MODE_KEY,
+      ranked_session_token: "first-move-token",
+      replay_string: "replay-v1",
+      attempt_schema_version: 1
+    });
+    expect(flushAttemptOutbox).toHaveBeenCalledTimes(1);
+  });
+
+  it("pagehide only flushes existing ranked attempts without creating abandon", async () => {
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "pagehide-token",
+      challengeId: "ranked-pagehide",
+      successfulMoveCount: 3
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const enqueueAttempt = vi.fn(() => true);
+    const flushAttemptOutbox = vi.fn(async () => true);
+    runtime.windowLike.RankedSessionRuntime = { enqueueAttempt, flushAttemptOutbox };
+    const addEventListenerMock = runtime.windowLike.addEventListener as ReturnType<typeof vi.fn>;
+    const pagehideHandler = addEventListenerMock.mock.calls.find((call) => call[0] === "pagehide")?.[1] as
+      | (() => void)
+      | undefined;
+
+    pagehideHandler?.();
+    await flushRuntimePromises();
+
+    expect(enqueueAttempt).not.toHaveBeenCalled();
+    expect(flushAttemptOutbox).toHaveBeenCalledWith({ keepalive: true });
+  });
+
+  it.each(["missing manager", "replay manager"])(
+    "pagehide still flushes existing ranked attempts with %s",
+    async (managerState) => {
+      const manager = createTerminatedManager();
+      const runtime = loadOnlineLeaderboardRuntime({
+        manager,
+        fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+      });
+      const enqueueAttempt = vi.fn(() => true);
+      const flushAttemptOutbox = vi.fn(async () => true);
+      runtime.windowLike.RankedSessionRuntime = { enqueueAttempt, flushAttemptOutbox };
+      runtime.windowLike.game_manager = managerState === "missing manager"
+        ? null
+        : createTerminatedManager({ replayMode: true });
+      const addEventListenerMock = runtime.windowLike.addEventListener as ReturnType<typeof vi.fn>;
+      const pagehideHandler = addEventListenerMock.mock.calls.find((call) => call[0] === "pagehide")?.[1] as
+        | (() => void)
+        | undefined;
+
+      pagehideHandler?.();
+      await flushRuntimePromises();
+
+      expect(enqueueAttempt).not.toHaveBeenCalled();
+      expect(flushAttemptOutbox).toHaveBeenCalledWith({ keepalive: true });
+    }
+  );
+
+  it("persists navigation abandon and blocks the fixed game links when persistence fails", async () => {
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "navigation-token",
+      challengeId: "ranked-navigation",
+      successfulMoveCount: 3
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const enqueueAttempt = vi.fn(() => true);
+    runtime.windowLike.RankedSessionRuntime = {
+      enqueueAttempt,
+      flushAttemptOutbox: vi.fn(async () => true)
+    };
+    const documentLike = runtime.windowLike.document as { addEventListener: ReturnType<typeof vi.fn> };
+    const clickHandler = documentLike.addEventListener.mock.calls.find((call) => call[0] === "click")?.[1] as
+      | ((eventLike: Record<string, unknown>) => void)
+      | undefined;
+    const createNavigationEvent = (id: string) => {
+      const anchor = {
+        id,
+        closest: vi.fn((selector: string) => selector === ".title" ? null : anchor)
+      };
+      return {
+        button: 0,
+        target: { closest: vi.fn(() => anchor) },
+        preventDefault: vi.fn(),
+        stopImmediatePropagation: vi.fn()
+      };
+    };
+
+    const allowed = createNavigationEvent("top-modes-btn");
+    clickHandler?.(allowed);
+    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      event: "abandon",
+      reason: "navigation",
+      ranked_session_token: "navigation-token"
+    }));
+    expect(allowed.preventDefault).not.toHaveBeenCalled();
+
+    enqueueAttempt.mockReturnValue(false);
+    const blocked = createNavigationEvent("top-practice-btn");
+    clickHandler?.(blocked);
+    expect(blocked.preventDefault).toHaveBeenCalledTimes(1);
+    expect(blocked.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(runtime.windowLike.alert).toHaveBeenCalled();
+  });
+
   it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {
     const runtime = loadOnlineLeaderboardRuntime({
       manager: createTerminatedManager(),
@@ -831,6 +985,7 @@ describe("online leaderboard terminal submission", () => {
       initial_seed: null,
       seed: null,
       ranked_verification: null,
+      record_schema_version: 1,
       client_record_id: "rec_client_1",
       replay_string: "replay-v1"
     });
@@ -2051,6 +2206,7 @@ describe("online leaderboard terminal submission", () => {
       };
       return true;
     });
+    const enqueueAttempt = vi.fn(() => true);
     runtime.windowLike.RankedSessionRuntime = {
       getCurrentContext: vi.fn(() => {
         const raw = storage.getItem(ACTIVE_SESSION_KEY);
@@ -2066,7 +2222,9 @@ describe("online leaderboard terminal submission", () => {
       promotePrefetchedSession: vi.fn(() => false),
       startNextSession,
       ensurePrefetch: vi.fn(async () => true),
-      clearActiveSession: vi.fn()
+      clearActiveSession: vi.fn(),
+      enqueueAttempt,
+      flushAttemptOutbox: vi.fn(async () => true)
     };
 
     (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
@@ -2078,8 +2236,70 @@ describe("online leaderboard terminal submission", () => {
     expect(originalRestart).toHaveBeenCalledTimes(1);
     expect(recordPayload?.ranked_session_token).toBe("old-ranked-token");
     expect(recordPayload?.challenge_id).toBe("ranked-old");
+    expect(enqueueAttempt).not.toHaveBeenCalled();
     expect(JSON.parse(storage.getItem(ACTIVE_SESSION_KEY) || "{}").ranked_session_token).toBe("next-ranked-token");
     expect(runtime.windowLike.alert).not.toHaveBeenCalled();
+  });
+
+  it("attempts to persist abandon before restarting an active ranked game without setup", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-no-setup",
+        seed: 123,
+        ranked_session_token: "no-setup-token",
+        issued_at: nowSec - 60,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "no-setup-token",
+      challengeId: "ranked-no-setup",
+      restart: originalRestart
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const enqueueAttempt = vi.fn()
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const startNextSession = vi.fn(async () => true);
+    runtime.windowLike.RankedSessionRuntime = {
+      startNextSession,
+      enqueueAttempt,
+      flushAttemptOutbox: vi.fn(async () => true),
+      ensurePrefetch: vi.fn(async () => true)
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      event: "abandon",
+      ranked_session_token: "no-setup-token",
+      reason: "restart",
+      attempt_schema_version: 1
+    }));
+    expect(startNextSession).not.toHaveBeenCalled();
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledTimes(1);
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(enqueueAttempt).toHaveBeenCalledTimes(2);
+    expect(startNextSession).toHaveBeenCalledWith(MODE_KEY);
+    expect(originalRestart).toHaveBeenCalledTimes(1);
   });
 
   it("shows the restart confirmation before requesting an on-demand ranked session", async () => {
@@ -2109,6 +2329,10 @@ describe("online leaderboard terminal submission", () => {
     const seedDeferred = createDeferred<boolean>();
     let confirmationShown = false;
     const actuate = vi.fn();
+    const restartOrder: string[] = [];
+    const clearSavedGameState = vi.fn(() => {
+      restartOrder.push("clear");
+    });
     const setup = vi.fn(function (this: Record<string, unknown>) {
       this.over = false;
       this.score = 0;
@@ -2121,14 +2345,18 @@ describe("online leaderboard terminal submission", () => {
       confirmationShown = true;
       return confirmDeferred.promise.then((confirmed) => {
         if (!confirmed) return;
+        (this.clearSavedGameState as (...args: unknown[]) => void)(MODE_KEY);
         (this.setup as (...args: unknown[]) => void)(undefined, { disableStateRestore: true });
       });
     });
     const manager = createTerminatedManager({
+      over: false,
       rankPolicy: "ranked",
       rankedSessionToken: "old-ranked-token",
+      challengeId: "ranked-old",
       restart: originalRestart,
       actuate,
+      clearSavedGameState,
       setup
     });
     const runtime = loadOnlineLeaderboardRuntime({
@@ -2147,9 +2375,16 @@ describe("online leaderboard terminal submission", () => {
         return createJsonResponse({ success: true, data: [] });
       }
     });
+    const enqueueAttempt = vi.fn(() => {
+      restartOrder.push("enqueue");
+      return true;
+    });
+    const flushAttemptOutbox = vi.fn(async () => true);
     runtime.windowLike.RankedSessionRuntime = {
       promotePrefetchedSession: vi.fn(() => false),
-      startNextSession: vi.fn(() => seedDeferred.promise.then((ready) => {
+      startNextSession: vi.fn(() => {
+        restartOrder.push("start");
+        return seedDeferred.promise.then((ready) => {
         if (ready) {
           storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(nextSession));
           runtime.windowLike.GAME_CHALLENGE_CONTEXT = {
@@ -2160,9 +2395,12 @@ describe("online leaderboard terminal submission", () => {
           };
         }
         return ready;
-      })),
+        });
+      }),
       ensurePrefetch: vi.fn(async () => true),
-      clearActiveSession: vi.fn()
+      clearActiveSession: vi.fn(),
+      enqueueAttempt,
+      flushAttemptOutbox
     };
 
     (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
@@ -2175,6 +2413,13 @@ describe("online leaderboard terminal submission", () => {
     await flushRuntimePromises();
 
     expect(runtime.windowLike.RankedSessionRuntime.startNextSession).toHaveBeenCalledWith(MODE_KEY);
+    expect(restartOrder.slice(0, 3)).toEqual(["enqueue", "clear", "start"]);
+    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      event: "abandon",
+      ranked_session_token: "old-ranked-token",
+      reason: "restart",
+      attempt_schema_version: 1
+    }));
     expect(setup).not.toHaveBeenCalled();
 
     seedDeferred.resolve(true);
@@ -2223,11 +2468,14 @@ describe("online leaderboard terminal submission", () => {
       storage,
       fetchImpl: async () => createJsonResponse({ success: true, data: [] })
     });
+    const enqueueAttempt = vi.fn(() => true);
     runtime.windowLike.RankedSessionRuntime = {
       promotePrefetchedSession: vi.fn(() => false),
       startNextSession: vi.fn(async () => true),
       ensurePrefetch: vi.fn(async () => true),
-      clearActiveSession: vi.fn()
+      clearActiveSession: vi.fn(),
+      enqueueAttempt,
+      flushAttemptOutbox: vi.fn(async () => true)
     };
 
     (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
@@ -2240,8 +2488,57 @@ describe("online leaderboard terminal submission", () => {
 
     expect(runtime.windowLike.RankedSessionRuntime.startNextSession).not.toHaveBeenCalled();
     expect(setup).not.toHaveBeenCalled();
+    expect(enqueueAttempt).not.toHaveBeenCalled();
     expect(manager.setup).toBe(setup);
     expect(manager.rankedRestartPreparing).toBe(false);
+  });
+
+  it("keeps the old ranked game when restart abandon cannot be persisted", async () => {
+    const storage = new MemoryStorage();
+    const continueGame = vi.fn();
+    const clearSavedGameState = vi.fn();
+    const setup = vi.fn();
+    const originalRestart = vi.fn(function (this: Record<string, any>) {
+      return Promise.resolve().then(() => {
+        this.actuator.continue();
+        this.clearSavedGameState(MODE_KEY);
+        this.setup(undefined, { disableStateRestore: true });
+      });
+    });
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "persist-failure-token",
+      challengeId: "persist-failure-challenge",
+      successfulMoveCount: 2,
+      actuator: { continue: continueGame },
+      clearSavedGameState,
+      setup,
+      restart: originalRestart
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const startNextSession = vi.fn(async () => true);
+    runtime.windowLike.RankedSessionRuntime = {
+      startNextSession,
+      enqueueAttempt: vi.fn(() => false),
+      flushAttemptOutbox: vi.fn(async () => false),
+      ensurePrefetch: vi.fn(async () => true)
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(continueGame).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(setup).not.toHaveBeenCalled();
+    expect(startNextSession).not.toHaveBeenCalled();
+    expect(manager.rankedSessionToken).toBe("persist-failure-token");
+    expect(manager.rankedRestartPreparing).toBe(false);
+    expect(runtime.windowLike.alert).toHaveBeenCalled();
   });
 
   it("does not promote a prefetched ranked session before restart confirmation is accepted", async () => {
@@ -2406,6 +2703,66 @@ describe("online leaderboard terminal submission", () => {
     expect(manager.rankedSessionToken).toBe("old-ranked-token");
     expect(manager.rankedRestartBlockedUntilSessionReady).toBe(true);
     expect(manager.rankedRestartPreparing).toBe(false);
+  });
+
+  it("blocks moves after abandon is persisted but the next ranked session is unavailable", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(
+      ACTIVE_SESSION_KEY,
+      JSON.stringify({
+        mode_key: MODE_KEY,
+        challenge_id: "ranked-abandoned",
+        seed: 123,
+        ranked_session_token: "abandoned-token",
+        issued_at: nowSec - 60,
+        exp: nowSec + 3600,
+        owner_user_id: "7"
+      })
+    );
+
+    const setup = vi.fn();
+    const originalMove = vi.fn();
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      (this.setup as (...args: unknown[]) => void)(undefined, { disableStateRestore: true });
+    });
+    const manager = createTerminatedManager({
+      over: false,
+      rankPolicy: "ranked",
+      rankedSessionToken: "abandoned-token",
+      challengeId: "ranked-abandoned",
+      move: originalMove,
+      restart: originalRestart,
+      setup
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+    const enqueueAttempt = vi.fn(() => true);
+    runtime.windowLike.RankedSessionRuntime = {
+      startNextSession: vi.fn(async () => false),
+      enqueueAttempt,
+      flushAttemptOutbox: vi.fn(async () => true),
+      ensurePrefetch: vi.fn(async () => false)
+    };
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      event: "abandon",
+      ranked_session_token: "abandoned-token",
+      reason: "restart"
+    }));
+    expect(manager.rankedRestartBlockedUntilSessionReady).toBe(true);
+    expect(manager.over).toBe(false);
+
+    (manager.move as { call: (thisArg: unknown, direction: number) => void }).call(manager, 1);
+
+    expect(originalMove).not.toHaveBeenCalled();
+    expect(manager.successfulMoveCount).toBe(2);
   });
 
   it("does not call restartWithSeed when ranked session creation fails before setup", async () => {

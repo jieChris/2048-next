@@ -8,8 +8,10 @@ import {
   parseCustomSecondaryTimerRules,
   readCustomSecondaryTimerRuleText,
   writeCustomSecondaryTimerRuleText,
-  type CustomSecondaryTimerFamily
+  type CustomSecondaryTimerFamily,
+  type CustomSecondaryTimerRule
 } from "../core/custom-secondary-timers";
+import { resolveSecondaryTimerLegendFontSize } from "../core/game-manager-base-helpers";
 import { getTimerMilestoneValues, getTimerSlotIdsForBoard } from "../core/rules";
 
 const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
@@ -18,6 +20,9 @@ const CUSTOM_TIMER_PARENT_VALUES: Record<CustomSecondaryTimerFamily, number[]> =
   pow2: getTimerSlotIdsForBoard("pow2", 5, 5),
   fibonacci: getTimerMilestoneValues("fibonacci", [], 4, 4)
 };
+const CUSTOM_TIMER_PREVIEW_STYLE_SLOTS = [
+  32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
+];
 let customTimerFamily: CustomSecondaryTimerFamily = "pow2";
 
 const globalWindow = window as Window & {
@@ -98,6 +103,98 @@ function isEnglishUi(): boolean {
   return String(lang || "").toLowerCase().startsWith("en");
 }
 
+function resolveCustomTimerPreviewStyleSlot(parent: number): number {
+  const index = CUSTOM_TIMER_PARENT_VALUES[customTimerFamily].indexOf(parent);
+  return CUSTOM_TIMER_PREVIEW_STYLE_SLOTS[Math.min(Math.max(index, 0), CUSTOM_TIMER_PREVIEW_STYLE_SLOTS.length - 1)];
+}
+
+function createCustomTimerPreviewLegend(value: number, styleSlot: number): HTMLDivElement {
+  const legend = document.createElement("div");
+  legend.className = `timertile custom-secondary-timer-preview-legend timer-legend-${styleSlot}`;
+  legend.textContent = String(value);
+  legend.style.fontSize = resolveSecondaryTimerLegendFontSize(value);
+  return legend;
+}
+
+function createCustomTimerPreviewTime(text: string): HTMLDivElement {
+  const timer = document.createElement("div");
+  timer.className = "timertile custom-secondary-timer-preview-time";
+  timer.textContent = text;
+  return timer;
+}
+
+function renderCustomTimerPreview(savedText: string): void {
+  const list = document.getElementById("custom-secondary-timer-preview-list");
+  const empty = document.getElementById("custom-secondary-timer-preview-empty");
+  const title = document.getElementById("custom-secondary-timer-preview-title");
+  const hint = document.querySelector(".custom-secondary-timer-preview-head small");
+  if (!list || !empty) return;
+  const isEnglish = isEnglishUi();
+  if (title) title.textContent = isEnglish ? "Saved rules preview" : "已保存规则预览";
+  if (hint) hint.textContent = isEnglish ? "Select a parent to expand" : "点击母计时器展开";
+  empty.textContent = isEnglish
+    ? "Save rules to preview their expanded hierarchy here."
+    : "保存规则后，可在这里预览展开层级。";
+  list.replaceChildren();
+
+  const parsed = parseCustomSecondaryTimerRules({
+    text: savedText,
+    family: customTimerFamily,
+    parentValues: CUSTOM_TIMER_PARENT_VALUES[customTimerFamily]
+  });
+  const groups = new Map<number, CustomSecondaryTimerRule[]>();
+  for (const rule of parsed.rules) {
+    const rules = groups.get(rule.parent) || [];
+    rules.push(rule);
+    groups.set(rule.parent, rules);
+  }
+  empty.hidden = groups.size > 0;
+
+  for (const [parent, rules] of groups) {
+    const group = document.createElement("section");
+    group.className = "custom-secondary-timer-preview-group";
+    const childrenId = `custom-secondary-timer-preview-children-${customTimerFamily}-${parent}`;
+    const styleSlot = resolveCustomTimerPreviewStyleSlot(parent);
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "custom-secondary-timer-preview-parent";
+    trigger.dataset.timerPreviewParent = String(parent);
+    trigger.setAttribute("aria-controls", childrenId);
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-label", isEnglish ? `Expand ${parent} sub-timers` : `展开 ${parent} 子计时器`);
+    trigger.append(createCustomTimerPreviewLegend(parent, styleSlot), createCustomTimerPreviewTime("00:00.000"));
+
+    const children = document.createElement("div");
+    children.id = childrenId;
+    children.hidden = true;
+    for (const rule of rules) {
+      const level = Math.max(1, rule.values.length - 1);
+      const row = document.createElement("div");
+      row.className = "custom-secondary-timer-preview-child";
+      row.dataset.timerPreviewChild = String(parent);
+      row.dataset.timerPreviewLevel = String(level);
+      row.dataset.timerPreviewRule = rule.expression;
+      row.style.setProperty("--timer-preview-level", String(level));
+      row.append(
+        createCustomTimerPreviewLegend(rule.values[rule.values.length - 1] || parent, styleSlot),
+        createCustomTimerPreviewTime("—")
+      );
+      row.setAttribute("title", rule.expression);
+      children.append(row);
+    }
+    trigger.addEventListener("click", () => {
+      const expanded = trigger.getAttribute("aria-expanded") !== "true";
+      trigger.setAttribute("aria-expanded", expanded ? "true" : "false");
+      children.hidden = !expanded;
+    });
+    group.append(trigger, children);
+    list.append(group);
+  }
+
+  const syncTimerLegendStyles = globalWindow.ThemeManager?.syncTimerLegendStyles;
+  if (typeof syncTimerLegendStyles === "function") syncTimerLegendStyles.call(globalWindow.ThemeManager);
+}
+
 function syncCustomTimerGenerator(resetRange: boolean): void {
   const startSelect = document.getElementById("custom-secondary-timer-range-start") as HTMLSelectElement | null;
   const endSelect = document.getElementById("custom-secondary-timer-range-end") as HTMLSelectElement | null;
@@ -146,6 +243,7 @@ function syncCustomTimerEditor(reloadText: boolean): void {
     button.tabIndex = active ? 0 : -1;
   });
   syncCustomTimerGenerator(reloadText);
+  renderCustomTimerPreview(readCustomSecondaryTimerRuleText(window.localStorage, customTimerFamily));
 }
 
 function generateCustomTimerRules(): void {
@@ -192,6 +290,7 @@ function saveCustomTimerRules(): void {
   }
   input.removeAttribute("aria-invalid");
   const saved = writeCustomSecondaryTimerRuleText(window.localStorage, customTimerFamily, input.value);
+  if (saved) renderCustomTimerPreview(input.value);
   if (note) {
     note.textContent = saved
       ? (isEnglish ? "Saved. Applies from the next game." : "已保存，将从下一局开始生效。")

@@ -406,7 +406,7 @@ describe("breakout easter egg", () => {
     expect(host?.innerHTML).toContain("发现彩蛋");
     expect(host?.innerHTML).toContain("隐藏成就");
     expect(host?.innerHTML).toContain("unlock-toast--easter-egg");
-    expect(host?.innerHTML).toContain("egg-yolk-easter_egg_breakout_discovered");
+    expect(host?.innerHTML).toContain("egg-shell-easter_egg_breakout_discovered");
     expect(host?.innerHTML).toContain("achievement-easter-egg-full");
     expect(host?.innerHTML).toContain("打开排行榜里的弹球彩蛋。");
     expect(host?.innerHTML).not.toContain("Reward Claimed");

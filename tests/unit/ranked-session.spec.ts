@@ -10,6 +10,7 @@ import {
 const MODE_KEY = "standard_4x4_pow2_no_undo";
 const ACTIVE_KEY = `ranked_session_active:v1:${MODE_KEY}`;
 const PREFETCH_KEY = `ranked_session_prefetch:v1:${MODE_KEY}`;
+const ATTEMPT_OUTBOX_KEY = "ranked_session_attempt_outbox:v1";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -63,6 +64,91 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe("ranked session runtime", () => {
+  it("deduplicates, owner-isolates, and clears successful attempt outbox events", async () => {
+    const storage = new MemoryStorage();
+    let responseMode: "success" | "unauthorized" | "network" = "success";
+    const fetchImpl = vi.fn(async () => {
+      if (responseMode === "network") throw new Error("offline");
+      if (responseMode === "unauthorized") {
+        return new Response(JSON.stringify({ success: false, code: "UNAUTHORIZED" }), {
+          status: 401,
+          headers: { "content-type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+    const begin = {
+      challenge_id: "challenge-1",
+      event: "begin" as const,
+      mode_key: MODE_KEY,
+      ranked_session_token: "ranked-token",
+      replay_string: "replay-after-first-move",
+      attempt_schema_version: 1 as const
+    };
+
+    expect(runtime.enqueueAttempt(begin)).toBe(true);
+    expect(runtime.enqueueAttempt(begin)).toBe(true);
+    expect(JSON.parse(storage.getItem(ATTEMPT_OUTBOX_KEY) || "[]")).toHaveLength(1);
+
+    storage.setItem("2048_auth_userId_v1", "8");
+    await expect(runtime.flushAttemptOutbox()).resolves.toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(storage.getItem(ATTEMPT_OUTBOX_KEY)).not.toBeNull();
+
+    storage.setItem("2048_auth_userId_v1", "7");
+    responseMode = "unauthorized";
+    await expect(runtime.flushAttemptOutbox()).resolves.toBe(false);
+    expect(storage.getItem(ATTEMPT_OUTBOX_KEY)).not.toBeNull();
+    expect(storage.getItem("2048_auth_token_v1")).toBeNull();
+
+    storage.setItem("2048_auth_token_v1", "auth-token");
+    storage.setItem("2048_auth_userId_v1", "7");
+    responseMode = "network";
+    await expect(runtime.flushAttemptOutbox()).resolves.toBe(false);
+    expect(storage.getItem(ATTEMPT_OUTBOX_KEY)).not.toBeNull();
+
+    responseMode = "success";
+    await expect(runtime.flushAttemptOutbox()).resolves.toBe(true);
+    expect(storage.getItem(ATTEMPT_OUTBOX_KEY)).toBeNull();
+    const requestBody = JSON.parse(String(fetchImpl.mock.calls.at(-1)?.[1]?.body || "{}"));
+    expect(requestBody).toEqual({
+      event: "begin",
+      mode_key: MODE_KEY,
+      ranked_session_token: "ranked-token",
+      replay_string: "replay-after-first-move",
+      attempt_schema_version: 1
+    });
+  });
+
+  it("drops permanently rejected attempt events instead of retrying forever", async () => {
+    const storage = new MemoryStorage();
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ success: false, code: "SESSION_TERMINAL" }), {
+        status: 409,
+        headers: { "content-type": "application/json" }
+      });
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+
+    expect(runtime.enqueueAttempt({
+      challenge_id: "challenge-2",
+      event: "abandon",
+      mode_key: MODE_KEY,
+      ranked_session_token: "ranked-token",
+      replay_string: "non-terminal-replay",
+      reason: "restart",
+      attempt_schema_version: 1
+    })).toBe(true);
+    await expect(runtime.flushAttemptOutbox()).resolves.toBe(true);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(storage.getItem(ATTEMPT_OUTBOX_KEY)).toBeNull();
+  });
+
   it("does not promote a prefetched session that reuses the active ranked seed", async () => {
     const storage = new MemoryStorage();
     const activeSession = createSession();
@@ -210,7 +296,10 @@ describe("ranked session runtime", () => {
     await expect(runtime.startNextSession(modeKey)).resolves.toBe(true);
 
     expect(fetchImpl).toHaveBeenCalled();
-    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body || "{}"))).toMatchObject({ mode_key: modeKey });
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body || "{}"))).toMatchObject({
+      mode_key: modeKey,
+      attempt_schema_version: 1
+    });
     expect(JSON.parse(storage.getItem(activeKey) || "{}")).toMatchObject({
       mode_key: modeKey,
       ranked_session_token: "fib-token"

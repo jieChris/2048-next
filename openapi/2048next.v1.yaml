@@ -372,6 +372,43 @@ paths:
                         items:
                           $ref: "#/components/schemas/LeaderboardEntry"
 
+  /leaderboard/standard-4x4-no-undo:
+    get:
+      tags: [Leaderboard]
+      summary: Read the isolated standard 4x4 no-undo showcase leaderboard.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Standard 4x4 no-undo showcase result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    required: [mode_key, summary, trend, data]
+                    properties:
+                      mode_key:
+                        type: string
+                        const: standard_4x4_pow2_no_undo
+                      summary:
+                        $ref: "#/components/schemas/LeaderboardShowcaseSummary"
+                      trend:
+                        type: array
+                        minItems: 7
+                        maxItems: 7
+                        items:
+                          $ref: "#/components/schemas/LeaderboardShowcaseTrendPoint"
+                      achievement_focus:
+                        $ref: "#/components/schemas/LeaderboardAchievementFocus"
+                      data:
+                        type: array
+                        maxItems: 10
+                        items:
+                          $ref: "#/components/schemas/LeaderboardShowcaseEntry"
+
   /score:
     post:
       tags: [Records]
@@ -491,6 +528,24 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/RankedSession"
+
+  /ranked-session/attempt:
+    post:
+      tags: [Ranked]
+      summary: Record a verified ranked-session begin or abandon event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RankedSessionAttemptRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "400":
+          description: Invalid attempt payload or replay.
+        "409":
+          description: Session is already terminal and cannot be abandoned.
 
   /ranked-checkpoint:
     get:
@@ -1416,6 +1471,91 @@ components:
           type: string
           format: date-time
 
+    LeaderboardShowcaseEntry:
+      type: object
+      additionalProperties: false
+      required: [rank, user_id, nickname, score, max_tile, board_sum, duration_ms]
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 10
+        user_id:
+          type: integer
+          minimum: 0
+        nickname:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+        max_tile:
+          type: integer
+          minimum: 0
+        board_sum:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+        game_date:
+          type: [string, "null"]
+          format: date-time
+        uploaded_at:
+          type: [string, "null"]
+          format: date-time
+
+    LeaderboardShowcaseSummary:
+      type: object
+      additionalProperties: false
+      required: [total_records, total_players, reached_16384, reached_32768]
+      properties:
+        total_records:
+          type: integer
+          minimum: 0
+        total_players:
+          type: integer
+          minimum: 0
+        reached_16384:
+          type: integer
+          minimum: 0
+        reached_32768:
+          type: integer
+          minimum: 0
+
+    LeaderboardShowcaseTrendPoint:
+      type: object
+      additionalProperties: false
+      required: [date, best_score]
+      properties:
+        date:
+          type: string
+          format: date
+        best_score:
+          type: integer
+          minimum: 0
+
+    LeaderboardAchievementFocus:
+      type: object
+      additionalProperties: false
+      required: [completed_all]
+      properties:
+        completed_all:
+          type: boolean
+        achievement_id:
+          type: string
+        name:
+          type: string
+        current:
+          type: integer
+          minimum: 0
+        target:
+          type: integer
+          minimum: 1
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+
     UserRecordStats:
       type: object
       additionalProperties: true
@@ -1428,6 +1568,16 @@ components:
           items:
             type: object
             additionalProperties: true
+        rating:
+          type: object
+          additionalProperties: false
+          required: [value, status]
+          properties:
+            value:
+              type: [integer, "null"]
+            status:
+              type: string
+              enum: [insufficient_data]
         tile_milestones:
           type: array
           items:
@@ -1474,6 +1624,9 @@ components:
           type: string
         mode_bucket:
           type: string
+        record_era:
+          type: string
+          enum: [beta, official_v1]
         max_tile:
           type: integer
         replay:
@@ -1495,6 +1648,9 @@ components:
       additionalProperties: true
       required: [score, mode_key]
       properties:
+        record_schema_version:
+          type: integer
+          enum: [1]
         client_record_id:
           type: string
         score:
@@ -1533,6 +1689,9 @@ components:
       additionalProperties: true
       required: [mode_key]
       properties:
+        attempt_schema_version:
+          type: integer
+          enum: [1]
         mode_key:
           type: string
         mode:
@@ -1545,6 +1704,28 @@ components:
           type: integer
         ruleset:
           type: string
+
+    RankedSessionAttemptRequest:
+      type: object
+      additionalProperties: false
+      required: [event, mode_key, ranked_session_token, replay_string, attempt_schema_version]
+      properties:
+        event:
+          type: string
+          enum: [begin, abandon]
+        mode_key:
+          type: string
+        ranked_session_token:
+          type: string
+        replay_string:
+          type: string
+        reason:
+          type: string
+          enum: [restart, navigation]
+          description: Required for abandon and omitted for begin.
+        attempt_schema_version:
+          type: integer
+          enum: [1]
 
     RankedSession:
       type: object
@@ -1560,6 +1741,12 @@ components:
           type: string
         mode_key:
           type: string
+        status:
+          type: string
+          enum: [created, started, consumed, abandoned, expired]
+        record_era:
+          type: string
+          enum: [beta, official_v1]
         issued_at:
           type: string
           format: date-time

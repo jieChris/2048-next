@@ -609,6 +609,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leaderboard/standard-4x4-no-undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the isolated standard 4x4 no-undo showcase leaderboard. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Standard 4x4 no-undo showcase result. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            /** @constant */
+                            mode_key: "standard_4x4_pow2_no_undo";
+                            summary: components["schemas"]["LeaderboardShowcaseSummary"];
+                            trend: components["schemas"]["LeaderboardShowcaseTrendPoint"][];
+                            achievement_focus?: components["schemas"]["LeaderboardAchievementFocus"];
+                            data: components["schemas"]["LeaderboardShowcaseEntry"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/score": {
         parameters: {
             query?: never;
@@ -851,6 +894,52 @@ export interface paths {
                             data?: components["schemas"]["RankedSession"];
                         };
                     };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ranked-session/attempt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a verified ranked-session begin or abandon event. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RankedSessionAttemptRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                /** @description Invalid attempt payload or replay. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session is already terminal and cannot be abandoned. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -2234,6 +2323,38 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        LeaderboardShowcaseEntry: {
+            rank: number;
+            user_id: number;
+            nickname: string;
+            score: number;
+            max_tile: number;
+            board_sum: number;
+            duration_ms: number;
+            /** Format: date-time */
+            game_date?: string | null;
+            /** Format: date-time */
+            uploaded_at?: string | null;
+        };
+        LeaderboardShowcaseSummary: {
+            total_records: number;
+            total_players: number;
+            reached_16384: number;
+            reached_32768: number;
+        };
+        LeaderboardShowcaseTrendPoint: {
+            /** Format: date */
+            date: string;
+            best_score: number;
+        };
+        LeaderboardAchievementFocus: {
+            completed_all: boolean;
+            achievement_id?: string;
+            name?: string;
+            current?: number;
+            target?: number;
+            progress_percent?: number;
+        };
         UserRecordStats: {
             summary?: {
                 [key: string]: unknown;
@@ -2241,6 +2362,11 @@ export interface components {
             by_mode?: {
                 [key: string]: unknown;
             }[];
+            rating?: {
+                value: number | null;
+                /** @enum {string} */
+                status: "insufficient_data";
+            };
             tile_milestones?: {
                 [key: string]: unknown;
             }[];
@@ -2267,6 +2393,8 @@ export interface components {
             mode?: string;
             mode_key?: string;
             mode_bucket?: string;
+            /** @enum {string} */
+            record_era?: "beta" | "official_v1";
             max_tile?: number;
             replay?: string;
             replay_url?: string;
@@ -2280,6 +2408,8 @@ export interface components {
             [key: string]: unknown;
         };
         GameRecordSubmitRequest: {
+            /** @enum {integer} */
+            record_schema_version?: 1;
             client_record_id?: string;
             score: number;
             duration_ms?: number;
@@ -2300,6 +2430,8 @@ export interface components {
             [key: string]: unknown;
         };
         RankedSessionStartRequest: {
+            /** @enum {integer} */
+            attempt_schema_version?: 1;
             mode_key: string;
             mode?: string;
             mode_bucket?: string;
@@ -2309,12 +2441,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        RankedSessionAttemptRequest: {
+            /** @enum {string} */
+            event: "begin" | "abandon";
+            mode_key: string;
+            ranked_session_token: string;
+            replay_string: string;
+            /**
+             * @description Required for abandon and omitted for begin.
+             * @enum {string}
+             */
+            reason?: "restart" | "navigation";
+            /** @enum {integer} */
+            attempt_schema_version: 1;
+        };
         RankedSession: {
             id?: string;
             challenge_id?: string;
             seed?: string;
             ranked_session_token?: string;
             mode_key?: string;
+            /** @enum {string} */
+            status?: "created" | "started" | "consumed" | "abandoned" | "expired";
+            /** @enum {string} */
+            record_era?: "beta" | "official_v1";
             /** Format: date-time */
             issued_at?: string;
         } & {

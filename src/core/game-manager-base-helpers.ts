@@ -1021,12 +1021,13 @@ function createCustomSecondaryTimerRowElement(
 
   const legend = documentWithCreateElement.createElement("div");
   const parentSlot = resolveSecondaryTimerSlotByValue(manager, rule.parent) || rule.parent;
+  const child = rule.values[rule.values.length - 1] || rule.parent;
   legend.className = "timertile timer-secondary-legend timer-legend-" + String(parentSlot);
-  legend.textContent = rule.expression;
+  legend.textContent = String(child);
   legend.setAttribute?.("title", rule.expression);
   const legendStyle = ensureSecondaryTimerElementStyle(legend);
   legendStyle.color = "#f9f6f2";
-  legendStyle.fontSize = rule.expression.length > 8 ? "9px" : "11px";
+  legendStyle.fontSize = resolveSecondaryTimerLegendFontSize(child);
   row.appendChild?.(legend);
   row.appendChild?.(createSecondaryTimerValueElement(documentWithCreateElement, valueId, level));
   appendSecondaryTimerRowBreaks(documentWithCreateElement, row);

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>2048 经典 4×4 无撤回总榜</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
+  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
+  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
+  <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
+  <script src="/js/beta_access_preload.js?v=20260708-01"></script>
+  <link href="style/main.css?v=20260721-leaderboard-rank-colors-v1" rel="stylesheet" type="text/css">
+  <link href="style/leaderboard_4x4.css?v=20260723-light-dark-v10" rel="stylesheet" type="text/css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';">
+</head>
+<body id="leaderboard-4x4-page" data-page="leaderboard-4x4" data-leaderboard-state="loading">
+  <main class="showcase-shell">
+    <header class="showcase-page-header">
+      <a class="page-back-button" href="2048.html" aria-label="返回首页">首页</a>
+      <a class="showcase-brand" href="2048.html" aria-label="2048 Next 首页">
+        <img class="showcase-brand-logo" width="112" height="48" decoding="async" src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 标志">
+      </a>
+      <a id="home-user-display" class="showcase-account-link" href="account_settings.html">游客</a>
+    </header>
+
+    <section class="showcase-dashboard" aria-label="经典 4×4 无撤回排行榜">
+      <div class="showcase-data-column">
+        <section class="showcase-overview" aria-label="经典 4×4 无撤回数据概览">
+          <div class="showcase-kpi-grid">
+            <article class="showcase-kpi-card showcase-kpi-card--wide">
+              <span class="showcase-kpi-icon" aria-hidden="true">▦</span>
+              <div><strong id="leaderboard-4x4-total-records">--</strong><small>正式对局</small></div>
+            </article>
+            <article class="showcase-kpi-card showcase-kpi-card--wide">
+              <span class="showcase-kpi-icon" aria-hidden="true">◎</span>
+              <div><strong id="leaderboard-4x4-total-players">--</strong><small>参赛玩家</small></div>
+            </article>
+            <article class="showcase-kpi-card showcase-kpi-card--milestone">
+              <span class="showcase-kpi-icon" aria-hidden="true">16384</span>
+              <div>
+                <small id="leaderboard-4x4-rate-16384">--%</small>
+                <strong id="leaderboard-4x4-reached-16384">--</strong>
+                <em>达成对局</em>
+              </div>
+            </article>
+            <article class="showcase-kpi-card showcase-kpi-card--milestone">
+              <span class="showcase-kpi-icon" aria-hidden="true">32768</span>
+              <div>
+                <small id="leaderboard-4x4-rate-32768">--%</small>
+                <strong id="leaderboard-4x4-reached-32768">--</strong>
+                <em>达成对局</em>
+              </div>
+            </article>
+          </div>
+
+          <article class="showcase-trend-card">
+            <header>
+              <div><p>PERFORMANCE</p><h2>最近 7 天最高分</h2></div>
+              <span>北京时间</span>
+            </header>
+            <div id="leaderboard-4x4-trend" class="showcase-trend-chart" role="img" aria-label="最近 7 天每日最高分趋势"></div>
+          </article>
+        </section>
+
+        <section class="showcase-board" aria-label="经典 4×4 无撤回排行榜">
+          <header class="showcase-board-header">
+            <div>
+              <p>GLOBAL RANKING</p>
+              <h2>4×4 无撤回总榜</h2>
+            </div>
+            <div class="showcase-board-actions">
+              <span><small>刷新于</small><strong id="leaderboard-4x4-refreshed">--:--:--</strong></span>
+              <button id="leaderboard-4x4-refresh" type="button">载入中</button>
+            </div>
+          </header>
+
+          <div id="leaderboard-4x4-list" class="showcase-ranking-list" role="list" aria-live="polite"></div>
+
+          <footer class="showcase-board-footer">
+            <p id="leaderboard-4x4-status" role="status" aria-live="polite">正在读取正式排行榜…</p>
+            <div class="showcase-pagination" aria-label="分页">
+              <button type="button" aria-label="上一页" disabled>‹</button>
+              <span>第 1 / 1 页</span>
+              <button type="button" aria-label="下一页" disabled>›</button>
+            </div>
+          </footer>
+        </section>
+      </div>
+
+      <aside class="showcase-rail" aria-label="4×4 专业榜补充信息">
+        <section class="showcase-rail-card showcase-milestone-card">
+          <header><p>MILESTONES</p><h2>经典里程碑</h2></header>
+          <div class="showcase-milestone-list">
+            <div class="showcase-milestone-row"><span>2048</span><small>首次 · 10 次 · 100 次</small></div>
+            <div class="showcase-milestone-row"><span>4096</span><small>首次 · 10 次 · 100 次</small></div>
+            <div class="showcase-milestone-row"><span>8192</span><small>首次 · 10 次 · 100 次</small></div>
+            <div class="showcase-milestone-row"><span>16384</span><small>首次 · 10 次 · 100 次</small></div>
+            <div class="showcase-milestone-row"><span>32768</span><small>首次 · 10 次 · 100 次</small></div>
+            <div class="showcase-milestone-row"><span>65536</span><small>首次 · 10 次 · 100 次</small></div>
+          </div>
+        </section>
+
+        <a id="leaderboard-4x4-achievements-link" class="showcase-rail-achievements" href="medal-wall.html">
+          <span>浏览成就墙</span><b aria-hidden="true">→</b>
+        </a>
+
+        <section class="showcase-rail-card showcase-podium-card">
+          <header><p>TOP PLAYERS</p><h2>前三名</h2></header>
+          <div id="leaderboard-4x4-podium" class="showcase-mini-podium" aria-live="polite"></div>
+        </section>
+
+        <section class="showcase-rail-card showcase-progress-card">
+          <div><small id="leaderboard-4x4-progress-title">32768 全局达成率</small><strong id="leaderboard-4x4-progress-rate">--%</strong></div>
+          <progress id="leaderboard-4x4-progress" max="100" value="0" aria-label="32768 达成率"></progress>
+          <span id="leaderboard-4x4-progress-count">-- / -- 局</span>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="./src/entries/leaderboard-4x4.ts"></script>
+</body>
+</html>

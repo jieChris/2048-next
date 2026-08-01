@@ -164,7 +164,7 @@ describe("module entry html pages", () => {
     expect(html).toContain('class="achievements-header-user"');
     expect(html).not.toContain('id="achievements-user-link"');
     expect(html).toContain("成就勋章墙");
-    expect(html).toContain("已点亮和未点亮的成就会同时展示");
+    expect(html).toContain('id="achievement-family-dialog"');
   });
 
   it("does not keep the old public achievements direct page", () => {

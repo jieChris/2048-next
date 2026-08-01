@@ -122,6 +122,7 @@
   var summaryBestTile = 0;
   var summaryLastActive = "";
   var summaryModeStats = [];
+  var summaryRatingStatus = "";
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
   var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
     ? global.CLOUD_REPLAY_CONTRACT
@@ -211,6 +212,8 @@
       restoreFail: "恢复记录失败",
       deletedHint: "已删除，保留 3 天可恢复",
       restoreReplayHint: "已删除记录需恢复后才能查看回放",
+      betaRecord: "内测成绩",
+      ratingInsufficient: "数据积累中，暂无 Rating",
       colMode: "模式",
       colScore: "分数",
       colBoardSum: "盘面和",
@@ -306,6 +309,8 @@
       restoreFail: "Failed to restore record",
       deletedHint: "Deleted (recoverable within 3 days)",
       restoreReplayHint: "Restore this deleted record to view its replay.",
+      betaRecord: "Beta result",
+      ratingInsufficient: "Collecting data — no rating yet.",
       colMode: "Mode",
       colScore: "Score",
       colBoardSum: "Board Sum",
@@ -370,6 +375,32 @@
   function normalizeReplayFileVersion(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
+  }
+
+  function normalizeRecordEra(value) {
+    var era = toText(value).trim();
+    return era === "beta" || era === "official_v1" ? era : "";
+  }
+
+  function resolveRecordEra(primary, fallback) {
+    return normalizeRecordEra(primary && primary.record_era) || normalizeRecordEra(fallback && fallback.record_era);
+  }
+
+  function isBetaRecord(record, fallback) {
+    return resolveRecordEra(record, fallback) === "beta";
+  }
+
+  function isOfficialRecord(record) {
+    return resolveRecordEra(record, null) === "official_v1";
+  }
+
+  function createRecordEraBadge(record, fallback) {
+    if (!isBetaRecord(record, fallback)) return null;
+    var badge = global.document.createElement("span");
+    badge.className = "user-record-era-badge";
+    badge.setAttribute("data-record-era", "beta");
+    badge.textContent = t("betaRecord");
+    return badge;
   }
 
   function byId(id) {
@@ -1090,6 +1121,7 @@
     for (var i = 0; i < rawStats.length; i += 1) {
       var source = rawStats[i];
       if (!source || typeof source !== "object") continue;
+      if (isBetaRecord(source)) continue;
       var modeBucket = toText(source.mode_bucket || source.mode).trim();
       var modeKey = toText(source.mode_key).trim();
       if (!modeBucket) modeBucket = normalizeModeBucketFromKey(modeKey);
@@ -1251,9 +1283,9 @@
       candidate.mode = toText(fallback.mode || fallback.mode_bucket).trim();
       candidate.mode_key = toText(fallback.mode_key).trim();
       candidate.board_width = fallback.board_width;
-      candidate.board_sum = fallback.board_sum;
       candidate.board_height = fallback.board_height;
       candidate.score = fallback.score;
+      candidate.board_sum = fallback.board_sum;
       candidate.best_tile = fallback.best_tile;
       candidate.duration_ms = fallback.duration_ms;
       candidate.ended_at = fallback.ended_at;
@@ -1268,9 +1300,9 @@
     }
     if (source.mode_key != null) candidate.mode_key = toText(source.mode_key).trim();
     if (source.board_width != null) candidate.board_width = source.board_width;
-    if (source.board_sum != null) candidate.board_sum = source.board_sum;
     if (source.board_height != null) candidate.board_height = source.board_height;
     if (source.score != null) candidate.score = source.score;
+    if (source.board_sum != null) candidate.board_sum = source.board_sum;
     if (source.best_tile != null) candidate.best_tile = source.best_tile;
     if (source.duration_ms != null) candidate.duration_ms = source.duration_ms;
     if (source.ended_at != null) candidate.ended_at = source.ended_at;
@@ -1473,6 +1505,7 @@
       );
       return {
         score: Math.floor(Number(normalized.score) || 0),
+        record_era: resolveRecordEra(source, fallback),
         mode_bucket: toText(source.mode_bucket || (fallback && fallback.mode_bucket) || normalized.mode).trim(),
         mode_key: toText(source.mode_key || (fallback && fallback.mode_key) || normalized.mode_key).trim(),
         board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallback && fallback.board_width)),
@@ -1497,6 +1530,7 @@
     var finalBoard = source.final_board;
     return {
       score: Math.floor(Number(source.score != null ? source.score : fallbackRecord && fallbackRecord.score) || 0),
+      record_era: resolveRecordEra(source, fallbackRecord),
       mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket)).trim(),
       mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key)).trim(),
       board_width: parsePositiveInt(source.board_width || (fallbackRecord && fallbackRecord.board_width)),
@@ -1624,13 +1658,13 @@
     if (!recordId) return { error: "invalid record id" };
 
     var cached = recordDetailCache[recordId];
+    if (cached && !cached.loading) return cached;
+
     if (isDeletedRecord(record)) {
       var deletedDetail = Object.assign({ loading: false }, normalizeRecordDetailPayload(record, record));
       recordDetailCache[recordId] = deletedDetail;
       return deletedDetail;
     }
-
-    if (cached && !cached.loading) return cached;
 
     var eagerLocalDetail = buildLocalRecordDetailFallback(record);
     if (eagerLocalDetail) {
@@ -1724,6 +1758,7 @@
       replay_file_version: replayFileVersion,
       replay_logic_version: CLOUD_REPLAY_LOGIC_VERSION,
       id: toText(record && record.id).trim(),
+      record_era: resolveRecordEra(detail, record),
       score: Math.floor(Number(record && record.score) || 0),
       mode_key: toText((detail && detail.mode_key) || (record && record.mode_key)).trim(),
       mode_bucket: toText((detail && detail.mode_bucket) || (record && record.mode_bucket)).trim(),
@@ -1843,7 +1878,12 @@
     if (isDeletedRecord(record)) {
       metaText += " \u00b7 " + t("deletedHint");
     }
-    meta.textContent = metaText;
+    var metaCopy = global.document.createElement("span");
+    metaCopy.className = "user-record-detail-meta-copy";
+    metaCopy.textContent = metaText;
+    var detailEraBadge = createRecordEraBadge(detail, record);
+    if (detailEraBadge) metaCopy.appendChild(detailEraBadge);
+    meta.appendChild(metaCopy);
 
     var actions = global.document.createElement("div");
     actions.className = "user-record-detail-actions";
@@ -1893,7 +1933,7 @@
           });
         });
         actions.appendChild(restoreBtn);
-      } else {
+      } else if (!isBetaRecord(detail, record)) {
         var deleteBtn = global.document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.className = "replay-button user-record-action-btn user-danger-btn";
@@ -1953,7 +1993,12 @@
 
     var mode = global.document.createElement("span");
     mode.className = "user-record-mode";
-    mode.textContent = resolveRecordModeLabel(record);
+    var modeLabel = global.document.createElement("span");
+    modeLabel.className = "user-record-mode-label";
+    modeLabel.textContent = resolveRecordModeLabel(record);
+    mode.appendChild(modeLabel);
+    var rowEraBadge = createRecordEraBadge(record, null);
+    if (rowEraBadge) mode.appendChild(rowEraBadge);
     row.appendChild(mode);
 
     var score = global.document.createElement("span");
@@ -2074,7 +2119,7 @@
     var id = toText(recordId).trim();
     var visibility = getRecordVisibilityValue();
     var record = cachedRecords[idx] || {};
-    if (!isDeletedRecord(record) && summaryTotalRecords > 0) {
+    if (isOfficialRecord(record) && !isDeletedRecord(record) && summaryTotalRecords > 0) {
       summaryTotalRecords -= 1;
       updateSummaryCards();
     }
@@ -2093,8 +2138,10 @@
     if (idx < 0) return;
     var id = toText(recordId).trim();
     var visibility = getRecordVisibilityValue();
-    summaryTotalRecords += 1;
-    updateSummaryCards();
+    if (isOfficialRecord(cachedRecords[idx])) {
+      summaryTotalRecords += 1;
+      updateSummaryCards();
+    }
     if (visibility === "all") {
       cachedRecords[idx].deleted_at = "";
     } else {
@@ -2115,6 +2162,7 @@
       out.push({
         id: toText(item.id || (normalized && normalized.id)).trim(),
         user_id: parsePositiveInt(item.user_id),
+        record_era: normalizeRecordEra(item.record_era),
         mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
         mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
         board_width: parsePositiveInt(item.board_width || (normalized && normalized.board_width)),
@@ -2188,6 +2236,9 @@
   }
 
   function buildSummaryPreviewHtml() {
+    if (summaryRatingStatus === "insufficient_data") {
+      return escapeHtml(t("ratingInsufficient"));
+    }
     if (summaryTotalRecords <= 0) {
       var emptyNode = global.document.createElement("span");
       emptyNode.textContent = t("summaryPreviewEmpty");
@@ -2269,11 +2320,18 @@
   async function fetchSummaryData() {
     if (!targetUserId) return;
     var stats = await getUserStats(targetUserId);
-    var summary = stats && stats.success && stats.data && typeof stats.data === "object"
-      ? stats.data.summary
+    var statsData = stats && stats.success && stats.data && typeof stats.data === "object"
+      ? stats.data
       : null;
-    if (summary && typeof summary === "object") {
-      summaryModeStats = normalizeSummaryModeStats(stats.data.by_mode);
+    var rating = statsData && statsData.rating && typeof statsData.rating === "object"
+      ? statsData.rating
+      : null;
+    summaryRatingStatus = toText(rating && rating.status).trim() === "insufficient_data"
+      ? "insufficient_data"
+      : "";
+    var summary = statsData ? statsData.summary : null;
+    if (summary && typeof summary === "object" && !isBetaRecord(summary)) {
+      summaryModeStats = normalizeSummaryModeStats(statsData.by_mode);
       summaryTotalRecords = parsePositiveInt(summary.total_records);
       summaryBestScore = parsePositiveInt(summary.best_score);
       summaryBestTile = parsePositiveInt(summary.best_tile);
@@ -2282,18 +2340,11 @@
       return;
     }
 
-    var result = await getUserRecords(targetUserId, {
-      limit: 1, page: 1, sort_by: "score", order: "desc", mode: "all", status: "active"
-    });
-    if (!result || !result.success) return;
     summaryModeStats = [];
-    var meta = resolvePagerMeta(result, 1, 1, (result.data || []).length);
-    summaryTotalRecords = meta.totalCount || 0;
-    var bestRecord = Array.isArray(result.data) && result.data[0];
-    if (bestRecord) {
-      summaryBestScore = Math.floor(Number(bestRecord.score) || 0);
-      summaryBestTile = Math.floor(Number(bestRecord.best_tile) || 0);
-    }
+    summaryTotalRecords = 0;
+    summaryBestScore = 0;
+    summaryBestTile = 0;
+    summaryLastActive = "";
     updateSummaryCards();
   }
 
@@ -2571,10 +2622,6 @@
     var recordsPromise = refreshRecords(true);
     var summaryPromise = fetchSummaryData();
     await Promise.all([ownershipPromise, userInfoPromise, recordsPromise, summaryPromise]);
-    if (cachedRecords.length > 0) {
-      summaryLastActive = resolveRecordDateValue(cachedRecords[0]);
-      updateSummaryCards();
-    }
   }
 
   global.UserProfilePageRuntime = {

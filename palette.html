@@ -11,7 +11,7 @@
   <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260722-board-parity-v2" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260722-theme-sidebar-v8" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260723-timer-preview-v3" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -74,14 +74,26 @@
             <button id="custom-secondary-timer-generate" class="replay-button" type="button">生成推荐规则</button>
           </div>
           <p class="custom-secondary-timer-generator-hint">生成结果会替换规则内容；点击保存前不会生效。</p>
-          <label for="custom-secondary-timer-rules" class="custom-secondary-timer-label">规则内容</label>
-          <p id="custom-secondary-timer-family" class="custom-secondary-timer-desc">2 的幂模式共享；每行一条完整规则。</p>
-          <textarea id="custom-secondary-timer-rules" rows="8" spellcheck="false" placeholder="32&#10;32+2&#10;32+4"></textarea>
-          <div class="custom-secondary-timer-actions">
-            <button id="custom-secondary-timer-save" class="replay-button" type="button">保存规则</button>
-            <button id="custom-secondary-timer-clear" class="replay-button" type="button">清空</button>
+          <div class="custom-secondary-timer-workspace">
+            <div class="custom-secondary-timer-editor-column">
+              <label for="custom-secondary-timer-rules" class="custom-secondary-timer-label">规则内容</label>
+              <p id="custom-secondary-timer-family" class="custom-secondary-timer-desc">2 的幂模式共享；每行一条完整规则。</p>
+              <textarea id="custom-secondary-timer-rules" rows="8" spellcheck="false" placeholder="32&#10;32+2&#10;32+4"></textarea>
+              <div class="custom-secondary-timer-actions">
+                <button id="custom-secondary-timer-save" class="replay-button" type="button">保存规则</button>
+                <button id="custom-secondary-timer-clear" class="replay-button" type="button">清空</button>
+              </div>
+              <p id="custom-secondary-timer-note" class="palette-note" aria-live="polite"></p>
+            </div>
+            <section id="custom-secondary-timer-preview" class="custom-secondary-timer-preview" aria-labelledby="custom-secondary-timer-preview-title">
+              <div class="custom-secondary-timer-preview-head">
+                <strong id="custom-secondary-timer-preview-title">已保存规则预览</strong>
+                <small>点击母计时器展开</small>
+              </div>
+              <div id="custom-secondary-timer-preview-list" class="custom-secondary-timer-preview-list"></div>
+              <p id="custom-secondary-timer-preview-empty" class="custom-secondary-timer-preview-empty">保存规则后，可在这里预览展开层级。</p>
+            </section>
           </div>
-          <p id="custom-secondary-timer-note" class="palette-note" aria-live="polite"></p>
         </div>
       </details>
     </section>

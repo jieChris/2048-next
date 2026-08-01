@@ -336,8 +336,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(finalSnapshot.pending).toBe("");
     expect(finalSnapshot.last.length).toBeGreaterThan(0);
-    expect(recordBodies).toHaveLength(1);
-    expect(String(recordBodies[0]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
-    expect(String(recordBodies[0]?.replay_string || "").length).toBeGreaterThan(0);
+    // Reload may race the old pagehide flush with the new document's startup retry.
+    expect(recordBodies.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(recordBodies.map((body) => String(body.client_record_id || ""))).size).toBe(1);
+    expect(recordBodies.every((body) => String(body.mode_key || "") === "board_3x3_pow2_no_undo")).toBe(true);
+    const replayStrings = recordBodies.map((body) => String(body.replay_string || ""));
+    expect(replayStrings.every(Boolean)).toBe(true);
+    expect(new Set(replayStrings).size).toBe(1);
   });
 });

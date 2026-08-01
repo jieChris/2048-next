@@ -192,8 +192,8 @@ function resolveTheoreticalCellsCount(width, height) {
   return Number.isInteger(cells) && cells > 0 ? cells : null;
 }
 function resolveFibonacciTheoreticalMaxTile(cells) {
-  // Fibonacci 4x4 theoretical max: 4181.
-  var targetIndex = cells + 2;
+  // Fibonacci 4x4 theoretical max: 3524578.
+  var targetIndex = cells * 2;
   var a = 1;
   var b = 2;
   if (targetIndex <= 1) return 1;

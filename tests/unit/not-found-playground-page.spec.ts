@@ -146,7 +146,7 @@ describe("404 tile playground", () => {
     expect(service.grantMyAchievementEvent).not.toHaveBeenCalled();
 
     const showAchievementUnlockToast = vi.fn();
-    service.grantMyAchievementEvent.mockResolvedValue({
+    const achievementPayload = {
       success: true,
       newly_granted: true,
       data: {
@@ -155,7 +155,8 @@ describe("404 tile playground", () => {
           name: "你也曾迷路",
         },
       },
-    });
+    };
+    service.grantMyAchievementEvent.mockResolvedValue(achievementPayload);
     await submitLostPageAchievement({
       runtime: { showAchievementUnlockToast } as never,
       service,
@@ -165,11 +166,6 @@ describe("404 tile playground", () => {
     });
 
     expect(service.grantMyAchievementEvent).toHaveBeenCalledWith("lost_page_visited");
-    expect(showAchievementUnlockToast).toHaveBeenCalledWith({
-      achievement: {
-        id: "lost_page_visited",
-        name: "你也曾迷路",
-      },
-    });
+    expect(showAchievementUnlockToast).toHaveBeenCalledWith(achievementPayload);
   });
 });

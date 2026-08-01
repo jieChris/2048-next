@@ -7,6 +7,8 @@ const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY = "__rankedSessionSuppressNextAuthReload";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
+const ATTEMPT_OUTBOX_STORAGE_KEY = "ranked_session_attempt_outbox:v1";
+const ATTEMPT_SCHEMA_VERSION = 1;
 const SAVED_GAME_STATE_STORAGE_KEY_PREFIX = "savedGameStateByMode:v1:";
 const SAVED_GAME_STATE_LITE_STORAGE_KEY_PREFIX = "savedGameStateLiteByMode:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
@@ -53,6 +55,8 @@ export interface RankedSessionRecord {
   ranked_session_token: string;
   issued_at: number;
   exp: number;
+  status?: "created" | "started" | "consumed" | "abandoned" | "expired" | null | undefined;
+  record_era?: "beta" | "official_v1" | null | undefined;
   owner_user_id?: string | null | undefined;
   client_received_at_ms?: number | null | undefined;
 }
@@ -64,6 +68,20 @@ export interface RankedChallengeContext {
   ranked_session_token: string;
 }
 
+export interface RankedSessionAttemptDraft {
+  challenge_id: string;
+  event: "begin" | "abandon";
+  mode_key: string;
+  ranked_session_token: string;
+  replay_string: string;
+  reason?: "restart" | "navigation" | undefined;
+  attempt_schema_version: 1;
+}
+
+export interface RankedSessionAttemptFlushOptions {
+  keepalive?: boolean;
+}
+
 export interface RankedSessionRuntime {
   getCurrentContext: (modeLike?: string | null | undefined) => RankedChallengeContext | null;
   promotePrefetchedSession: (modeLike?: string | null | undefined) => boolean;
@@ -72,6 +90,8 @@ export interface RankedSessionRuntime {
   getLastFailureReason: () => string;
   clearActiveSession: (modeLike?: string | null | undefined) => void;
   clearModeSession: (modeLike?: string | null | undefined) => void;
+  enqueueAttempt: (attempt: RankedSessionAttemptDraft) => boolean;
+  flushAttemptOutbox: (options?: RankedSessionAttemptFlushOptions) => Promise<boolean>;
   resolvePageModeKey: () => string | null;
 }
 
@@ -86,6 +106,23 @@ interface RankedSessionWindowLike extends Window {
 
 interface NormalizeRankedSessionOptions {
   allowExpired?: boolean;
+}
+
+interface RankedSessionAttemptPayload {
+  event: "begin" | "abandon";
+  mode_key: string;
+  ranked_session_token: string;
+  replay_string: string;
+  reason?: "restart" | "navigation" | undefined;
+  attempt_schema_version: 1;
+}
+
+interface RankedSessionAttemptOutboxItem {
+  id: string;
+  owner_user_id: string;
+  challenge_id: string;
+  payload: RankedSessionAttemptPayload;
+  created_at_ms: number;
 }
 
 function isRankedModeKey(modeLike: unknown): modeLike is string {
@@ -261,6 +298,18 @@ function normalizeRankedSessionRecord(
     ranked_session_token: rankedSessionToken,
     issued_at: issuedAt,
     exp,
+    status:
+      parsed.status === "created" ||
+      parsed.status === "started" ||
+      parsed.status === "consumed" ||
+      parsed.status === "abandoned" ||
+      parsed.status === "expired"
+        ? parsed.status
+        : null,
+    record_era:
+      parsed.record_era === "beta" || parsed.record_era === "official_v1"
+        ? parsed.record_era
+        : null,
     owner_user_id:
       typeof parsed.owner_user_id === "string" && parsed.owner_user_id.trim()
         ? parsed.owner_user_id.trim()
@@ -270,6 +319,93 @@ function normalizeRankedSessionRecord(
         ? Math.floor(Number(parsed.client_received_at_ms))
         : null
   };
+}
+
+function normalizeRankedSessionAttemptDraft(rawValue: unknown): RankedSessionAttemptDraft | null {
+  if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) return null;
+  const source = rawValue as Record<string, unknown>;
+  const event = source.event === "begin" || source.event === "abandon" ? source.event : null;
+  const modeKey = String(source.mode_key || "").trim();
+  const challengeId = String(source.challenge_id || "").trim().toLowerCase();
+  const token = String(source.ranked_session_token || "").trim();
+  const replayString = String(source.replay_string || "").trim();
+  const reason = source.reason === "restart" || source.reason === "navigation" ? source.reason : undefined;
+  if (!event || !isRankedModeKey(modeKey) || !challengeId || !token || !replayString) return null;
+  if (Number(source.attempt_schema_version) !== ATTEMPT_SCHEMA_VERSION) return null;
+  if (event === "begin" && source.reason != null && String(source.reason).trim()) return null;
+  if (event === "abandon" && !reason) return null;
+  return {
+    challenge_id: challengeId,
+    event,
+    mode_key: modeKey,
+    ranked_session_token: token,
+    replay_string: replayString,
+    ...(reason ? { reason } : {}),
+    attempt_schema_version: ATTEMPT_SCHEMA_VERSION
+  };
+}
+
+function buildAttemptOutboxItemId(ownerUserId: string, challengeId: string, event: string): string {
+  return JSON.stringify([ownerUserId, challengeId, event]);
+}
+
+function normalizeAttemptOutboxItem(rawValue: unknown): RankedSessionAttemptOutboxItem | null {
+  if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) return null;
+  const source = rawValue as Record<string, unknown>;
+  const ownerUserId = String(source.owner_user_id || "").trim();
+  const challengeId = String(source.challenge_id || "").trim().toLowerCase();
+  const draft = normalizeRankedSessionAttemptDraft({
+    ...(source.payload && typeof source.payload === "object" && !Array.isArray(source.payload)
+      ? (source.payload as Record<string, unknown>)
+      : {}),
+    challenge_id: challengeId
+  });
+  if (!ownerUserId || !challengeId || !draft) return null;
+  const { challenge_id: _challengeId, ...payload } = draft;
+  const createdAt = Math.max(0, Math.floor(Number(source.created_at_ms) || 0));
+  return {
+    id: buildAttemptOutboxItemId(ownerUserId, challengeId, payload.event),
+    owner_user_id: ownerUserId,
+    challenge_id: challengeId,
+    payload,
+    created_at_ms: createdAt
+  };
+}
+
+function readAttemptOutbox(storageLike: Storage | null): RankedSessionAttemptOutboxItem[] {
+  const raw = safeReadStorageItem({ storageLike, key: ATTEMPT_OUTBOX_STORAGE_KEY });
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => normalizeAttemptOutboxItem(item))
+      .filter((item): item is RankedSessionAttemptOutboxItem => !!item);
+  } catch (_err) {
+    return [];
+  }
+}
+
+function writeAttemptOutbox(
+  storageLike: Storage | null,
+  items: RankedSessionAttemptOutboxItem[]
+): boolean {
+  if (items.length === 0) {
+    removeStorageKey(storageLike, ATTEMPT_OUTBOX_STORAGE_KEY);
+    return true;
+  }
+  return safeSetStorageItem({
+    storageLike,
+    key: ATTEMPT_OUTBOX_STORAGE_KEY,
+    value: JSON.stringify(items)
+  });
+}
+
+function removeAttemptOutboxItem(storageLike: Storage | null, itemId: string): void {
+  writeAttemptOutbox(
+    storageLike,
+    readAttemptOutbox(storageLike).filter((item) => item.id !== itemId)
+  );
 }
 
 function readRankedSessionRecord(
@@ -427,6 +563,7 @@ export function createRankedSessionRuntime(
   const sessionRequestCache = new Map<string, Promise<RankedSessionRecord | null>>();
   const ownerUserIdResolver = () => readAuthUserId(windowLike);
   let lastFailureReason = "";
+  let attemptFlushPromise: Promise<boolean> | null = null;
 
   const resolveModeKey = (modeLike?: string | null | undefined): string | null => {
     const explicitModeKey = String(modeLike || "").trim();
@@ -513,7 +650,10 @@ export function createRankedSessionRuntime(
                 "content-type": "application/json",
                 Authorization: `Bearer ${authToken}`
               },
-              body: JSON.stringify({ mode_key: modeKey })
+              body: JSON.stringify({
+                mode_key: modeKey,
+                attempt_schema_version: ATTEMPT_SCHEMA_VERSION
+              })
             });
             const payload = (await response.json().catch(() => null)) as {
               success?: boolean;
@@ -560,6 +700,82 @@ export function createRankedSessionRuntime(
     })();
     sessionRequestCache.set(requestKey, requestPromise);
     return requestPromise;
+  };
+
+  const enqueueAttempt = (rawAttempt: RankedSessionAttemptDraft): boolean => {
+    const ownerUserId = ownerUserIdResolver();
+    const attempt = normalizeRankedSessionAttemptDraft(rawAttempt);
+    if (!ownerUserId || !attempt) return false;
+    const { challenge_id: challengeId, ...payload } = attempt;
+    const itemId = buildAttemptOutboxItemId(ownerUserId, challengeId, payload.event);
+    const items = readAttemptOutbox(storageLike);
+    if (items.some((item) => item.id === itemId)) return true;
+    items.push({
+      id: itemId,
+      owner_user_id: ownerUserId,
+      challenge_id: challengeId,
+      payload,
+      created_at_ms: Date.now()
+    });
+    return writeAttemptOutbox(storageLike, items);
+  };
+
+  const submitAttempt = async (
+    item: RankedSessionAttemptOutboxItem,
+    authToken: string,
+    options: RankedSessionAttemptFlushOptions
+  ): Promise<"success" | "permanent" | "retry"> => {
+    const fetchLike = resolveFetchLike(windowLike);
+    const apiBase = buildRankedSessionApiBaseCandidates(windowLike)[0];
+    if (!fetchLike || !apiBase) return "retry";
+    try {
+      const response = await fetchLike(`${apiBase}/ranked-session/attempt`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(item.payload),
+        keepalive: options.keepalive === true
+      });
+      const payload = (await response.json().catch(() => null)) as { success?: boolean } | null;
+      if (response.status === 401 || response.status === 403) {
+        clearAuthSession(storageLike);
+        markInternalAuthTransition(windowLike);
+        return "retry";
+      }
+      if (response.status === 400 || response.status === 409) return "permanent";
+      return response.ok && payload?.success === true ? "success" : "retry";
+    } catch (_err) {
+      return "retry";
+    }
+  };
+
+  const flushAttemptOutbox = async (
+    options: RankedSessionAttemptFlushOptions = {}
+  ): Promise<boolean> => {
+    if (attemptFlushPromise) return attemptFlushPromise;
+    const pending = (async (): Promise<boolean> => {
+      const authToken = readAuthToken(windowLike);
+      const ownerUserId = ownerUserIdResolver();
+      if (!authToken || !ownerUserId) return false;
+      const ownerItems = readAttemptOutbox(storageLike).filter(
+        (item) => item.owner_user_id === ownerUserId
+      );
+      for (const item of ownerItems) {
+        const outcome = await submitAttempt(item, authToken, options);
+        if (outcome === "success" || outcome === "permanent") {
+          removeAttemptOutboxItem(storageLike, item.id);
+          continue;
+        }
+        return false;
+      }
+      return true;
+    })().finally(() => {
+      if (attemptFlushPromise === pending) attemptFlushPromise = null;
+    });
+    attemptFlushPromise = pending;
+    return pending;
   };
 
   const runtime: RankedSessionRuntime = {
@@ -632,6 +848,8 @@ export function createRankedSessionRuntime(
       clearActiveSession(modeKey);
       clearPrefetchedSession(modeKey);
     },
+    enqueueAttempt,
+    flushAttemptOutbox,
     resolvePageModeKey() {
       return pageModeResolver();
     }
@@ -731,6 +949,9 @@ export async function bootstrapRankedSessionForHomeFamilyPage(
   const windowLike = window as unknown as RankedSessionWindowLike;
   const runtime = createRankedSessionRuntime(windowLike, pageId);
   windowLike.RankedSessionRuntime = runtime;
+  if (readAuthToken(windowLike)) {
+    void runtime.flushAttemptOutbox().catch(() => false);
+  }
   const modeKey = runtime.resolvePageModeKey();
   if (!modeKey) return;
   bindRankedSessionAuthTransitionReload(windowLike, runtime, modeKey);
