@@ -5,6 +5,7 @@
 - 仓库缺少 Trellis `./.trellis/scripts/get_context.py` 与 `.trellis/spec/guides/index.md`，无法执行标准上下文发现流程。采用最保守回退：手工读取仓库 `AGENTS.md`、`.trellis/spec/index.md`、`cross-repo-architecture.md`、`frontend-api-boundary.md` 与 `smoke-testing.md`，并仅修改前端静态 SEO 与部署配置。
 - 原计划使用 `X-Forwarded-Proto` 在站点 Nginx 强制 HTTPS；只读审计确认外层 edge 会覆盖该头。为避免误判或重定向循环，改用会被 edge 原样转发的 Cloudflare `CF-Visitor`，且只在其明确声明 HTTP 时跳转。Cloudflare API 连接可读取 zone，但读取/修改 `always_use_https` 返回授权错误，因此未绕过权限修改账户设置。
 - 初版 `CF-Visitor` 正则会把 `https` 的 `http` 前缀误判为 HTTP。该版本未提交、未部署；发布前已改为完整匹配 `{"scheme":"http"}` 并增加 HTTPS 反例断言。
+- PR 第二轮 `Refactor Gate` 暴露既有排位重启 Smoke 在确认框关闭后立即读取异步准备阶段才写入的清理标记。为避免扩大到排位产品逻辑，仅按现有“等待能力”规范改为等待标记出现；该场景的产品单元测试仍验证标记写入本身是同步的。
 - 上述可复用的代理头与重定向反例规则已沉淀到 `.trellis/spec/smoke-testing.md`。
 
 ## 进度
@@ -19,6 +20,7 @@
 - `npx vitest run tests/unit/seo-contract.spec.ts tests/unit/nginx-cache-policy.spec.ts`：10 项通过。
 - `PW_WEB_PORT=4191 npx playwright test --config=playwright.config.ts tests/smoke/pages-seo-contract.smoke.spec.ts --workers=1`：4 项通过。
 - SEO 标题合同修正后，目标回归 2 项通过，完整 `npm run test:smoke:pages` 231 项通过。
+- 排位清理标记 Smoke 调整后连续 20 次通过，相关产品单元测试 55 项通过，完整 critical smoke 41 项通过。
 - 本地生产预览确认中英文首页与模式页的最终运行时 title、canonical 正确。
 - `npm run verify:release`：全部 refactor、unit、critical smoke、build 与 release-ready 门禁通过。
 - `git diff --check`：通过。
