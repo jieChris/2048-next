@@ -13,13 +13,13 @@ function restoreGlobals(): void {
   else Object.defineProperty(globalThis, "window", { value: originalWindow, configurable: true, writable: true });
 }
 
-function installDom(): JSDOM {
+function installDom(url = "https://example.test/admin.html?view=dashboard"): JSDOM {
   const dom = new JSDOM(`<!doctype html><html><body data-admin-access="checking">
     <div id="admin-gate"><span id="admin-gate-text"></span></div>
     <div id="admin-shell" hidden><aside id="admin-sidebar"></aside><div id="admin-sidebar-backdrop" hidden></div><div><header id="admin-topbar"></header><main id="admin-content"></main></div></div>
     <dialog id="admin-dialog"><div id="admin-dialog-title"></div><div id="admin-dialog-body"></div><div id="admin-dialog-actions"></div></dialog>
     <div id="admin-toast" hidden></div>
-  </body></html>`, { url: "https://example.test/admin.html?view=dashboard" });
+  </body></html>`, { url });
   Object.defineProperty(globalThis, "document", { value: dom.window.document, configurable: true, writable: true });
   Object.defineProperty(globalThis, "window", { value: dom.window, configurable: true, writable: true });
   dom.window.localStorage.setItem("2048_auth_token_v1", "admin-token");
@@ -54,9 +54,25 @@ describe("Next admin console", () => {
 
     expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
     expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("用户中心");
+    expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("成绩补录");
     expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("12");
     expect(dom.window.document.body.textContent).not.toContain("内测用户管理");
     expect(dom.window.document.body.textContent).not.toContain("内测资格");
+  });
+
+  it("renders record import as an independent URL module", async () => {
+    const dom = installDom("https://example.test/admin.html?view=imports&user_id=42");
+    vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } }) })));
+    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
+
+    bootstrapAdminPage();
+    await flush();
+
+    expect(dom.window.document.querySelector("[data-view=imports]")?.classList.contains("is-active")).toBe(true);
+    expect(dom.window.document.querySelector("#admin-content h1")?.textContent).toBe("成绩补录");
+    expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("已预填用户 #42");
+    (dom.window.document.querySelector("#admin-content [data-import]") as HTMLButtonElement).click();
+    expect((dom.window.document.getElementById("dialog-import-user") as HTMLInputElement).value).toBe("42");
   });
 
   it("keeps Tabler and admin styles isolated to the admin entry", () => {

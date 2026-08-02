@@ -114,7 +114,7 @@ test.describe("Next admin console", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("searches users and imports a replay through server preview", async ({ page }) => {
+  test("searches users and imports a replay through the independent module", async ({ page }) => {
     const requests = await installAdminApiMocks(page);
 
     await page.goto("/admin.html?view=dashboard", { waitUntil: "domcontentloaded" });
@@ -132,14 +132,23 @@ test.describe("Next admin console", () => {
 
     await page.getByRole("button", { name: "补录对局" }).click();
     const dialog = page.locator("#admin-dialog");
+    await expect(dialog.locator("#dialog-import-user")).toHaveValue("42");
+    await dialog.getByRole("button", { name: "取消" }).click();
+
+    await page.locator("#admin-sidebar").getByRole("button", { name: "成绩补录" }).click();
+    await expect(page).toHaveURL(/view=imports/u);
+    await expect(page.getByRole("heading", { name: "成绩补录", level: 1 })).toBeVisible();
+    await page.getByRole("button", { name: "补录对局" }).click();
     await expect(dialog).toBeVisible();
     await expect(dialog.locator("#dialog-import-score, #dialog-import-duration, [name=score], [name=steps]")).toHaveCount(0);
-    await dialog.locator("#dialog-import-replay").fill("replay:complete-terminal-game");
-    await dialog.locator("#dialog-import-reason").fill("客户端离线导致终局记录未上传");
+    await dialog.getByLabel("目标用户 ID").fill("42");
+    await dialog.getByLabel("或粘贴回放字符串").fill("replay:complete-terminal-game");
+    await dialog.getByLabel("原因").fill("客户端离线导致终局记录未上传");
     await dialog.getByRole("button", { name: "预校验" }).click();
 
     await expect(dialog.getByText("服务端预校验结果")).toBeVisible();
     await expect(dialog.getByText("32768", { exact: true })).toBeVisible();
+    expect(requests.importBodies).toHaveLength(0);
     await dialog.getByRole("button", { name: "确认执行" }).click();
 
     await expect(page.locator("#admin-toast")).toContainText("admin-record-42");
@@ -160,8 +169,8 @@ test.describe("Next admin console", () => {
     await expect(page.locator("#admin-sidebar")).toHaveClass(/is-open/u);
     await expect(page.locator("#admin-sidebar-backdrop")).toBeVisible();
 
-    await page.locator("#admin-sidebar").getByRole("button", { name: "用户中心" }).click();
-    await expect(page.getByRole("heading", { name: "用户中心", level: 1 })).toBeVisible();
+    await page.locator("#admin-sidebar").getByRole("button", { name: "成绩补录" }).click();
+    await expect(page.getByRole("heading", { name: "成绩补录", level: 1 })).toBeVisible();
     await expect(page.locator("#admin-sidebar")).not.toHaveClass(/is-open/u);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
