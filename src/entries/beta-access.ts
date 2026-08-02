@@ -1,5 +1,5 @@
 import { createBrowserStorageAccess, readStorageValue, removeStorageValue } from "../storage/browser-storage";
-import { AUTH_TOKEN_KEY, type JsonRecord } from "../services/api-client";
+import { AUTH_TOKEN_KEY, requestLogout, type JsonRecord } from "../services/api-client";
 import {
   ACTIVE_BETA_NOTICE_VERSION,
   acceptBetaNotice,
@@ -189,6 +189,11 @@ function redirectToLogin(): void {
   window.location.replace("beta-login.html?state=login&next=" + encodeURIComponent(currentNext()));
 }
 
+async function logoutAndRedirectToLogin(): Promise<void> {
+  await requestLogout({ locationLike: window.location }).catch(() => undefined);
+  redirectToLogin();
+}
+
 function errorText(payload: JsonRecord | null | undefined, fallback: string): string {
   return toText(payload?.error || payload?.message || payload?.code).trim() || fallback;
 }
@@ -251,8 +256,8 @@ function bind(): void {
     if (acceptButton) acceptButton.disabled = !checkbox.checked;
   });
   byId("beta-notice-accept")?.addEventListener("click", () => void acceptNotice());
-  byId("beta-notice-logout")?.addEventListener("click", redirectToLogin);
-  byId("beta-switch-account")?.addEventListener("click", redirectToLogin);
+  byId("beta-notice-logout")?.addEventListener("click", () => void logoutAndRedirectToLogin());
+  byId("beta-switch-account")?.addEventListener("click", () => void logoutAndRedirectToLogin());
 }
 
 if (shouldBypassBetaGateForLocalDevelopment(window, window.localStorage)) {

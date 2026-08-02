@@ -2523,6 +2523,12 @@
     removeLocalStorageItem(STORAGE_NICKNAME_KEY);
   }
 
+  async function logoutCurrentUser() {
+    await apiRequest("/logout", { method: "POST", timeoutMs: 1500 });
+    clearAuthState();
+    global.location.href = "account.html";
+  }
+
   function bindEvents() {
     var refreshBtn = byId("user-record-refresh");
     var undoSelect = byId("user-record-undo");
@@ -2538,8 +2544,7 @@
     if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
-        clearAuthState();
-        global.location.href = "account.html";
+        void logoutCurrentUser();
       });
     }
     if (undoSelect) {

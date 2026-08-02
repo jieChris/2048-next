@@ -11,6 +11,7 @@
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
+  var safeSetStorage = _u.safeSetStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
   var callFetch = _u.callFetch || function (url, requestInit) {
@@ -544,6 +545,7 @@
         }
       });
       if (result && result.success) {
+        if (result.token) safeSetStorage(STORAGE_TOKEN_KEY, toText(result.token));
         setTip(t("changeOk"), "ok");
         var oldInput = byId("password-change-old-password");
         var newInput = byId("password-change-new-password");

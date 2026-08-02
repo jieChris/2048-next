@@ -139,19 +139,18 @@ describe("module entry html pages", () => {
     expect(userHtml).toContain('href="Practice_board.html"');
   });
 
-  it("admin.html includes the achievement management mounts", () => {
+  it("admin.html exposes the dynamic admin console mounts", () => {
     const html = readHtml("admin.html");
 
     [
-      'id="admin-achievement-list"',
-      'id="admin-achievement-name"',
-      'id="admin-achievement-description"',
-      'id="admin-achievement-rule-type"',
-      'id="admin-achievement-create"',
-      'id="admin-achievement-save"',
-      'id="admin-achievement-upload-icon"',
-      'id="admin-achievement-grant"',
-      'id="admin-achievement-backfill"'
+      'id="admin-gate"',
+      'id="admin-shell"',
+      'id="admin-sidebar"',
+      'id="admin-topbar"',
+      'id="admin-content"',
+      'id="admin-dialog"',
+      'id="admin-toast"',
+      'src="/src/entries/admin.ts"'
     ].forEach((fragment) => {
       expect(html).toContain(fragment);
     });

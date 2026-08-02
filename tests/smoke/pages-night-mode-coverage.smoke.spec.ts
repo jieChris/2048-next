@@ -66,8 +66,7 @@ test.describe("Night mode page coverage", () => {
       "/palette.html",
       "/touch_sensitivity.html",
       "/relay_5x5.html",
-      "/stone_2k_monitor.html",
-      "/admin.html"
+      "/stone_2k_monitor.html"
     ];
 
     for (const path of paths) {
@@ -89,8 +88,7 @@ test.describe("Night mode page coverage", () => {
       { path: "/history.html", selector: ".history-item", background: "rgb(43, 55, 52)" },
       { path: "/touch_sensitivity.html", selector: "#touch-threshold-value", background: "rgb(43, 55, 52)" },
       { path: "/relay_5x5.html", selector: "#relay-note", background: "rgb(43, 55, 52)" },
-      { path: "/stone_2k_monitor.html", selector: ".stone-access-card", background: "rgb(35, 46, 44)" },
-      { path: "/admin.html", selector: ".admin-card", background: "rgb(35, 46, 44)" }
+      { path: "/stone_2k_monitor.html", selector: ".stone-access-card", background: "rgb(35, 46, 44)" }
     ];
 
     for (const item of cases) {

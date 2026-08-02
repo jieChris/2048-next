@@ -423,7 +423,7 @@ test.describe("Achievements pages", () => {
         return;
       }
       if (path === "/api/admin/me") {
-        await route.fulfill({ json: { success: true, admin: true, user: { id: 1, nickname: "Admin" } } });
+        await route.fulfill({ json: { success: true, data: { user_id: 1, admin: true, rootAdmin: true, canManageSuperAdmins: true } } });
         return;
       }
       if (path === "/api/admin/achievements") {
@@ -433,16 +433,16 @@ test.describe("Achievements pages", () => {
       await route.fulfill({ status: 404, json: { success: false, error: "not_found" } });
     });
 
-    const response = await page.goto("/admin.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/admin.html?view=achievements", { waitUntil: "domcontentloaded" });
     expect(response, "Admin response should exist").not.toBeNull();
     expect(response?.ok(), "Admin response should be 2xx").toBeTruthy();
 
-    await expect(page).toHaveURL(/\/admin\.html$/u);
+    await expect(page).toHaveURL(/\/admin\.html\?view=achievements$/u);
     await expect(page.getByRole("heading", { name: "成就管理" })).toBeVisible();
-    await expect(page.locator("#admin-achievement-list")).toContainText("首次 2048");
+    await expect(page.locator(".admin-achievement-list")).toContainText("首次 2048");
 
     await page.getByRole("button", { name: /活动冠军/ }).click();
-    await expect(page.locator("#admin-achievement-name")).toHaveValue("活动冠军");
-    await expect(page.locator("#admin-achievement-grant-id")).toHaveValue("ach_event_champion");
+    await expect(page.locator('[data-achievement-form] input[name="name"]')).toHaveValue("活动冠军");
+    await expect(page).toHaveURL(/achievement=ach_event_champion/u);
   });
 });
