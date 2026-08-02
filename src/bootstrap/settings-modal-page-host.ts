@@ -1,3 +1,5 @@
+import { initOperationFeedbackSettingsUI } from "./operation-feedback-settings";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
@@ -245,6 +247,30 @@ function buildCanonicalSettingsModalInnerHtml(options: {
     })
   ];
 
+  rows.push(
+    `<div id="operation-feedback-settings-row" class="settings-row settings-toggle-row operation-feedback-settings-row">` +
+      `<div class="settings-toggle-main">` +
+      `<div class="settings-toggle-copy">` +
+      `<label for="operation-feedback-toggle" class="settings-toggle-title">${
+        isEn ? "Operation Feedback" : "操作反馈"
+      }</label>` +
+      `<div class="settings-toggle-desc">${
+        isEn ? "Show recent input and valid / invalid feedback in this game" : "显示本局最近操作及有效／无效反馈"
+      }</div>` +
+      `</div>` +
+      `<label class="settings-switch" for="operation-feedback-toggle" aria-label="${
+        isEn ? "Operation Feedback" : "操作反馈"
+      }">` +
+      `<input id="operation-feedback-toggle" type="checkbox">` +
+      `<span class="settings-switch-slider"></span>` +
+      `</label>` +
+      `</div>` +
+      `<button type="button" class="settings-inline-action-btn" data-operation-feedback-layout-open>${
+        isEn ? "Layout Debugger" : "布局调试"
+      }</button>` +
+      `</div>`
+  );
+
   if (options.hasInlineStats) {
     rows.push(
       buildSettingsToggleRowHtml({
@@ -274,6 +300,7 @@ const CANONICAL_SETTINGS_ROW_IDS = [
   "win-prompt-toggle",
   "bgm-settings-row",
   "night-bg-settings-row",
+  "operation-feedback-settings-row",
   "pku2048-inline-stats-toggle",
   "timer-module-view-toggle",
   "top-button-style-settings-row",
@@ -347,7 +374,8 @@ export function normalizeSettingsModalContent(input: {
   const hasCanonicalBase =
     !!getElementById(documentLike, "win-prompt-toggle") &&
     !!getElementById(documentLike, "bgm-toggle") &&
-    !!getElementById(documentLike, "night-bg-toggle");
+    !!getElementById(documentLike, "night-bg-toggle") &&
+    !!getElementById(documentLike, "operation-feedback-toggle");
 
   if (!hasCanonicalBase) {
     toRecord(content).innerHTML = buildCanonicalSettingsModalInnerHtml({
@@ -574,6 +602,10 @@ export function applySettingsModalPageOpen(input: {
   }
 
   normalizeSettingsModalContent({
+    documentLike: source.documentLike,
+    windowLike: source.windowLike
+  });
+  initOperationFeedbackSettingsUI({
     documentLike: source.documentLike,
     windowLike: source.windowLike
   });

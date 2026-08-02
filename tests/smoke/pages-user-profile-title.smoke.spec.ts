@@ -1055,6 +1055,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("own profile status filter requests deleted records and renders restore action", async ({ page }) => {
     const recordRequests: string[] = [];
+    const protectedRecordAuthorizations: Array<string | undefined> = [];
     let replayRequests = 0;
     let restoreRequests = 0;
 
@@ -1080,6 +1081,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       if (url.includes("/user/9/records")) {
         recordRequests.push(url);
         const status = new URL(url).searchParams.get("status") || "active";
+        if (status === "deleted" || status === "all") {
+          protectedRecordAuthorizations.push(route.request().headers().authorization);
+        }
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -1151,6 +1155,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
     expect(replayRequests).toBe(0);
     expect(recordRequests.some((url) => new URL(url).searchParams.get("status") === "deleted")).toBeTruthy();
+    expect(protectedRecordAuthorizations).toEqual(["Bearer test-token-deleted-records"]);
 
     const allRecordsResponse = page.waitForResponse((response) => {
       const url = response.url();
@@ -1159,6 +1164,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.selectOption("#user-record-visibility", "all");
     await allRecordsResponse;
     await expect.poll(() => recordRequests.some((url) => new URL(url).searchParams.get("status") === "all")).toBeTruthy();
+    expect(protectedRecordAuthorizations).toEqual([
+      "Bearer test-token-deleted-records",
+      "Bearer test-token-deleted-records"
+    ]);
     await expect(page.locator(".user-record-item.is-deleted")).toHaveCount(1);
     await page.locator(".user-record-row").click();
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");

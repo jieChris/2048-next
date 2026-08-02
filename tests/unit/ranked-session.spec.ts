@@ -64,6 +64,28 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe("ranked session runtime", () => {
+  it("reports the diagnostic reason when an attempt cannot be persisted", () => {
+    const storage = new MemoryStorage();
+    const windowLike = createWindowLike(storage);
+    const runtime = createRankedSessionRuntime(windowLike, "index");
+    const originalSetItem = storage.setItem.bind(storage);
+    vi.spyOn(storage, "setItem").mockImplementation((key, value) => {
+      if (key === ATTEMPT_OUTBOX_KEY) throw new Error("quota exceeded");
+      originalSetItem(key, value);
+    });
+
+    expect(runtime.enqueueAttempt({
+      challenge_id: "challenge-write-failure",
+      event: "abandon",
+      mode_key: MODE_KEY,
+      ranked_session_token: "ranked-token",
+      replay_string: "terminal-replay",
+      reason: "navigation",
+      attempt_schema_version: 1
+    })).toBe(false);
+    expect(runtime.getLastFailureReason()).toBe("attempt_outbox_write_failed");
+  });
+
   it("deduplicates, owner-isolates, and clears successful attempt outbox events", async () => {
     const storage = new MemoryStorage();
     let responseMode: "success" | "unauthorized" | "network" = "success";

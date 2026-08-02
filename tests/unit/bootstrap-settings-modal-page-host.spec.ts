@@ -53,6 +53,7 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
+      "operation-feedback-settings-row",
       "pku2048-inline-stats-toggle"
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
@@ -99,6 +100,7 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
+      "operation-feedback-settings-row",
       "top-button-style-settings-row",
       "ui-language-settings-row"
     ]);

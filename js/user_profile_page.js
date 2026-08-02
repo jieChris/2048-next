@@ -827,7 +827,11 @@
     if (status === "deleted" || status === "all" || status === "active") {
       path += "&status=" + encodeURIComponent(status);
     }
-    return apiRequest(path, { method: "GET", timeoutMs: USER_RECORDS_API_TIMEOUT_MS });
+    return apiRequest(path, {
+      method: "GET",
+      timeoutMs: USER_RECORDS_API_TIMEOUT_MS,
+      auth: status === "deleted" || status === "all"
+    });
   }
 
   function getUserStats(userId) {

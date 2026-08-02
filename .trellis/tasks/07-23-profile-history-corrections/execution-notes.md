@@ -5,6 +5,7 @@
 - 仓库缺少 `.trellis/scripts/get_context.py`，无法执行标准包上下文脚本；采用最保守替代方案，直接读取 `.trellis/spec/index.md`、`frontend-api-boundary.md`、`cross-repo-architecture.md` 与 `smoke-testing.md` 后继续。
 - `js/user_profile_page.js`、`style/user_profile_page.css` 和目标 Smoke 已有未提交改动；本次仅在现有差异上追加局部补丁，不回退或重写用户改动。
 - 当前开发分支的旧 PR 已被 squash 合并，分支提交不再是 `main` 的祖先；为避免重复夹带旧 404 功能，本次提交将移植到基于最新 `origin/main` 的隔离工作树后再发布。
+- 本次鉴权修复的 `audit:service-boundary` 被工作区既有未提交文件 `src/entries/operation-feedback-preview.ts` 的直接 storage 使用拦截；为避免覆盖无关改动，不修改该文件，改以目标 Smoke、生产构建、语法检查和差异检查验证本次补丁。
 
 ## 调查记录
 

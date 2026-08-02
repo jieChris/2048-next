@@ -11,7 +11,7 @@
   <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260722-board-parity-v2" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260723-timer-preview-v3" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260802-settings-sidebar-v2" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -32,22 +32,25 @@
       </nav>
     </header>
 
-    <nav class="settings-category-nav" aria-label="设置分类">
-      <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="page">
-        <strong>计时器</strong>
-        <span>自定义子计时器规则</span>
-      </a>
-      <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
-        <strong>外观与配色</strong>
-        <span>主题、色板与棋盘预览</span>
-      </a>
-    </nav>
+    <div class="settings-workbench">
+      <nav class="settings-category-nav" aria-label="设置分类">
+        <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="page">
+          <strong>计时器</strong>
+        </a>
+        <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
+          <strong>外观与配色</strong>
+        </a>
+      </nav>
 
-    <section id="timer-settings" class="card-surface palette-settings-card">
-      <div class="panel-head">
-        <h2>计时器设置</h2>
-        <span class="panel-pill">计时</span>
-      </div>
+      <div class="settings-category-content">
+        <section id="timer-settings" class="card-surface palette-settings-card">
+          <div class="panel-head">
+            <div>
+              <h2>计时器设置</h2>
+              <p class="settings-section-description">自定义子计时器规则</p>
+            </div>
+            <span class="panel-pill">计时</span>
+          </div>
       <details id="custom-secondary-timer-editor" class="settings-disclosure">
         <summary>
           <span class="settings-disclosure-copy">
@@ -98,8 +101,12 @@
       </details>
     </section>
 
-    <section id="appearance-settings" class="palette-settings-section" hidden>
-    <section class="palette-grid">
+        <section id="appearance-settings" class="palette-settings-section" hidden>
+          <header class="settings-section-header">
+            <h2>外观与配色</h2>
+            <p class="settings-section-description">主题、色板与棋盘预览</p>
+          </header>
+          <section class="palette-grid">
       <aside class="palette-sidebar card-surface">
         <div class="theme-selection-col palette-sidebar-theme">
           <label>选择主题</label>
@@ -208,6 +215,8 @@
       </section>
     </section>
     </section>
+      </div>
+    </div>
   </main>
 
   <script type="module" src="./src/entries/palette.ts"></script>
