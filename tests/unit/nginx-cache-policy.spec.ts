@@ -41,6 +41,8 @@ describe("self-hosted nginx cache policy", () => {
     expect(config).toContain("error_page 401 403 =404 /404.html;");
     expect(config).toContain("location = /_admin_page_auth {");
     expect(config).toContain("internal;");
+    expect(config).toContain("server 2048-game-api:3001;");
+    expect(config).not.toContain("server 127.0.0.1:3010;");
     expect(config).toContain("proxy_pass http://game_data_api/api/admin/me;");
     expect(config).toContain('proxy_set_header Cookie "";');
     expect(config).toContain('proxy_set_header Authorization "Bearer $cookie_next_admin_session_v1";');
@@ -55,6 +57,8 @@ describe("self-hosted nginx cache policy", () => {
     expect(workflow).toContain("Upload Nginx config");
     expect(workflow).toContain("deploy/nginx/2048-next.nginx.conf.example");
     expect(workflow).toContain('cp "${nginx_config_path}" "${deploy_root}/nginx.conf"');
+    expect(workflow).toContain("docker network inspect edge-migrate-net");
+    expect(workflow).toContain("--network edge-migrate-net");
     expect(workflow).toContain("npm run verify:release");
     expect(workflow).toContain("previous release restored");
   });
