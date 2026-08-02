@@ -55,6 +55,7 @@ describe("Next admin console", () => {
     expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
     expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("用户中心");
     expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("成绩补录");
+    expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("第三方记录导入");
     expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("12");
     expect(dom.window.document.body.textContent).not.toContain("内测用户管理");
     expect(dom.window.document.body.textContent).not.toContain("内测资格");
@@ -73,6 +74,21 @@ describe("Next admin console", () => {
     expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("已预填用户 #42");
     (dom.window.document.querySelector("#admin-content [data-import]") as HTMLButtonElement).click();
     expect((dom.window.document.getElementById("dialog-import-user") as HTMLInputElement).value).toBe("42");
+  });
+
+  it("renders third-party import as a separate two-stage module", async () => {
+    const dom = installDom("https://example.test/admin.html?view=external-import&user_id=42");
+    vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } }) })));
+    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
+
+    bootstrapAdminPage();
+    await flush();
+
+    expect(dom.window.document.querySelector("[data-view='external-import']")?.classList.contains("is-active")).toBe(true);
+    expect(dom.window.document.querySelector("#admin-content h1")?.textContent).toBe("第三方记录导入");
+    expect((dom.window.document.getElementById("external-import-user") as HTMLInputElement).value).toBe("42");
+    expect(dom.window.document.querySelector("[data-external-preview]")?.textContent).toBe("预览导入");
+    expect((dom.window.document.querySelector("[data-external-commit]") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("keeps Tabler and admin styles isolated to the admin entry", () => {
@@ -95,6 +111,16 @@ describe("Next admin console", () => {
     expect(page).toContain("official_v1");
     expect(page).not.toContain('id="dialog-import-score"');
     expect(page).not.toContain('id="dialog-import-duration"');
+  });
+
+  it("uses multipart preview and commit endpoints for third-party imports", () => {
+    const page = readFileSync(resolve(process.cwd(), "src/pages/admin-page.ts"), "utf8");
+
+    expect(page).toContain("/third-party-record-import/preview");
+    expect(page).toContain("/third-party-record-import/commit");
+    expect(page).toContain('body.append("file", file, file.name)');
+    expect(page).toContain('body.append("reason", reasonInput.value.trim())');
+    expect(page).toContain("data.batch_audit_recorded === false");
   });
 
   it("uses URL parameters for stable module and user detail navigation", () => {

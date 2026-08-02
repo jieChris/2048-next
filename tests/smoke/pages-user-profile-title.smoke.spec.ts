@@ -1138,6 +1138,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator(".user-record-score").first()).toHaveText("8192");
     await expect(page.locator(".user-record-era-badge")).toHaveCount(2);
+    await expect(page.locator(".user-record-era-badge").first()).toHaveText("内测成绩");
     await expect(page.locator(".user-record-detail-error")).toHaveText("已删除记录需恢复后才能查看回放");
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
     expect(replayRequests).toBe(0);
@@ -1236,6 +1237,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 id: "rec-beta-1",
                 user_id: 9,
                 record_era: "beta",
+                source_platform_name: "2048Verse",
                 mode_bucket: "standard_no_undo",
                 mode_key: "standard_4x4_pow2_no_undo",
                 score: 8192,
@@ -1292,7 +1294,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator(".user-record-item")).toHaveCount(2);
     await expect(page.locator(".user-record-era-badge")).toHaveCount(1);
-    await expect(page.locator(".user-record-era-badge")).toHaveText("内测成绩");
+    await expect(page.locator(".user-record-era-badge")).toHaveText("第三方 · 2048Verse");
     await expect(page.locator("#user-summary-preview")).toHaveText("数据积累中，暂无 Rating");
     await expect(page.locator("#user-summary-total-value")).toHaveText("1");
     await expect(page.locator("#user-summary-best-score-value")).toHaveText("4096");
@@ -1300,7 +1302,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const betaRecord = page.locator(".user-record-item").first();
     await betaRecord.locator(".user-record-row").click();
-    await expect(betaRecord.locator(".user-record-detail .user-record-era-badge")).toHaveText("内测成绩");
+    await expect(betaRecord.locator(".user-record-detail .user-record-era-badge")).toHaveText("第三方 · 2048Verse");
     await expect(betaRecord.locator(".user-replay-btn")).toBeVisible();
     await expect(betaRecord.locator(".user-replay-export-btn")).toBeVisible();
     await expect(betaRecord.locator(".user-record-action-btn")).toHaveCount(0);

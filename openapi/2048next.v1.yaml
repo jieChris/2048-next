@@ -1025,6 +1025,38 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
 
+  /admin/users/{id}/third-party-record-import/preview:
+    post:
+      tags: [Admin, Records]
+      summary: Parse and verify a third-party replay file or ZIP without writing records.
+      parameters:
+        - $ref: "#/components/parameters/AdminUserIdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ThirdPartyRecordImportRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ThirdPartyRecordImportResponse"
+
+  /admin/users/{id}/third-party-record-import/commit:
+    post:
+      tags: [Admin, Records]
+      summary: Import verified third-party replay records as noncompetitive beta history.
+      parameters:
+        - $ref: "#/components/parameters/AdminUserIdPath"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ThirdPartyRecordImportRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ThirdPartyRecordImportResponse"
+
   /admin/records:
     get:
       tags: [Admin, Records]
@@ -1681,6 +1713,17 @@ components:
                 properties:
                   data:
                     $ref: "#/components/schemas/Achievement"
+    ThirdPartyRecordImportResponse:
+      description: Third-party record import preview or commit result.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ThirdPartyRecordImportResult"
 
   schemas:
     ApiEnvelope:
@@ -1725,6 +1768,126 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+
+    ThirdPartyRecordImportRequest:
+      type: object
+      additionalProperties: false
+      required: [file, reason]
+      properties:
+        file:
+          type: string
+          format: binary
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    ThirdPartyRecordImportResult:
+      type: object
+      additionalProperties: false
+      required:
+        - user_id
+        - commit
+        - container
+        - archive_entry_count
+        - total
+        - valid
+        - would_insert
+        - inserted
+        - skipped_duplicates
+        - rejected
+        - batch_id
+        - batch_audit_recorded
+        - items
+      properties:
+        user_id:
+          type: integer
+          minimum: 1
+        commit:
+          type: boolean
+        container:
+          type: string
+          enum: [single, zip]
+        archive_entry_count:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 0
+        valid:
+          type: integer
+          minimum: 0
+        would_insert:
+          type: integer
+          minimum: 0
+        inserted:
+          type: integer
+          minimum: 0
+        skipped_duplicates:
+          type: integer
+          minimum: 0
+        rejected:
+          type: integer
+          minimum: 0
+        batch_id:
+          type: [string, "null"]
+        batch_audit_recorded:
+          type: [boolean, "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThirdPartyRecordImportItem"
+
+    ThirdPartyRecordImportItem:
+      type: object
+      additionalProperties: false
+      required: [index, status]
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [would_insert, inserted, skipped_duplicate, rejected]
+        reason:
+          type: string
+        error:
+          type: string
+        existing_record_id:
+          type: string
+        record_id:
+          type: string
+        mode_key:
+          type: string
+        mode_bucket:
+          type: string
+        client_record_id:
+          type: [string, "null"]
+        replay_fingerprint:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+        best_tile:
+          type: integer
+          minimum: 0
+        steps:
+          type: integer
+          minimum: 0
+        duration_ms:
+          type: integer
+          minimum: 0
+        ended_at:
+          type: string
+          format: date-time
+        source_platform_id:
+          type: [string, "null"]
+        source_platform_name:
+          type: [string, "null"]
+        source_adapter_version:
+          type: [string, "null"]
+        source_filename:
+          type: [string, "null"]
 
     User:
       type: object
@@ -2006,6 +2169,14 @@ components:
           type: string
         replay_url:
           type: string
+        source_platform_id:
+          type: [string, "null"]
+        source_platform_name:
+          type: [string, "null"]
+        source_adapter_version:
+          type: [string, "null"]
+        source_filename:
+          type: [string, "null"]
         created_at:
           type: string
           format: date-time
