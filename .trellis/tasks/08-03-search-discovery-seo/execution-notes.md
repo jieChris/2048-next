@@ -6,7 +6,7 @@
 - 原计划使用 `X-Forwarded-Proto` 在站点 Nginx 强制 HTTPS；只读审计确认外层 edge 会覆盖该头。为避免误判或重定向循环，改用会被 edge 原样转发的 Cloudflare `CF-Visitor`，且只在其明确声明 HTTP 时跳转。Cloudflare API 连接可读取 zone，但读取/修改 `always_use_https` 返回授权错误，因此未绕过权限修改账户设置。
 - 初版 `CF-Visitor` 正则会把 `https` 的 `http` 前缀误判为 HTTP。该版本未提交、未部署；发布前已改为完整匹配 `{"scheme":"http"}` 并增加 HTTPS 反例断言。
 - PR 第二轮 `Refactor Gate` 暴露既有排位重启 Smoke 在确认框关闭后立即读取异步准备阶段才写入的清理标记。为避免扩大到排位产品逻辑，仅按现有“等待能力”规范改为等待标记出现；该场景的产品单元测试仍验证标记写入本身是同步的。
-- PR 第三轮 `Smoke (pages)` 暴露练习盘脚本在慢速网络下可能晚于 `DOMContentLoaded` 到达，导致专属 UI 初始化被永久跳过并留下中英文混排。采用最保守的根因修复：沿用项目既有 ready-state 初始化模式，让脚本在事件已发生时立即初始化，并增加延迟脚本加载的回归场景；未修改练习盘行为。
+- PR 第三轮 `Smoke (pages)` 暴露语言审计在固定等待 800ms 后采样时，练习盘的后台脚本仍可能尚未加载完成。初步曾判断为错过 `DOMContentLoaded`，但复核发现共享 loader 已兼容晚到监听；用未修改的脚本延迟 1.5 秒对照确认其会在加载后正常初始化。采用最保守回退：不改产品代码，仅让审计等待练习盘运行时、模式键和模式列表就绪后再采样。
 - 上述可复用的代理头与重定向反例规则已沉淀到 `.trellis/spec/smoke-testing.md`。
 
 ## 进度
@@ -22,7 +22,7 @@
 - `PW_WEB_PORT=4191 npx playwright test --config=playwright.config.ts tests/smoke/pages-seo-contract.smoke.spec.ts --workers=1`：4 项通过。
 - SEO 标题合同修正后，目标回归 2 项通过，完整 `npm run test:smoke:pages` 231 项通过。
 - 排位清理标记 Smoke 调整后连续 20 次通过，相关产品单元测试 55 项通过，完整 critical smoke 41 项通过。
-- 练习盘脚本延迟 1.5 秒时已在修复前稳定复现中英文混排；ready-state 修复后同一场景恢复为完整英文，新增延迟加载 Smoke 连续 5 次通过，完整中英文页面审计通过。
+- 练习盘脚本延迟 1.5 秒的对照显示：脚本返回前为静态混合文案，未修改脚本会在返回后自动完成英文初始化；改为按运行时就绪条件采样后，完整中英文页面审计通过。
 - 本地生产预览确认中英文首页与模式页的最终运行时 title、canonical 正确。
 - 最新 `npm run verify:release`：全部 refactor、unit、critical smoke、build 与 release-ready 门禁通过。
 - `git diff --check`：通过。

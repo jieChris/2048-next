@@ -163,6 +163,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         expect(response, `${target} response should exist`).not.toBeNull();
         expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
         await expect(page.locator("body")).toBeVisible();
+        if (target === "/Practice_board.html") {
+          await waitForWindowCondition(
+            page,
+            () =>
+              Boolean((window as any).__practicePhaseSyncBound) &&
+              document.getElementById("practice-mode-picker-btn")?.hasAttribute("data-active-practice-mode-key") === true &&
+              document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0,
+            15_000
+          );
+        }
         await page.waitForTimeout(800);
 
         const texts = await collectVisibleLanguageTexts(page);
@@ -174,23 +184,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         expect(violations, `${target} ${lang} language violations`).toEqual([]);
       }
     }
-  });
-
-  test("practice controls initialize when their background script loads late", async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem("ui_language_v1", "en"));
-    await page.route(/\/js\/test_ui\.js$/, async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 750));
-      await route.continue();
-    });
-
-    const response = await page.goto("/Practice_board.html", { waitUntil: "domcontentloaded" });
-    expect(response?.ok()).toBeTruthy();
-    await expect(page.locator("#practice-mode-picker-btn")).toHaveAttribute(
-      "title",
-      /^Choose Mode \(Current: /
-    );
-    await expect(page.locator("#practice-board-code-btn")).toHaveAttribute("title", "Enter Board Code");
-    await expect(page.locator("#practice-mode-badge")).toHaveText(/^(?!.*[\u3400-\u9fff]).+$/u);
   });
 
   test("timer module settings description updates immediately when language toggles", async ({ page }) => {
