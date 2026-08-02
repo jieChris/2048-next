@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  applyReplayImportActions,
   getFinalBoardMatrix,
   importReplay,
   insertCustomTile,
@@ -22,6 +23,47 @@ function createGrid() {
       callback(0, 1, { value: 4 });
       callback(1, 1, null);
     }
+  };
+}
+
+function createReplaySeekTestManager() {
+  const windowLike = {
+    createCurrentUndoStackEntrySnapshot(manager: Record<string, unknown>) {
+      return {
+        score: manager.score,
+        tiles: [],
+        testState: manager.testState,
+        comboStreak: 0,
+        successfulMoveCount: 0,
+        lockConsumedAtMoveCount: -1,
+        lockedDirectionTurn: null,
+        lockedDirection: null,
+        undoUsed: 0
+      };
+    },
+    applyUndoRestoredTiles(manager: Record<string, unknown>, entry: Record<string, unknown>) {
+      manager.testState = entry.testState;
+    },
+    applyUndoRestoreState(manager: Record<string, unknown>, entry: Record<string, unknown>) {
+      manager.score = entry.score;
+    }
+  };
+  return {
+    replayMoves: [],
+    replaySpawns: [],
+    replayIndex: 0,
+    replayMode: true,
+    replayStartBoardMatrix: [[2, 0], [0, 0]],
+    score: 0,
+    testState: 0,
+    getWindowLike: () => windowLike,
+    restartWithBoard: vi.fn(),
+    move: vi.fn(function (this: { score: number; testState: number }) {
+      this.testState += 1;
+      this.score += 2;
+    }),
+    actuate: vi.fn(),
+    clearTransientTileVisualState: vi.fn()
   };
 }
 
@@ -566,6 +608,59 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.restartWithBoard).toHaveBeenCalled();
     expect(moves).toEqual([[1, { x: 0, y: 0, value: 2 }]]);
     expect(manager.replayIndex).toBe(1);
+  });
+
+  it("restores recent backward steps from replay state history", () => {
+    const manager: any = createReplaySeekTestManager();
+
+    applyReplayImportActions(manager, { replayMoves: [1, 1, 1], replaySpawns: [] });
+    seekReplay(manager, 3);
+    expect(manager.move).toHaveBeenCalledTimes(3);
+
+    stepReplay(manager, -1);
+    expect(manager.move).toHaveBeenCalledTimes(3);
+    expect(manager.restartWithBoard).not.toHaveBeenCalled();
+    expect(manager.testState).toBe(2);
+    expect(manager.score).toBe(4);
+
+    stepReplay(manager, 1);
+    expect(manager.move).toHaveBeenCalledTimes(4);
+    expect(manager.testState).toBe(3);
+  });
+
+  it("uses bounded generated checkpoints for long backward seeks", () => {
+    const manager: any = createReplaySeekTestManager();
+
+    applyReplayImportActions(manager, {
+      replayMoves: Array.from({ length: 600 }, () => 1),
+      replaySpawns: []
+    });
+    seekReplay(manager, 600);
+
+    expect(manager.replayStateHistory.filter(Boolean).length).toBeLessThanOrEqual(513);
+    expect(manager.replaySeekCheckpointHistory.length).toBeGreaterThanOrEqual(18);
+
+    const moveCountBeforeBackwardSeek = manager.move.mock.calls.length;
+    seekReplay(manager, 50);
+
+    expect(manager.restartWithBoard).not.toHaveBeenCalled();
+    expect(manager.move.mock.calls.length - moveCountBeforeBackwardSeek).toBeLessThanOrEqual(31);
+    expect(manager.testState).toBe(50);
+    expect(manager.replayIndex).toBe(50);
+  });
+
+  it("keeps undo-action replays on the original rebuild path", () => {
+    const manager: any = createReplaySeekTestManager();
+
+    applyReplayImportActions(manager, { replayMoves: [1, ["u"], 1], replaySpawns: [] });
+    seekReplay(manager, 3);
+    manager.restartWithBoard.mockClear();
+    manager.move.mockClear();
+
+    stepReplay(manager, -1);
+
+    expect(manager.restartWithBoard).toHaveBeenCalled();
+    expect(manager.move).toHaveBeenCalledTimes(2);
   });
 
   it("restores checkpoint scores when seeking legacy text replays", () => {

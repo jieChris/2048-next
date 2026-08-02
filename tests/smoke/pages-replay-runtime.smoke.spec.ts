@@ -228,6 +228,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const forwardIndex = Number(manager.replayIndex || 0);
 
         manager.seek(backwardTarget);
+        const moveCallCountAfterBackwardSeek = moveCallCount;
 
         const exactHistoryCountAfterBackward = Array.isArray(manager.replayStateHistory)
           ? manager.replayStateHistory.filter(Boolean).length
@@ -245,6 +246,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           forwardIndex,
           backwardIndex,
           moveCallCountAfterForwardSeek,
+          moveCallCountAfterBackwardSeek,
           exactHistoryCountAfterForward,
           checkpointCountAfterForward,
           exactHistoryCountAfterBackward,
@@ -260,6 +262,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.forwardIndex).toBe(snapshot.forwardTarget);
     expect(snapshot.backwardIndex).toBe(snapshot.backwardTarget);
     expect(snapshot.moveCallCountAfterForwardSeek).toBeLessThanOrEqual(40);
+    expect(
+      snapshot.moveCallCountAfterBackwardSeek - snapshot.moveCallCountAfterForwardSeek
+    ).toBeLessThanOrEqual(32);
     expect(snapshot.exactHistoryCountAfterForward).toBeLessThanOrEqual(24);
     expect(snapshot.exactHistoryCountAfterBackward).toBeLessThanOrEqual(40);
     expect(snapshot.checkpointCountAfterForward).toBeGreaterThanOrEqual(3);
@@ -315,7 +320,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.moveCountAfterWarmup).toBeGreaterThan(0);
-    expect(snapshot.moveCountAfterRewind).toBeGreaterThan(snapshot.moveCountAfterWarmup);
+    expect(snapshot.moveCountAfterRewind).toBe(snapshot.moveCountAfterWarmup);
     expect(snapshot.moveCountAfterForward).toBe(snapshot.moveCountAfterRewind + 1);
   });
 
