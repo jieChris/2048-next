@@ -1,7 +1,7 @@
 # 2048-next Nginx reverse proxy config for the self-hosted static container.
 
 upstream game_data_api {
-    server 127.0.0.1:3010;
+    server 2048-game-api:3001;
     keepalive 32;
 }
 

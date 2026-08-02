@@ -232,10 +232,12 @@ jobs:
 
             command -v docker >/dev/null 2>&1
             test -f "${nginx_config_path}"
+            docker network inspect edge-migrate-net >/dev/null
             if [ -f "${deploy_root}/nginx.conf" ]; then
               cp "${deploy_root}/nginx.conf" "${previous_nginx_config}"
             fi
             docker run --rm \
+              --network edge-migrate-net \
               -v "${nginx_config_path}:/etc/nginx/conf.d/default.conf:ro" \
               nginx:1.27-alpine nginx -t
 
@@ -244,17 +246,12 @@ jobs:
             ln -sfn "${release_dir}" "${deploy_root}/current"
 
             start_site_container() {
-              docker_network_args=()
-              if docker network inspect edge-migrate-net >/dev/null 2>&1; then
-                docker_network_args=(--network edge-migrate-net)
-              fi
-
               if docker ps -a --format '{{.Names}}' | grep -qx 'site-2048-next'; then
                 docker rm -f site-2048-next >/dev/null
               fi
 
               docker run -d \
-                "${docker_network_args[@]}" \
+                --network edge-migrate-net \
                 --name site-2048-next \
                 --restart unless-stopped \
                 -p 127.0.0.1:2048:80 \
