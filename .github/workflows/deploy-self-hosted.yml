@@ -230,6 +230,7 @@ jobs:
             tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
             rm -f "/tmp/${artifact_name}"
 
+            command -v curl >/dev/null 2>&1
             command -v docker >/dev/null 2>&1
             test -f "${nginx_config_path}"
             docker network inspect edge-migrate-net >/dev/null
@@ -260,10 +261,37 @@ jobs:
                 nginx:1.27-alpine >/dev/null
             }
 
+            admin_paths=(
+              "/admin.html"
+              "/admin.html?deploy_probe=${release_id}"
+              "/admin.html?view=dashboard"
+              "/admin.html?view=users"
+              "/admin.html?view=records"
+              "/admin.html?view=imports"
+              "/admin.html?view=external-import"
+              "/admin.html?view=achievements"
+              "/admin.html?view=rescue"
+              "/admin.html?view=governance"
+              "/admin.html?view=audit"
+              "/admin.html?view=tools"
+            )
+
             wait_for_site() {
               for health_attempt in $(seq 1 20); do
                 if docker exec site-2048-next wget -q --spider http://127.0.0.1/2048.html; then
-                  return 0
+                  origin_admin_status="$(curl --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' --header 'Cookie:' --header 'Host: 2048next.cn' http://127.0.0.1:2048/admin.html || true)"
+                  public_admin_status="404"
+                  for admin_path in "${admin_paths[@]}"; do
+                    current_admin_status="$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' --header 'Cookie:' "https://2048next.cn${admin_path}" || true)"
+                    if [ "${current_admin_status}" != "404" ]; then
+                      public_admin_status="${admin_path}:${current_admin_status:-no status}"
+                      break
+                    fi
+                  done
+                  if [ "${origin_admin_status}" = "404" ] && [ "${public_admin_status}" = "404" ]; then
+                    return 0
+                  fi
+                  echo "WARN: unauthenticated /admin.html returned origin=${origin_admin_status:-no status}, public=${public_admin_status:-no status}; retrying..." >&2
                 fi
                 sleep 1
               done

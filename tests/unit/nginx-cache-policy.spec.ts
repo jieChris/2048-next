@@ -62,4 +62,15 @@ describe("self-hosted nginx cache policy", () => {
     expect(workflow).toContain("npm run verify:release");
     expect(workflow).toContain("previous release restored");
   });
+
+  it("rolls back when the production admin guard is publicly exposed", () => {
+    const workflow = readFileSync(".github/workflows/deploy-self-hosted.yml", "utf8");
+
+    expect(workflow).toContain("http://127.0.0.1:2048/admin.html");
+    expect(workflow).toContain('"/admin.html?deploy_probe=${release_id}"');
+    expect(workflow).toContain('"/admin.html?view=external-import"');
+    expect(workflow).toContain('[ "${origin_admin_status}" = "404" ] && [ "${public_admin_status}" = "404" ]');
+    expect(workflow.indexOf("if ! wait_for_site;"))
+      .toBeLessThan(workflow.indexOf('rm -f "${previous_nginx_config}"'));
+  });
 });
