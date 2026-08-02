@@ -33,6 +33,12 @@ await page.goto("/palette.html#appearance-settings");
 - Playwright 配置允许 `reuseExistingServer` 时，多工作树或并行开发不得默认共用 `4173`；否则测试可能静默连接另一工作树的旧页面，产生与当前代码无关的缺失元素或旧行为失败。
 - 在隔离工作树运行 Smoke 时，通过 `PW_WEB_PORT=<空闲端口>` 启动并连接当前工作树；失败后先确认响应页面的实际版本，再判断产品或测试回归。
 
+## 生产重定向必须包含反例
+
+- 协议或主机规范化依赖代理头时，先确认每层代理是否覆盖该头；不得把内层连接协议误当成访客协议。
+- 匹配 HTTP 的规则必须同时验证 HTTPS 反例，避免宽泛的 `http` 子串匹配 `https` 并造成全站循环。
+- 发布后分别检查 HTTP、HTTPS、`www` 与 canonical URL，并限制最大跳转次数；只验证“最终能打开”会掩盖多跳或循环。
+
 ## 等待能力，不等待时间
 
 - `waitUntil: "domcontentloaded"` 只表示文档已解析，不表示运行时、包装钩子或异步状态已经就绪。
