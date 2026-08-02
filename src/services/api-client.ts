@@ -37,6 +37,11 @@ export interface JsonApiClient {
   request: (path: string, options?: RequestInit) => Promise<JsonRecord>;
 }
 
+export interface RequestLogoutOptions {
+  locationLike?: LocationLike | null | undefined;
+  fetchLike?: FetchLike;
+}
+
 const DEFAULT_REMOTE_API_BASE = "https://2048next.cn/api";
 export const AUTH_TOKEN_KEY = "2048_auth_token_v1";
 
@@ -79,6 +84,15 @@ export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = 
 
 export function readAuthToken(options: { storageLike?: Storage | null | undefined } = {}): string {
   return readStorageValue(options.storageLike || null, AUTH_TOKEN_KEY) || "";
+}
+
+export async function requestLogout(options: RequestLogoutOptions = {}): Promise<JsonRecord> {
+  const client = createJsonApiClient({
+    bases: buildApiBaseCandidates({ locationLike: options.locationLike }),
+    fetchLike: options.fetchLike,
+    timeoutMs: 1500
+  });
+  return client.request("/logout", { method: "POST" });
 }
 
 async function fetchWithTimeout(

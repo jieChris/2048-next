@@ -173,6 +173,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clear the browser page-access session cookie. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/login/captcha": {
         parameters: {
             query?: never;
@@ -1581,6 +1609,592 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read dashboard metrics and recent admin activity. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search and page account users. */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    role?: string;
+                    status?: "active" | "inactive";
+                    activity?: "7d" | "30d" | "never";
+                    sort?: "newest" | "last_active" | "records";
+                    page?: components["parameters"]["PageQuery"];
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a unified account, game, achievement, rescue, and audit summary. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Correct non-authentication profile fields. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        nickname?: string;
+                        display_name?: string;
+                        avatar_url?: string;
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/admin/users/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Enable or disable an eligible account. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        active: boolean;
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/admin/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change an eligible account between player and board administrator. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "player" | "board_admin";
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/admin/users/{id}/revoke-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke all existing authentication tokens for a user without changing the password. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a secure password reset code to the account email. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/record-import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify one terminal replay and report trusted derived fields without writing. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminRecordImportRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/record-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Write one verified replay as an official administrator-imported record. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminRecordImportRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search and page game records across users. */
+        get: {
+            parameters: {
+                query?: {
+                    user_id?: number;
+                    mode_key?: string;
+                    status?: string;
+                    record_id?: string;
+                    from?: string;
+                    to?: string;
+                    page?: components["parameters"]["PageQuery"];
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/records/{id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide a verified record and rebuild the affected leaderboard. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminRecordIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/records/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a hidden record and rebuild the affected leaderboard. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminRecordIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search administrator audit logs. */
+        get: {
+            parameters: {
+                query?: {
+                    actor?: number;
+                    target?: number;
+                    action?: string;
+                    target_type?: string;
+                    from?: string;
+                    to?: string;
+                    page?: components["parameters"]["PageQuery"];
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search game and runtime audit events. */
+        get: {
+            parameters: {
+                query?: {
+                    severity?: "debug" | "info" | "warning" | "error" | "critical";
+                    user_id?: number;
+                    from?: string;
+                    to?: string;
+                    page?: components["parameters"]["PageQuery"];
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/super-admins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Next console super administrators. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        /** Grant super administrator access as the root administrator. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        user_id: number;
+                    };
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/super-admins/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke super administrator access as the root administrator. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/tables": {
         parameters: {
             query?: never;
@@ -1688,6 +2302,10 @@ export interface paths {
             parameters: {
                 query?: {
                     user_id?: number;
+                    status?: "pending" | "accepted" | "rejected" | "consumed" | "expired";
+                    from?: string;
+                    to?: string;
+                    limit?: components["parameters"]["LimitQuery"];
                 };
                 header?: never;
                 path?: never;
@@ -2262,6 +2880,17 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        AdminReasonRequest: {
+            reason: string;
+        };
+        AdminRecordImportRequest: {
+            replay_string: string;
+            mode_key?: string;
+            client_record_id?: string;
+            /** Format: date-time */
+            ended_at?: string;
+            reason: string;
+        };
         User: {
             id?: number;
             user_id?: number;
@@ -2696,6 +3325,8 @@ export interface components {
         };
     };
     parameters: {
+        AdminUserIdPath: number;
+        AdminRecordIdPath: string;
         UserIdPath: number;
         RecordIdPath: string;
         OfferIdPath: string;

@@ -894,6 +894,7 @@
         }
       });
       if (result && result.success) {
+        if (result.token) safeSetStorage(STORAGE_TOKEN_KEY, toText(result.token));
         if (oldInput) oldInput.value = "";
         if (newInput) newInput.value = "";
         setTip(t("passwordChanged"), "ok");
@@ -905,7 +906,8 @@
     }
   }
 
-  function onLogoutClick() {
+  async function onLogoutClick() {
+    await apiRequest("/logout", { method: "POST", timeoutMs: 1500 });
     clearAuth();
     setTip(t("logoutDone"), "ok");
     global.setTimeout(function () {
@@ -1048,7 +1050,7 @@
     }
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
-        onLogoutClick();
+        void onLogoutClick();
       });
     }
 

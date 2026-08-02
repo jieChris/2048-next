@@ -113,6 +113,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
   });
 
   test("user profile logout button clears current account and opens leaderboard", async ({ page }) => {
+    let logoutCalls = 0;
     await page.addInitScript(() => {
       if (!window.location.pathname.endsWith("/user.html")) return;
       window.localStorage.setItem("2048_auth_token_v1", "test-token-logout");
@@ -122,6 +123,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
+      if (url.includes("/api/logout")) {
+        logoutCalls += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true })
+        });
+        return;
+      }
       if (url.includes("/user/me")) {
         await route.fulfill({
           status: 200,
@@ -187,6 +197,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       userId: null,
       nickname: null
     });
+    expect(logoutCalls).toBe(1);
   });
 
   test("user profile summary keeps intrinsic height beside taller record card", async ({ page }) => {

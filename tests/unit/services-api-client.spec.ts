@@ -4,7 +4,8 @@ import {
   AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
   createJsonApiClient,
-  readAuthToken
+  readAuthToken,
+  requestLogout
 } from "../../src/services/api-client";
 
 describe("services: api-client", () => {
@@ -134,6 +135,25 @@ describe("services: api-client", () => {
       error: "api_unavailable"
     });
     expect(fetchLike).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the server page-access session through the same-origin API", async () => {
+    const fetchLike = vi.fn().mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve({ success: true })
+    });
+
+    await expect(requestLogout({
+      locationLike: { origin: "https://example.test" },
+      fetchLike
+    })).resolves.toEqual({ success: true });
+
+    expect(fetchLike).toHaveBeenCalledTimes(1);
+    expect(fetchLike).toHaveBeenCalledWith(
+      "https://example.test/api/logout",
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) })
+    );
   });
 
   it("falls back when the local proxy reports api_unavailable", async () => {
