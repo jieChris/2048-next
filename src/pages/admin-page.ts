@@ -1,7 +1,7 @@
 import { createAdminApi, adminQuery, type AdminApiResponse, type AdminRecord } from "../services/admin";
 import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
 
-type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "governance" | "audit" | "tools";
+type ViewName = "dashboard" | "users" | "records" | "imports" | "achievements" | "rescue" | "governance" | "audit" | "tools";
 type Language = "zh" | "en";
 
 const ADMIN_DENIED_REDIRECT = "/404.html";
@@ -15,6 +15,7 @@ const copy: Record<Language, Record<string, string>> = {
     dashboard: "仪表盘",
     users: "用户中心",
     records: "游戏记录",
+    imports: "成绩补录",
     achievements: "成就管理",
     rescue: "恢复单",
     governance: "管理员与权限",
@@ -95,6 +96,15 @@ const copy: Record<Language, Record<string, string>> = {
     reasonRequired: "请填写操作原因",
     importRecord: "补录对局",
     importTitle: "为用户补录正式对局",
+    importWorkspaceHint: "为未正常上传的完整终局回放补录正式成绩。",
+    importReplayOnly: "只接受可验证的完整终局回放，不允许手工填写或覆盖成绩。",
+    importStepTarget: "指定目标用户",
+    importStepTargetHint: "填写用户 ID；从用户详情进入时会自动带入。",
+    importStepPreview: "上传并预校验",
+    importStepPreviewHint: "提交回放与必填原因，由服务端计算成绩并检查重复。",
+    importStepConfirm: "核对并确认写入",
+    importStepConfirmHint: "确认后写入 official_v1，参与排行榜重算与成就评估。",
+    prefilledUser: "已预填用户 #{id}",
     targetUserId: "目标用户 ID",
     replayFile: "回放文件",
     replayText: "或粘贴回放字符串",
@@ -194,6 +204,7 @@ const copy: Record<Language, Record<string, string>> = {
     dashboard: "Dashboard",
     users: "Users",
     records: "Game Records",
+    imports: "Record Import",
     achievements: "Achievements",
     rescue: "Rescue Offers",
     governance: "Admins & Access",
@@ -274,6 +285,15 @@ const copy: Record<Language, Record<string, string>> = {
     reasonRequired: "A reason is required",
     importRecord: "Import Record",
     importTitle: "Import an Official Game Record",
+    importWorkspaceHint: "Restore an official result from a complete terminal replay that failed to upload.",
+    importReplayOnly: "Only verifiable complete terminal replays are accepted. Scores cannot be entered or overridden manually.",
+    importStepTarget: "Choose the user",
+    importStepTargetHint: "Enter a user ID. Links from a user profile carry it automatically.",
+    importStepPreview: "Upload and dry-run",
+    importStepPreviewHint: "Submit the replay and required reason so the server can calculate and deduplicate it.",
+    importStepConfirm: "Review and confirm",
+    importStepConfirmHint: "Confirmation writes official_v1, rebuilds rankings, and evaluates achievements.",
+    prefilledUser: "User #{id} prefilled",
     targetUserId: "Target User ID",
     replayFile: "Replay File",
     replayText: "Or paste replay string",
@@ -371,7 +391,7 @@ const copy: Record<Language, Record<string, string>> = {
 
 const navigation: Array<{ group: string; items: Array<{ view: ViewName; label: string; icon: string }> }> = [
   { group: "overview", items: [{ view: "dashboard", label: "dashboard", icon: "▦" }] },
-  { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }] },
+  { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }, { view: "imports", label: "imports", icon: "↥" }] },
   { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }] },
   { group: "governanceGroup", items: [{ view: "governance", label: "governance", icon: "♜" }, { view: "audit", label: "audit", icon: "≡" }] },
   { group: "system", items: [{ view: "tools", label: "tools", icon: "⌘" }] }
@@ -733,6 +753,18 @@ async function renderRecords(): Promise<void> {
   bindPagination();
 }
 
+function renderImports(): void {
+  const userId = currentUrl().searchParams.get("user_id") || "";
+  const steps: Array<[string, string]> = [
+    ["importStepTarget", "importStepTargetHint"],
+    ["importStepPreview", "importStepPreviewHint"],
+    ["importStepConfirm", "importStepConfirmHint"]
+  ];
+  byId("admin-content").innerHTML = pageHeader(t("imports"), t("importWorkspaceHint"), `<button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) +
+    `<section class="card admin-card"><div class="card-body"><div class="alert alert-info d-flex align-items-center justify-content-between gap-3 flex-wrap"><span>${escapeHtml(t("importReplayOnly"))}</span>${userId ? badge(t("prefilledUser", { id: userId }), "orange") : ""}</div><div class="row g-3">${steps.map(([title, hint], index) => `<div class="col-md-4"><div class="card card-sm h-100"><div class="card-body"><span class="badge bg-orange-lt text-orange mb-3">0${index + 1}</span><h2 class="h3">${escapeHtml(t(title))}</h2><p class="text-secondary mb-0">${escapeHtml(t(hint))}</p></div></div></div>`).join("")}</div></div></section>`;
+  byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(userId));
+}
+
 function bindRecordActions(): void {
   const root = byId("admin-content");
   root.querySelectorAll<HTMLElement>("[data-record-user]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: node.dataset.recordUser, section: "records" })));
@@ -752,7 +784,7 @@ function setRecordVisibility(recordId: string, hidden: boolean): void {
 function openImportDialog(fixedUserId = ""): void {
   openDialog({
     title: t("importTitle"),
-    body: `<div class="alert alert-info">${escapeHtml(t("officialImportHint"))}</div>${fixedUserId ? `<input id="dialog-import-user" type="hidden" value="${escapeHtml(fixedUserId)}">` : `<div class="mb-3"><label class="form-label">${escapeHtml(t("targetUserId"))}</label><input id="dialog-import-user" class="form-control" type="number" min="1"></div>`}<div class="mb-3"><label class="form-label">${escapeHtml(t("replayFile"))}</label><input id="dialog-import-file" class="form-control" type="file" accept=".txt,.rpl,text/plain"></div><div class="mb-3"><label class="form-label">${escapeHtml(t("replayText"))}</label><textarea id="dialog-import-replay" class="form-control admin-replay-input" rows="5"></textarea></div><div class="row g-3"><div class="col-md-6"><label class="form-label">${escapeHtml(t("modeOptional"))}</label><input id="dialog-import-mode" class="form-control"></div><div class="col-md-6"><label class="form-label">${escapeHtml(t("clientRecordId"))}</label><input id="dialog-import-client" class="form-control"></div></div><div class="mt-3"><label class="form-label">${escapeHtml(t("reason"))}</label><textarea id="dialog-import-reason" class="form-control" rows="3" required></textarea></div>`,
+    body: `<div class="alert alert-info">${escapeHtml(t("officialImportHint"))}</div>${fixedUserId ? `<input id="dialog-import-user" type="hidden" value="${escapeHtml(fixedUserId)}">` : `<div class="mb-3"><label class="form-label" for="dialog-import-user">${escapeHtml(t("targetUserId"))}</label><input id="dialog-import-user" class="form-control" type="number" min="1"></div>`}<div class="mb-3"><label class="form-label" for="dialog-import-file">${escapeHtml(t("replayFile"))}</label><input id="dialog-import-file" class="form-control" type="file" accept=".txt,.rpl,text/plain"></div><div class="mb-3"><label class="form-label" for="dialog-import-replay">${escapeHtml(t("replayText"))}</label><textarea id="dialog-import-replay" class="form-control admin-replay-input" rows="5"></textarea></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="dialog-import-mode">${escapeHtml(t("modeOptional"))}</label><input id="dialog-import-mode" class="form-control"></div><div class="col-md-6"><label class="form-label" for="dialog-import-client">${escapeHtml(t("clientRecordId"))}</label><input id="dialog-import-client" class="form-control"></div></div><div class="mt-3"><label class="form-label" for="dialog-import-reason">${escapeHtml(t("reason"))}</label><textarea id="dialog-import-reason" class="form-control" rows="3" required></textarea></div>`,
     confirmLabel: t("preview"),
     onConfirm: async () => {
       const userId = dialogValue("dialog-import-user");
@@ -905,6 +937,7 @@ async function renderCurrentView(): Promise<void> {
       case "dashboard": await renderDashboard(); break;
       case "users": await renderUsers(); break;
       case "records": await renderRecords(); break;
+      case "imports": renderImports(); break;
       case "achievements": await renderAchievements(); break;
       case "rescue": await renderRescue(); break;
       case "governance": await renderGovernance(); break;
