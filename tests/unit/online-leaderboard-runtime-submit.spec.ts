@@ -397,7 +397,8 @@ describe("online leaderboard terminal submission", () => {
     const enqueueAttempt = vi.fn(() => true);
     runtime.windowLike.RankedSessionRuntime = {
       enqueueAttempt,
-      flushAttemptOutbox: vi.fn(async () => true)
+      flushAttemptOutbox: vi.fn(async () => true),
+      getLastFailureReason: () => "attempt_outbox_write_failed"
     };
     const documentLike = runtime.windowLike.document as { addEventListener: ReturnType<typeof vi.fn> };
     const clickHandler = documentLike.addEventListener.mock.calls.find((call) => call[0] === "click")?.[1] as
@@ -430,7 +431,9 @@ describe("online leaderboard terminal submission", () => {
     clickHandler?.(blocked);
     expect(blocked.preventDefault).toHaveBeenCalledTimes(1);
     expect(blocked.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(runtime.windowLike.alert).toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith(
+      "暂时无法保存本局排位记录，请重试后再离开游戏。\n失败原因：浏览器本地存储写入失败（attempt_outbox_write_failed）。\n如果对局最终未正常上传，可以添加QQ群1103144436申请补录成绩。"
+    );
   });
 
   it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {

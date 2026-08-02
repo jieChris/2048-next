@@ -416,16 +416,26 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function queueRankedAttemptForManager(manager, eventName, reason) {
-    if (!shouldUseRankedCheckpoint(manager) || manager.rankCheckpointApplying === true) return false;
-    if (Math.floor(Number(manager.successfulMoveCount) || 0) <= 0) return false;
-    if (eventName === "abandon" && isSessionTerminated(manager)) return false;
+    function fail(code) {
+      if (manager) manager.rankedAttemptPersistenceError = code;
+      return false;
+    }
+    if (!shouldUseRankedCheckpoint(manager) || manager.rankCheckpointApplying === true) {
+      return fail("ranked_attempt_not_applicable");
+    }
+    if (Math.floor(Number(manager.successfulMoveCount) || 0) <= 0) {
+      return fail("ranked_attempt_empty");
+    }
+    if (eventName === "abandon" && isSessionTerminated(manager)) {
+      return fail("ranked_attempt_already_terminal");
+    }
     var rankedContext = resolveRankedSubmitContextForManager(manager);
     var challengeId = toText(rankedContext && rankedContext.challengeId).trim().toLowerCase();
-    if (!rankedContext || !challengeId) return false;
+    if (!rankedContext || !challengeId) return fail("ranked_context_missing");
     var replayPayload = resolveRecordReplayPayload(manager);
-    if (!replayPayload.replayString) return false;
+    if (!replayPayload.replayString) return fail("replay_payload_missing");
     var runtime = getRankedSessionRuntime();
-    if (!runtime || typeof runtime.enqueueAttempt !== "function") return false;
+    if (!runtime || typeof runtime.enqueueAttempt !== "function") return fail("ranked_runtime_unavailable");
     var attempt = {
       challenge_id: challengeId,
       event: eventName,
@@ -436,7 +446,13 @@ function shouldAutoLoadOnlineLeaderboard() {
     };
     if (eventName === "abandon") attempt.reason = reason === "navigation" ? "navigation" : "restart";
     var queued = runtime.enqueueAttempt(attempt);
-    if (!queued) return false;
+    if (!queued) {
+      var runtimeReason = typeof runtime.getLastFailureReason === "function"
+        ? toText(runtime.getLastFailureReason()).trim()
+        : "";
+      return fail(runtimeReason || "attempt_outbox_persist_failed");
+    }
+    if (manager) manager.rankedAttemptPersistenceError = "";
     runPromiseSafely(function () {
       return flushRankedAttemptOutbox();
     });
@@ -458,12 +474,24 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function notifyRankedAttemptPersistenceBlocked(manager) {
-    if (manager) manager.rankedAttemptPersistenceError = "attempt_outbox_persist_failed";
+    var reasonCode = toText(manager && manager.rankedAttemptPersistenceError).trim() || "attempt_outbox_persist_failed";
     if (typeof global.alert !== "function") return;
     var isEnglish = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).trim().toLowerCase() === "en";
+    var reasonCopy = {
+      attempt_owner_missing: isEnglish ? "No signed-in player was detected" : "未检测到登录用户",
+      attempt_payload_invalid: isEnglish ? "The ranked attempt data is incomplete" : "待上传的排位数据不完整",
+      attempt_outbox_write_failed: isEnglish ? "Browser local storage could not be written" : "浏览器本地存储写入失败",
+      attempt_outbox_persist_failed: isEnglish ? "The pending upload record could not be saved" : "待上传记录保存失败",
+      ranked_attempt_not_applicable: isEnglish ? "The current game is not eligible for ranked persistence" : "当前对局不满足排位记录条件",
+      ranked_attempt_empty: isEnglish ? "The current game has no successful moves" : "本局尚无有效移动",
+      ranked_attempt_already_terminal: isEnglish ? "The game was already terminal when persistence was attempted" : "保存时本局已经结束",
+      ranked_context_missing: isEnglish ? "The ranked session context is missing" : "排位会话信息缺失",
+      replay_payload_missing: isEnglish ? "The replay could not be generated" : "本局回放生成失败",
+      ranked_runtime_unavailable: isEnglish ? "The ranked upload component is unavailable" : "排位上传组件未初始化"
+    }[reasonCode] || (isEnglish ? "Unknown persistence failure" : "未知的本地保存错误");
     global.alert(isEnglish
-      ? "Could not save this ranked attempt. Please retry before leaving the game."
-      : "暂时无法保存本局排位记录，请重试后再离开游戏。");
+      ? "Could not save this ranked attempt. Please retry before leaving the game.\nFailure reason: " + reasonCopy + " (" + reasonCode + ").\nIf the result is not uploaded, join QQ group 1103144436 to request a manual import."
+      : "暂时无法保存本局排位记录，请重试后再离开游戏。\n失败原因：" + reasonCopy + "（" + reasonCode + "）。\n如果对局最终未正常上传，可以添加QQ群1103144436申请补录成绩。");
   }
 
   function maybeQueueRankedBeginAttempt(manager) {
