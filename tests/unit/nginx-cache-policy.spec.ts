@@ -33,6 +33,21 @@ describe("self-hosted nginx cache policy", () => {
     expect(config).toContain('add_header X-Frame-Options $frame_options always;');
   });
 
+  it("serves admin.html only after the existing admin identity check", () => {
+    const config = readFileSync("deploy/nginx/2048-next.nginx.conf.example", "utf8");
+
+    expect(config).toContain("location = /admin.html {");
+    expect(config).toContain("auth_request /_admin_page_auth;");
+    expect(config).toContain("error_page 401 403 =404 /404.html;");
+    expect(config).toContain("location = /_admin_page_auth {");
+    expect(config).toContain("internal;");
+    expect(config).toContain("proxy_pass http://game_data_api/api/admin/me;");
+    expect(config).toContain('proxy_set_header Cookie "";');
+    expect(config).toContain('proxy_set_header Authorization "Bearer $cookie_next_admin_session_v1";');
+    expect(config).toContain('/admin.html "private, no-store";');
+    expect(config).toContain('/404.html "private, no-store";');
+  });
+
   it("publishes the repo nginx config during self-hosted deploy", () => {
     const workflow = readFileSync(".github/workflows/deploy-self-hosted.yml", "utf8");
 

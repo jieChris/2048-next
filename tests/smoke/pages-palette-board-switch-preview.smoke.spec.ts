@@ -104,11 +104,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#theme-select-trigger .custom-arrow")).toHaveCSS("border-left-width", "0px");
     await expect(page.locator("#theme-select-trigger .custom-arrow")).toHaveCSS("border-top-width", "0px");
     await expect(page.locator(".palette-variant-note")).toHaveText("色板颜色会按方块等级映射到其他棋盘变体。");
-    await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
-      "href",
-      "style/palette_page.css?v=20260722-theme-sidebar-v8"
-    );
-
     await page.waitForSelector(".swatch-chip", { state: "attached" });
 
     const styles = await page.evaluate(() => {

@@ -83,6 +83,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     let nicknameCheckCalls = 0;
     let nicknameUpdateCalls = 0;
     let passwordChangeCalls = 0;
+    let logoutCalls = 0;
     let nicknameUpdatePayload: Record<string, unknown> | null = null;
     let passwordChangePayload: Record<string, unknown> | null = null;
 
@@ -149,6 +150,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         passwordChangeCalls += 1;
         const body = route.request().postDataJSON();
         passwordChangePayload = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true })
+        });
+        return;
+      }
+
+      if (pathname.endsWith("/api/logout")) {
+        logoutCalls += 1;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -235,6 +246,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       timeout: 4000,
       waitUntil: "domcontentloaded"
     });
+
+    expect(logoutCalls).toBe(1);
 
     const logoutSnapshot = await page.evaluate(() => ({
       token: window.localStorage.getItem("2048_auth_token_v1"),
