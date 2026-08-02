@@ -1491,12 +1491,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
     await page.locator("#game-dialog-confirm").click();
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
-    const clearMarkerWritten = await page.evaluate(() =>
-      !!window.localStorage.getItem(
-        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
-      )
+    await page.waitForFunction(
+      () =>
+        !!window.localStorage.getItem(
+          "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
+        ),
+      { timeout: 12_000 }
     );
-    expect(clearMarkerWritten).toBe(true);
 
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
     expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();

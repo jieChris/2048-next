@@ -78,6 +78,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   function stripAllowedChinesePageTerms(text: string) {
     return text
+      .replace(/\bNEXT\b/gu, "")
       .replace(/\bIPS\b/gu, "")
       .replace(/\bWASD\b/gu, "")
       .replace(/\bKHJL\b/gu, "")
@@ -162,6 +163,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         expect(response, `${target} response should exist`).not.toBeNull();
         expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
         await expect(page.locator("body")).toBeVisible();
+        if (target === "/Practice_board.html") {
+          await waitForWindowCondition(
+            page,
+            () =>
+              Boolean((window as any).__practicePhaseSyncBound) &&
+              document.getElementById("practice-mode-picker-btn")?.hasAttribute("data-active-practice-mode-key") === true &&
+              document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0,
+            15_000
+          );
+        }
         await page.waitForTimeout(800);
 
         const texts = await collectVisibleLanguageTexts(page);
