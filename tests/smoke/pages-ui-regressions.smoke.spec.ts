@@ -78,6 +78,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   function stripAllowedChinesePageTerms(text: string) {
     return text
+      .replace(/\bNEXT\b/gu, "")
       .replace(/\bIPS\b/gu, "")
       .replace(/\bWASD\b/gu, "")
       .replace(/\bKHJL\b/gu, "")

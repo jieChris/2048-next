@@ -12,11 +12,13 @@
 - 已完成代码与生产环境只读审计。
 - 已确认站长验证/提交只能帮助发现和诊断，不直接提高自然排名。
 - 已完成 canonical、模式页元数据、运行时标题、sitemap、正式开放文案、旧内测入口与 IndexNow key 的实现。
+- PR 首轮 `Smoke (pages)` 暴露两条旧测试合同仍要求首页标题为 `2048`，并把品牌词 `NEXT` 误判为中文页夹杂英文；仅同步测试合同，没有回退 SEO 标题。
 
 ## 验证
 
 - `npx vitest run tests/unit/seo-contract.spec.ts tests/unit/nginx-cache-policy.spec.ts`：10 项通过。
 - `PW_WEB_PORT=4191 npx playwright test --config=playwright.config.ts tests/smoke/pages-seo-contract.smoke.spec.ts --workers=1`：4 项通过。
+- SEO 标题合同修正后，目标回归 2 项通过，完整 `npm run test:smoke:pages` 231 项通过。
 - 本地生产预览确认中英文首页与模式页的最终运行时 title、canonical 正确。
 - `npm run verify:release`：全部 refactor、unit、critical smoke、build 与 release-ready 门禁通过。
 - `git diff --check`：通过。
