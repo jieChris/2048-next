@@ -176,6 +176,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }
   });
 
+  test("practice controls initialize when their background script loads late", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("ui_language_v1", "en"));
+    await page.route(/\/js\/test_ui\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      await route.continue();
+    });
+
+    const response = await page.goto("/Practice_board.html", { waitUntil: "domcontentloaded" });
+    expect(response?.ok()).toBeTruthy();
+    await expect(page.locator("#practice-mode-picker-btn")).toHaveAttribute(
+      "title",
+      /^Choose Mode \(Current: /
+    );
+    await expect(page.locator("#practice-board-code-btn")).toHaveAttribute("title", "Enter Board Code");
+    await expect(page.locator("#practice-mode-badge")).toHaveText(/^(?!.*[\u3400-\u9fff]).+$/u);
+  });
+
   test("timer module settings description updates immediately when language toggles", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {

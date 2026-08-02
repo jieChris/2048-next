@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded", function () {
+(function () {
+  function initPracticeUi() {
   function showGameAlert(message) {
     if (window.GameDialog && typeof window.GameDialog.alert === "function") {
       window.GameDialog.alert(message);
@@ -1690,4 +1691,11 @@ document.addEventListener("DOMContentLoaded", function () {
   syncPracticeGestureEntryUi();
   syncPracticeSetupPhaseUi();
   requestPracticeRelayout();
-});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initPracticeUi);
+  } else {
+    initPracticeUi();
+  }
+})();
