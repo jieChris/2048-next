@@ -2346,6 +2346,17 @@ describe("online leaderboard terminal submission", () => {
 
   it("keeps ranked page-hide progress local without uploading a cloud checkpoint", async () => {
     const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "active-ranked-challenge",
+      seed: 123,
+      ranked_session_token: "active-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(activeSession));
     const buildSavedGameStatePayload = vi.fn(() => ({
       mode_key: MODE_KEY,
       replay_string: "duplicated-replay",
@@ -2358,7 +2369,8 @@ describe("online leaderboard terminal submission", () => {
       moveHistory: [0],
       successfulMoveCount: 1,
       score: 1024,
-      rankedSessionToken: "active-ranked-token"
+      rankedSessionToken: "active-ranked-token",
+      challengeId: "active-ranked-challenge"
     });
     const runtime = loadOnlineLeaderboardRuntime({
       manager,
@@ -2373,6 +2385,7 @@ describe("online leaderboard terminal submission", () => {
     });
 
     const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      hasLocalRankedCheckpointMirror: (modeKey: string) => boolean;
       persistRankedCheckpointOnPageHide: (manager: Record<string, unknown>) => void;
     };
     onlineRuntime.persistRankedCheckpointOnPageHide(manager);
@@ -2382,8 +2395,28 @@ describe("online leaderboard terminal submission", () => {
     expect(mirrorRaw).not.toBeNull();
     const mirror = JSON.parse(mirrorRaw || "{}");
     expect(mirror.replay_string).toBe("replay-v1");
+    expect(mirror).toMatchObject({
+      client_record_id: "rec_client_1",
+      ranked_session_token: "active-ranked-token",
+      challenge_id: "active-ranked-challenge",
+      initial_seed: 123,
+      seed: 123
+    });
     expect(mirror.ui_state?.saved_state).toBeUndefined();
     expect(buildSavedGameStatePayload).not.toHaveBeenCalled();
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(true);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      ...activeSession,
+      seed: 456
+    }));
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(false);
+    onlineRuntime.persistRankedCheckpointOnPageHide(manager);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      ...activeSession,
+      challenge_id: "different-ranked-challenge",
+      ranked_session_token: "different-ranked-token"
+    }));
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(false);
     expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
   });
 

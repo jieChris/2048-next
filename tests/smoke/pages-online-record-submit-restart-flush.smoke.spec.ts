@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
+import { waitForRankedMoveReady } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test.describe.configure({ mode: "serial" });
@@ -92,7 +93,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.removeItem("online_pending_record_submit_signature_v1");
         window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
         window.localStorage.setItem("ranked_session_prefetch:v1:" + injectedModeKey, JSON.stringify(injectedNext));
-        window.confirm = () => true;
       },
       { modeKey, oldSession, nextSession }
     );
@@ -103,9 +103,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Game response should exist").not.toBeNull();
     expect(response?.ok(), "Game response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await page.waitForFunction(() => {
+    await waitForRankedMoveReady(page);
+    await page.waitForFunction(({ injectedModeKey, expectedSeed, expectedToken }) => {
       const manager = (window as any).game_manager;
-      return !!manager && !!(window as any).OnlineLeaderboardRuntime;
+      const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
+      const active = activeRaw ? JSON.parse(activeRaw) : null;
+      return (
+        !!manager &&
+        !!(window as any).OnlineLeaderboardRuntime &&
+        manager.__onlineImmediateSubmitHooksBound === true &&
+        Math.floor(Number(manager.initialSeed)) === expectedSeed &&
+        String(manager.rankedSessionToken || "") === expectedToken &&
+        String(active?.ranked_session_token || "") === expectedToken
+      );
+    }, {
+      injectedModeKey: modeKey,
+      expectedSeed: oldSession.seed,
+      expectedToken: oldSession.ranked_session_token
     });
 
     await page.evaluate((injectedModeKey) => {
@@ -121,34 +135,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.successfulMoveCount = 3;
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
-      if (typeof manager.tryAutoSubmitOnGameOver === "function") {
-        manager.tryAutoSubmitOnGameOver();
-      }
-      const rankedRuntime = (window as any).RankedSessionRuntime;
-      if (rankedRuntime && typeof rankedRuntime.promotePrefetchedSession === "function") {
-        rankedRuntime.promotePrefetchedSession(injectedModeKey);
-      }
-      const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + injectedModeKey);
-      const active = activeRaw ? JSON.parse(activeRaw) : null;
-      if (active) {
-        manager.rankedSessionToken = String(active.ranked_session_token || "");
-        manager.challengeId = String(active.challenge_id || "");
-        const activeSeed = Math.floor(Number(active.seed));
-        if (Number.isSafeInteger(activeSeed) && activeSeed >= 0) {
-          manager.initialSeed = activeSeed;
-          manager.seed = activeSeed;
-        }
-        (window as any).GAME_CHALLENGE_CONTEXT = {
-          id: String(active.challenge_id || ""),
-          mode_key: String(active.mode_key || injectedModeKey),
-          seed: activeSeed,
-          ranked_session_token: String(active.ranked_session_token || "")
-        };
-      }
-      manager.rankCheckpointApplying = true;
       manager.restart();
-      manager.rankCheckpointApplying = false;
     }, modeKey);
+
+    const confirmRestart = page.locator("#game-dialog-confirm");
+    await expect(confirmRestart).toBeVisible({ timeout: 5000 });
+    await confirmRestart.click();
 
     await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     await expect
@@ -156,18 +148,25 @@ test.describe("Legacy Multi-Page Smoke", () => {
         async () =>
           page.evaluate(() => {
             const manager = (window as any).game_manager;
+            const modeKey = String(manager?.modeKey || manager?.mode || "");
+            const activeRaw = window.localStorage.getItem("ranked_session_active:v1:" + modeKey);
+            const active = activeRaw ? JSON.parse(activeRaw) : null;
             return {
-              blocked: !!manager?.rankedSetupBlockedUntilSessionReady,
+              blocked: !!manager?.rankedRestartBlockedUntilSessionReady,
+              preparing: !!manager?.rankedRestartPreparing,
               initialSeed: Math.floor(Number(manager?.initialSeed)),
-              managerToken: String(manager?.rankedSessionToken || "")
+              managerToken: String(manager?.rankedSessionToken || ""),
+              activeToken: active ? String(active.ranked_session_token || "") : ""
             };
           }),
         { timeout: 5000 }
       )
       .toEqual({
         blocked: false,
+        preparing: false,
         initialSeed: nextSession.seed,
-        managerToken: "next-ranked-token"
+        managerToken: "next-ranked-token",
+        activeToken: "next-ranked-token"
       });
 
     const afterRestartSession = await page.evaluate((injectedModeKey) => {

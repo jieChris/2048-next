@@ -53,3 +53,9 @@
 - 修复后目标单测 15/15、完整单元测试 1979/1979、`npx tsc --noEmit` 与 `git diff --check` 通过；按浏览器约束未在本机启动独立 Playwright，History Smoke 交由 GitHub CI 验证。
 - 并行终局身份审计发现：无 `client_record_id` 的旧恢复局若先以 rescue 回放保存、Promise 完成前 live 回放编码恢复，会被误判为另一局并遗漏 `sessionSubmitDone`。身份检查改为先接受同模式、同种子下匹配的 rescue identity，再检查 live identity；TS 与实际 JS 运行时各增加 1 条回归。
 - 旧恢复局身份专项 30/30、完整单元测试 1981/1981、`npx tsc --noEmit`、实际 JS `node --check` 与 `git diff --check` 通过。
+- `Smoke (pages)` 暴露紧凑 checkpoint 镜像在移除 `ui_state.saved_state` 后未把会话身份字段提升到顶层；镜像 builder/normalizer 现对称保留 `ranked_session_token`、`challenge_id`、`initial_seed` 与 `seed`，并收紧不同 challenge 的拒绝分支，避免旧局镜像跨会话恢复。
+- checkpoint 恢复 Smoke 改为等待既有 `waitForRankedMoveReady` 能力标记，不再固定等待 3 秒；本地历史 autosave Smoke 改为等待 `saveRecordAsync`/`getAllAsync` 与 `localHistorySaveInFlight.promise`，不再从 IndexedDB 成功后已清理的同步 fallback 读取，也删除了未确认页面对话框、实际未执行的重开断言。
+- 重开 Smoke 原先手工提升预取会话、覆盖 manager 会话字段并以 `rankCheckpointApplying` 绕过正常重开门控，同时没有处理页面内异步确认框，制造了旧终局与新 token 混合的非真实状态。现改为调用正常 `restart()`、点击 `GameDialog` 确认并等待 manager 与 active-session 同时切换到下一会话；无需修改产品清理逻辑。
+- 本轮本地验证：checkpoint 目标单测 76/76、完整单元测试 1981/1981、`npx tsc --noEmit`、实际 JS `node --check`、7 项边界/结构审计、`git diff --check` 与生产构建全部通过；按浏览器硬性约束未启动独立 Playwright，相关 pages Smoke 交由 GitHub CI 验证。
+- 最终只读审查补充发现：相同 challenge 的 checkpoint 原先会在 seed 校验前直接接受；现按完整存档合同在双方 seed 可用时拒绝不一致。重开 Smoke 也补充等待在线提交钩子、旧会话身份及专用重开状态，避免在包装器绑定前触发测试。
+- 修正后三项阻塞点经同一只读审查 Agent 复核关闭，未发现新的阻塞问题；完整单测与生产构建再次通过。

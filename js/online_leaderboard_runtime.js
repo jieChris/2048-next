@@ -346,6 +346,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function normalizeRankedSessionSeed(valueLike) {
+    if (valueLike == null || valueLike === "") return null;
     var seed = Math.floor(Number(valueLike));
     return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
   }
@@ -2462,8 +2463,12 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!activeSession) return false;
     var activeChallengeId = toText(activeSession.challenge_id).trim().toLowerCase();
     var checkpointChallengeId = resolveRankedCheckpointSessionId(checkpointData);
-    if (activeChallengeId && checkpointChallengeId && activeChallengeId === checkpointChallengeId) {
-      return false;
+    if (activeChallengeId && checkpointChallengeId) {
+      if (activeChallengeId !== checkpointChallengeId) return true;
+      var activeSeed = normalizeRankedSessionSeed(activeSession.seed);
+      var checkpointSeed = normalizeRankedSessionSeed(checkpointData.initial_seed);
+      if (checkpointSeed === null) checkpointSeed = normalizeRankedSessionSeed(checkpointData.seed);
+      return activeSeed !== null && checkpointSeed !== null && activeSeed !== checkpointSeed;
     }
     if (checkpointChallengeId) {
       return false;
@@ -2489,6 +2494,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return {
       mode: toText(rawValue.mode).trim(),
       mode_key: modeKey,
+      ranked_session_token: toText(rawValue.ranked_session_token).trim() || null,
+      challenge_id: toText(rawValue.challenge_id).trim() || null,
+      initial_seed: normalizeRankedSessionSeed(rawValue.initial_seed),
+      seed: normalizeRankedSessionSeed(rawValue.seed),
       client_record_id: toText(rawValue.client_record_id).trim() || null,
       replay_string: replayString,
       duration_ms: durationMs,
@@ -2547,6 +2556,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return {
       mode: toText(payload.mode).trim(),
       mode_key: toText(payload.mode_key).trim(),
+      ranked_session_token: toText(payload.ranked_session_token).trim() || null,
+      challenge_id: toText(payload.challenge_id).trim() || null,
+      initial_seed: normalizeRankedSessionSeed(payload.initial_seed),
+      seed: normalizeRankedSessionSeed(payload.seed),
       client_record_id: toText(payload.client_record_id).trim() || null,
       replay_string: toText(payload.replay_string).trim(),
       duration_ms: Math.max(0, Math.floor(Number(payload.duration_ms) || 0)),

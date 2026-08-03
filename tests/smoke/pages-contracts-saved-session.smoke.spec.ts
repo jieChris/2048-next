@@ -1319,8 +1319,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
     expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
-    await page.waitForTimeout(3000);
+    await waitForRankedMoveReady(page, 12_000);
 
     const restoredSnapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
