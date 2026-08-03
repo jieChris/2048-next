@@ -51,3 +51,5 @@
 - `Smoke (history)` 仍在页面迁移完成后写入旧 `localStorage`，且异步导出刚触发就撤销下载监听；改为导航前一次性播种 legacy fixture、使用 async 存储 API，并等待下载回调完成。
 - 上述规则已由 `.trellis/spec/smoke-testing.md` 的“前置状态必须显式”和“等待能力，不等待时间”覆盖，未重复扩张规范。
 - 修复后目标单测 15/15、完整单元测试 1979/1979、`npx tsc --noEmit` 与 `git diff --check` 通过；按浏览器约束未在本机启动独立 Playwright，History Smoke 交由 GitHub CI 验证。
+- 并行终局身份审计发现：无 `client_record_id` 的旧恢复局若先以 rescue 回放保存、Promise 完成前 live 回放编码恢复，会被误判为另一局并遗漏 `sessionSubmitDone`。身份检查改为先接受同模式、同种子下匹配的 rescue identity，再检查 live identity；TS 与实际 JS 运行时各增加 1 条回归。
+- 旧恢复局身份专项 30/30、完整单元测试 1981/1981、`npx tsc --noEmit`、实际 JS `node --check` 与 `git diff --check` 通过。

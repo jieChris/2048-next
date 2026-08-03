@@ -1696,11 +1696,18 @@ function isSameTerminalLocalHistoryIdentity(manager: ManagerLike, identity: stri
   if (identity.startsWith("client:")) {
     return `client:${String(manager.clientRecordId || "").trim()}` === identity;
   }
-  let replayString = String(manager.rescueReplayString || "").trim();
+  const rescueReplayString = String(manager.rescueReplayString || "").trim();
+  if (
+    rescueReplayString &&
+    buildTerminalLocalHistoryIdentity(manager, rescueReplayString) === identity
+  ) {
+    return true;
+  }
   try {
-    replayString = serializeReplay(manager);
-  } catch (_error) {}
-  return buildTerminalLocalHistoryIdentity(manager, replayString) === identity;
+    return buildTerminalLocalHistoryIdentity(manager, serializeReplay(manager)) === identity;
+  } catch (_error) {
+    return false;
+  }
 }
 
 export function tryAutoSubmitOnGameOver(

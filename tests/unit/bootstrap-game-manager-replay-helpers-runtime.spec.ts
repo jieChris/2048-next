@@ -974,6 +974,58 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.sessionSubmitDone).toBe(true);
   });
 
+  it("keeps the rescue identity when live replay serialization recovers before async save completion", async () => {
+    let liveReplayAvailable = false;
+    let resolveSave!: (record: Record<string, unknown>) => void;
+    const savePromise = new Promise<Record<string, unknown>>((resolve) => {
+      resolveSave = resolve;
+    });
+    const savedRecords: Record<string, unknown>[] = [];
+    const manager = {
+      sessionSubmitDone: false,
+      replayMode: false,
+      over: true,
+      won: false,
+      keepPlaying: false,
+      modeKey: "standard_4x4_pow2_no_undo",
+      clientRecordId: "",
+      initialSeed: 123,
+      width: 2,
+      height: 2,
+      score: 4096,
+      successfulMoveCount: 2,
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
+      grid: createGrid(),
+      getDurationMs: vi.fn(() => 1200),
+      getWindowLike: vi.fn(() => ({
+        btoa() {
+          if (!liveReplayAvailable) throw new Error("live_replay_unavailable");
+          return "live-replay";
+        }
+      })),
+      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
+        return {
+          scope: {},
+          method(record: Record<string, unknown>) {
+            savedRecords.push(record);
+            return savePromise;
+          }
+        };
+      }),
+      writeLocalStorageJsonPayload: vi.fn()
+    };
+
+    const saveAttempt = tryAutoSubmitOnGameOver(manager) as Promise<boolean>;
+    expect(savedRecords[0]?.replay_string).toBe("REPLAY_v1RPL_B64_rescue");
+
+    liveReplayAvailable = true;
+    resolveSave({ id: "local-rescue-async" });
+
+    await expect(saveAttempt).resolves.toBe(true);
+    expect(manager.sessionSubmitDone).toBe(true);
+  });
+
   it("does not let an old async history save mark a newly started game as submitted", async () => {
     let resolveSave!: (record: Record<string, unknown>) => void;
     const savePromise = new Promise<Record<string, unknown>>((resolve) => {

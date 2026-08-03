@@ -1761,11 +1761,15 @@ function isSameTerminalLocalHistoryIdentity(manager, identity) {
   if (identity.indexOf("client:") === 0) {
     return "client:" + String(manager.clientRecordId || "").trim() === identity;
   }
-  var replayString = String(manager.rescueReplayString || "").trim();
+  var rescueReplayString = String(manager.rescueReplayString || "").trim();
+  if (rescueReplayString && buildTerminalLocalHistoryIdentity(manager, rescueReplayString) === identity) {
+    return true;
+  }
   try {
-    replayString = serializeReplay(manager);
-  } catch (_err) {}
-  return buildTerminalLocalHistoryIdentity(manager, replayString) === identity;
+    return buildTerminalLocalHistoryIdentity(manager, serializeReplay(manager)) === identity;
+  } catch (_err) {
+    return false;
+  }
 }
 
 function completeAutoSubmitWithLocalHistory(manager, executionContext, identity, savedRecord) {

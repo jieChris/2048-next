@@ -135,4 +135,52 @@ describe("core game manager replay auto submit", () => {
     expect(manager.localHistorySaveInFlight).toBeUndefined();
     expect(manager.sessionSubmitDone).toBe(true);
   });
+
+  it("keeps the rescue identity when the live replay codec recovers before async save completion", async () => {
+    const runtime = loadReplayHelpersRuntime();
+    let liveReplayAvailable = false;
+    let resolveSave!: (record: Record<string, unknown>) => void;
+    const savePromise = new Promise<Record<string, unknown>>((resolve) => {
+      resolveSave = resolve;
+    });
+    const savedRecords: Record<string, unknown>[] = [];
+    const manager = createTerminalManager({
+      clientRecordId: "",
+      sessionReplayV1: {
+        supported: true,
+        board_width: 4,
+        board_height: 4,
+        init_tiles: [],
+        records: []
+      },
+      getWindowLike: vi.fn(() => ({
+        CoreReplayCodecRuntime: {
+          encodeReplayV1Rpl() {
+            if (!liveReplayAvailable) throw new Error("live_replay_unavailable");
+            return new Uint8Array([1, 2, 3]);
+          }
+        },
+        btoa: vi.fn(() => "live-replay")
+      })),
+      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
+        return {
+          scope: {},
+          method(record: Record<string, unknown>) {
+            savedRecords.push(record);
+            return savePromise;
+          }
+        };
+      })
+    });
+
+    const saveAttempt = runtime.tryAutoSubmitOnGameOver(manager) as Promise<boolean>;
+    expect(savedRecords[0]?.replay_string).toBe("REPLAY_v1RPL_B64_rescue");
+
+    liveReplayAvailable = true;
+    resolveSave({ id: "local-rescue-async" });
+
+    await expect(saveAttempt).resolves.toBe(true);
+    expect(manager.sessionSubmitDone).toBe(true);
+  });
 });
