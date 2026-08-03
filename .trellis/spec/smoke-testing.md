@@ -14,7 +14,9 @@
 - 中文界面的语言分离审计可精确放行固定品牌词，但页面 title 的完整 SEO 文案应由 SEO 专项用例单独断言，不能继续沿用旧的短标题合同。
 - 不得依赖项目当前默认值；默认主题或默认页面变化不应破坏无关测试。
 - 对互斥显示的页面模块，先使用对应锚点或点击入口，再断言模块内元素可见。
+- URL 锚点会自动展开 `<details>` 时，先读取或断言最终 `open` 状态；不得无条件点击 `summary`，否则会把已就绪模块反向折叠。
 - 同一反馈文案可能同时出现在结果区域和全局 Toast 时，定位器必须限定到被测区域或语义角色，不能用全页模糊文本定位制造 strict-mode 歧义。
+- `page.addInitScript` 会在同一页面的每次导航重新执行；只用于首次播种的存储状态必须带一次性标记，避免后续导航覆盖测试刚完成的用户设置。
 
 ```ts
 // 错误：依赖当前默认主题和默认分类
@@ -44,6 +46,7 @@ await page.goto("/palette.html#appearance-settings");
 
 - `waitUntil: "domcontentloaded"` 只表示文档已解析，不表示运行时、包装钩子或异步状态已经就绪。
 - 触发行为前，等待该行为真正依赖的能力，例如函数存在、绑定标记为真或目标状态已写入。
+- 排位页面在直接调用 `move()`、重开或导出前，除等待 `game_manager` 外，还必须确认 `rankedSetupBlockedUntilSessionReady`、`rankCheckpointRestorePending`、`rankCheckpointApplying` 和 `needsRankedCheckpointRestore` 均不为 `true`；管理器已创建不代表排位盘面恢复已完成。
 - 不使用固定延时掩盖初始化竞态；固定延时只适用于确认“在一段时间内不会发生”的负向断言。
 - 测试需要在线提交、副作用钩子或轮询初始化时，不得同时设置对应的禁用标记。
 

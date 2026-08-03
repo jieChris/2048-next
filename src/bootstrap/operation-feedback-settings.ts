@@ -3,6 +3,11 @@ import {
   OPERATION_FEEDBACK_RESULT_EVENT,
   type ConfirmedOperationFeedbackResult
 } from "../core/game-manager-input-events";
+import {
+  createBrowserStorageAccess,
+  readStorageValue,
+  writeStorageValue
+} from "../storage/browser-storage";
 
 export type OperationFeedbackPlacement = "timer" | "edge" | "custom";
 
@@ -53,7 +58,8 @@ let backspaceMaskSequence = 0;
 function readPreferences(windowLike: Window | null): OperationFeedbackPreferences {
   if (!windowLike) return { ...DEFAULT_PREFERENCES };
   try {
-    const parsed = JSON.parse(windowLike.localStorage.getItem(STORAGE_KEY) || "{}") as Partial<OperationFeedbackPreferences>;
+    const storageLike = createBrowserStorageAccess({ windowLike }).local();
+    const parsed = JSON.parse(readStorageValue(storageLike, STORAGE_KEY) || "{}") as Partial<OperationFeedbackPreferences>;
     return {
       enabled: parsed.enabled === true,
       placement: ["timer", "edge", "custom"].includes(String(parsed.placement))
@@ -69,9 +75,8 @@ function readPreferences(windowLike: Window | null): OperationFeedbackPreference
 }
 
 function savePreferences(windowLike: Window | null, preferences: OperationFeedbackPreferences): void {
-  try {
-    windowLike?.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-  } catch (_error) {}
+  const storageLike = createBrowserStorageAccess({ windowLike }).local();
+  writeStorageValue(storageLike, STORAGE_KEY, JSON.stringify(preferences));
 }
 
 function isDesktop(windowLike: Window | null): boolean {
@@ -447,7 +452,7 @@ export function initOperationFeedbackSettingsUI(input: {
   const documentLike = input.documentLike && typeof (input.documentLike as Document).getElementById === "function"
     ? (input.documentLike as Document)
     : null;
-  const windowLike = input.windowLike && typeof (input.windowLike as Window).localStorage !== "undefined"
+  const windowLike = input.windowLike && typeof (input.windowLike as Window).addEventListener === "function"
     ? (input.windowLike as Window)
     : null;
   if (!documentLike || !isDesktop(windowLike)) return { hasToggle: false, didBind: false };

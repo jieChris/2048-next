@@ -327,7 +327,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(paletteResponse, "Palette response should exist").not.toBeNull();
     expect(paletteResponse?.ok(), "Palette response should be 2xx").toBeTruthy();
     await expect(page.locator("#appearance-settings-editor")).toBeVisible();
-    await expect(page.locator("#appearance-settings-editor")).not.toHaveAttribute("open", "");
+    await expect(page.locator("#appearance-settings-editor")).toHaveAttribute("open", "");
 
     await page.evaluate(() => {
       (window as any).ThemeManager.applyTheme("ocean");

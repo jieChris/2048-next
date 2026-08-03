@@ -21,7 +21,10 @@ test.describe("custom secondary timers", () => {
 
     const response = await page.goto("/palette.html#timer-settings", { waitUntil: "domcontentloaded" });
     expect(response?.ok()).toBeTruthy();
-    await page.locator("#custom-secondary-timer-editor summary").click();
+    const editor = page.locator("#custom-secondary-timer-editor");
+    if (!(await editor.evaluate((node) => (node as HTMLDetailsElement).open))) {
+      await editor.locator("summary").click();
+    }
 
     const input = page.locator("#custom-secondary-timer-rules");
     const preview = page.locator("#custom-secondary-timer-preview");
