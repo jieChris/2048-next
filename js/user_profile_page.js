@@ -183,6 +183,9 @@
       labelName: "昵称：",
       labelCreated: "注册时间：",
       recordHeading: "历史记录",
+      sourceLabel: "记录来源",
+      sourceOfficial: "正式记录",
+      sourceThirdParty: "第三方记录",
       undoLabel: "撤回",
       undoDisabled: "无撤回",
       undoEnabled: "可撤回",
@@ -281,6 +284,9 @@
       labelName: "Nickname:",
       labelCreated: "Created:",
       recordHeading: "History Records",
+      sourceLabel: "Record Source",
+      sourceOfficial: "Official Records",
+      sourceThirdParty: "Third-party Records",
       undoLabel: "Undo",
       undoDisabled: "No Undo",
       undoEnabled: "Undo",
@@ -826,6 +832,7 @@
     var order = toText(opts.order).toLowerCase() === "asc" ? "asc" : "desc";
     var mode = toText(opts.mode).trim().toLowerCase();
     var status = toText(opts.status).trim().toLowerCase();
+    var recordSource = toText(opts.record_source).trim().toLowerCase() === "third_party" ? "third_party" : "official";
 
     var path = "/user/" + encodeURIComponent(String(safeUserId)) + "/records";
     path += "?page_size=" + encodeURIComponent(String(safeLimit));
@@ -833,6 +840,7 @@
     path += "&page=" + encodeURIComponent(String(safePage));
     path += "&sort_by=" + encodeURIComponent(sortBy);
     path += "&order=" + encodeURIComponent(order);
+    path += "&record_source=" + encodeURIComponent(recordSource);
     if (mode && mode !== "all") {
       path += "&mode=" + encodeURIComponent(mode);
     }
@@ -1199,6 +1207,11 @@
   function getUndoFilterValue() {
     var value = toText(byId("user-record-undo") && byId("user-record-undo").value).trim().toLowerCase();
     return value === "undo" ? "undo" : "no_undo";
+  }
+
+  function getRecordSourceValue() {
+    var value = toText(byId("user-record-source") && byId("user-record-source").value).trim().toLowerCase();
+    return value === "third_party" ? "third_party" : "official";
   }
 
   function getModeFilterValue() {
@@ -2381,12 +2394,14 @@
     renderRecordsLoadingHint();
     var requestSeq = ++recordsRequestSeq;
     activeModeFilter = getModeFilterValue();
+    var recordSource = getRecordSourceValue();
     updateSummaryCards();
     activeRecordVisibility = isOwnProfile ? getRecordVisibilityValue() : "active";
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
       page: recordPage,
       mode: activeModeFilter,
+      record_source: recordSource,
       status: activeRecordVisibility,
       sort_by: getSortByValue(),
       order: getOrderValue()
@@ -2396,6 +2411,7 @@
         limit: DEFAULT_RECORD_LIMIT,
         page: recordPage,
         mode: activeModeFilter,
+        record_source: recordSource,
         status: activeRecordVisibility,
         sort_by: getSortByValue(),
         order: getOrderValue()
@@ -2466,6 +2482,7 @@
       "user-summary-best-tile-label": t("summaryBestTileLabel"),
       "user-summary-last-active-label": t("summaryLastActiveLabel"),
       "user-record-heading": resolveRecordHeadingText(),
+      "user-source-label": t("sourceLabel"),
       "user-undo-label": t("undoLabel"),
       "user-mode-label": currentLang === "en" ? "Mode" : "\u6a21\u5f0f",
       "user-sort-label": t("sortLabel"),
@@ -2492,6 +2509,12 @@
     if (summaryRow) summaryRow.setAttribute("aria-label", t("summaryAriaLabel"));
 
     var undoSelect = byId("user-record-undo");
+    var sourceSelect = byId("user-record-source");
+    if (sourceSelect && sourceSelect.options && sourceSelect.options.length >= 2) {
+      sourceSelect.options[0].textContent = t("sourceOfficial");
+      sourceSelect.options[1].textContent = t("sourceThirdParty");
+    }
+
     if (undoSelect && undoSelect.options && undoSelect.options.length >= 2) {
       undoSelect.options[0].textContent = t("undoDisabled");
       undoSelect.options[1].textContent = t("undoEnabled");
@@ -2541,6 +2564,7 @@
 
   function bindEvents() {
     var refreshBtn = byId("user-record-refresh");
+    var sourceSelect = byId("user-record-source");
     var undoSelect = byId("user-record-undo");
     var modeSelect = byId("user-record-mode");
     var sortSelect = byId("user-record-sort");
@@ -2552,6 +2576,7 @@
     var navMenu = global.document.querySelector(".user-nav-menu");
 
     if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
+    if (sourceSelect) sourceSelect.addEventListener("change", function () { refreshRecords(true); });
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
         void logoutCurrentUser();
@@ -2614,11 +2639,13 @@
     applyLanguage();
 
     var undoSelect = byId("user-record-undo");
+    var sourceSelect = byId("user-record-source");
     var sortSelect = byId("user-record-sort");
     var orderSelect = byId("user-record-order");
     var modeSelect = byId("user-record-mode");
     var visibilitySelect = byId("user-record-visibility");
     if (undoSelect && !undoSelect.value) undoSelect.value = "no_undo";
+    if (sourceSelect && !sourceSelect.value) sourceSelect.value = "official";
     if (modeSelect && !modeSelect.value) modeSelect.value = "standard_no_undo";
     if (sortSelect && !sortSelect.value) sortSelect.value = "time";
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";

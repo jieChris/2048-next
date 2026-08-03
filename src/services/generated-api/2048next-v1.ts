@@ -515,6 +515,7 @@ export interface paths {
                     page?: components["parameters"]["PageQuery"];
                     limit?: components["parameters"]["LimitQuery"];
                     mode?: string;
+                    record_source?: "official" | "third_party";
                     sort_by?: "time" | "score" | "board_sum";
                     order?: "asc" | "desc";
                     visibility?: "active" | "deleted" | "all";
@@ -534,6 +535,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
+                            /** @enum {string} */
+                            record_source?: "official" | "third_party";
                             records?: components["schemas"]["GameRecord"][];
                         };
                     };

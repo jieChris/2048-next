@@ -366,7 +366,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
       "href",
-      "style/user_profile_page.css?v=20260723-history-fixes-v11"
+      "style/user_profile_page.css?v=20260803-record-source-v1"
     );
 
     await expect(page.locator(".user-record-mode").first()).toHaveText("4x4（不可撤回）");
@@ -392,15 +392,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(recordColumnLayout[0].width / recordColumnLayout[1].width).toBeCloseTo(1.35, 1);
     expect(recordColumnLayout.slice(2).every((column) => Math.abs(column.width - recordColumnLayout[1].width) < 1)).toBe(true);
     await expect(page.locator("#user-record-page")).toHaveText("第1/3页");
-    const labelSizes = await page.locator("#user-undo-label, #user-mode-label, #user-sort-label, #user-order-label")
+    const labelSizes = await page.locator("#user-source-label, #user-undo-label, #user-mode-label, #user-sort-label, #user-order-label")
       .evaluateAll((nodes) => nodes.map((node) => {
         const rect = node.getBoundingClientRect();
         return [rect.width, rect.height];
       }));
-    expect(labelSizes).toEqual([[1, 1], [1, 1], [1, 1], [1, 1]]);
-    const controlWidths = await page.locator("#user-record-undo, #user-record-mode, #user-record-sort, #user-record-order")
+    expect(labelSizes).toEqual([[1, 1], [1, 1], [1, 1], [1, 1], [1, 1]]);
+    const controlWidths = await page.locator("#user-record-source, #user-record-undo, #user-record-mode, #user-record-sort, #user-record-order")
       .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
-    expect(controlWidths).toEqual([160, 320, 180, 160]);
+    expect(controlWidths).toEqual([160, 160, 320, 180, 160]);
+    const sourceOptions = await page.locator("#user-record-source option").evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(sourceOptions).toEqual(["official", "third_party"]);
     const sortOptions = await page.locator("#user-record-sort option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
@@ -1166,13 +1170,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-record-action-btn")).toHaveCount(0);
   });
 
-  test("user profile distinguishes beta records without mixing them into official rating summary", async ({ page }) => {
+  test("user profile shows third-party imports only after switching record source", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-record-era");
       window.localStorage.setItem("2048_auth_userId_v1", "9");
       window.localStorage.setItem("2048_auth_nickname_v1", "Owner");
     });
 
+    const recordRequests: string[] = [];
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
       if (url.includes("/user/me")) {
@@ -1227,16 +1232,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return;
       }
       if (url.includes("/user/9/records")) {
+        recordRequests.push(url);
+        const thirdParty = new URL(url).searchParams.get("record_source") === "third_party";
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: [
-              {
+            data: thirdParty
+              ? [{
                 id: "rec-beta-1",
                 user_id: 9,
                 record_era: "beta",
+                source_platform_id: "2048verse",
                 source_platform_name: "2048Verse",
                 mode_bucket: "standard_no_undo",
                 mode_key: "standard_4x4_pow2_no_undo",
@@ -1247,8 +1255,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 created_at: "2026-07-21 00:00:00",
                 replay_string: "replay_beta",
                 final_board: [[2, 4, 8, 16], [32, 64, 128, 1024], [0, 0, 0, 0], [0, 0, 0, 0]]
-              },
-              {
+              }]
+              : [{
                 id: "rec-official-1",
                 user_id: 9,
                 record_era: "official_v1",
@@ -1261,11 +1269,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 created_at: "2026-07-20 00:00:00",
                 replay_string: "replay_official",
                 final_board: [[2, 4, 8, 16], [32, 64, 128, 512], [0, 0, 0, 0], [0, 0, 0, 0]]
-              }
-            ],
-            page: 1,
+              }],
+            page: Number(new URL(url).searchParams.get("page") || 1),
             limit: 20,
-            total: 2
+            total: thirdParty ? 1 : 21
           })
         });
         return;
@@ -1292,13 +1299,31 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
-    await expect(page.locator(".user-record-item")).toHaveCount(2);
-    await expect(page.locator(".user-record-era-badge")).toHaveCount(1);
-    await expect(page.locator(".user-record-era-badge")).toHaveText("第三方 · 2048Verse");
+    await expect(page.locator("#user-record-source")).toHaveValue("official");
+    await expect.poll(() => recordRequests.some((url) => new URL(url).searchParams.get("record_source") === "official"))
+      .toBe(true);
+    await expect(page.locator(".user-record-item")).toHaveCount(1);
+    await expect(page.locator(".user-record-era-badge")).toHaveCount(0);
     await expect(page.locator("#user-summary-preview")).toHaveText("数据积累中，暂无 Rating");
     await expect(page.locator("#user-summary-total-value")).toHaveText("1");
     await expect(page.locator("#user-summary-best-score-value")).toHaveText("4096");
     await expect(page.locator("#user-summary-last-active-value")).toHaveText("2026-07-20 08:00:00");
+
+    const officialRecord = page.locator(".user-record-item").first();
+    await officialRecord.locator(".user-record-row").click();
+    await expect(officialRecord.locator(".user-record-detail")).toBeVisible();
+    await expect(officialRecord.locator(".user-record-action-btn")).toHaveCount(1);
+
+    await page.locator("#user-record-next").click();
+    await expect.poll(() => recordRequests.some((url) => new URL(url).searchParams.get("page") === "2"))
+      .toBe(true);
+    await page.selectOption("#user-record-source", "third_party");
+    await expect.poll(() => recordRequests.some((url) => {
+      const params = new URL(url).searchParams;
+      return params.get("record_source") === "third_party" && params.get("page") === "1";
+    })).toBe(true);
+    await expect(page.locator(".user-record-item")).toHaveCount(1);
+    await expect(page.locator(".user-record-era-badge")).toHaveText("第三方 · 2048Verse");
 
     const betaRecord = page.locator(".user-record-item").first();
     await betaRecord.locator(".user-record-row").click();
@@ -1316,10 +1341,5 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const exportedReplay = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     expect(exportedReplay.record_era).toBe("beta");
 
-    const officialRecord = page.locator(".user-record-item").nth(1);
-    await officialRecord.locator(".user-record-row").click();
-    await expect(officialRecord.locator(".user-record-detail")).toBeVisible();
-    await expect(officialRecord.locator(".user-record-era-badge")).toHaveCount(0);
-    await expect(officialRecord.locator(".user-record-action-btn")).toHaveCount(1);
   });
 });

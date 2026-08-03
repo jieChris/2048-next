@@ -247,6 +247,7 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
   width: 160px;
 }
 
+.user-record-source-field,
 .user-record-visibility-field {
   flex: 0 0 160px;
   width: 160px;
@@ -646,6 +647,7 @@ body[data-page="user-profile"] .user-record-tools .settings-select:focus-visible
   .user-record-mode-field,
   .user-record-sort-field,
   .user-record-order-field,
+  .user-record-source-field,
   .user-record-visibility-field {
     width: auto;
     max-width: none;

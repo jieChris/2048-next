@@ -281,6 +281,12 @@ paths:
           in: query
           schema:
             type: string
+        - name: record_source
+          in: query
+          schema:
+            type: string
+            enum: [official, third_party]
+            default: official
         - name: sort_by
           in: query
           schema:
@@ -306,6 +312,9 @@ paths:
                   - $ref: "#/components/schemas/ApiEnvelope"
                   - type: object
                     properties:
+                      record_source:
+                        type: string
+                        enum: [official, third_party]
                       records:
                         type: array
                         items:

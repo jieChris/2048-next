@@ -12,7 +12,7 @@
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260721-leaderboard-rank-colors-v1" rel="stylesheet" type="text/css">
   <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/user_profile_page.css?v=20260723-history-fixes-v11" rel="stylesheet" type="text/css">
+  <link href="style/user_profile_page.css?v=20260803-record-source-v1" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn https://*.myqcloud.com; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -79,6 +79,13 @@
         </div>
 
         <div class="user-record-tools">
+          <div class="user-record-field user-record-source-field">
+            <label for="user-record-source" id="user-source-label">记录来源</label>
+            <select id="user-record-source" class="settings-select">
+              <option value="official">正式记录</option>
+              <option value="third_party">第三方记录</option>
+            </select>
+          </div>
           <div class="user-record-field user-record-undo-field">
             <label for="user-record-undo" id="user-undo-label">撤回</label>
             <select id="user-record-undo" class="settings-select">
