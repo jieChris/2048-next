@@ -53,13 +53,19 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
-      "pku2048-inline-stats-toggle"
+      "operation-feedback-settings-row",
+      "pku2048-inline-stats-toggle",
+      "settings-page-entry-row"
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelector("#toolkit-entry-row")).toBeNull();
     expect(dom.window.document.querySelector("#toolkit-account-link")).toBeNull();
+    expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
+    expect(dom.window.document.querySelector<HTMLAnchorElement>("#settings-page-entry-link")?.getAttribute("href")).toBe("palette.html");
+    expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
+    expect(dom.window.document.querySelector("[data-operation-feedback-layout-open]")).toBeNull();
   });
 
   it("preserves dynamic settings rows and reuses canonical nodes on repeated opens", () => {
@@ -99,9 +105,12 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
+      "operation-feedback-settings-row",
       "top-button-style-settings-row",
-      "ui-language-settings-row"
+      "settings-page-entry-row"
     ]);
+    expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
+    expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
   });
 
   it("creates settings action resolvers with safe fallbacks", () => {

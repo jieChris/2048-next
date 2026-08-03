@@ -405,6 +405,17 @@
     height: 56px;
   }
 
+  .unlock-toast--codepen .unlock-toast-title,
+  .unlock-toast--codepen .unlock-toast-name,
+  .unlock-toast--codepen .unlock-toast-desc {
+    padding-left: 56px;
+  }
+
+  .unlock-toast--codepen-milestone .unlock-toast-content,
+  .unlock-toast--codepen-reward .unlock-toast-content {
+    height: 78px;
+  }
+
   .unlock-toast--codepen .unlock-toast-name {
     top: 22px;
     font-size: 23px;
@@ -414,6 +425,14 @@
     top: 19px;
   }
 
+}
+
+@media (max-width: 340px) {
+  .unlock-toast--codepen .unlock-toast-title,
+  .unlock-toast--codepen .unlock-toast-name,
+  .unlock-toast--codepen .unlock-toast-desc {
+    padding-left: 36px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

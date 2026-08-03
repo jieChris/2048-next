@@ -1,4 +1,6 @@
 // Input manager for capped 2048 mode (no undo)
+var nextCappedOperationFeedbackInputId = 0;
+
 function CappedInputManager() {
   this.events = {};
   this.listen();
@@ -23,6 +25,35 @@ CappedInputManager.prototype.emit = function (event, data) {
 CappedInputManager.prototype.listen = function () {
   var self = this;
 
+  function isEditableTarget(target) {
+    if (!target) return false;
+    var el = target.nodeType === 1 ? target : target.parentElement;
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    if (el.closest && el.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")) return true;
+    var tag = String(el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
+  function createKeyboardMoveAttempt(direction, event) {
+    var arrowKeys = { 38: "arrow-up", 39: "arrow-right", 40: "arrow-down", 37: "arrow-left" };
+    var physicalKeys = {
+      ArrowUp: "arrow-up", ArrowRight: "arrow-right", ArrowDown: "arrow-down", ArrowLeft: "arrow-left"
+    };
+    var code = String(event.code || "");
+    var key = physicalKeys[code] || (code.length === 4 && code.indexOf("Key") === 0
+      ? code.slice(3)
+      : String(event.key || "").toUpperCase());
+    return {
+      direction: direction,
+      feedback: {
+        id: "capped-" + (++nextCappedOperationFeedbackInputId),
+        key: arrowKeys[event.which] || key,
+        repeat: event.repeat === true
+      }
+    };
+  }
+
   var map = {
     38: 0, // Up
     39: 1, // Right
@@ -40,6 +71,7 @@ CappedInputManager.prototype.listen = function () {
   };
 
   document.addEventListener("keydown", function (event) {
+    if (isEditableTarget(event.target)) return;
     var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
                     event.shiftKey;
     var mapped    = map[event.which];
@@ -47,7 +79,7 @@ CappedInputManager.prototype.listen = function () {
     if (!modifiers) {
       if (mapped !== undefined) {
         event.preventDefault();
-        self.emit("move", mapped);
+        self.emit("move", createKeyboardMoveAttempt(mapped, event));
       }
 
       if (event.key === 'r' || event.key === 'R' || event.code === 'KeyR' || event.which === 82) self.restart.bind(self)(event);

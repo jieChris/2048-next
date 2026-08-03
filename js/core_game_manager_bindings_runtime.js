@@ -301,12 +301,14 @@ function bindUndoAndStatsBindings() {
   ]);
 }
 
-function resolveStatsPanelStepValues(manager, totalSteps, moveSteps, undoSteps) {
+function resolveStatsPanelStepValues(manager, totalSteps, moveSteps, undoSteps, validInputs, invalidInputs) {
   var fallback = manager.computeStepStats();
   return {
     totalSteps: typeof totalSteps === "undefined" ? fallback.totalSteps : totalSteps,
     moveSteps: typeof moveSteps === "undefined" ? fallback.moveSteps : moveSteps,
-    undoSteps: typeof undoSteps === "undefined" ? fallback.undoSteps : undoSteps
+    undoSteps: typeof undoSteps === "undefined" ? fallback.undoSteps : undoSteps,
+    validInputs: typeof validInputs === "undefined" ? normalizeActuateStatsNumber(manager.validInputCount) : validInputs,
+    invalidInputs: typeof invalidInputs === "undefined" ? normalizeActuateStatsNumber(manager.invalidInputCount) : invalidInputs
   };
 }
 
@@ -341,6 +343,8 @@ function applyStatsPanelStepAndSpawnValues(manager, stepValues, pair) {
   manager.setStatsPanelFieldText("stats-panel-total", stepValues.totalSteps);
   manager.setStatsPanelFieldText("stats-panel-moves", stepValues.moveSteps);
   manager.setStatsPanelFieldText("stats-panel-undo", stepValues.undoSteps);
+  manager.setStatsPanelFieldText("stats-panel-valid-inputs", stepValues.validInputs);
+  manager.setStatsPanelFieldText("stats-panel-invalid-inputs", stepValues.invalidInputs);
   manager.setStatsPanelFieldText("stats-panel-two", resolveSpawnCount(manager, pair.primary));
   manager.setStatsPanelFieldText("stats-panel-four", resolveSpawnCount(manager, pair.secondary));
 }
@@ -351,9 +355,9 @@ function applyStatsPanelRateValue(manager) {
 }
 
 function bindUpdateStatsPanelBinding() {
-  bindGameManagerPrototypeMethod("updateStatsPanel", function (totalSteps, moveSteps, undoSteps) {
+  bindGameManagerPrototypeMethod("updateStatsPanel", function (totalSteps, moveSteps, undoSteps, validInputs, invalidInputs) {
     if (!this) return;
-    var stepValues = resolveStatsPanelStepValues(this, totalSteps, moveSteps, undoSteps);
+    var stepValues = resolveStatsPanelStepValues(this, totalSteps, moveSteps, undoSteps, validInputs, invalidInputs);
     var pair = this.getSpawnStatPair();
     applyStatsPanelSpawnLabels(this, pair);
     applyStatsPanelStepAndSpawnValues(this, stepValues, pair);

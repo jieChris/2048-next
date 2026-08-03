@@ -63,7 +63,7 @@ describe("core setup ui state runtime", () => {
     expect(manager.notifyUndoSettingsStateChanged).toHaveBeenCalledTimes(1);
     expect(manager.applyTimerModuleView).toHaveBeenCalledWith("compact", true);
     expect(manager.actuate).toHaveBeenCalledTimes(1);
-    expect(manager.updateStatsPanel).toHaveBeenCalledWith(0, 0, 0);
+    expect(manager.updateStatsPanel).toHaveBeenCalledWith(0, 0, 0, 0, 0);
     expect(manager.callWindowMethod).not.toHaveBeenCalledWith("cappedTimerReset");
     expect(manager.getWindowLike().updateItemModeHud).toHaveBeenCalledTimes(1);
     expect(manager.getWindowLike().resetMoveTimeoutDeadline).toHaveBeenCalledTimes(1);

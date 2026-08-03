@@ -23,6 +23,7 @@ import { installHomeModeRuntime } from "../bootstrap/home-mode";
 import { installHomePageHostRuntime } from "../bootstrap/home-page-host";
 import { installHomeRuntimeContractRuntime } from "../bootstrap/home-runtime-contract";
 import { installHomeStartupHostRuntime } from "../bootstrap/home-startup-host";
+import { initOperationFeedbackSettingsUI } from "../bootstrap/operation-feedback-settings";
 import { installMergeEffectsRuntime } from "../bootstrap/merge-effects-runtime";
 import { installModeCatalogRuntime } from "../bootstrap/mode-catalog";
 import { installMoveApplyRuntime } from "../bootstrap/move-apply-runtime";
@@ -119,7 +120,7 @@ const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "index-tail",
   "i18n"
 ]);
-const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260625-ranked-cache";
+const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260803-operation-feedback";
 const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
   "core_capped_timer_scroll_runtime",
   "capped_timer_scroll",
@@ -438,6 +439,9 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoStackEntryRuntime();
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    initOperationFeedbackSettingsUI({ documentLike: document, windowLike: window });
+  }
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     if (manifest.capabilities.includes("announcement")) {

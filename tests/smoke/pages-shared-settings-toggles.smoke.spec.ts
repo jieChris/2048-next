@@ -326,7 +326,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(paletteResponse, "Palette response should exist").not.toBeNull();
     expect(paletteResponse?.ok(), "Palette response should be 2xx").toBeTruthy();
-    await expect(page.locator(".theme-selection-col")).toBeVisible();
+    await expect(page.locator("#appearance-settings-editor")).toBeVisible();
+    await expect(page.locator("#appearance-settings-editor")).not.toHaveAttribute("open", "");
 
     await page.evaluate(() => {
       (window as any).ThemeManager.applyTheme("ocean");
@@ -450,7 +451,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const targets = [
       { url: "/account_settings.html", selector: ".account-auth-form-surface" },
       { url: "/replay.html", selector: ".replay-metric-card" },
-      { url: "/palette.html#appearance-settings", selector: ".palette-sidebar" },
+      { url: "/palette.html#appearance-settings", selector: "#appearance-settings-editor" },
       { url: "/history.html", selector: ".portal-card" },
       { url: "/relay_5x5.html", selector: ".relay-panel" },
       { url: "/Practice_board.html?practice_fresh=1", selector: ".dashboard-box" }

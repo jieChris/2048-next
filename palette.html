@@ -10,8 +10,8 @@
   <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
   <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260722-board-parity-v2" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260723-timer-preview-v3" rel="stylesheet" type="text/css">
+  <link href="style/main.css?v=20260803-operation-feedback-live-lock-v3" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260802-settings-sidebar-v17" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -19,11 +19,11 @@
   <main class="palette-page-shell">
     <header class="palette-page-header">
       <div class="palette-title-wrap palette-nav">
-        <a class="palette-nav-btn page-back-button" href="2048.html">回首页</a>
+        <a class="palette-nav-btn page-back-button" href="2048.html" data-back-navigation="fixed">回首页</a>
         <div class="page-title-visually-hidden">
           <p class="palette-kicker">2048 设置</p>
           <h1 class="palette-title">设置</h1>
-          <p class="palette-subtitle">集中管理计时器、主题与色板，相关选项按类别收纳。</p>
+          <p class="palette-subtitle">集中管理计时器、界面语言、主题与色板，相关选项按类别收纳。</p>
         </div>
       </div>
       <nav class="palette-nav">
@@ -32,32 +32,32 @@
       </nav>
     </header>
 
-    <nav class="settings-category-nav" aria-label="设置分类">
-      <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="page">
-        <strong>计时器</strong>
-        <span>自定义子计时器规则</span>
-      </a>
-      <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
-        <strong>外观与配色</strong>
-        <span>主题、色板与棋盘预览</span>
-      </a>
-    </nav>
+    <div class="settings-workbench">
+      <nav class="settings-category-nav" aria-label="设置分类">
+        <span class="settings-category-active-bookmark" aria-hidden="true"></span>
+        <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="location">
+          <strong>计时器</strong>
+        </a>
+        <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
+          <strong>外观与配色</strong>
+        </a>
+        <a class="settings-category-link" href="#language-settings" aria-controls="language-settings">
+          <strong>界面语言</strong>
+        </a>
+      </nav>
 
-    <section id="timer-settings" class="card-surface palette-settings-card">
-      <div class="panel-head">
-        <h2>计时器设置</h2>
-        <span class="panel-pill">计时</span>
-      </div>
-      <details id="custom-secondary-timer-editor" class="settings-disclosure">
-        <summary>
-          <span class="settings-disclosure-copy">
-            <strong>自定义子计时器</strong>
-            <small>按规则体系保存，每行填写一条完整规则。</small>
-          </span>
-          <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
-          <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
-        </summary>
-        <div class="custom-secondary-timer-body">
+      <div class="settings-category-content">
+        <section id="timer-settings" class="palette-settings-section">
+          <details id="custom-secondary-timer-editor" class="settings-disclosure">
+            <summary>
+              <span class="settings-disclosure-copy">
+                <strong>计时器</strong>
+                <small>自定义子计时器规则</small>
+              </span>
+              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
+              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
+            </summary>
+            <div class="custom-secondary-timer-body">
           <div class="custom-secondary-timer-family-tabs" role="tablist" aria-label="子计时器规则体系">
             <button type="button" class="custom-secondary-timer-family-btn is-active" data-timer-family="pow2" role="tab" aria-selected="true">2048</button>
             <button type="button" class="custom-secondary-timer-family-btn" data-timer-family="fibonacci" role="tab" aria-selected="false">Fibonacci</button>
@@ -94,14 +94,23 @@
               <p id="custom-secondary-timer-preview-empty" class="custom-secondary-timer-preview-empty">保存规则后，可在这里预览展开层级。</p>
             </section>
           </div>
-        </div>
-      </details>
-    </section>
+            </div>
+          </details>
+        </section>
 
-    <section id="appearance-settings" class="palette-settings-section" hidden>
-    <section class="palette-grid">
+        <section id="appearance-settings" class="palette-settings-section">
+          <details id="appearance-settings-editor" class="settings-disclosure appearance-settings-disclosure">
+            <summary>
+              <span class="settings-disclosure-copy appearance-settings-disclosure-copy">
+                <strong>外观与配色</strong>
+                <small>主题、色板与棋盘预览</small>
+              </span>
+              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
+              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
+            </summary>
+          <section class="palette-grid">
       <aside class="palette-sidebar card-surface">
-        <div class="theme-selection-col palette-sidebar-theme">
+        <div class="theme-selection-col">
           <label>选择主题</label>
           <div class="custom-select-wrapper">
             <div class="custom-select">
@@ -205,9 +214,40 @@
           <div id="palette-preview-fib"></div>
         </div>
 
-      </section>
+       </section>
+     </section>
+          </details>
     </section>
-    </section>
+
+        <section id="language-settings" class="palette-settings-section">
+          <details id="language-settings-editor" class="settings-disclosure language-settings-disclosure">
+            <summary>
+              <span class="settings-disclosure-copy language-settings-disclosure-copy">
+                <strong>界面语言</strong>
+                <small>切换网站显示语言</small>
+              </span>
+              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
+              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
+            </summary>
+            <div class="language-settings-body">
+              <div id="ui-language-settings-row" class="settings-row settings-toggle-row language-settings-row">
+                <div class="settings-toggle-main language-toggle-main">
+                  <div class="settings-toggle-copy">
+                    <div id="ui-language-label" class="settings-toggle-title">界面语言</div>
+                    <div id="ui-language-desc" class="settings-toggle-desc">页面中英文切换</div>
+                  </div>
+                  <label class="settings-switch language-settings-switch" aria-label="界面语言">
+                    <input id="ui-language-toggle" type="checkbox" role="switch">
+                    <span class="settings-switch-slider language-switch-slider"></span>
+                    <span id="ui-language-toggle-thumb" class="language-switch-thumb">中</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
+        </section>
+      </div>
+    </div>
   </main>
 
   <script type="module" src="./src/entries/palette.ts"></script>

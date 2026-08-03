@@ -705,7 +705,15 @@ export function createRankedSessionRuntime(
   const enqueueAttempt = (rawAttempt: RankedSessionAttemptDraft): boolean => {
     const ownerUserId = ownerUserIdResolver();
     const attempt = normalizeRankedSessionAttemptDraft(rawAttempt);
-    if (!ownerUserId || !attempt) return false;
+    lastFailureReason = "";
+    if (!ownerUserId) {
+      lastFailureReason = "attempt_owner_missing";
+      return false;
+    }
+    if (!attempt) {
+      lastFailureReason = "attempt_payload_invalid";
+      return false;
+    }
     const { challenge_id: challengeId, ...payload } = attempt;
     const itemId = buildAttemptOutboxItemId(ownerUserId, challengeId, payload.event);
     const items = readAttemptOutbox(storageLike);
@@ -717,7 +725,9 @@ export function createRankedSessionRuntime(
       payload,
       created_at_ms: Date.now()
     });
-    return writeAttemptOutbox(storageLike, items);
+    const written = writeAttemptOutbox(storageLike, items);
+    if (!written) lastFailureReason = "attempt_outbox_write_failed";
+    return written;
   };
 
   const submitAttempt = async (

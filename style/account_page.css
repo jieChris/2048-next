@@ -20,12 +20,14 @@ body[data-page="account-hub"][data-i18n-ready="0"] {
 
 .account-page-shell {
   width: min(1220px, calc(100vw - 32px));
+  box-sizing: border-box;
 }
 
 .account-grid {
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 14px;
+  min-width: 0;
 }
 
 body[data-page="account-hub"][data-auth-state] .account-grid {
@@ -34,6 +36,8 @@ body[data-page="account-hub"][data-auth-state] .account-grid {
 
 .account-auth-card,
 .account-board-card {
+  box-sizing: border-box;
+  min-width: 0;
   padding: 14px;
 }
 
@@ -889,8 +893,12 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
 
 @media (max-width: 560px) {
   .account-page-shell {
-    width: calc(100% - 24px);
+    width: 100%;
     margin: 10px auto 18px;
+  }
+
+  .account-board-card {
+    padding: 12px;
   }
 
   body[data-page="account-hub"] .palette-page-header {
@@ -977,7 +985,7 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
   .account-board-head-row,
   .account-board-empty,
   .account-board-row {
-    grid-template-columns: 42px minmax(74px, 1fr) 70px 96px;
+    grid-template-columns: 32px minmax(58px, 1fr) 56px 76px;
     gap: 6px;
     font-size: 12px;
   }

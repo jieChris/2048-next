@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+async function openAppearanceWorkspace(page: import("@playwright/test").Page) {
+  const disclosure = page.locator("#appearance-settings-editor");
+  if (!await disclosure.evaluate((element) => element.open)) {
+    await disclosure.locator("summary").click();
+  }
+}
+
 test.describe("Legacy Multi-Page Smoke", () => {
   test("fresh profile defaults to mist cyan with the cold cyan palette", async ({ page }) => {
     await page.addInitScript(() => {
@@ -19,18 +26,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
 
     await expect(page.locator("#timer-settings")).toBeVisible();
-    await expect(page.locator("#appearance-settings")).toBeHidden();
-    await page.locator('.settings-category-link[href="#appearance-settings"]').click();
-    await expect(page.locator("#timer-settings")).toBeHidden();
     await expect(page.locator("#appearance-settings")).toBeVisible();
-    await expect(page.locator('.settings-category-link[href="#appearance-settings"]')).toHaveAttribute("aria-current", "page");
+    await page.locator('.settings-category-link[href="#appearance-settings"]').click();
+    await openAppearanceWorkspace(page);
+    await expect(page.locator("#timer-settings")).toBeVisible();
+    await expect(page.locator("#appearance-settings")).toBeVisible();
+    await expect(page.locator('.settings-category-link[href="#appearance-settings"]')).toHaveAttribute("aria-current", "location");
 
     await page.locator('.settings-category-link[href="#timer-settings"]').click();
     await expect(page.locator("#timer-settings")).toBeVisible();
-    await expect(page.locator("#appearance-settings")).toBeHidden();
-    await expect(page.locator('.settings-category-link[href="#timer-settings"]')).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("#appearance-settings")).toBeVisible();
+    await expect(page.locator('.settings-category-link[href="#timer-settings"]')).toHaveAttribute("aria-current", "location");
 
     await page.locator('.settings-category-link[href="#appearance-settings"]').click();
+    await openAppearanceWorkspace(page);
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "mist_cyan");
     await expect(page.locator("#theme-select-trigger > span")).toHaveText("雾青灰");
@@ -54,6 +63,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
     });
     await touchPage.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(touchPage);
     await expect(touchPage.locator(".palette-touch-entry")).toBeVisible();
     await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("width", "280px");
     await expect(touchPage.locator("#palette-preview-board")).toHaveCSS("padding", "10px");
@@ -82,6 +92,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    const appearanceDisclosure = page.locator("#appearance-settings-editor");
+    await expect(appearanceDisclosure).toBeVisible();
+    await expect(appearanceDisclosure).toHaveAttribute("open", "");
+    await expect(page.locator(".palette-grid")).toBeVisible();
     await expect(page.locator(".palette-item.is-active")).toBeVisible();
     await expect(page.locator("#palette-name-input")).toBeDisabled();
     await expect(page.locator("#palette-name-input")).toHaveCSS("opacity", "0.42");
@@ -95,7 +109,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".palette-editor > .panel-head")).toHaveCount(0);
     await expect(page.locator(".palette-theme-card")).toHaveCount(0);
     await expect(page.locator("#palette-board-switch")).toHaveCount(0);
-    await expect(page.locator(".palette-sidebar > .theme-selection-col")).toBeVisible();
+    await expect(page.locator("#theme-select-trigger")).toBeVisible();
     await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveText("色板");
     await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveCSS("font-size", "15px");
     await expect(page.locator(".palette-sidebar .panel-head h2")).toHaveCSS("font-weight", "600");
@@ -106,7 +120,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".palette-variant-note")).toHaveText("色板颜色会按方块等级映射到其他棋盘变体。");
     await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
       "href",
-      "style/palette_page.css?v=20260722-theme-sidebar-v8"
+      "style/palette_page.css?v=20260802-settings-sidebar-v17"
     );
 
     await page.waitForSelector(".swatch-chip", { state: "attached" });
@@ -165,6 +179,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await openAppearanceWorkspace(page);
     await expect(page.locator("#palette-preview-board .preview-tile")).toHaveCount(16);
     await expect(page.locator("#palette-preview-board")).toHaveClass(/game-container/);
     await expect(page.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner')).toHaveCSS("font-size", "51px");
@@ -201,6 +216,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
 
     const palettes = await page.evaluate(() => {
       const list = (window as any).ThemeManager.getTilePalettes();
@@ -221,6 +237,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("tile_palette_active_v1", "cold-cyan-steps");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
 
     const paletteItem = page.locator('[data-palette-id="cold-cyan-steps"]');
     await expect(paletteItem).toHaveCount(1);
@@ -286,6 +303,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("tile_palette_active_v1", "warm-glaze-steps");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
 
     const paletteItem = page.locator('[data-palette-id="warm-glaze-steps"]');
     await expect(paletteItem).toHaveCount(1);
@@ -353,6 +371,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.localStorage.setItem("tile_palette_active_v1", "jade-ochre");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
 
     const paletteItem = page.locator('[data-palette-id="jade-ochre"]');
     await expect(paletteItem).toHaveCount(1);
@@ -423,6 +442,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     expect(response, "Palette response should exist").not.toBeNull();
     expect(response?.ok(), "Palette response should be 2xx").toBeTruthy();
+    await openAppearanceWorkspace(page);
     await expect(page.locator("#palette-board-switch")).toHaveCount(0);
     await page.locator("#palette-create-btn").click();
     await page.locator('.color-target[data-index="0"]').click();
@@ -452,6 +472,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
 
     await expect(page.locator("#theme-preview-grid-pow2 .theme-preview-tile")).toHaveCount(16);
     await expect(page.locator("#palette-editor-current .color-target")).toHaveCount(16);

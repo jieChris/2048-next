@@ -48,7 +48,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#account-auth-heading")).toHaveCSS("margin-left", "14px");
     await expect(page.locator("#settings-subtitle")).toBeHidden();
     await expect(page.locator("#settings-kicker")).toBeHidden();
-    await expect(page.locator("#home-user-display")).toBeHidden();
+    await expect(page.locator("#home-user-display")).toHaveCount(0);
     await expect(page.locator("#settings-nav-user")).toBeHidden();
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-top", "19px");
     await expect(page.locator(".account-auth-form-surface")).toHaveCSS("padding-bottom", "19px");
@@ -59,7 +59,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#account-action-row")).toHaveCSS("padding-bottom", "12px");
     await expect(page.locator('link[href^="style/account_settings_page.css"]')).toHaveAttribute(
       "href",
-      "style/account_settings_page.css?v=20260720-unified-auth-v3"
+      "style/account_settings_page.css?v=20260802-login-responsive-v2"
     );
 
     const alignment = await page.locator(".settings-auth-section").evaluate((section) => {
@@ -77,6 +77,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(alignment.centerDelta).toBeLessThanOrEqual(1);
     expect(alignment.actionInset).toBeGreaterThan(0);
+  });
+
+  test("guest login panel stays usable on narrow mobile screens", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("theme_profile_v1", "mist_cyan"));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/account_settings.html", { waitUntil: "domcontentloaded" });
+
+    const layout = await page.locator("body").evaluate(() => {
+      const header = document.querySelector<HTMLElement>(".palette-page-header")!;
+      const form = document.querySelector<HTMLElement>(".account-auth-form-surface")!;
+      return {
+        hasGuestLabel: Boolean(document.querySelector("#home-user-display")),
+        horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        headerDirection: getComputedStyle(header).flexDirection,
+        formWidth: form.getBoundingClientRect().width
+      };
+    });
+
+    expect(layout.hasGuestLabel).toBe(false);
+    expect(layout.horizontalOverflow).toBe(false);
+    expect(layout.headerDirection).toBe("row");
+    expect(layout.formWidth).toBeLessThanOrEqual(366);
   });
 
   test("account settings page supports nickname/password/logout flows", async ({ page }) => {

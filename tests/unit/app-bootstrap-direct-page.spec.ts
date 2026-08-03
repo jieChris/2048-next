@@ -189,6 +189,7 @@ describe("app: bootstrap-direct-page", () => {
     await bootstrapDirectPage("account");
 
     const link = {
+      dataset: {},
       closest: vi.fn((selector: string) => selector === "a.page-back-button[href]" ? link : null)
     };
     const preventDefault = vi.fn();
@@ -206,5 +207,66 @@ describe("app: bootstrap-direct-page", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps fixed back links on their declared destination", async () => {
+    let clickListener: ((event: MouseEvent) => void) | null = null;
+    const documentLike = {
+      ...createDocumentLike(),
+      referrer: "http://127.0.0.1:5173/modes.html",
+      addEventListener(type: string, listener: EventListener) {
+        if (type === "click") clickListener = listener as (event: MouseEvent) => void;
+      },
+      getElementById: vi.fn(() => null),
+      createElement: vi.fn(() => ({ setAttribute: vi.fn() })),
+      body: {
+        setAttribute: vi.fn(),
+        appendChild: vi.fn()
+      }
+    } as unknown as Document;
+    const back = vi.fn();
+    const windowLike = {
+      addEventListener: vi.fn(),
+      matchMedia: vi.fn(() => ({ matches: false })),
+      navigator: {},
+      localStorage: { getItem: vi.fn(() => null) },
+      location: {
+        href: "http://127.0.0.1:5173/palette.html#appearance-settings",
+        origin: "http://127.0.0.1:5173"
+      },
+      history: { back, length: 3 }
+    } as unknown as Window;
+    Object.defineProperty(globalThis, "document", {
+      value: documentLike,
+      configurable: true,
+      writable: true
+    });
+    Object.defineProperty(globalThis, "window", {
+      value: windowLike,
+      configurable: true,
+      writable: true
+    });
+
+    await bootstrapDirectPage("palette");
+
+    const link = {
+      dataset: { backNavigation: "fixed" },
+      closest: vi.fn((selector: string) => selector === "a.page-back-button[href]" ? link : null)
+    };
+    const preventDefault = vi.fn();
+    expect(clickListener).not.toBeNull();
+    clickListener?.({
+      defaultPrevented: false,
+      button: 0,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      target: link,
+      preventDefault
+    } as unknown as MouseEvent);
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(back).not.toHaveBeenCalled();
   });
 });

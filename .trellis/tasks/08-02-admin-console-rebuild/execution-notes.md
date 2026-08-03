@@ -6,6 +6,7 @@
 - 2026-08-02：开始实施前确认两个目标仓库均缺少 Trellis `./.trellis/scripts/get_context.py`，且不存在 `.trellis/spec/guides/index.md`。采用最保守回退：手工枚举并完整读取 `2048-next` 与 `2048-game-api` 的 spec 索引及全部相关规范；不触碰 `2048-ranked`。
 - 2026-08-02：实施计划原拟把后台控制器继续拆成多个业务模块。浏览器联调时确认 URL 路由、对话框和跨模块刷新共享同一小型状态，继续拆分会在本批次扩大状态同步与回归面。采用保守回退：保留单一 `admin-page.ts` 控制器，仅抽离 Admin API 边界并删除旧实现；功能合同、测试和页面结构不缩水。后续当该控制器再次出现独立维护需求时再按业务边界拆分。
 - 2026-08-02：发布前发现后端本地 `main` 与远端 `main` 已分叉，Next 当前功能分支也落后于远端 `main`，且两个原工作区均混有其他未提交任务。采用最保守回退：保留原工作区与无关改动不动，只提交本任务文件，再从最新 `origin/main` 创建干净发布工作区并移植本任务提交；后端先部署并通过健康检查，随后再发布 Next/Nginx，避免门禁先上线导致管理员临时全部返回 404。
+- 2026-08-03：生产验收确认 Cloudflare 既有缓存规则覆盖源站 `private, no-store`，导致 `/admin.html` 的匿名 404 被缓存；同时 Cloudflare API 连接器与本机 Wrangler 均缺少规则写入/清缓存权限。经用户明确授权后采用最保守回退：不修改或重新部署 Next、Nginx、API、数据库，只通过已登录的 Cloudflare 控制台为精确路径追加一条末位 Bypass 规则。配置页随后加载异常，但规则生效后所有目标请求均为 `DYNAMIC` 且无 `Age`；依据 Cloudflare 官方机制，Bypass 不执行缓存查找，旧对象不会再被服务，因此不再为纯缓存卫生扩大权限或使用 Global API Key，保留旧对象自然淘汰。
 
 ## Delivery Summary
 
@@ -29,3 +30,4 @@
 - 页面门禁增量验证：`2048-next` 全量 Unit 299 个文件、1874 项通过；Admin/账号设置/用户页 Smoke 20 项通过；生产构建、OpenAPI 同步、服务边界、旧运行时边界、资源预算与 `git diff --check` 通过。
 - 页面门禁增量验证：`2048-game-api` 全量 Node 23 个文件、177 项通过，TypeScript 与 `git diff --check` 通过；覆盖 Cookie 签发/清除、`board_admin` 拒绝和停用配置管理员拒绝。
 - 本机未安装 Nginx 或容器运行时，未单独执行 `nginx -t`；仓库部署流程会在切换版本前使用 `nginx:1.27-alpine nginx -t` 校验本次配置。
+- Cloudflare 生产缓存修复：末位规则 `http.request.uri.path eq "/admin.html"` + Bypass 已部署；裸路径及 10 个后台视图各匿名重复 3 次均为 `404 / DYNAMIC / private, no-store / 无 Age`，`/api/admin/me` 为 `401 / DYNAMIC`；管理员会话刷新 `external-import` 为 `200 / DYNAMIC / private, no-store`，其后匿名请求同一 URL 仍为 `404 / DYNAMIC`。

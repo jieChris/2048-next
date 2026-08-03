@@ -39,7 +39,8 @@ function bindContextualBackNavigation(): void {
         mouseEvent.altKey
       ) return;
       const target = mouseEvent.target as Element | null;
-      if (!target?.closest("a.page-back-button[href]")) return;
+      const backLink = target?.closest<HTMLAnchorElement>("a.page-back-button[href]");
+      if (!backLink || backLink.dataset.backNavigation === "fixed") return;
       mouseEvent.preventDefault();
       window.history.back();
     },

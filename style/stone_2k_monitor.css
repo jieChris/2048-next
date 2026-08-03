@@ -29,6 +29,7 @@ body[data-page="stone-2k-monitor"] {
 
 .stone-monitor-shell {
   width: min(1360px, calc(100vw - 40px));
+  box-sizing: border-box;
   margin: 24px auto 36px;
   transition: opacity 0.22s ease, filter 0.22s ease, transform 0.22s ease;
 }
@@ -726,7 +727,7 @@ body[data-stone-monitor-locked="locked"] #stone-change-key {
 
 @media (max-width: 560px) {
   .stone-monitor-shell {
-    width: min(100vw - 16px, 520px);
+    width: min(100%, 520px);
   }
 
   .stone-access-gate {

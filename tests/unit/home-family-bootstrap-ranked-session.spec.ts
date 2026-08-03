@@ -65,7 +65,7 @@ describe("home family bootstrap ranked session ordering", () => {
     releaseRankedSession?.();
     await pendingBootstrap;
 
-    expect(loadCalls).toEqual([["./js/home_standard_startup_bundle.js?v=20260625-ranked-cache"]]);
+    expect(loadCalls).toEqual([["./js/home_standard_startup_bundle.js?v=20260803-operation-feedback"]]);
   });
 
   it("keeps the modern index bootstrap boundary without the removed deferred bundle", async () => {
@@ -75,6 +75,8 @@ describe("home family bootstrap ranked session ordering", () => {
     const installSettingsModalPageHostRuntime = vi.fn();
     const installIndexUiStartupHostRuntime = vi.fn();
     const applyIndexUiBootstrapFromTsRuntime = vi.fn();
+    const startupOrder: string[] = [];
+    const initOperationFeedbackSettingsUI = vi.fn(() => startupOrder.push("feedback"));
     const applyIndexUiPageBootstrap = vi.fn();
     const indexUiBootstrapResolvers = {
       exportReplay: vi.fn(),
@@ -148,6 +150,9 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/bootstrap/settings-modal-page-host", () => ({
       installSettingsModalPageHostRuntime
     }));
+    vi.doMock("../../src/bootstrap/operation-feedback-settings", () => ({
+      initOperationFeedbackSettingsUI
+    }));
     vi.doMock("../../src/bootstrap/index-ui-startup-host", () => ({
       installIndexUiStartupHostRuntime
     }));
@@ -183,6 +188,7 @@ describe("home family bootstrap ranked session ordering", () => {
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async (scripts: string[]) => {
         loadCalls.push(scripts);
+        startupOrder.push(`load:${scripts.join(",")}`);
       })
     }));
     vi.doMock("../../src/entries/runtime-manifest", () => ({
@@ -218,6 +224,10 @@ describe("home family bootstrap ranked session ordering", () => {
     const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
 
     await bootstrapHomeFamilyPage("index");
+    expect(startupOrder.indexOf("feedback")).toBeGreaterThanOrEqual(0);
+    expect(startupOrder.indexOf("feedback")).toBeLessThan(
+      startupOrder.findIndex((item) => item.includes("home_standard_startup_bundle.js"))
+    );
     for (const callback of idleCallbacks) callback();
     await vi.waitFor(() => {
       expect(applyIndexUiBootstrapFromTsRuntime).toHaveBeenCalledTimes(1);

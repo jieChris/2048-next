@@ -12,6 +12,8 @@ export interface StatsPanelCopy {
   totalSteps: string;
   moveSteps: string;
   undoSteps: string;
+  validInputs: string;
+  invalidInputs: string;
   primarySpawns: string;
   secondarySpawns: string;
   secondaryRate: string;
@@ -37,6 +39,8 @@ const EN_COPY: StatsPanelCopy = {
   totalSteps: "Total Actions",
   moveSteps: "Effective Moves",
   undoSteps: "Undo Count",
+  validInputs: "Valid Inputs",
+  invalidInputs: "Invalid Inputs",
   primarySpawns: "2 Spawns",
   secondarySpawns: "4 Spawns",
   secondaryRate: "Actual 4-Rate",
@@ -49,6 +53,8 @@ const ZH_COPY: StatsPanelCopy = {
   totalSteps: "总操作数",
   moveSteps: "有效移动数",
   undoSteps: "撤回次数",
+  validInputs: "有效输入数",
+  invalidInputs: "无效输入数",
   primarySpawns: "出2数量",
   secondarySpawns: "出4数量",
   secondaryRate: "实际出4率",

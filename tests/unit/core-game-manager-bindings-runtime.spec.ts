@@ -106,6 +106,8 @@ const TOP_LEVEL_GAMEPLAY_BINDING_REFERENCES = [
 ] as const;
 
 type BindingsRuntimeContext = {
+  GameManager: { prototype: Record<string, (...args: unknown[]) => void> };
+  bindUpdateStatsPanelBinding: () => void;
   createCappedUiManagerForwardBindings: () => [string, unknown][];
   createPreAccessorManagerForwardBindings: () => [string, unknown][];
   createPostAccessorManagerForwardBindings: () => [string, unknown][];
@@ -129,6 +131,12 @@ function loadBindingsRuntime(options?: {
   const context = {
     console,
     GameManager: { prototype: {} },
+    normalizeActuateStatsNumber(value: unknown) {
+      const numberValue = Number(value);
+      return Number.isFinite(numberValue) && numberValue >= 0 ? Math.floor(numberValue) : 0;
+    },
+    resolveManagerElementById: vi.fn(() => null),
+    resolveSpawnCount: vi.fn(() => 0),
     CoreCappedUiManagerForwardBindingsRuntime: options?.cappedUiRuntime,
     CorePostAccessorManagerForwardBindingsRuntime: options?.postAccessorRuntime,
     CorePreAccessorManagerForwardBindingsRuntime: options?.preAccessorRuntime
@@ -209,5 +217,45 @@ describe("core game manager bindings runtime", () => {
         Object.fromEntries(PRE_ACCESSOR_MANAGER_BINDING_NAMES.map((name) => [name, expect.any(Function)]))
       )
     );
+  });
+
+  it("binds five stats values and falls back for omitted arguments", () => {
+    const runtime = loadBindingsRuntime();
+    runtime.bindUpdateStatsPanelBinding();
+    const setStatsPanelFieldText = vi.fn();
+    const manager = {
+      computeStepStats: vi.fn(() => ({ totalSteps: 12, moveSteps: 9, undoSteps: 3 })),
+      validInputCount: "10.9",
+      invalidInputCount: -2,
+      getSpawnStatPair: vi.fn(() => ({ primary: 2, secondary: 4 })),
+      getActualSecondaryRate: vi.fn(() => "10.00"),
+      setStatsPanelFieldText
+    };
+
+    runtime.GameManager.prototype.updateStatsPanel.call(manager);
+
+    expect(manager.computeStepStats).toHaveBeenCalledTimes(1);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-total", 12);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-moves", 9);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-undo", 3);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-valid-inputs", 10);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-invalid-inputs", 0);
+  });
+
+  it("writes explicitly supplied input counts to the stats panel", () => {
+    const runtime = loadBindingsRuntime();
+    runtime.bindUpdateStatsPanelBinding();
+    const setStatsPanelFieldText = vi.fn();
+    const manager = {
+      computeStepStats: vi.fn(() => ({ totalSteps: 0, moveSteps: 0, undoSteps: 0 })),
+      getSpawnStatPair: vi.fn(() => ({ primary: 2, secondary: 4 })),
+      getActualSecondaryRate: vi.fn(() => "10.00"),
+      setStatsPanelFieldText
+    };
+
+    runtime.GameManager.prototype.updateStatsPanel.call(manager, 12, 9, 3, 7, 2);
+
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-valid-inputs", 7);
+    expect(setStatsPanelFieldText).toHaveBeenCalledWith("stats-panel-invalid-inputs", 2);
   });
 });

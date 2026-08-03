@@ -533,7 +533,7 @@
     var copy = lang === "en"
       ? {
           title: "Settings",
-          subtitle: "Manage timers, themes, and palettes in clearly grouped sections.",
+          subtitle: "Manage timers, language, themes, and palettes in clearly grouped sections.",
           listTitle: "Palettes",
           currentName: "Current Palette",
           create: "New Copy",
@@ -554,7 +554,7 @@
         }
       : {
           title: "设置",
-          subtitle: "集中管理计时器、主题与色板，相关选项按类别收纳。",
+          subtitle: "集中管理计时器、界面语言、主题与色板，相关选项按类别收纳。",
           listTitle: "色板",
           empty: "未选择色板",
           create: "新建副本",
@@ -759,40 +759,11 @@
   }
 
   function ensureLanguageRow(lang) {
-    var modal = global.document.querySelector("#settings-modal .settings-modal-content");
-    if (!modal) return;
     var row = global.document.getElementById("ui-language-settings-row");
     var label = global.document.getElementById("ui-language-label");
     var toggle = global.document.getElementById("ui-language-toggle");
     var thumb = global.document.getElementById("ui-language-toggle-thumb");
-    if (!row) {
-      row = global.document.createElement("div");
-      row.id = "ui-language-settings-row";
-      row.className = "settings-row settings-toggle-row language-settings-row";
-      row.innerHTML =
-        '<div class="settings-toggle-main language-toggle-main">' +
-        '  <div class="settings-toggle-copy">' +
-        '    <div id="ui-language-label" class="settings-toggle-title"></div>' +
-        '    <div id="ui-language-desc" class="settings-toggle-desc"></div>' +
-        '  </div>' +
-        '  <label class="settings-switch language-settings-switch">' +
-        '    <input id="ui-language-toggle" type="checkbox" role="switch">' +
-        '    <span class="settings-switch-slider language-switch-slider"></span>' +
-        '    <span id="ui-language-toggle-thumb" class="language-switch-thumb">\u4e2d</span>' +
-        '  </label>' +
-        '</div>';
-      var toolkitEntry = modal.querySelector("#toolkit-entry-row");
-      var actions = modal.querySelector(".replay-modal-actions");
-      var anchor = toolkitEntry && toolkitEntry.parentNode === modal ? toolkitEntry : actions;
-      if (anchor && anchor.parentNode && typeof anchor.parentNode.insertBefore === "function") {
-        anchor.parentNode.insertBefore(row, anchor);
-      } else {
-        modal.appendChild(row);
-      }
-      label = global.document.getElementById("ui-language-label");
-      toggle = global.document.getElementById("ui-language-toggle");
-      thumb = global.document.getElementById("ui-language-toggle-thumb");
-    }
+    if (!row) return;
     if (!label || !toggle || !thumb) return;
     var desc = global.document.getElementById("ui-language-desc");
     label.textContent = lang === "en" ? "Language" : "\u754c\u9762\u8bed\u8a00";

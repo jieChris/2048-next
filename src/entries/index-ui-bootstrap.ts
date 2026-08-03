@@ -28,6 +28,7 @@ import { installReplayModalRuntime } from "../bootstrap/replay-modal";
 import { installReplayPageHostRuntime } from "../bootstrap/replay-page-host";
 import { installSettingsModalHostRuntime } from "../bootstrap/settings-modal-host";
 import { installSettingsModalPageHostRuntime } from "../bootstrap/settings-modal-page-host";
+import { initOperationFeedbackSettingsUI } from "../bootstrap/operation-feedback-settings";
 import * as storageRuntime from "../bootstrap/storage";
 import * as themeSettingsRuntime from "../bootstrap/theme-settings";
 import * as themeSettingsHostRuntime from "../bootstrap/theme-settings-host";
@@ -195,4 +196,5 @@ export function applyIndexUiBootstrapFromTsRuntime(): void {
     syncMobileUndoTopButtonAvailability: indexUiBootstrapResolvers.syncMobileUndoTopButtonAvailability,
     prettyTimeRuntime: coreContracts.prettyTimeRuntime
   });
+  initOperationFeedbackSettingsUI({ documentLike: document, windowLike: window });
 }
