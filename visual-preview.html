@@ -32,8 +32,10 @@
 
       <div class="workshop-toolbar-modes">
         <div class="workshop-control-group" role="group" data-i18n-aria="devicePicker">
-          <button class="is-active" type="button" aria-pressed="true" data-preview-device="desktop" data-i18n="desktop">桌面</button>
-          <button type="button" aria-pressed="false" data-preview-device="mobile" data-i18n="mobile">移动</button>
+          <button type="button" aria-pressed="false" data-preview-device="small-mobile" title="小屏手机">320×568</button>
+          <button type="button" aria-pressed="false" data-preview-device="mobile" title="主移动尺寸">390×844</button>
+          <button type="button" aria-pressed="false" data-preview-device="tablet" title="平板">768×1024</button>
+          <button class="is-active" type="button" aria-pressed="true" data-preview-device="desktop" title="桌面">1280×720</button>
         </div>
         <div class="workshop-control-group" role="group" data-i18n-aria="themePicker">
           <button class="is-active" type="button" aria-pressed="true" data-preview-theme="light" data-i18n="light">浅色</button>

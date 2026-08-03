@@ -40,12 +40,15 @@ const PROFILE_BUTTON_SVG =
 const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "account",
   "account-hub",
+  "account-settings",
   "achievements",
   "admin",
   "modes",
+  "password",
   "palette",
   "palette-hub",
   "practice",
+  "register",
   "replay",
   "stone-2k-monitor",
   "user-profile"

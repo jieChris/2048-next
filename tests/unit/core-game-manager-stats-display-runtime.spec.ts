@@ -8,7 +8,9 @@ type StatsDisplayRuntimeContext = {
   actuate: (manager: Record<string, unknown>) => void;
   createActuatorPayloadState: (manager: Record<string, unknown>) => Record<string, unknown>;
   finalizeActuatePersistence: (manager: Record<string, unknown>) => void;
+  resolveStepStatsFastPath: (manager: Record<string, unknown>) => Record<string, number> | null;
   resolveStatsDisplayLanguage: (manager: Record<string, unknown>) => string;
+  updateActuateStatsAndPanel: (manager: Record<string, unknown>) => void;
 };
 
 function loadStatsDisplayRuntime(extraContext?: Record<string, unknown>): StatsDisplayRuntimeContext {
@@ -153,5 +155,45 @@ describe("core game manager stats display runtime", () => {
     expect((manager.actuator as { actuate: ReturnType<typeof vi.fn> }).actuate).not.toHaveBeenCalled();
     expect(manager.computeStepStats).not.toHaveBeenCalled();
     expect(manager.updateStatsPanel).not.toHaveBeenCalled();
+  });
+
+  it("normalizes current-round input counts in the stats fast path", () => {
+    const runtime = loadStatsDisplayRuntime();
+
+    expect(
+      runtime.resolveStepStatsFastPath({
+        replayMode: false,
+        moveHistory: [{}, {}, {}],
+        successfulMoveCount: 2.9,
+        undoUsed: 1,
+        validInputCount: "7.8",
+        invalidInputCount: -4
+      })
+    ).toEqual({
+      totalSteps: 3,
+      moveSteps: 2,
+      undoSteps: 1,
+      validInputs: 7,
+      invalidInputs: 0
+    });
+  });
+
+  it("passes normalized input counts through the stats display update", () => {
+    const updateStatsPanel = vi.fn();
+    const runtime = loadStatsDisplayRuntime({
+      resolveManagerElementById: vi.fn(() => null)
+    });
+    const manager = {
+      replayMode: true,
+      validInputCount: 5.6,
+      invalidInputCount: "2.9",
+      computeStepStats: vi.fn(() => ({ totalSteps: 8, moveSteps: 6, undoSteps: 2 })),
+      updateStatsPanel
+    };
+
+    runtime.updateActuateStatsAndPanel(manager);
+
+    expect(manager.computeStepStats).toHaveBeenCalledTimes(1);
+    expect(updateStatsPanel).toHaveBeenCalledWith(8, 6, 2, 5, 2);
   });
 });

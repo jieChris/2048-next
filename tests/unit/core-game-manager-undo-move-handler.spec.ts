@@ -2,12 +2,36 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createGameManagerUndoMoveHandlerRuntime,
+  executeUndoMove,
   handleUndoMove,
   installGameManagerUndoMoveHandlerRuntime,
   type GameManagerUndoMoveHandlerRuntime
 } from "../../src/core/game-manager-undo-move-handler";
 
 describe("core game manager undo move handler", () => {
+  it("distinguishes non-undo input from a recognized but unavailable undo", () => {
+    expect(executeUndoMove({}, 0)).toEqual({ handled: false, valid: false });
+    expect(
+      executeUndoMove({}, -1, {
+        canExecuteUndoMove: vi.fn(() => false)
+      })
+    ).toEqual({ handled: true, valid: false });
+  });
+
+  it("does not validate or actuate when an undo restore does not complete", () => {
+    const actuate = vi.fn();
+
+    expect(
+      executeUndoMove({ undoStack: [{}] }, -1, {
+        actuate,
+        canExecuteUndoMove: vi.fn(() => true),
+        executeUndoRestorePipeline: vi.fn(() => null),
+        pushRedoSnapshotBeforeUndo: vi.fn()
+      })
+    ).toEqual({ handled: true, valid: false });
+    expect(actuate).not.toHaveBeenCalled();
+  });
+
   it("runs the redo pipeline before actuating and optionally restarting the timer", () => {
     const actuate = vi.fn();
     const startTimer = vi.fn();
@@ -18,7 +42,7 @@ describe("core game manager undo move handler", () => {
       startTimer
     };
 
-    const handled = handleUndoMove(manager, -2, {
+    const result = executeUndoMove(manager, -2, {
       actuate,
       canExecuteRedoMove,
       canExecuteUndoMove: vi.fn(),
@@ -29,7 +53,7 @@ describe("core game manager undo move handler", () => {
       shouldStartTimerAfterUndoRestore: vi.fn()
     });
 
-    expect(handled).toBe(true);
+    expect(result).toEqual({ handled: true, valid: true });
     expect(canExecuteRedoMove).toHaveBeenCalledWith(manager);
     expect(executeRedoRestorePipeline).toHaveBeenCalledWith(manager);
     expect(actuate).toHaveBeenCalledWith(manager);
@@ -48,7 +72,7 @@ describe("core game manager undo move handler", () => {
       startTimer
     };
 
-    const handled = handleUndoMove(manager, -1, {
+    const result = executeUndoMove(manager, -1, {
       actuate,
       canExecuteRedoMove: vi.fn(),
       canExecuteUndoMove,
@@ -59,7 +83,7 @@ describe("core game manager undo move handler", () => {
       shouldStartTimerAfterUndoRestore: (_target, undoRestore) => undoRestore.shouldStartTimer
     });
 
-    expect(handled).toBe(true);
+    expect(result).toEqual({ handled: true, valid: true });
     expect(canExecuteUndoMove).toHaveBeenCalledWith(manager);
     expect(pushRedoSnapshotBeforeUndo).toHaveBeenCalledWith(manager, manager.undoStack[0]);
     expect(executeUndoRestorePipeline).toHaveBeenCalledWith(manager, -1);
@@ -70,6 +94,7 @@ describe("core game manager undo move handler", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createGameManagerUndoMoveHandlerRuntime();
     expect(runtime.handleUndoMove).toBe(handleUndoMove);
+    expect(runtime.executeUndoMove).toBe(executeUndoMove);
 
     const windowLike: { CoreGameManagerUndoMoveHandlerRuntime?: GameManagerUndoMoveHandlerRuntime } = {};
     expect(installGameManagerUndoMoveHandlerRuntime({ windowLike })).toBe(
@@ -77,11 +102,19 @@ describe("core game manager undo move handler", () => {
     );
     expect(windowLike.CoreGameManagerUndoMoveHandlerRuntime?.handleUndoMove).toBe(handleUndoMove);
 
-    const existing = { handleUndoMove: vi.fn() };
-    expect(
-      installGameManagerUndoMoveHandlerRuntime({
-        windowLike: { CoreGameManagerUndoMoveHandlerRuntime: existing }
-      })
-    ).toBe(existing);
+    expect(handleUndoMove({}, -1, { canExecuteUndoMove: vi.fn(() => false) })).toBe(true);
+
+    const originalHandleUndoMove = vi.fn();
+    const existing: {
+      executeUndoMove?: typeof executeUndoMove;
+      handleUndoMove: typeof originalHandleUndoMove;
+    } = { handleUndoMove: originalHandleUndoMove };
+    const installed = installGameManagerUndoMoveHandlerRuntime({
+      windowLike: { CoreGameManagerUndoMoveHandlerRuntime: existing }
+    });
+
+    expect(installed).toBe(existing);
+    expect(existing.handleUndoMove).toBe(originalHandleUndoMove);
+    expect(existing.executeUndoMove).toBe(executeUndoMove);
   });
 });

@@ -28,12 +28,23 @@ export interface GameManagerUndoMoveHandlerOperations {
   ) => boolean;
 }
 
+export interface GameManagerUndoMoveResult {
+  handled: boolean;
+  valid: boolean;
+}
+
 export interface GameManagerUndoMoveHandlerRuntime {
+  executeUndoMove: typeof executeUndoMove;
+  handleUndoMove: typeof handleUndoMove;
+}
+
+export interface InstallableGameManagerUndoMoveHandlerRuntime {
+  executeUndoMove?: typeof executeUndoMove;
   handleUndoMove: typeof handleUndoMove;
 }
 
 export interface GameManagerUndoMoveHandlerWindowLike {
-  CoreGameManagerUndoMoveHandlerRuntime?: GameManagerUndoMoveHandlerRuntime;
+  CoreGameManagerUndoMoveHandlerRuntime?: InstallableGameManagerUndoMoveHandlerRuntime;
 }
 
 export interface GameManagerUndoMoveHandlerRuntimeInstallOptions {
@@ -48,36 +59,52 @@ function resolveUpcomingUndoEntry(manager: GameManagerUndoMoveHandlerManagerLike
     : source;
 }
 
+export function executeUndoMove(
+  manager: GameManagerUndoMoveHandlerManagerLike | null | undefined,
+  direction: number,
+  operations: GameManagerUndoMoveHandlerOperations = {}
+): GameManagerUndoMoveResult {
+  if (!manager || (direction !== -1 && direction !== -2)) {
+    return { handled: false, valid: false };
+  }
+
+  if (direction === -2) {
+    if (!operations.canExecuteRedoMove?.(manager)) return { handled: true, valid: false };
+    const redoRestore = operations.executeRedoRestorePipeline?.(manager);
+    if (!redoRestore || typeof operations.actuate !== "function") {
+      return { handled: true, valid: false };
+    }
+    operations.actuate(manager);
+    if (operations.shouldStartTimerAfterRedoRestore?.(manager, redoRestore)) {
+      manager.startTimer?.();
+    }
+    return { handled: true, valid: true };
+  }
+
+  if (!operations.canExecuteUndoMove?.(manager)) return { handled: true, valid: false };
+  operations.pushRedoSnapshotBeforeUndo?.(manager, resolveUpcomingUndoEntry(manager));
+  const undoRestore = operations.executeUndoRestorePipeline?.(manager, direction);
+  if (!undoRestore || typeof operations.actuate !== "function") {
+    return { handled: true, valid: false };
+  }
+  operations.actuate(manager);
+  if (operations.shouldStartTimerAfterUndoRestore?.(manager, undoRestore)) {
+    manager.startTimer?.();
+  }
+  return { handled: true, valid: true };
+}
+
 export function handleUndoMove(
   manager: GameManagerUndoMoveHandlerManagerLike | null | undefined,
   direction: number,
   operations: GameManagerUndoMoveHandlerOperations = {}
 ): boolean {
-  if (!manager || (direction !== -1 && direction !== -2)) return false;
-
-  if (direction === -2) {
-    if (!operations.canExecuteRedoMove?.(manager)) return true;
-    const redoRestore = operations.executeRedoRestorePipeline?.(manager);
-    if (!redoRestore) return true;
-    operations.actuate?.(manager);
-    if (operations.shouldStartTimerAfterRedoRestore?.(manager, redoRestore)) {
-      manager.startTimer?.();
-    }
-    return true;
-  }
-
-  if (!operations.canExecuteUndoMove?.(manager)) return true;
-  operations.pushRedoSnapshotBeforeUndo?.(manager, resolveUpcomingUndoEntry(manager));
-  const undoRestore = operations.executeUndoRestorePipeline?.(manager, direction) || {};
-  operations.actuate?.(manager);
-  if (operations.shouldStartTimerAfterUndoRestore?.(manager, undoRestore)) {
-    manager.startTimer?.();
-  }
-  return true;
+  return executeUndoMove(manager, direction, operations).handled;
 }
 
 export function createGameManagerUndoMoveHandlerRuntime(): GameManagerUndoMoveHandlerRuntime {
   return {
+    executeUndoMove,
     handleUndoMove
   };
 }
@@ -94,6 +121,8 @@ export function installGameManagerUndoMoveHandlerRuntime(
   if (!target) return null;
   if (!target.CoreGameManagerUndoMoveHandlerRuntime) {
     target.CoreGameManagerUndoMoveHandlerRuntime = createGameManagerUndoMoveHandlerRuntime();
+  } else if (typeof target.CoreGameManagerUndoMoveHandlerRuntime.executeUndoMove !== "function") {
+    target.CoreGameManagerUndoMoveHandlerRuntime.executeUndoMove = executeUndoMove;
   }
-  return target.CoreGameManagerUndoMoveHandlerRuntime;
+  return target.CoreGameManagerUndoMoveHandlerRuntime as GameManagerUndoMoveHandlerRuntime;
 }

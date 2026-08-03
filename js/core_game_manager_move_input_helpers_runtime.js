@@ -318,34 +318,59 @@ function consumeItemSpawnValueOverride(manager, fallbackValue) {
   return override;
 }
 
-function tryHandleMoveInputImmediately(manager, direction) {
-  if (direction == -1 || direction == -2) {
-    manager.move(direction);
+function normalizeMoveInputAttempt(attempt) {
+  if (attempt && typeof attempt === "object" && "direction" in attempt) return attempt;
+  return { direction: attempt, feedback: null };
+}
+
+function isUndoMoveDirection(direction) {
+  return direction == -1 || direction == -2;
+}
+
+function isRankCheckpointRestoreActive(manager) {
+  return !!(manager && (
+    manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true
+  ));
+}
+
+function executeImmediateUndoMoveInput(manager, attempt) {
+  manager.pendingMoveInput = null;
+  executeImmediateMoveInput(manager, attempt, Date.now());
+}
+
+function tryHandleMoveInputImmediately(manager, attempt) {
+  if (isUndoMoveDirection(attempt.direction)) {
+    executeImmediateUndoMoveInput(manager, attempt);
     return true;
   }
+  if (hasPendingMoveInput(manager)) return false;
   var throttleMs = resolveMoveInputThrottleMs(manager);
   if (throttleMs <= 0) {
-    manager.move(direction);
+    executeImmediateMoveInput(manager, attempt, Date.now());
     return true;
   }
   var now = Date.now();
   if (!manager.moveInputFlushScheduled && (now - manager.lastMoveInputAt) >= throttleMs) {
-    executeImmediateMoveInput(manager, direction, now);
+    executeImmediateMoveInput(manager, attempt, now);
     return true;
   }
   return false;
 }
 
-function queueMoveInputDirection(manager, direction) {
-  manager.pendingMoveInput = direction;
+function queueMoveInputAttempt(manager, attempt) {
+  manager.pendingMoveInput = attempt;
   scheduleMoveInputFlush(manager);
 }
 
-function handleMoveInput(manager, direction) {
+function handleMoveInput(manager, attempt) {
   if (!manager) return;
-  if (manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true) return;
-  if (tryHandleMoveInputImmediately(manager, direction)) return;
-  queueMoveInputDirection(manager, direction);
+  if (isRankCheckpointRestoreActive(manager)) {
+    manager.pendingMoveInput = null;
+    return;
+  }
+  var normalizedAttempt = normalizeMoveInputAttempt(attempt);
+  if (tryHandleMoveInputImmediately(manager, normalizedAttempt)) return;
+  queueMoveInputAttempt(manager, normalizedAttempt);
 }
 
 function createMoveInputThrottleResolveArgs(manager) {
@@ -380,10 +405,30 @@ function resolveMoveInputThrottleMs(manager) {
   );
 }
 
-function executeImmediateMoveInput(manager, direction, now) {
-  if (!manager) return;
-  manager.lastMoveInputAt = now;
-  manager.move(direction);
+function resolveOperationFeedbackInputEventsRuntime() {
+  if (typeof CoreGameManagerInputEventsRuntime !== "undefined" && CoreGameManagerInputEventsRuntime) {
+    return CoreGameManagerInputEventsRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerInputEventsRuntime) {
+    return window.CoreGameManagerInputEventsRuntime;
+  }
+  return null;
+}
+
+function publishConfirmedMoveInput(manager, attempt, valid) {
+  var runtime = resolveOperationFeedbackInputEventsRuntime();
+  if (runtime && typeof runtime.publishConfirmedOperationFeedback === "function") {
+    runtime.publishConfirmedOperationFeedback(manager, attempt, valid);
+  }
+}
+
+function executeImmediateMoveInput(manager, attempt, now) {
+  if (!manager || isRankCheckpointRestoreActive(manager)) return false;
+  var normalizedAttempt = normalizeMoveInputAttempt(attempt);
+  if (!isUndoMoveDirection(normalizedAttempt.direction)) manager.lastMoveInputAt = now;
+  var valid = manager.move(normalizedAttempt.direction) === true;
+  publishConfirmedMoveInput(manager, normalizedAttempt, valid);
+  return valid;
 }
 
 function hasPendingMoveInput(manager) {
@@ -398,42 +443,44 @@ function scheduleMoveInputFlush(manager) {
   });
 }
 
-function scheduleDelayedPendingMoveInput(manager, direction, wait) {
+function scheduleDelayedPendingMoveInput(manager, attempt, wait) {
   setTimeout(function () {
-    if (hasPendingMoveInput(manager)) {
-      // Newer input exists; next flush will consume latest direction.
-      scheduleMoveInputFlush(manager);
-      return;
-    }
-    executeImmediateMoveInput(manager, direction, Date.now());
+    if (manager.pendingMoveInput !== attempt) return;
+    manager.pendingMoveInput = null;
+    executeImmediateMoveInput(manager, attempt, Date.now());
   }, wait);
 }
 
 function flushPendingMoveInput(manager) {
   if (!manager) return;
   manager.moveInputFlushScheduled = false;
-  var direction = manager.pendingMoveInput;
-  manager.pendingMoveInput = null;
-  if (direction === null || typeof direction === "undefined") return;
+  var attempt = manager.pendingMoveInput;
+  if (attempt === null || typeof attempt === "undefined") return;
+  if (isRankCheckpointRestoreActive(manager)) {
+    manager.pendingMoveInput = null;
+    return;
+  }
   var throttleMs = resolveMoveInputThrottleMs(manager);
-  if (throttleMs <= 0) return manager.move(direction);
   var now = Date.now();
-  var wait = throttleMs - (now - manager.lastMoveInputAt);
-  if (wait <= 0) return executeImmediateMoveInput(manager, direction, now);
-  return scheduleDelayedPendingMoveInput(manager, direction, wait);
+  var wait = throttleMs <= 0 ? 0 : throttleMs - (now - manager.lastMoveInputAt);
+  if (wait > 0) return scheduleDelayedPendingMoveInput(manager, attempt, wait);
+  manager.pendingMoveInput = null;
+  return executeImmediateMoveInput(manager, attempt, now);
 }
 
-function shouldAbortMoveBeforePlanning(manager, direction) {
+function shouldAbortMoveBeforeUndo(manager) {
   if (!manager) return true;
-  if (manager.rankedSetupBlockedUntilSessionReady) return true;
+  if (manager.rankedSetupBlockedUntilSessionReady || isRankCheckpointRestoreActive(manager)) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
     }
     return true;
   }
-  // 0~7: move directions, -1: undo
-  if (handleUndoMove(manager, direction)) return true;
+  return false;
+}
+
+function shouldAbortMoveBeforePlanning(manager, direction) {
   if (!manager.isDirectionAllowed(direction)) return true;
   if (isGameTerminated(manager)) return true;
   if (checkAndHandleMoveTimeout(manager, Date.now())) return true;
@@ -442,15 +489,49 @@ function shouldAbortMoveBeforePlanning(manager, direction) {
   return false;
 }
 
+function resolveUndoMoveHandlerRuntimeForMove() {
+  if (typeof CoreGameManagerUndoMoveHandlerRuntime !== "undefined" && CoreGameManagerUndoMoveHandlerRuntime) {
+    return CoreGameManagerUndoMoveHandlerRuntime;
+  }
+  if (typeof window !== "undefined" && window && window.CoreGameManagerUndoMoveHandlerRuntime) {
+    return window.CoreGameManagerUndoMoveHandlerRuntime;
+  }
+  return null;
+}
+
+function createUndoMoveOperationsForMove() {
+  return {
+    actuate: actuate, canExecuteRedoMove: canExecuteRedoMove,
+    canExecuteUndoMove: canExecuteUndoMove, executeRedoRestorePipeline: executeRedoRestorePipeline,
+    executeUndoRestorePipeline: executeUndoRestorePipeline,
+    pushRedoSnapshotBeforeUndo: pushRedoSnapshotBeforeUndo,
+    shouldStartTimerAfterRedoRestore: shouldStartTimerAfterRedoRestore,
+    shouldStartTimerAfterUndoRestore: shouldStartTimerAfterUndoRestore
+  };
+}
+
+function executeUndoMoveForMove(manager, direction) {
+  if (!isUndoMoveDirection(direction)) return { handled: false, valid: false };
+  var runtime = resolveUndoMoveHandlerRuntimeForMove();
+  if (runtime && typeof runtime.executeUndoMove === "function") {
+    return runtime.executeUndoMove(manager, direction, createUndoMoveOperationsForMove());
+  }
+  return { handled: handleUndoMove(manager, direction), valid: false };
+}
+
 function move(manager, direction) {
-  if (shouldAbortMoveBeforePlanning(manager, direction)) return;
+  if (shouldAbortMoveBeforeUndo(manager)) return false;
+  var undoResult = executeUndoMoveForMove(manager, direction);
+  if (undoResult.handled) return undoResult.valid === true;
+  if (shouldAbortMoveBeforePlanning(manager, direction)) return false;
   var movePlan = buildMovePlan(manager, direction);
-  if (!(movePlan && movePlan.vector)) return;
+  if (!(movePlan && movePlan.vector)) return false;
   var traversals = buildTraversals(manager, movePlan.vector);
   resetGridMergeStateBeforeMove(manager);
   var moved = processMoveTraversals(manager, movePlan, traversals);
-  if (!moved) return;
+  if (!moved) return false;
   finalizeSuccessfulMove(manager, movePlan, direction);
+  return true;
 }
 
 function shouldSkipMoveByLockedDirection(manager, direction, lockedDirection) {

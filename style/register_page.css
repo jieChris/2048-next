@@ -15,6 +15,7 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
 
 .register-page-shell {
   width: min(760px, calc(100vw - 32px));
+  box-sizing: border-box;
 }
 
 .register-card {
@@ -69,7 +70,7 @@ body[data-page="register-hub"][data-i18n-ready="0"] {
 
 @media (max-width: 560px) {
   .register-page-shell {
-    width: calc(100vw - 12px);
+    width: 100%;
     margin: 10px auto 18px;
   }
 

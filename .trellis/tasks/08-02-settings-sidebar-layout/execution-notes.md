@@ -1,0 +1,68 @@
+# Execution Notes
+
+## Route Deviation
+
+- 2026-08-02：标准 Trellis 上下文脚本与共享指南索引缺失；保守回退为根规范、现有 palette 页面和冒烟规范。未改计时器、外观或色板业务逻辑。
+
+## Validation
+
+- `npx tsc --noEmit`：通过。
+- `npx vitest run tests/unit/palette-entry-bootstrap.spec.ts`：通过。
+- `npm run build`：通过；保留既有 `ui-preview.html` 普通脚本无法由 Vite 打包的警告。
+- `git diff --check`：通过。
+
+## Primer 导航修订（2026-08-02）
+
+- 根据确认方案，将左栏改为无卡片容器的 Primer NavList 风格：`184px` 宽、透明背景、无外边框；活动项为 `3px` 青色左线与浅色底。
+- 分类说明从导航中移至对应内容标题下；小屏 `820px` 下使用静态双列顶部导航。
+- 内置浏览器复核：桌面导航宽 `184px`、透明且无边框，活动项左线 `3px`；`#appearance-settings` 与 `#timer-settings` 均能正确切换内容和 `aria-current`；窄屏两项完整可见且内容在导航下方。
+
+## 固定回首页修复（2026-08-02）
+
+- 根因：`bootstrap-direct-page` 会将所有 `.page-back-button` 拦截为 `history.back()`；设置分类的哈希切换也会产生历史记录，因而“回首页”先退回上一个分类。
+- 修复：仅为 palette 页的固定目的地链接标记 `data-back-navigation="fixed"`，共享拦截器跳过该标记。未标记页面仍保持原有的上下文返回行为。
+- 回归：先新增“固定返回链接不调用 `history.back()`”单测并确认其失败；实现后 `tests/unit/app-bootstrap-direct-page.spec.ts`（7 项）与 `tests/unit/palette-entry-bootstrap.spec.ts`（1 项）均通过，`npx tsc --noEmit` 通过。
+- 内置浏览器：依次切换外观与配色、计时器、外观与配色后点击“回首页”，实际 URL 为 `/2048.html`。
+
+## 外观与配色整体折叠（2026-08-02）
+
+- 修正范围：撤销仅折叠主题下拉的错误实现，改为用一个原生折叠容器包裹完整外观工作区。
+- 收起时仅显示“外观与配色”摘要；展开后才显示主题选择、色板列表、颜色编辑和棋盘预览。
+- 先新增“完整外观工作区默认收起”的 HTML 回归测试并确认失败；实现后 `tests/unit/html-module-entry-pages.spec.ts`（30 项）与 `tests/unit/palette-entry-bootstrap.spec.ts`（1 项）通过，内置浏览器确认完整工作区关闭／展开状态均正确。
+
+## 同页书签目录修订（2026-08-02）
+
+- 根据确认方案，计时器与外观与配色不再互斥隐藏，两个设置区在同一纵向页面连续显示；左侧只保留跳转到 `#timer-settings`、`#appearance-settings` 的书签目录。
+- 目录使用原生锚点与 `scroll-margin-top` 完成跳转，运行时只同步当前锚点的 `aria-current="location"` 和书签强调色，不再改变任何区块的可见性。
+- 外观与配色完整工作区仍由原生 `<details>` 默认收起；未新增组件、依赖或额外状态。
+- 验证：先新增“外观区默认可定位、工作区仍折叠”的静态回归断言并确认失败，随后 `tests/unit/html-module-entry-pages.spec.ts`（30 项）、`tests/unit/palette-entry-bootstrap.spec.ts`（1 项）、`npx tsc --noEmit` 与 `npm run build` 通过。构建保留既有 `ui-preview.html` 普通脚本不能打包的警告。
+- 视觉：仅用 Codex 内置浏览器核对 1280px 与 390px；两设置区均可见、书签跳转不隐藏区块、外观折叠可展开。`tests/visual/manifest.json` 未登记 palette 页面，因此未制造视觉基线或运行独立 Playwright。
+
+## 书签导航视觉修订（2026-08-02）
+
+- 根据反馈，移除原先每项各自的静态书签。参考 Material Web Navigation Rail 的“单一活动指示器”交互，不复制组件或引入依赖：一个书签指示器根据当前锚点滑动到对应条目，文字同步位移与强调。
+- 桌面端导航固定在页面内容左缘并以视口垂直中线定位；`resize` 时重算书签偏移。窄屏恢复为顶部双锚点，隐藏移动指示器并用下划线表示当前位置，避免水平布局错位。
+- 内置浏览器验证：1280×720 下导航组中心位于视口中线，切换到外观与配色后 hash、`aria-current` 与书签偏移均同步；390×844 下顶部锚点完整可见。未操作 Chrome 或独立 Playwright；palette 页面仍未在视觉 manifest 登记，因此未更新基线。
+- 后续确认：活动指示器改为沿导航细线滑动的小圆点；目录文字恢复左对齐，激活项保留轻微右移。
+
+## 计时器框架与目录对齐修订（2026-08-02）
+
+- 计时器移除旧的外层白色卡片、页面标题和胶囊标签，直接复用外观与配色相同的单层原生折叠框；锚点、折叠状态及子计时器业务不变。
+- 修正窄屏断点将目录文本强制居中的覆写；目录链接在所有断点均左对齐。
+- 验证：内置浏览器 1280×720 下，两折叠框的边框、圆角和背景计算样式一致，目录为左对齐；静态回归测试覆盖桌面及 `max-width: 860px` 两处目录规则均为 `justify-content: flex-start`。未启动 Chrome、独立 Playwright，且未更新视觉基线（palette 页面未登记在 manifest）。
+- `npx vitest run tests/unit/html-module-entry-pages.spec.ts tests/unit/palette-entry-bootstrap.spec.ts`（32 项）、`npx tsc --noEmit`、`npm run build` 与 `git diff --check`：均通过。构建仅保留既有 `ui-preview.html` 非模块脚本警告。
+
+## 右侧模块与书签联动修订（2026-08-02）
+
+- 右侧计时器、外观与配色继续使用独立且一致的折叠框，并增加 `20px` 纵向间距，消除相邻边框和圆角粘连。
+- 通过左侧书签或带设置锚点的 URL 定位时，目标折叠框自动展开并平滑滚动到页面顶部；普通无锚点进入仍保持默认折叠状态，且不自动关闭另一个模块。
+- 使用原生 `IntersectionObserver` 根据右侧模块的可见比例同步左侧活动文字和圆点，手动滚动时不再停留在旧分类。
+- 左侧书签直接绑定目标展开行为；即使 URL 已经是同一锚点，用户手动收起后再次点击该书签也会重新展开并定位。
+- 先新增布局与交互回归测试并确认因缺少间距、展开滚动和可见状态同步而失败；实现后相关单测转绿。内置浏览器 1280×720 验证：实际模块间距 `20px`（像素取整测得 `19px`）、锚点目标自动展开、手动滚动后活动项切换正确。
+
+## 已废弃：第三项操作反馈入口（2026-08-02）
+
+- 左侧书签目录与右侧内容区同步增加“操作反馈”；既有两项布局、折叠行为和联动逻辑不变。
+- 第三项仅在桌面宽度显示，并沿用同一圆点指示器和锚点定位机制。
+- 定向 Vitest 40 项、类型检查、构建、差异格式检查及内置浏览器桌面复核通过；未启动 Chrome。
+- 后续设置重构已将完整设置页第三项替换为“界面语言”；操作反馈只保留在游戏设置弹窗中，本节仅记录被替代的历史方案。

@@ -53,13 +53,19 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
-      "pku2048-inline-stats-toggle"
+      "operation-feedback-settings-row",
+      "pku2048-inline-stats-toggle",
+      "settings-page-entry-row"
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelector("#toolkit-entry-row")).toBeNull();
     expect(dom.window.document.querySelector("#toolkit-account-link")).toBeNull();
+    expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
+    expect(dom.window.document.querySelector<HTMLAnchorElement>("#settings-page-entry-link")?.getAttribute("href")).toBe("palette.html");
+    expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
+    expect(dom.window.document.querySelector("[data-operation-feedback-layout-open]")).toBeNull();
   });
 
   it("preserves dynamic settings rows and reuses canonical nodes on repeated opens", () => {
@@ -67,6 +73,15 @@ describe("bootstrap settings modal page host", () => {
       <div id="settings-modal">
         <div class="settings-modal-content">
           <h3>设置</h3>
+          <div class="settings-row settings-toggle-row">
+            <input id="win-prompt-toggle" type="checkbox">
+          </div>
+          <div id="bgm-settings-row" class="settings-row settings-toggle-row">
+            <input id="bgm-toggle" type="checkbox">
+          </div>
+          <div id="night-bg-settings-row" class="settings-row settings-toggle-row">
+            <input id="night-bg-toggle" type="checkbox">
+          </div>
           <div id="top-button-style-settings-row" class="settings-row settings-toggle-row">
             <input id="top-button-style-toggle" type="checkbox">
           </div>
@@ -80,17 +95,21 @@ describe("bootstrap settings modal page host", () => {
       url: "https://example.test/"
     });
 
+    const winPromptToggle = dom.window.document.getElementById("win-prompt-toggle");
+    const bgmToggle = dom.window.document.getElementById("bgm-toggle");
+    const nightToggle = dom.window.document.getElementById("night-bg-toggle");
+    const topButtonStyleRow = dom.window.document.getElementById("top-button-style-settings-row");
     normalizeSettingsModalContent({
       documentLike: dom.window.document
     });
-    const winPromptToggle = dom.window.document.getElementById("win-prompt-toggle");
-    const topButtonStyleRow = dom.window.document.getElementById("top-button-style-settings-row");
 
     normalizeSettingsModalContent({
       documentLike: dom.window.document
     });
 
     expect(dom.window.document.getElementById("win-prompt-toggle")).toBe(winPromptToggle);
+    expect(dom.window.document.getElementById("bgm-toggle")).toBe(bgmToggle);
+    expect(dom.window.document.getElementById("night-bg-toggle")).toBe(nightToggle);
     expect(dom.window.document.getElementById("top-button-style-settings-row")).toBe(topButtonStyleRow);
     expect(
       Array.from(dom.window.document.querySelectorAll(".settings-modal-content > .settings-row"))
@@ -99,9 +118,12 @@ describe("bootstrap settings modal page host", () => {
       "win-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
+      "operation-feedback-settings-row",
       "top-button-style-settings-row",
-      "ui-language-settings-row"
+      "settings-page-entry-row"
     ]);
+    expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
+    expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
   });
 
   it("creates settings action resolvers with safe fallbacks", () => {

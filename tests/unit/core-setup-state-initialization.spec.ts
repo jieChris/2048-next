@@ -90,7 +90,7 @@ describe("core setup state initialization runtime", () => {
       pendingTimerAnchorServerMs: 95_000,
       timerUpdateIntervalMs: 250,
       timerFrozen: true,
-      pendingMoveInput: { direction: 1 },
+      pendingMoveInput: { direction: 1, feedback: { id: 7 } },
       moveInputFlushScheduled: true,
       lastMoveInputAt: 123,
       moveDeadlineAt: 456

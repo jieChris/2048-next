@@ -21,7 +21,8 @@
     body[data-page="relay-5x5"] {
       min-height: 100vh;
     }
-    .relay-page { margin-top: 24px; margin-bottom: 24px; position: relative; }
+    .relay-page { width: min(750px, 100%); margin-top: 24px; margin-bottom: 24px; position: relative; box-sizing: border-box; }
+    .relay-page :is(.relay-panel, .relay-held-snapshot-wrap, .relay-replay-wrap, .relay-table-wrap, .relay-replay-inline-row, .relay-replay-segment-row) { box-sizing: border-box; min-width: 0; max-width: 100%; }
     .relay-head { margin-bottom: 14px; }
     .relay-head h1 { margin: 0; color: #776e65; font-size: 34px; line-height: 1.1; }
     .relay-head p { margin: 10px 0 0; color: #8a8178; font-size: 15px; }
@@ -530,6 +531,7 @@
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
     }
     @media (max-width: 900px) {
+      .relay-page { width: 100%; }
       .relay-grid { grid-template-columns: 1fr; }
       .relay-grid--advanced { grid-template-columns: 1fr; }
       .relay-snapshot-replay-row { grid-template-columns: 1fr; }
@@ -559,6 +561,18 @@
       }
       .relay-replay-segment-row {
         grid-template-columns: minmax(0, 1fr);
+      }
+      .relay-replay-segment-board-wrap {
+        width: min(225px, 100%);
+        margin-left: 0;
+      }
+      .relay-replay-segment-board-wrap::before {
+        display: none;
+      }
+      .relay-replay-segment-hint,
+      #relay-replay-segment-board-hint {
+        width: 100%;
+        margin-left: 0;
       }
       #relay-replay-copy-segment-btn {
         width: 100%;

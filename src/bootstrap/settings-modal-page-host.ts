@@ -1,3 +1,5 @@
+import { initOperationFeedbackSettingsUI } from "./operation-feedback-settings";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
@@ -205,6 +207,44 @@ function buildSettingsToggleRowHtml(options: {
   );
 }
 
+function buildSettingsPageEntryHtml(lang: "zh" | "en"): string {
+  const isEn = lang === "en";
+  return (
+    `<div id="settings-page-entry-row" class="settings-row settings-page-entry-row">` +
+    `<a id="settings-page-entry-link" class="settings-page-entry-link" href="palette.html">` +
+    `<span class="settings-page-entry-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>` +
+    `<span class="settings-page-entry-copy"><strong>${isEn ? "Full Settings" : "完整设置"}</strong>` +
+    `<small>${isEn ? "Timers, language, themes and palettes" : "计时器、界面语言、主题与配色"}</small></span>` +
+    `<span class="settings-page-entry-arrow" aria-hidden="true">→</span>` +
+    `</a>` +
+    `</div>`
+  );
+}
+
+function buildOperationFeedbackRowHtml(lang: "zh" | "en"): string {
+  const isEn = lang === "en";
+  return (
+    `<div id="operation-feedback-settings-row" class="settings-row settings-toggle-row operation-feedback-settings-row">` +
+    `<div class="settings-toggle-main">` +
+    `<div class="settings-toggle-copy">` +
+    `<label for="operation-feedback-toggle" class="settings-toggle-title">${
+      isEn ? "Operation Feedback" : "操作反馈"
+    }</label>` +
+    `<div class="settings-toggle-desc">${
+      isEn ? "Show recent input and valid / invalid feedback in this game" : "显示本局最近操作及有效／无效反馈"
+    }</div>` +
+    `</div>` +
+    `<label class="settings-switch" for="operation-feedback-toggle" aria-label="${
+      isEn ? "Operation Feedback" : "操作反馈"
+    }">` +
+    `<input id="operation-feedback-toggle" type="checkbox">` +
+    `<span class="settings-switch-slider"></span>` +
+    `</label>` +
+    `</div>` +
+    `</div>`
+  );
+}
+
 function buildCanonicalSettingsModalInnerHtml(options: {
   lang: "zh" | "en";
   hasInlineStats: boolean;
@@ -245,6 +285,8 @@ function buildCanonicalSettingsModalInnerHtml(options: {
     })
   ];
 
+  rows.push(buildOperationFeedbackRowHtml(lang));
+
   if (options.hasInlineStats) {
     rows.push(
       buildSettingsToggleRowHtml({
@@ -258,6 +300,8 @@ function buildCanonicalSettingsModalInnerHtml(options: {
       })
     );
   }
+
+  rows.push(buildSettingsPageEntryHtml(lang));
 
   return rows.join("");
 }
@@ -274,16 +318,16 @@ const CANONICAL_SETTINGS_ROW_IDS = [
   "win-prompt-toggle",
   "bgm-settings-row",
   "night-bg-settings-row",
+  "operation-feedback-settings-row",
   "pku2048-inline-stats-toggle",
   "timer-module-view-toggle",
   "top-button-style-settings-row",
-  "ui-language-settings-row"
+  "settings-page-entry-row"
 ] as const;
 
 const DYNAMIC_SETTINGS_ROW_IDS = [
   "timer-module-view-toggle",
-  "top-button-style-settings-row",
-  "ui-language-settings-row"
+  "top-button-style-settings-row"
 ] as const;
 
 function reorderSettingsRows(content: unknown): void {
@@ -329,6 +373,7 @@ export function normalizeSettingsModalContent(input: {
     };
   }
   removeNode(getElementById(documentLike, "toolkit-entry-row"));
+  removeNode(getElementById(documentLike, "ui-language-settings-row"));
 
   const existingRows: unknown[] = [];
   const children = toRecord(toRecord(content).children);
@@ -356,6 +401,24 @@ export function normalizeSettingsModalContent(input: {
     });
     for (const row of existingRows) {
       appendChild(content, row);
+    }
+  } else {
+    const insertAdjacentHtml = asFunction<(position: string, html: string) => unknown>(
+      toRecord(content).insertAdjacentHTML
+    );
+    if (!getElementById(documentLike, "operation-feedback-toggle") && insertAdjacentHtml) {
+      (insertAdjacentHtml as unknown as Function).call(
+        content,
+        "beforeend",
+        buildOperationFeedbackRowHtml(readUiLanguage(source.windowLike))
+      );
+    }
+    if (!getElementById(documentLike, "settings-page-entry-row") && insertAdjacentHtml) {
+      (insertAdjacentHtml as unknown as Function).call(
+        content,
+        "beforeend",
+        buildSettingsPageEntryHtml(readUiLanguage(source.windowLike))
+      );
     }
   }
 
@@ -574,6 +637,10 @@ export function applySettingsModalPageOpen(input: {
   }
 
   normalizeSettingsModalContent({
+    documentLike: source.documentLike,
+    windowLike: source.windowLike
+  });
+  initOperationFeedbackSettingsUI({
     documentLike: source.documentLike,
     windowLike: source.windowLike
   });

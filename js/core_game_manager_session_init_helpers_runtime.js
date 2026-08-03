@@ -60,7 +60,8 @@ function initializeTimerMilestones(manager) {
 
 function resetRoundStatsStateFallback(manager) {
   if (!manager) return;
-  manager.comboStreak = 0; manager.successfulMoveCount = 0; manager.ipsInputCount = 0;
+  manager.comboStreak = 0; manager.successfulMoveCount = 0;
+  manager.validInputCount = 0; manager.invalidInputCount = 0; manager.ipsInputCount = 0;
   manager.ipsInputTimes = [];
   manager.undoUsed = 0; manager.lockConsumedAtMoveCount = -1;
   manager.lockedDirectionTurn = null; manager.lockedDirection = null;
@@ -92,9 +93,13 @@ function resetRoundStatsState(manager) {
       updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined,
       nowMs: Date.now()
     });
-    return;
+  } else {
+    resetRoundStatsStateFallback(manager);
   }
-  resetRoundStatsStateFallback(manager);
+  var inputEventsRuntime = resolveCoreGameManagerInputEventsRuntime();
+  if (inputEventsRuntime && typeof inputEventsRuntime.publishOperationFeedbackReset === "function") {
+    inputEventsRuntime.publishOperationFeedbackReset(manager);
+  }
 }
 
 function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, ScoreManager) {
