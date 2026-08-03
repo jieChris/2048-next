@@ -2878,6 +2878,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.actuate = function () {};
     try {
       restartWithBoard(manager, envelope.initialBoard, replayModeConfig);
+      manager.rankCheckpointApplying = true;
       manager.disableSessionSync = true;
       for (var actionIndex = 0; actionIndex < replayMoves.length; actionIndex++) {
         var action = replayMoves[actionIndex];

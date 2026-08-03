@@ -59,3 +59,8 @@
 - 本轮本地验证：checkpoint 目标单测 76/76、完整单元测试 1981/1981、`npx tsc --noEmit`、实际 JS `node --check`、7 项边界/结构审计、`git diff --check` 与生产构建全部通过；按浏览器硬性约束未启动独立 Playwright，相关 pages Smoke 交由 GitHub CI 验证。
 - 最终只读审查补充发现：相同 challenge 的 checkpoint 原先会在 seed 校验前直接接受；现按完整存档合同在双方 seed 可用时拒绝不一致。重开 Smoke 也补充等待在线提交钩子、旧会话身份及专用重开状态，避免在包装器绑定前触发测试。
 - 修正后三项阻塞点经同一只读审查 Agent 复核关闭，未发现新的阻塞问题；完整单测与生产构建再次通过。
+- CI `30810549442` 的 Refactor Gate 与 Pages Smoke 共同复现 compact checkpoint 刷新恢复失败；现场状态为镜像身份与 seed 完整、候选通过校验，但 `lastRankedCheckpointRestoreError` 为 `parse_unavailable`。实际 play 加载链已退役旧 replay helpers 脚本，而 TypeScript replay helper installer 没有把其既有内部 `parseReplayImportEnvelope(manager, text)` 暴露到 `online_leaderboard_runtime.js` 使用的共享全局入口。
+- 采用最小共享层修复：`installGameManagerReplayHelperGlobals()` 直接安装既有 parser，并在 installer 单测锁定该运行时合同；没有增加固定延时、恢复重试或重复 parser。
+- parser 就绪后的内置浏览器复现进一步证明：checkpoint 身份可恢复，但 `restartWithBoard()` 内部 `setup()` 会清空 `rankCheckpointApplying`；核心 move 因恢复标志直接中止，且非 replay 状态不消费 `forcedSpawn`。即使放行 move，替换后的初始盘面也未回写 `sessionReplayV1.init_tiles`，指定出生块未写入 `lastSpawn`，会使当前盘面、分数及下一次序列化继续分叉。
+- 最小修复复用既有恢复标志和 session replay 同步器：setup 后恢复 `rankCheckpointApplying`，仅在 `disableSessionSync === true` 时放行内部恢复 move（用户输入层仍无条件拦截），应用态消费并记录指定出生块，并在 `restartWithBoard()` 替换盘面后重同步回放初始块。最终 4 个目标单测文件 141/141、完整单元测试 1985/1985、TypeScript、变更 JS 语法检查、6 项发布相关结构/边界审计、`git diff --check` 与生产构建全部通过。
+- Codex 内置浏览器最终复验：标准 4×4 当前对局连续执行 3 次有效移动后生成紧凑 checkpoint，再写入 424242 分冲突存档并刷新；刷新前后 `clientRecordId`、8 分盘面、challenge/seed/token 均一致，恢复错误为空、镜像仍存在，冲突存档未被采用。测试标签与自建本地服务已关闭。

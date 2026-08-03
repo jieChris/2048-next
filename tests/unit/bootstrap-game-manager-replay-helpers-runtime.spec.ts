@@ -77,6 +77,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(windowLike.keepPlaying).toBeTypeOf("function");
     expect(windowLike.serializeReplay).toBeTypeOf("function");
     expect(windowLike.importReplay).toBeTypeOf("function");
+    expect(windowLike.parseReplayImportEnvelope).toBeTypeOf("function");
     expect(windowLike.stepReplay).toBeTypeOf("function");
   });
 

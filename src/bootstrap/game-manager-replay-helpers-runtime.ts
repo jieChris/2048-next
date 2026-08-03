@@ -1827,6 +1827,7 @@ export function installGameManagerReplayHelperGlobals(
     serializeReplayAsV9Verse,
     exportReplayAsV9VerseBlob,
     serializeReplayAsV9RplBase64,
+    parseReplayImportEnvelope,
     tryAutoSubmitOnGameOver,
     isTerminalSessionForPersistence,
     isSessionTerminated,

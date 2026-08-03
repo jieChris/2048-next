@@ -223,6 +223,9 @@ function loadOnlineLeaderboardRuntime(options: {
   apiBases?: string[];
   storage?: MemoryStorage;
   buildSavedGameStatePayload?: (...args: unknown[]) => Record<string, unknown>;
+  parseReplayImportEnvelope?: (...args: unknown[]) => Record<string, unknown> | null;
+  restartWithBoard?: (...args: unknown[]) => void;
+  resolveStructuredReplayModeConfig?: (...args: unknown[]) => Record<string, unknown> | null;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
@@ -283,6 +286,9 @@ function loadOnlineLeaderboardRuntime(options: {
     setTimeout,
     clearTimeout,
     buildSavedGameStatePayload: options.buildSavedGameStatePayload,
+    parseReplayImportEnvelope: options.parseReplayImportEnvelope,
+    restartWithBoard: options.restartWithBoard,
+    resolveStructuredReplayModeConfig: options.resolveStructuredReplayModeConfig,
     applySavedStateRestore(manager: Record<string, unknown>, savedState: Record<string, unknown>) {
       manager.score = Number(savedState.score || 0);
       manager.over = !!savedState.over;
@@ -2418,6 +2424,87 @@ describe("online leaderboard terminal submission", () => {
     }));
     expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(false);
     expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
+  });
+
+  it("keeps checkpoint application active after restart setup resets runtime state", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-checkpoint-replay",
+      seed: 101,
+      ranked_session_token: "checkpoint-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-checkpoint-replay",
+      ranked_session_token: "checkpoint-token",
+      initial_seed: 101,
+      seed: 101,
+      client_record_id: "rec_checkpoint",
+      replay_string: "checkpoint-replay",
+      duration_ms: 1200,
+      saved_at: Date.now(),
+      owner_user_id: "7",
+      ui_state: {}
+    }));
+    const moveStates: Array<{ applying: boolean; forcedSpawn: unknown }> = [];
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      successfulMoveCount: 0,
+      rankedSessionToken: "checkpoint-token",
+      challengeId: "ranked-checkpoint-replay",
+      initialSeed: 101,
+      needsRankedCheckpointRestore: false,
+      lastRankedCheckpointRestoreError: "",
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn(),
+      move: vi.fn(function (this: Record<string, unknown>) {
+        moveStates.push({
+          applying: this.rankCheckpointApplying === true,
+          forcedSpawn: this.forcedSpawn
+        });
+      })
+    });
+    const replaySpawns = [
+      { x: 0, y: 1, value: 2 },
+      { x: 1, y: 2, value: 2 },
+      { x: 2, y: 3, value: 4 }
+    ];
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      parseReplayImportEnvelope: () => ({
+        kind: "v1rpl",
+        modeKey: MODE_KEY,
+        initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        replayMoves: [0, 1, 2],
+        replaySpawns
+      }),
+      resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      restartWithBoard: (currentManager) => {
+        (currentManager as Record<string, unknown>).rankCheckpointApplying = false;
+      },
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    manager.needsRankedCheckpointRestore = true;
+    (runtime.windowLike.OnlineLeaderboardRuntime as {
+      scheduleRankedCheckpointRestore: (currentManager: Record<string, unknown>, options: unknown) => void;
+    }).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
+    await flushRuntimePromises();
+
+    expect(moveStates).toEqual(replaySpawns.map((forcedSpawn) => ({ applying: true, forcedSpawn })));
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
   });
 
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {
