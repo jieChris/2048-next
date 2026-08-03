@@ -65,6 +65,12 @@ describe("search discovery contract", () => {
     expect(robots).toContain("Sitemap: https://2048next.cn/sitemap.xml");
   });
 
+  it("keeps the Baidu ownership verification file published", () => {
+    expect(
+      readFileSync("public/baidu_verify_codeva-nWQw1M3I49.html", "utf8").trim()
+    ).toBe("15e3c771012a7e508a357aee6a60553f");
+  });
+
   it("redirects duplicate and insecure production entry points", () => {
     const nginx = readFileSync("deploy/nginx/2048-next.nginx.conf.example", "utf8");
 
