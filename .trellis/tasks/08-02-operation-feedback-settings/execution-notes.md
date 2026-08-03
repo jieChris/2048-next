@@ -2,6 +2,7 @@
 
 ## Route Deviation
 
+- 2026-08-03：HTTPS 推送在 HTTP/2、HTTP/1.1 及固定 Content-Length 上传下均于 sideband 返回阶段断连，远端分支未创建；对象审计确认实际 pack 约 22.2 MiB、最大 blob 约 332 KiB，不属于 GitHub 容量限制。保守改用已验证为同一 `jieChris` 账号的一次性 SSH URL 推送，并在完成后核对远端分支 SHA；不修改仓库 remote、不拆分提交、不删除视觉基线。
 - 2026-08-03：多个诊断 Agent 曾同时运行 Playwright Runner，并共享默认 `test-results` 目录，导致一个业务断言已通过的结构化回放用例在关闭页面时因 trace 文件竞争报 `ENOENT`。保守停止其他 Runner，改用单 worker、隔离端口独占重跑完整 Pages Smoke；未放宽断言、增加重试或修改产品行为。
 - 2026-08-03：发布时当前工作分支与远端 `main` 已明显分叉，直接推送会覆盖或回退已经上线的改动。用户明确选择发布工作区全部待提交内容后，保守改为先生成完整快照提交，再仅将该快照提交移植到最新 `origin/main`，通过发布门禁后由 PR 合入 `main` 触发既有原子部署；不以旧分支直接覆盖生产。
 - 2026-08-02：标准 Trellis 前置脚本 `.trellis/scripts/get_context.py` 与共享指南索引不存在。保守回退为读取根规范、冒烟规范和实际设置模块；仅实施操作反馈设置调试页，不改游戏逻辑、视频或 CapCut 内容。
