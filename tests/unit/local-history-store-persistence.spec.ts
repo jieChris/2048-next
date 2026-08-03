@@ -295,7 +295,10 @@ describe("local history durable persistence", () => {
     storage.setItem(HISTORY_KEY, legacyPayload);
     const runtime = loadStore({ storage });
 
-    expect(runtime.store.listRecords().items[0]).toMatchObject({ id: "valid-row", board_sum: 6 });
+    const validRow = runtime.store
+      .listRecords()
+      .items.find((item) => item.id === "valid-row");
+    expect(validRow).toMatchObject({ id: "valid-row", board_sum: 6 });
     expect(storage.getItem(HISTORY_KEY)).toBe(legacyPayload);
 
     await runtime.store.listRecordsAsync();

@@ -44,3 +44,10 @@
 - 变更 JavaScript 的 `node --check` 与 `git diff --check` 通过。
 - `npm run build` 独立串行通过，`precompress-dist` 为 392 个资源生成 784 个压缩文件；仅有仓库既有的 `ui-preview.html` 非 module script 警告。
 - Codex 内置浏览器复验：标准 4×4 执行有效移动后打开练习板，新标签正确载入当前三枚方块；原对局无弹窗、无阻断，两页均无应用来源错误日志。测试标签与本地服务已清理。
+
+## PR CI 修复（2026-08-03）
+
+- `Refactor Gate` 暴露新增 fallback 纯读测试依赖 `saved_at` 动态补全后的首项排序；改为按稳定记录 ID 查找，不修改既有排序合同。
+- `Smoke (history)` 仍在页面迁移完成后写入旧 `localStorage`，且异步导出刚触发就撤销下载监听；改为导航前一次性播种 legacy fixture、使用 async 存储 API，并等待下载回调完成。
+- 上述规则已由 `.trellis/spec/smoke-testing.md` 的“前置状态必须显式”和“等待能力，不等待时间”覆盖，未重复扩张规范。
+- 修复后目标单测 15/15、完整单元测试 1979/1979、`npx tsc --noEmit` 与 `git diff --check` 通过；按浏览器约束未在本机启动独立 Playwright，History Smoke 交由 GitHub CI 验证。
