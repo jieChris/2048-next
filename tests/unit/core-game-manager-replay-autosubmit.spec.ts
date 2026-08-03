@@ -34,7 +34,50 @@ function loadReplayHelpersRuntime() {
   };
   vm.runInNewContext(script, context);
   return context as typeof context & {
-    tryAutoSubmitOnGameOver: (manager: Record<string, unknown>) => void;
+    tryAutoSubmitOnGameOver: (
+      manager: Record<string, unknown>
+    ) => boolean | Promise<boolean> | undefined;
+  };
+}
+
+function createTerminalManager(overrides: Record<string, unknown> = {}) {
+  return {
+    sessionSubmitDone: false,
+    replayMode: false,
+    over: true,
+    won: false,
+    keepPlaying: false,
+    mode: "standard_4x4_pow2_no_undo",
+    modeKey: "standard_4x4_pow2_no_undo",
+    width: 4,
+    height: 4,
+    ruleset: "pow2",
+    rankedBucket: "standard_no_undo",
+    modeFamily: "standard",
+    rankPolicy: "unranked",
+    modeConfig: { undo_enabled: false },
+    specialRules: {},
+    initialSeed: 123,
+    score: 4096,
+    rescueReplayString: "REPLAY_v1RPL_B64_rescue",
+    grid: {
+      cells: [[{ value: 4096 }]],
+      cellContent({ x, y }: { x: number; y: number }) {
+        return x === 0 && y === 0 ? { value: 4096 } : null;
+      },
+      eachCell(callback: (x: number, y: number, tile: { value: number }) => void) {
+        callback(0, 0, { value: 4096 });
+      }
+    },
+    getDurationMs: vi.fn(() => 1200),
+    clonePlain: vi.fn((value: unknown) => JSON.parse(JSON.stringify(value))),
+    getWindowLike: vi.fn(() => ({})),
+    resolveNormalizedCoreValueOrFallback: vi.fn(
+      (_coreValue: unknown, _normalize: unknown, fallback: () => unknown) => fallback()
+    ),
+    resolveWindowNamespaceMethod: vi.fn(() => null),
+    writeLocalStorageJsonPayload: vi.fn(),
+    ...overrides
   };
 }
 
@@ -43,40 +86,7 @@ describe("core game manager replay auto submit", () => {
     const runtime = loadReplayHelpersRuntime();
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
-    const manager = {
-      sessionSubmitDone: false,
-      replayMode: false,
-      over: true,
-      won: false,
-      keepPlaying: false,
-      mode: "standard_4x4_pow2_no_undo",
-      modeKey: "standard_4x4_pow2_no_undo",
-      width: 4,
-      height: 4,
-      ruleset: "pow2",
-      rankedBucket: "standard_no_undo",
-      modeFamily: "standard",
-      rankPolicy: "unranked",
-      modeConfig: { undo_enabled: false },
-      specialRules: {},
-      initialSeed: 123,
-      score: 4096,
-      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
-      grid: {
-        cells: [[{ value: 4096 }]],
-        cellContent({ x, y }: { x: number; y: number }) {
-          return x === 0 && y === 0 ? { value: 4096 } : null;
-        },
-        eachCell(callback: (x: number, y: number, tile: { value: number }) => void) {
-          callback(0, 0, { value: 4096 });
-        }
-      },
-      getDurationMs: vi.fn(() => 1200),
-      clonePlain: vi.fn((value: unknown) => JSON.parse(JSON.stringify(value))),
-      getWindowLike: vi.fn(() => ({})),
-      resolveNormalizedCoreValueOrFallback: vi.fn(
-        (_coreValue: unknown, _normalize: unknown, fallback: () => unknown) => fallback()
-      ),
+    const manager = createTerminalManager({
       resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
         if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
         return {
@@ -90,7 +100,7 @@ describe("core game manager replay auto submit", () => {
       writeLocalStorageJsonPayload: vi.fn((_key: string, payload: Record<string, unknown>) => {
         resultWrites.push(payload);
       })
-    };
+    });
 
     expect(() => runtime.tryAutoSubmitOnGameOver(manager)).not.toThrow();
     expect(savedRecords).toHaveLength(1);
@@ -101,5 +111,28 @@ describe("core game manager replay auto submit", () => {
       replay_string: "REPLAY_v1RPL_B64_rescue"
     });
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });
+  });
+
+  it("cleans up and retries when async completion rejects an invalid saved record", async () => {
+    const runtime = loadReplayHelpersRuntime();
+    const saveRecordAsync = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "local-retry-record" });
+    const manager = createTerminalManager({
+      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
+        return { scope: {}, method: saveRecordAsync };
+      })
+    });
+
+    await expect(runtime.tryAutoSubmitOnGameOver(manager)).resolves.toBe(false);
+    expect(manager.localHistorySaveInFlight).toBeUndefined();
+    expect(manager.sessionSubmitDone).toBe(false);
+
+    await expect(runtime.tryAutoSubmitOnGameOver(manager)).resolves.toBe(true);
+    expect(saveRecordAsync).toHaveBeenCalledTimes(2);
+    expect(manager.localHistorySaveInFlight).toBeUndefined();
+    expect(manager.sessionSubmitDone).toBe(true);
   });
 });

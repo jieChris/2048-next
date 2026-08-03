@@ -38,15 +38,6 @@
   var RECORD_SCHEMA_VERSION = 1;
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
   var RANKED_RESTART_ATTEMPT_PERSIST_FAILED = { rankedRestartAttemptPersistFailed: true };
-  var RANKED_NAVIGATION_LINK_IDS = {
-    "home-title-link": true,
-    "home-user-display": true,
-    "toolkit-account-link": true,
-    "toolkit-palette-link": true,
-    "top-modes-btn": true,
-    "top-practice-btn": true,
-    "top-user-profile-btn": true
-  };
   var BREAKOUT_EASTER_EGG_GAME_URL = "./easter-eggs/breakout/index.html";
   var BREAKOUT_EASTER_EGG_TRIGGER_COUNT = 19;
 
@@ -66,6 +57,18 @@
       return storage.getItem(key);
     } catch (_err) {
       return null;
+    }
+  }
+
+  function readLocalStorageItemSnapshot(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") {
+      return { readable: false, value: null };
+    }
+    try {
+      return { readable: true, value: storage.getItem(key) };
+    } catch (_err) {
+      return { readable: false, value: null };
     }
   }
 
@@ -190,7 +193,7 @@
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
-  var safeSetStorage = _u.safeSetStorage || function () {};
+  var safeSetStorage = _u.safeSetStorage || function () { return false; };
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
@@ -228,7 +231,6 @@
   var pollingVisibilityBound = false;
   var pollingUsingScheduler = false;
   var lifecycleSubmitFlushBound = false;
-  var rankedNavigationAttemptBound = false;
   var authBestScoreSyncBound = false;
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
@@ -609,11 +611,41 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function cleanupRankedStateAfterRecordSubmit(manager, payload) {
+    if (!isCurrentManagerRecordPayload(manager, payload)) return false;
     var shouldClearCheckpoint = shouldClearCurrentManagerRankedCheckpointForRecord(manager, payload);
     clearActiveRankedSessionForRecordPayload(payload, manager);
     if (shouldClearCheckpoint) {
       clearRankedCheckpointForManager(manager, { keepalive: true }).catch(function () {});
     }
+    if (shouldClearCurrentManagerSavedStateForRecord(manager, payload)) {
+      manager.clearSavedGameState(toText(payload && payload.mode_key).trim());
+    }
+    return true;
+  }
+
+  function isCurrentManagerRecordPayload(manager, payload) {
+    if (!manager || !isSessionTerminated(manager)) return false;
+    var modeKey = toText(payload && payload.mode_key).trim();
+    if (!modeKey || toText(manager.modeKey || manager.mode).trim() !== modeKey) return false;
+    var submittedClientRecordId = toText(payload && payload.client_record_id).trim();
+    var currentClientRecordId = resolveManagerClientRecordIdForSubmit(manager);
+    if (submittedClientRecordId || currentClientRecordId) {
+      return !!submittedClientRecordId && submittedClientRecordId === currentClientRecordId;
+    }
+    var currentReplay = resolveRecordReplayPayload(manager);
+    return !!(
+      currentReplay &&
+      currentReplay.replayString &&
+      currentReplay.replayString === toText(payload && payload.replay_string)
+    );
+  }
+
+  function shouldClearCurrentManagerSavedStateForRecord(manager, payload) {
+    return !!(
+      manager &&
+      typeof manager.clearSavedGameState === "function" &&
+      isCurrentManagerRecordPayload(manager, payload)
+    );
   }
 
   function shouldSkipRankedSessionPreparationForRestart(manager) {
@@ -1104,6 +1136,13 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) return null;
     var payload = clonePendingSubmitPayload(rawValue);
     if (!payload) return null;
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "record_schema_version") &&
+      (!Number.isInteger(payload.record_schema_version) ||
+        payload.record_schema_version !== RECORD_SCHEMA_VERSION)
+    ) {
+      return null;
+    }
     var modeKey = toText(payload.mode_key).trim();
     var replayString = toText(payload.replay_string).trim();
     if (!modeKey || !replayString) return null;
@@ -1167,47 +1206,77 @@ function shouldAutoLoadOnlineLeaderboard() {
     }
   }
 
+  function readPendingRecordSubmitPrimarySnapshot() {
+    var snapshot = readLocalStorageItemSnapshot(STORAGE_PENDING_RECORD_SUBMIT_KEY);
+    if (!snapshot.readable) return { status: "unverified", state: null };
+    if (snapshot.value === null) return { status: "missing", state: null };
+    var raw = toText(snapshot.value).trim();
+    if (!raw) return { status: "unverified", state: null };
+    var state = buildPendingSubmitState(
+      raw,
+      RECORD_SUBMIT_PENDING_TTL_MS,
+      normalizePendingRecordSubmitPayload
+    );
+    if (!(state && state.signature && state.payload)) {
+      return { status: "unverified", state: null };
+    }
+    return { status: "valid", state: state };
+  }
+
   function readPendingRecordSubmitQueue() {
-    var raw = toText(safeGetStorage(STORAGE_PENDING_RECORD_QUEUE_KEY)).trim();
-    if (!raw) return [];
+    var snapshot = readLocalStorageItemSnapshot(STORAGE_PENDING_RECORD_QUEUE_KEY);
+    if (!snapshot.readable) return null;
+    if (snapshot.value === null) return [];
+    var raw = toText(snapshot.value).trim();
+    if (!raw) return null;
     try {
       var parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .map(normalizePendingRecordSubmitStateObject)
-        .filter(function (state) { return !!(state && state.signature && state.payload); });
+      if (!Array.isArray(parsed)) return null;
+      var queue = [];
+      for (var i = 0; i < parsed.length; i += 1) {
+        var state = normalizePendingRecordSubmitStateObject(parsed[i]);
+        if (!(state && state.signature && state.payload)) return null;
+        queue.push(state);
+      }
+      return queue;
     } catch (_err) {
-      clearPendingRecordSubmitQueue();
-      return [];
+      return null;
     }
   }
 
   function writePendingRecordSubmitQueue(queue) {
-    var list = Array.isArray(queue) ? queue.filter(function (state) {
-      return !!(state && state.signature && state.payload);
-    }).slice(0, RECORD_SUBMIT_PENDING_QUEUE_LIMIT) : [];
+    if (!Array.isArray(queue) || queue.length > RECORD_SUBMIT_PENDING_QUEUE_LIMIT) return false;
+    var list = [];
+    for (var i = 0; i < queue.length; i += 1) {
+      var normalized = normalizePendingRecordSubmitStateObject(queue[i]);
+      if (!(normalized && normalized.signature && normalized.payload)) return false;
+      list.push(normalized);
+    }
     if (!list.length) {
       clearPendingRecordSubmitQueue();
-      return;
+      return true;
     }
-    safeSetStorage(STORAGE_PENDING_RECORD_QUEUE_KEY, JSON.stringify(list));
+    return safeSetStorage(STORAGE_PENDING_RECORD_QUEUE_KEY, JSON.stringify(list));
   }
 
   function enqueuePendingRecordSubmitState(state) {
     var normalized = normalizePendingRecordSubmitStateObject(state);
-    if (!normalized || !normalized.payload) return;
-    var queue = readPendingRecordSubmitQueue().filter(function (item) {
+    if (!normalized || !normalized.payload) return false;
+    var existingQueue = readPendingRecordSubmitQueue();
+    if (!Array.isArray(existingQueue)) return false;
+    var queue = existingQueue.filter(function (item) {
       return item.signature !== normalized.signature;
     });
+    if (queue.length >= RECORD_SUBMIT_PENDING_QUEUE_LIMIT) return false;
     queue.push(normalized);
-    writePendingRecordSubmitQueue(queue);
+    return writePendingRecordSubmitQueue(queue);
   }
 
   function enqueuePendingRecordSubmitPayload(signature, payload) {
     var text = toText(signature).trim();
     var normalizedPayload = normalizePendingRecordSubmitPayload(payload);
-    if (!text || !normalizedPayload) return;
-    enqueuePendingRecordSubmitState({
+    if (!text || !normalizedPayload) return false;
+    return enqueuePendingRecordSubmitState({
       signature: text,
       payload: normalizedPayload,
       ownerUserId: toText(getUserId()).trim() || "",
@@ -1219,10 +1288,12 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function promoteNextPendingRecordSubmitState() {
     var queue = readPendingRecordSubmitQueue();
-    var next = queue.shift();
-    writePendingRecordSubmitQueue(queue);
+    if (!Array.isArray(queue)) return null;
+    var next = queue[0];
     if (!next) return null;
-    safeSetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY, JSON.stringify(next));
+    if (!safeSetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY, JSON.stringify(next))) return null;
+    queue.shift();
+    writePendingRecordSubmitQueue(queue);
     return next;
   }
 
@@ -1251,13 +1322,9 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function readPendingRecordSubmitState() {
-    var state = buildPendingSubmitState(
-      safeGetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY),
-      RECORD_SUBMIT_PENDING_TTL_MS,
-      normalizePendingRecordSubmitPayload
-    );
-    if (state) return state;
-    clearPendingRecordSubmitSignature();
+    var snapshot = readPendingRecordSubmitPrimarySnapshot();
+    if (snapshot.status === "valid") return snapshot.state;
+    if (snapshot.status !== "missing") return null;
     return promoteNextPendingRecordSubmitState();
   }
 
@@ -1360,17 +1427,17 @@ function shouldAutoLoadOnlineLeaderboard() {
     var text = toText(signature).trim();
     if (!text) {
       clearPendingRecordSubmitSignature();
-      return;
+      return true;
     }
     var normalizedPayload = normalizePendingRecordSubmitPayload(
       payload || (previousState ? previousState.payload : null)
     );
-    if (!normalizedPayload) return;
+    if (!normalizedPayload) return false;
     var now = Date.now();
     var previous = previousState && toText(previousState.signature).trim() === text ? previousState : null;
     var durabilityOnly = !!(options && options.durabilityOnly === true);
     var hadPreviousAttempt = !!(previous && Number(previous.lastAttemptAt) > 0);
-    safeSetStorage(
+    return safeSetStorage(
       STORAGE_PENDING_RECORD_SUBMIT_KEY,
       JSON.stringify({
         signature: text,
@@ -2475,7 +2542,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function buildRankedCheckpointLocalMirrorPayload(manager) {
     if (!shouldUseRankedCheckpoint(manager) || isSessionTerminated(manager)) return null;
-    var payload = buildRankedCheckpointPayload(manager);
+    var payload = buildRankedCheckpointPayload(manager, { includeSavedState: false });
     if (!payload) return null;
     return {
       mode: toText(payload.mode).trim(),
@@ -2495,7 +2562,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!modeKey) return false;
     var payload = buildRankedCheckpointLocalMirrorPayload(manager);
     if (!payload) {
-      clearRankedCheckpointLocalMirror(modeKey);
+      if (!isSessionTerminated(manager)) clearRankedCheckpointLocalMirror(modeKey);
       return false;
     }
     try {
@@ -3764,6 +3831,72 @@ async function refreshLeaderboard(modeLike) {
     }
   }
 
+  function buildTerminalLocalHistoryIdentityForSubmit(manager, payload) {
+    var clientRecordId = toText(payload && payload.client_record_id).trim();
+    if (clientRecordId) return "client:" + clientRecordId;
+    return [
+      toText(payload && payload.mode_key).trim(),
+      manager && manager.initialSeed || "",
+      toText(payload && payload.replay_string)
+    ].join("|");
+  }
+
+  function waitForTerminalLocalHistorySave(manager, payload) {
+    var inFlight = manager && manager.localHistorySaveInFlight;
+    var promise = inFlight && inFlight.promise;
+    if (promise && typeof promise.then === "function") {
+      if (toText(inFlight.identity) !== buildTerminalLocalHistoryIdentityForSubmit(manager, payload)) return false;
+      return Promise.resolve(promise).then(function (result) {
+        return result === true;
+      }, function () {
+        return false;
+      });
+    }
+    return !!(manager && manager.sessionSubmitDone === true);
+  }
+
+  function acceptTerminalLocalHistorySave(manager, payload, result) {
+    if (result === true) {
+      if (isCurrentManagerRecordPayload(manager, payload)) manager.sessionSubmitDone = true;
+      return true;
+    }
+    return !!(
+      manager &&
+      manager.sessionSubmitDone === true &&
+      isCurrentManagerRecordPayload(manager, payload)
+    );
+  }
+
+  function retryTerminalLocalHistorySave(manager, payload) {
+    if (!isCurrentManagerRecordPayload(manager, payload)) return false;
+    var method = manager && manager.tryAutoSubmitOnGameOver;
+    if (typeof method !== "function") return false;
+    var original = method.__onlineImmediateSubmitOriginal;
+    try {
+      var result = (typeof original === "function" ? original : method).call(manager);
+      if (!result || typeof result.then !== "function") {
+        return acceptTerminalLocalHistorySave(manager, payload, result);
+      }
+      return Promise.resolve(result).then(function (saved) {
+        return acceptTerminalLocalHistorySave(manager, payload, saved);
+      }, function () { return false; });
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function ensureTerminalLocalHistorySaved(manager, payload) {
+    var waiting = waitForTerminalLocalHistorySave(manager, payload);
+    if (!waiting || typeof waiting.then !== "function") {
+      return acceptTerminalLocalHistorySave(manager, payload, waiting) ||
+        retryTerminalLocalHistorySave(manager, payload);
+    }
+    return Promise.resolve(waiting).then(function (saved) {
+      if (acceptTerminalLocalHistorySave(manager, payload, saved)) return true;
+      return retryTerminalLocalHistorySave(manager, payload);
+    });
+  }
+
   async function maybeSubmitScoreOnGameOver() {
     var opts = arguments.length > 0 && arguments[0] && typeof arguments[0] === "object" ? arguments[0] : {};
     if (!getAuthToken()) return;
@@ -3849,45 +3982,65 @@ async function refreshLeaderboard(modeLike) {
     var manager = opts.manager || global.game_manager;
     if (!manager || manager.replayMode || !isSessionTerminated(manager)) {
       await retryPendingRecordSubmit(opts);
-      return;
-    }
-    if (shouldDeferUndoTerminalSubmit(manager, opts)) {
-      await retryPendingRecordSubmit(opts);
-      return;
+      return false;
     }
 
     var score = Math.floor(Number(manager.score) || 0);
-    if (!(score > 0)) {
-      await retryPendingRecordSubmit(opts);
-      return;
-    }
-
     var modeKey = toText(manager.modeKey || manager.mode).trim() || getCurrentModeKey();
     var payload = buildRecordSubmitPayload(manager, modeKey, score);
     if (!payload) {
       await retryPendingRecordSubmit(opts);
-      return;
+      return false;
+    }
+
+    var localHistorySaved = ensureTerminalLocalHistorySaved(manager, payload);
+    if (localHistorySaved && typeof localHistorySaved.then === "function") {
+      localHistorySaved = await localHistorySaved;
+    }
+    if (localHistorySaved !== true) {
+      await retryPendingRecordSubmit(opts);
+      return false;
+    }
+    if (shouldDeferUndoTerminalSubmit(manager, opts) || !(score > 0)) {
+      runPromiseSafely(function () { return retryPendingRecordSubmit(opts); });
+      return true;
     }
 
     var signature = buildRecordSubmitSignature(manager, payload);
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
-    var pendingState = readPendingRecordSubmitState();
+    var pendingSnapshot = readPendingRecordSubmitPrimarySnapshot();
+    var pendingState = pendingSnapshot.status === "valid"
+      ? pendingSnapshot.state
+      : (pendingSnapshot.status === "missing" ? promoteNextPendingRecordSubmitState() : null);
     var pendingSignature = pendingState ? pendingState.signature : "";
     if (
       recordSubmitLock &&
       pendingState &&
-      toText(pendingState.payload && pendingState.payload.client_record_id).trim() ===
-        toText(payload.client_record_id).trim()
-    ) return;
-    if (signature && signature === lastSignature) return;
-    if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) return;
-    if (signature && pendingSignature && signature !== pendingSignature) {
-      enqueuePendingRecordSubmitPayload(signature, payload);
+      signature &&
+      signature === pendingSignature
+    ) {
+      cleanupRankedStateAfterRecordSubmit(manager, payload);
+      return true;
+    }
+    if (signature && signature === lastSignature) {
+      cleanupRankedStateAfterRecordSubmit(manager, payload);
+      return true;
+    }
+    if (signature && signature === pendingSignature && shouldDeferPendingRecordSubmitRetry(pendingState)) {
+      cleanupRankedStateAfterRecordSubmit(manager, payload);
+      return true;
+    }
+    if (
+      signature &&
+      ((pendingSignature && signature !== pendingSignature) || pendingSnapshot.status === "unverified")
+    ) {
+      if (!enqueuePendingRecordSubmitPayload(signature, payload)) return false;
     } else if (signature && !pendingSignature) {
-      writePendingRecordSubmitSignature(signature, pendingState, payload, { durabilityOnly: true });
+      if (!writePendingRecordSubmitSignature(signature, pendingState, payload, { durabilityOnly: true })) return false;
     }
     cleanupRankedStateAfterRecordSubmit(manager, payload);
-    await retryPendingRecordSubmit(opts);
+    runPromiseSafely(function () { return retryPendingRecordSubmit(opts); });
+    return true;
   }
 
   function isUnauthorizedSubmitErrorText(errorTextLike) {
@@ -4158,6 +4311,86 @@ async function refreshLeaderboard(modeLike) {
     });
   }
 
+  function shouldGateRestartForTerminalLocalHistory(manager) {
+    var modeKey = toText(manager && (manager.modeKey || manager.mode)).trim();
+    return !!(
+      manager &&
+      !manager.replayMode &&
+      modeKey !== "practice" &&
+      isSessionTerminated(manager)
+    );
+  }
+
+  function notifyTerminalLocalHistoryRestartBlocked() {
+    if (typeof global.alert !== "function") return;
+    var isEnglish = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).trim().toLowerCase() === "en";
+    global.alert(isEnglish
+      ? "The current game record has not been saved yet. Please try again."
+      : "当前对局记录暂未保存，请重试。");
+  }
+
+  function isTerminalRecordSubmitDurable(manager, payload) {
+    if (Math.floor(Number(payload && payload.score) || 0) <= 0) return true;
+    var signature = buildRecordSubmitSignature(manager, payload);
+    if (toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY)).trim() === signature) return true;
+    var pendingSnapshot = readPendingRecordSubmitPrimarySnapshot();
+    var pending = pendingSnapshot.status === "valid" ? pendingSnapshot.state : null;
+    if (pending && pending.signature === signature && pending.payload) return true;
+    var queue = readPendingRecordSubmitQueue();
+    return Array.isArray(queue) && queue.some(function (state) {
+      return state.signature === signature && !!state.payload;
+    });
+  }
+
+  function captureTerminalRecordSynchronously(manager, payload) {
+    if (!(manager && manager.sessionSubmitDone === true)) return false;
+    runPromiseSafely(function () {
+      return maybeSubmitRecordOnGameOver({ allowUndoTerminalSubmit: true, manager: manager });
+    });
+    return isTerminalRecordSubmitDurable(manager, payload);
+  }
+
+  function deferRestartUntilTerminalLocalHistorySaved(manager, restart, thisArg, args) {
+    if (!shouldGateRestartForTerminalLocalHistory(manager)) return false;
+    if (manager.terminalLocalHistoryRestartPending === true) return true;
+    var modeKey = toText(manager.modeKey || manager.mode).trim() || getCurrentModeKey();
+    var payload = buildRecordSubmitPayload(manager, modeKey, Math.floor(Number(manager.score) || 0));
+    if (!payload) {
+      notifyTerminalLocalHistoryRestartBlocked();
+      return true;
+    }
+    if (manager.sessionSubmitDone === true) {
+      if (captureTerminalRecordSynchronously(manager, payload)) return "captured";
+      notifyTerminalLocalHistoryRestartBlocked();
+      return true;
+    }
+    manager.terminalLocalHistoryRestartPending = true;
+    runPromiseSafely(function () {
+      return Promise.resolve(maybeSubmitRecordOnGameOver({
+        allowUndoTerminalSubmit: true,
+        manager: manager
+      })).then(function (captured) {
+        if (!captured || !isCurrentManagerRecordPayload(manager, payload)) {
+          return notifyTerminalLocalHistoryRestartBlocked();
+        }
+        manager.terminalLocalHistoryRestartResume = true;
+        return restart.apply(thisArg, args);
+      }, function () {
+        notifyTerminalLocalHistoryRestartBlocked();
+      }).finally(function () {
+        manager.terminalLocalHistoryRestartPending = false;
+        manager.terminalLocalHistoryRestartResume = false;
+      });
+    });
+    return true;
+  }
+
+  function shouldBypassOnlineRestartHook(manager, args) {
+    if (manager && (manager.replayMode === true || manager.rankCheckpointApplying === true)) return true;
+    var options = args && args.length ? args[args.length - 1] : null;
+    return !!(options && typeof options === "object" && options.asReplay === true);
+  }
+
   function wrapOnlineSubmitHook(manager, methodName, timing) {
     if (!manager || typeof manager[methodName] !== "function") return;
     var original = manager[methodName];
@@ -4165,6 +4398,7 @@ async function refreshLeaderboard(modeLike) {
 
     var wrapped = function () {
       var currentManager = this || manager;
+      var shouldLockDirectRestart = false;
       if (methodName === "move" && currentManager.rankedRestartBlockedUntilSessionReady === true) {
         return;
       }
@@ -4173,6 +4407,21 @@ async function refreshLeaderboard(modeLike) {
           methodName === "restart" ||
           methodName === "restartWithSeed" ||
           methodName === "restartWithBoard";
+        var callArgs = Array.prototype.slice.call(arguments);
+        if (isRestartMethod && shouldBypassOnlineRestartHook(currentManager, callArgs)) {
+          return original.apply(this, arguments);
+        }
+        var isTerminalRestartResume = false;
+        if (isRestartMethod && currentManager.terminalLocalHistoryRestartPending === true) {
+          if (currentManager.terminalLocalHistoryRestartResume !== true) return currentManager;
+          currentManager.terminalLocalHistoryRestartResume = false;
+          isTerminalRestartResume = true;
+        }
+        if (isRestartMethod && !isTerminalRestartResume) {
+          var restartGate = deferRestartUntilTerminalLocalHistorySaved(currentManager, wrapped, this, callArgs);
+          if (restartGate === true) return currentManager;
+          shouldLockDirectRestart = restartGate === "captured";
+        }
         triggerImmediateOnlineSubmit({
           allowUndoTerminalSubmit: isRestartMethod,
           manager: currentManager
@@ -4188,7 +4437,7 @@ async function refreshLeaderboard(modeLike) {
                   currentManager,
                   original,
                   this,
-                  Array.prototype.slice.call(arguments),
+                  callArgs,
                   { afterConfirmation: true }
                 )
               ) {
@@ -4199,7 +4448,7 @@ async function refreshLeaderboard(modeLike) {
                 currentManager,
                 original,
                 this,
-                Array.prototype.slice.call(arguments)
+                callArgs
               );
               return currentManager;
             }
@@ -4208,7 +4457,7 @@ async function refreshLeaderboard(modeLike) {
               currentManager,
               original,
               this,
-              Array.prototype.slice.call(arguments)
+              callArgs
             );
             return currentManager;
           }
@@ -4217,7 +4466,14 @@ async function refreshLeaderboard(modeLike) {
           }
         }
       }
-      var result = original.apply(this, arguments);
+      if (shouldLockDirectRestart) currentManager.terminalLocalHistoryRestartPending = true;
+      var result;
+      try {
+        result = original.apply(this, arguments);
+      } catch (error) {
+        if (shouldLockDirectRestart) currentManager.terminalLocalHistoryRestartPending = false;
+        throw error;
+      }
       if (timing === "after") {
         triggerImmediateOnlineSubmit();
         if (methodName === "move" && currentManager.rankCheckpointApplying !== true) {
@@ -4226,10 +4482,18 @@ async function refreshLeaderboard(modeLike) {
           scheduleRankedCheckpointSave(currentManager, { reason: "move" });
         }
       }
+      if (!shouldLockDirectRestart) return result;
+      if (result && typeof result.then === "function") {
+        return Promise.resolve(result).finally(function () {
+          currentManager.terminalLocalHistoryRestartPending = false;
+        });
+      }
+      currentManager.terminalLocalHistoryRestartPending = false;
       return result;
     };
 
     wrapped.__onlineImmediateSubmitHooked = true;
+    wrapped.__onlineImmediateSubmitOriginal = original;
     manager[methodName] = wrapped;
   }
 
@@ -4271,29 +4535,6 @@ async function refreshLeaderboard(modeLike) {
     lifecycleSubmitFlushBound = true;
     global.addEventListener("pagehide", flushTerminalSubmitOnPageHide);
     global.addEventListener("beforeunload", flushTerminalSubmitOnPageHide);
-  }
-
-  function bindRankedNavigationAttemptPersistence() {
-    if (rankedNavigationAttemptBound || !global.document || typeof global.document.addEventListener !== "function") return;
-    rankedNavigationAttemptBound = true;
-    global.document.addEventListener("click", function (eventLike) {
-      if (!eventLike || eventLike.defaultPrevented) return;
-      if (eventLike.button != null && eventLike.button !== 0) return;
-      if (eventLike.metaKey || eventLike.ctrlKey || eventLike.shiftKey || eventLike.altKey) return;
-      var target = eventLike.target;
-      if (target && target.nodeType === 3) target = target.parentElement;
-      if (!target || typeof target.closest !== "function") return;
-      var anchor = target.closest("a[href]");
-      if (!anchor) return;
-      var anchorId = toText(anchor.id).trim();
-      var isTitleLink = typeof anchor.closest === "function" && !!anchor.closest(".title");
-      if (!RANKED_NAVIGATION_LINK_IDS[anchorId] && !isTitleLink) return;
-      var manager = global.game_manager;
-      if (persistRankedAbandonForAction(manager, "navigation")) return;
-      if (typeof eventLike.preventDefault === "function") eventLike.preventDefault();
-      if (typeof eventLike.stopImmediatePropagation === "function") eventLike.stopImmediatePropagation();
-      notifyRankedAttemptPersistenceBlocked(manager);
-    }, true);
   }
 
   function bindModeIntroRefresh() {
@@ -4473,7 +4714,6 @@ function init() {
     bindLanguageSync();
     bindAuthBestScoreSync();
     bindLifecycleSubmitFlush();
-    bindRankedNavigationAttemptPersistence();
     bindModeIntroRefresh();
     ensureTimerLeaderboardPanel();
     syncTimerLeaderboardViewMode();

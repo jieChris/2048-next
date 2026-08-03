@@ -442,10 +442,10 @@ function applyStructuredReplaySession(
   if (envelope.kind === "v3-json") {
     const seed = Number(envelope.seed);
     if (Number.isFinite(seed)) {
-      const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown) => unknown>(
+      const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown, options?: unknown) => unknown>(
         manager.restartWithSeed
       );
-      if (restartWithSeed) restartWithSeed.call(manager, seed, replayModeConfig);
+      if (restartWithSeed) restartWithSeed.call(manager, seed, replayModeConfig, { asReplay: true });
     }
     applied = true;
   }
@@ -1473,9 +1473,11 @@ function restartReplayForSeek(manager: ManagerLike, target: number): number {
     restartReplayAtBoard(manager, manager.replayStartBoardMatrix as BoardMatrix, 0);
     return 0;
   }
-  const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown) => unknown>(manager.restartWithSeed);
+  const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown, options?: unknown) => unknown>(
+    manager.restartWithSeed
+  );
   if (restartWithSeed && typeof manager.initialSeed !== "undefined") {
-    restartWithSeed.call(manager, manager.initialSeed, manager.modeConfig || null);
+    restartWithSeed.call(manager, manager.initialSeed, manager.modeConfig || null, { asReplay: true });
   }
   manager.replayMode = true;
   manager.replayIndex = 0;
@@ -1659,9 +1661,12 @@ function resolveLocalHistorySave(manager: ManagerLike): { scope: unknown; method
   const resolver = asFunction<(namespace: string, methodName: string) => unknown>(
     manager.resolveWindowNamespaceMethod
   );
-  const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", "saveRecord") : null);
-  const method = asFunction<(record: unknown) => unknown>(resolved.method);
-  return method ? { scope: resolved.scope || null, method } : null;
+  const resolveMethod = (methodName: string) => {
+    const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", methodName) : null);
+    const method = asFunction<(record: unknown) => unknown>(resolved.method);
+    return method ? { scope: resolved.scope || null, method } : null;
+  };
+  return resolveMethod("saveRecordAsync") || resolveMethod("saveRecord");
 }
 
 function writeAutoSubmitResultRecord(manager: ManagerLike, payload: unknown): void {
@@ -1680,7 +1685,27 @@ function writeAutoSubmitSkippedResult(manager: ManagerLike, reason: string): voi
   });
 }
 
-export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
+function buildTerminalLocalHistoryIdentity(manager: ManagerLike, replayString: string): string {
+  const clientRecordId = String(manager.clientRecordId || "").trim();
+  if (clientRecordId) return `client:${clientRecordId}`;
+  return [manager.modeKey || manager.mode || "", manager.initialSeed || "", replayString].join("|");
+}
+
+function isSameTerminalLocalHistoryIdentity(manager: ManagerLike, identity: string): boolean {
+  if (!isTerminalSessionForPersistence(manager)) return false;
+  if (identity.startsWith("client:")) {
+    return `client:${String(manager.clientRecordId || "").trim()}` === identity;
+  }
+  let replayString = String(manager.rescueReplayString || "").trim();
+  try {
+    replayString = serializeReplay(manager);
+  } catch (_error) {}
+  return buildTerminalLocalHistoryIdentity(manager, replayString) === identity;
+}
+
+export function tryAutoSubmitOnGameOver(
+  manager: ManagerLike
+): boolean | Promise<boolean> | undefined {
   if (!manager || manager.sessionSubmitDone) return;
   if (manager.replayMode) {
     writeAutoSubmitSkippedResult(manager, "replay_mode");
@@ -1704,6 +1729,12 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
     replay: serializeReplayV3(manager),
     replay_string: replayString
   };
+  const identity = buildTerminalLocalHistoryIdentity(manager, replayString);
+  const inFlight = toRecord(manager.localHistorySaveInFlight);
+  const inFlightPromise = inFlight.promise;
+  if (inFlight.identity === identity && typeof toRecord(inFlightPromise).then === "function") {
+    return Promise.resolve(inFlightPromise).then((result) => result === true);
+  }
   const saveRecord = resolveLocalHistorySave(manager);
   if (!saveRecord) {
     writeAutoSubmitResultRecord(manager, {
@@ -1711,18 +1742,48 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
       ok: false,
       reason: "local_history_store_missing"
     });
-    return;
+    return false;
   }
-  const saved = toRecord(saveRecord.method.call(saveRecord.scope, record));
-  manager.sessionSubmitDone = true;
-  writeAutoSubmitResultRecord(manager, {
-    at: endedAt,
-    ok: true,
-    local_saved: true,
-    record_id: saved.id || null,
-    mode_key: record.mode_key,
-    score: record.score
-  });
+  const complete = (savedLike: unknown): boolean => {
+    if (!isRecord(savedLike)) throw new Error("local_save_failed");
+    if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = true;
+    const saved = toRecord(savedLike);
+    writeAutoSubmitResultRecord(manager, {
+      at: endedAt,
+      ok: true,
+      local_saved: true,
+      record_id: saved.id || null,
+      mode_key: record.mode_key,
+      score: record.score
+    });
+    return true;
+  };
+  const fail = (error: unknown): boolean => {
+    if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = false;
+    writeAutoSubmitResultRecord(manager, {
+      at: endedAt,
+      ok: false,
+      mode_key: record.mode_key,
+      score: record.score,
+      error: String(toRecord(error).message || "local_save_failed")
+    });
+    return false;
+  };
+  try {
+    const saveResult = saveRecord.method.call(saveRecord.scope, record);
+    if (!saveResult || typeof toRecord(saveResult).then !== "function") return complete(saveResult);
+    const state = { identity, promise: Promise.resolve(false) };
+    state.promise = Promise.resolve(saveResult)
+      .then(complete)
+      .catch(fail)
+      .finally(() => {
+        if (manager.localHistorySaveInFlight === state) delete manager.localHistorySaveInFlight;
+      });
+    manager.localHistorySaveInFlight = state;
+    return state.promise;
+  } catch (error) {
+    return fail(error);
+  }
 }
 
 export interface GameManagerReplayHelpersRuntime {
