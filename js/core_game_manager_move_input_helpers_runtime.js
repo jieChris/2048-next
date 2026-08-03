@@ -470,7 +470,8 @@ function flushPendingMoveInput(manager) {
 
 function shouldAbortMoveBeforeUndo(manager) {
   if (!manager) return true;
-  if (manager.rankedSetupBlockedUntilSessionReady || isRankCheckpointRestoreActive(manager)) return true;
+  if (manager.rankedSetupBlockedUntilSessionReady) return true;
+  if (isRankCheckpointRestoreActive(manager) && manager.disableSessionSync !== true) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
@@ -1353,7 +1354,7 @@ function isGameTerminated(manager) {
 }
 
 function resolveForcedReplaySpawn(manager) {
-  if (!manager || !manager.replayMode) return null;
+  if (!manager || !(manager.replayMode || manager.rankCheckpointApplying === true)) return null;
   return manager.forcedSpawn || null;
 }
 
@@ -1365,6 +1366,9 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
   var forcedTile = new Tile(forcedSpawn, forcedSpawn.value);
   manager.grid.insertTile(forcedTile);
   recordSpawnValue(manager, forcedSpawn.value);
+  if (manager.rankCheckpointApplying === true) {
+    manager.lastSpawn = { x: forcedSpawn.x, y: forcedSpawn.y, value: forcedSpawn.value };
+  }
   manager.forcedSpawn = null;
   return true;
 }

@@ -41,6 +41,25 @@ class MemoryStorage {
   }
 }
 
+class SelectiveFailStorage extends MemoryStorage {
+  readonly failedKeys = new Set<string>();
+  readonly failedReadKeys = new Set<string>();
+
+  getItem(key: string): string | null {
+    if (this.failedReadKeys.has(key)) {
+      throw new DOMException("read denied", "SecurityError");
+    }
+    return super.getItem(key);
+  }
+
+  setItem(key: string, value: string): void {
+    if (this.failedKeys.has(key)) {
+      throw new DOMException("quota", "QuotaExceededError");
+    }
+    super.setItem(key, value);
+  }
+}
+
 interface FetchCall {
   url: string;
   init: {
@@ -143,6 +162,7 @@ function createTerminatedManager(overrides: Record<string, unknown> = {}): Recor
     modeKey: MODE_KEY,
     rankPolicy: "unranked",
     replayMode: false,
+    sessionSubmitDone: true,
     score: 4096,
     over: true,
     won: false,
@@ -167,6 +187,21 @@ function createTerminatedManager(overrides: Record<string, unknown> = {}): Recor
   };
 }
 
+function createPendingRecordState(signature: string, replayString: string, score = 4096) {
+  return {
+    signature,
+    payload: {
+      mode_key: MODE_KEY,
+      score,
+      replay_string: replayString
+    },
+    ownerUserId: "7",
+    createdAt: Date.now(),
+    lastAttemptAt: 0,
+    retryCount: 0
+  };
+}
+
 function activeSessionKeyForMode(modeKey: string): string {
   return `ranked_session_active:v1:${modeKey}`;
 }
@@ -187,6 +222,10 @@ function loadOnlineLeaderboardRuntime(options: {
   disableOnlineLeaderboard?: boolean;
   apiBases?: string[];
   storage?: MemoryStorage;
+  buildSavedGameStatePayload?: (...args: unknown[]) => Record<string, unknown>;
+  parseReplayImportEnvelope?: (...args: unknown[]) => Record<string, unknown> | null;
+  restartWithBoard?: (...args: unknown[]) => void;
+  resolveStructuredReplayModeConfig?: (...args: unknown[]) => Record<string, unknown> | null;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
@@ -215,7 +254,12 @@ function loadOnlineLeaderboardRuntime(options: {
         return storage.getItem(key);
       },
       safeSetStorage(key: string, value: string) {
-        storage.setItem(key, value);
+        try {
+          storage.setItem(key, value);
+          return true;
+        } catch (_error) {
+          return false;
+        }
       },
       safeRemoveStorage(key: string) {
         storage.removeItem(key);
@@ -241,6 +285,10 @@ function loadOnlineLeaderboardRuntime(options: {
     console,
     setTimeout,
     clearTimeout,
+    buildSavedGameStatePayload: options.buildSavedGameStatePayload,
+    parseReplayImportEnvelope: options.parseReplayImportEnvelope,
+    restartWithBoard: options.restartWithBoard,
+    resolveStructuredReplayModeConfig: options.resolveStructuredReplayModeConfig,
     applySavedStateRestore(manager: Record<string, unknown>, savedState: Record<string, unknown>) {
       manager.score = Number(savedState.score || 0);
       manager.over = !!savedState.over;
@@ -382,7 +430,429 @@ describe("online leaderboard terminal submission", () => {
     }
   );
 
-  it("persists navigation abandon and blocks the fixed game links when persistence fails", async () => {
+  it("retries a failed terminal local history save during pagehide", async () => {
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+      return Promise.resolve(true);
+    });
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      tryAutoSubmitOnGameOver: localAutoSubmit
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "record-after-local-retry" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const addEventListenerMock = runtime.windowLike.addEventListener as ReturnType<typeof vi.fn>;
+    const pagehideHandler = addEventListenerMock.mock.calls.find((call) => call[0] === "pagehide")?.[1] as
+      | (() => void)
+      | undefined;
+
+    pagehideHandler?.();
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+  });
+
+  it("retries terminal local history during pagehide even when the score is zero", async () => {
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+      return Promise.resolve(true);
+    });
+    const manager = createTerminatedManager({
+      score: 0,
+      sessionSubmitDone: false,
+      tryAutoSubmitOnGameOver: localAutoSubmit
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "must-not-upload" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+    const addEventListenerMock = runtime.windowLike.addEventListener as ReturnType<typeof vi.fn>;
+    const pagehideHandler = addEventListenerMock.mock.calls.find((call) => call[0] === "pagehide")?.[1] as
+      | (() => void)
+      | undefined;
+
+    pagehideHandler?.();
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("keeps recovery state until a terminal local history retry succeeds before restart", async () => {
+    const firstSave = createDeferred<boolean>();
+    const secondSave = createDeferred<boolean>();
+    const saveAttempts = [firstSave, secondSave];
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      const attempt = saveAttempts[localAutoSubmit.mock.calls.length - 1];
+      return attempt.promise.then((saved) => {
+        if (saved) this.sessionSubmitDone = true;
+        return saved;
+      });
+    });
+    const clearSavedGameState = vi.fn();
+    const restartConfirmation = createDeferred<void>();
+    const originalRestart = vi.fn(async function (this: Record<string, unknown>) {
+      await restartConfirmation.promise;
+      this.over = false;
+    });
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      tryAutoSubmitOnGameOver: localAutoSubmit,
+      clearSavedGameState,
+      restart: originalRestart
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "record-before-restart" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+
+    firstSave.resolve(false);
+    await flushRuntimePromises();
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    secondSave.resolve(true);
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(2);
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+    expect(manager.over).toBe(true);
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+
+    restartConfirmation.resolve();
+    await flushRuntimePromises();
+    expect(manager.over).toBe(false);
+    expect(clearSavedGameState).toHaveBeenCalled();
+  });
+
+  it("keeps an already durable restart locked until async confirmation settles", async () => {
+    const confirmation = createDeferred<void>();
+    const originalRestart = vi.fn(async function (this: Record<string, unknown>) {
+      await confirmation.promise;
+      this.over = false;
+    });
+    const manager = createTerminatedManager({ restart: originalRestart });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "captured" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+    expect(manager.over).toBe(true);
+
+    confirmation.resolve();
+    await flushRuntimePromises();
+    expect(manager.over).toBe(false);
+  });
+
+  it("does not restart when the terminal pending record cannot be persisted", async () => {
+    const storage = new SelectiveFailStorage();
+    storage.failedKeys.add(PENDING_RECORD_KEY);
+    const localAutoSubmit = vi.fn(function (this: Record<string, unknown>) {
+      this.sessionSubmitDone = true;
+      return Promise.resolve(true);
+    });
+    const clearSavedGameState = vi.fn();
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      (this.clearSavedGameState as ((modeKey: unknown) => void) | undefined)?.(this.modeKey);
+      this.over = false;
+    });
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      tryAutoSubmitOnGameOver: localAutoSubmit,
+      clearSavedGameState,
+      restart: originalRestart
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-submit" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    expect(localAutoSubmit).toHaveBeenCalledTimes(1);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledTimes(2);
+
+    storage.failedKeys.delete(PENDING_RECORD_KEY);
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+    expect(clearSavedGameState).toHaveBeenCalled();
+  });
+
+  it("preserves an unverified primary pending record instead of clearing it during retry", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(PENDING_RECORD_KEY, "{broken-primary");
+    const manager = createTerminatedManager({
+      over: false,
+      score: 0,
+      move: vi.fn()
+    });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBe("{broken-primary");
+  });
+
+  it.each([
+    ["future", 2],
+    ["zero", 0],
+    ["wrong-type", "1"]
+  ])("preserves a %s-version primary pending record during retry", async (_label, recordSchemaVersion) => {
+    const storage = new MemoryStorage();
+    const pending = createPendingRecordState("unknown-schema", "unknown-schema-replay");
+    pending.payload.record_schema_version = recordSchemaVersion;
+    const primaryRaw = JSON.stringify(pending);
+    storage.setItem(PENDING_RECORD_KEY, primaryRaw);
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    await flushRuntimePromises();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBe(primaryRaw);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("queues the current terminal record without overwriting an unverified primary", async () => {
+    const storage = new MemoryStorage();
+    const primaryRaw = "{unknown-primary-version";
+    storage.setItem(PENDING_RECORD_KEY, primaryRaw);
+    storage.setItem(
+      PENDING_RECORD_QUEUE_KEY,
+      JSON.stringify([createPendingRecordState("queued-old", "queued-old-replay")])
+    );
+    const clearSavedGameState = vi.fn();
+    const manager = createTerminatedManager({ clearSavedGameState });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBe(primaryRaw);
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_QUEUE_KEY) || "[]")).toMatchObject([
+      { signature: "queued-old", payload: { replay_string: "queued-old-replay" } },
+      { payload: { replay_string: "replay-v1", score: 4096 } }
+    ]);
+    expect(clearSavedGameState).toHaveBeenCalled();
+  });
+
+  it("blocks restart when an existing pending queue cannot be verified", () => {
+    const storage = new MemoryStorage();
+    const queueRaw = "{broken-queue";
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify(createPendingRecordState("primary-old", "primary-old-replay")));
+    storage.setItem(PENDING_RECORD_QUEUE_KEY, queueRaw);
+    const clearSavedGameState = vi.fn();
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({ clearSavedGameState, restart: originalRestart });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBe(queueRaw);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+  });
+
+  it("blocks restart without rewriting a future-version pending queue", () => {
+    const storage = new MemoryStorage();
+    const futureState = createPendingRecordState("queued-future", "queued-future-replay");
+    futureState.payload.record_schema_version = 2;
+    const queueRaw = JSON.stringify([futureState]);
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify(createPendingRecordState("primary-old", "primary-old-replay")));
+    storage.setItem(PENDING_RECORD_QUEUE_KEY, queueRaw);
+    const clearSavedGameState = vi.fn();
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({ clearSavedGameState, restart: originalRestart });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBe(queueRaw);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+  });
+
+  it("blocks restart without overwriting a temporarily unreadable pending queue", () => {
+    const storage = new SelectiveFailStorage();
+    const queueRaw = JSON.stringify([createPendingRecordState("queued-old", "queued-old-replay")]);
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify(createPendingRecordState("primary-old", "primary-old-replay")));
+    storage.setItem(PENDING_RECORD_QUEUE_KEY, queueRaw);
+    storage.failedReadKeys.add(PENDING_RECORD_QUEUE_KEY);
+    const clearSavedGameState = vi.fn();
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({ clearSavedGameState, restart: originalRestart });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    storage.failedReadKeys.delete(PENDING_RECORD_QUEUE_KEY);
+    expect(storage.getItem(PENDING_RECORD_QUEUE_KEY)).toBe(queueRaw);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+  });
+
+  it("blocks restart without dropping the current record when the pending queue is full", () => {
+    const storage = new MemoryStorage();
+    const fullQueue = Array.from({ length: 20 }, (_, index) =>
+      createPendingRecordState(`queued-${index}`, `queued-replay-${index}`)
+    );
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify(createPendingRecordState("primary-old", "primary-old-replay")));
+    storage.setItem(PENDING_RECORD_QUEUE_KEY, JSON.stringify(fullQueue));
+    const clearSavedGameState = vi.fn();
+    const originalRestart = vi.fn();
+    const manager = createTerminatedManager({ clearSavedGameState, restart: originalRestart });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    const persistedQueue = JSON.parse(storage.getItem(PENDING_RECORD_QUEUE_KEY) || "[]");
+    expect(persistedQueue).toHaveLength(20);
+    expect(
+      persistedQueue.some(
+        (state: { payload?: { replay_string?: string } }) => state.payload?.replay_string === "replay-v1"
+      )
+    ).toBe(false);
+    expect(originalRestart).not.toHaveBeenCalled();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).toHaveBeenCalledWith("当前对局记录暂未保存，请重试。");
+  });
+
+  it("uses a verified queue when the primary pending slot is temporarily unreadable", () => {
+    const storage = new SelectiveFailStorage();
+    const primaryRaw = JSON.stringify(createPendingRecordState("primary-old", "primary-old-replay"));
+    storage.setItem(PENDING_RECORD_KEY, primaryRaw);
+    storage.setItem(PENDING_RECORD_QUEUE_KEY, "[]");
+    storage.failedReadKeys.add(PENDING_RECORD_KEY);
+    const originalRestart = vi.fn(function (this: Record<string, unknown>) {
+      this.over = false;
+    });
+    const manager = createTerminatedManager({ restart: originalRestart });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "must-not-upload" } })
+    });
+
+    (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+
+    storage.failedReadKeys.delete(PENDING_RECORD_KEY);
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBe(primaryRaw);
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_QUEUE_KEY) || "[]")).toMatchObject([
+      { payload: { replay_string: "replay-v1", score: 4096 } }
+    ]);
+    expect(originalRestart).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps replay and checkpoint internal restarts synchronous", () => {
+    const localAutoSubmit = vi.fn();
+    const restartWithBoard = vi.fn();
+    const restartWithSeed = vi.fn();
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      tryAutoSubmitOnGameOver: localAutoSubmit,
+      restartWithBoard,
+      restartWithSeed
+    });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    (manager.restartWithBoard as { call: (...args: unknown[]) => void }).call(
+      manager,
+      [[2]],
+      { key: MODE_KEY },
+      { asReplay: true }
+    );
+    manager.rankCheckpointApplying = true;
+    (manager.restartWithSeed as { call: (...args: unknown[]) => void }).call(
+      manager,
+      456,
+      { key: MODE_KEY }
+    );
+
+    expect(restartWithBoard).toHaveBeenCalledTimes(1);
+    expect(restartWithSeed).toHaveBeenCalledTimes(1);
+    expect(localAutoSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not treat ordinary navigation links as abandon actions", () => {
     const manager = createTerminatedManager({
       over: false,
       rankPolicy: "ranked",
@@ -394,20 +864,20 @@ describe("online leaderboard terminal submission", () => {
       manager,
       fetchImpl: async () => createJsonResponse({ success: true, data: [] })
     });
-    const enqueueAttempt = vi.fn(() => true);
+    const enqueueAttempt = vi.fn(() => false);
     runtime.windowLike.RankedSessionRuntime = {
       enqueueAttempt,
       flushAttemptOutbox: vi.fn(async () => true),
       getLastFailureReason: () => "attempt_outbox_write_failed"
     };
     const documentLike = runtime.windowLike.document as { addEventListener: ReturnType<typeof vi.fn> };
-    const clickHandler = documentLike.addEventListener.mock.calls.find((call) => call[0] === "click")?.[1] as
-      | ((eventLike: Record<string, unknown>) => void)
-      | undefined;
-    const createNavigationEvent = (id: string) => {
+    const clickHandlers = documentLike.addEventListener.mock.calls
+      .filter((call) => call[0] === "click")
+      .map((call) => call[1] as (eventLike: Record<string, unknown>) => void);
+    const createNavigationEvent = (id: string, insideTitle = false) => {
       const anchor = {
         id,
-        closest: vi.fn((selector: string) => selector === ".title" ? null : anchor)
+        closest: vi.fn((selector: string) => selector === ".title" ? (insideTitle ? {} : null) : anchor)
       };
       return {
         button: 0,
@@ -417,23 +887,26 @@ describe("online leaderboard terminal submission", () => {
       };
     };
 
-    const allowed = createNavigationEvent("top-modes-btn");
-    clickHandler?.(allowed);
-    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
-      event: "abandon",
-      reason: "navigation",
-      ranked_session_token: "navigation-token"
-    }));
-    expect(allowed.preventDefault).not.toHaveBeenCalled();
+    const events = [
+      createNavigationEvent("top-practice-btn"),
+      createNavigationEvent("top-modes-btn"),
+      createNavigationEvent("top-user-profile-btn"),
+      createNavigationEvent("home-user-display"),
+      createNavigationEvent("toolkit-account-link"),
+      createNavigationEvent("toolkit-palette-link"),
+      createNavigationEvent("home-title-link"),
+      createNavigationEvent("", true)
+    ];
+    for (const eventLike of events) {
+      for (const handler of clickHandlers) handler(eventLike);
+    }
 
-    enqueueAttempt.mockReturnValue(false);
-    const blocked = createNavigationEvent("top-practice-btn");
-    clickHandler?.(blocked);
-    expect(blocked.preventDefault).toHaveBeenCalledTimes(1);
-    expect(blocked.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(runtime.windowLike.alert).toHaveBeenCalledWith(
-      "暂时无法保存本局排位记录，请重试后再离开游戏。\n失败原因：浏览器本地存储写入失败（attempt_outbox_write_failed）。\n如果对局最终未正常上传，可以添加QQ群1103144436申请补录成绩。"
-    );
+    expect(enqueueAttempt).not.toHaveBeenCalled();
+    for (const eventLike of events) {
+      expect(eventLike.preventDefault).not.toHaveBeenCalled();
+      expect(eventLike.stopImmediatePropagation).not.toHaveBeenCalled();
+    }
+    expect(runtime.windowLike.alert).not.toHaveBeenCalled();
   });
 
   it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {
@@ -914,7 +1387,7 @@ describe("online leaderboard terminal submission", () => {
     await flushRuntimePromises();
 
     manager.clientRecordId = "rec_rescue_second";
-    manager.sessionSubmitDone = false;
+    manager.sessionSubmitDone = true;
     (manager.move as { call: (thisArg: unknown) => void }).call(manager);
     await flushRuntimePromises();
 
@@ -1586,6 +2059,161 @@ describe("online leaderboard terminal submission", () => {
     expect(storage.getItem(LAST_RECORD_SUBMIT_KEY)).toBeNull();
   });
 
+  it("keeps every recovery source when the terminal pending record cannot be persisted", async () => {
+    const storage = new SelectiveFailStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-storage-full",
+      seed: 123,
+      ranked_session_token: "ranked-storage-full-token",
+      issued_at: nowSec - 60,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      replay_string: "recoverable-replay",
+      owner_user_id: "7",
+      duration_ms: 1200,
+      saved_at: Date.now(),
+      ui_state: {}
+    }));
+    storage.failedKeys.add(PENDING_RECORD_KEY);
+    const setItem = vi.spyOn(storage, "setItem");
+    const clearSavedGameState = vi.fn();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      rankedSessionToken: "ranked-storage-full-token",
+      challengeId: "ranked-storage-full",
+      clearSavedGameState
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: { id: "should-not-submit" } })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(setItem).toHaveBeenCalledWith(PENDING_RECORD_KEY, expect.any(String));
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("waits for local history and never clears a newer game", async () => {
+    const localSave = createDeferred<boolean>();
+    const clearSavedGameState = vi.fn();
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      localHistorySaveInFlight: {
+        identity: "client:rec_client_1",
+        promise: localSave.promise
+      },
+      clearSavedGameState
+    });
+    let recordPayload: Record<string, unknown> | null = null;
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records")) {
+          recordPayload = init.body ? (JSON.parse(init.body) as Record<string, unknown>) : null;
+          return createJsonResponse({ success: true, data: { id: "old-record" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+
+    manager.over = false;
+    manager.score = 0;
+    manager.clientRecordId = "rec_client_next";
+    manager.serialize = vi.fn(() => "replay-next");
+    localSave.resolve(true);
+    await flushRuntimePromises();
+
+    expect(recordPayload).toMatchObject({
+      client_record_id: "rec_client_1",
+      replay_string: "replay-v1",
+      score: 4096
+    });
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+  });
+
+  it("does not let an older local history save authorize the current game", async () => {
+    const oldLocalSave = createDeferred<boolean>();
+    const clearSavedGameState = vi.fn();
+    const manager = createTerminatedManager({
+      clientRecordId: "rec_client_2",
+      sessionSubmitDone: false,
+      localHistorySaveInFlight: {
+        identity: "client:rec_client_1",
+        promise: oldLocalSave.promise
+      },
+      clearSavedGameState,
+      serialize: vi.fn(() => "replay-v2")
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "wrong-record" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    oldLocalSave.resolve(true);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(runtime.storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(clearSavedGameState).not.toHaveBeenCalled();
+  });
+
+  it("does not treat blank client record ids as the same in-flight record", async () => {
+    const storage = new MemoryStorage();
+    const recordSubmit = createDeferred<Record<string, unknown>>();
+    const manager = createTerminatedManager({ clientRecordId: "" });
+    loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          await recordSubmit.promise;
+          return createJsonResponse({ success: true, data: { id: "record-ok" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    manager.initialSeed = 456;
+    manager.score = 8192;
+    manager.moveHistory = [0, 1, 2];
+    manager.serialize = vi.fn(() => "replay-v2");
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(JSON.parse(storage.getItem(PENDING_RECORD_QUEUE_KEY) || "[]")).toMatchObject([
+      { payload: { replay_string: "replay-v2", score: 8192 } }
+    ]);
+
+    recordSubmit.resolve({ success: true });
+    await flushRuntimePromises();
+  });
+
   it("does not fallback authenticated record writes to another API base", async () => {
     const storage = new MemoryStorage();
     const manager = createTerminatedManager();
@@ -1724,6 +2352,22 @@ describe("online leaderboard terminal submission", () => {
 
   it("keeps ranked page-hide progress local without uploading a cloud checkpoint", async () => {
     const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeSession = {
+      mode_key: MODE_KEY,
+      challenge_id: "active-ranked-challenge",
+      seed: 123,
+      ranked_session_token: "active-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(activeSession));
+    const buildSavedGameStatePayload = vi.fn(() => ({
+      mode_key: MODE_KEY,
+      replay_string: "duplicated-replay",
+      session_replay_v1: { records: new Array(100).fill([0, 1, 2]) }
+    }));
     const manager = createTerminatedManager({
       rankPolicy: "ranked",
       over: false,
@@ -1731,11 +2375,13 @@ describe("online leaderboard terminal submission", () => {
       moveHistory: [0],
       successfulMoveCount: 1,
       score: 1024,
-      rankedSessionToken: "active-ranked-token"
+      rankedSessionToken: "active-ranked-token",
+      challengeId: "active-ranked-challenge"
     });
     const runtime = loadOnlineLeaderboardRuntime({
       manager,
       storage,
+      buildSavedGameStatePayload,
       fetchImpl: async (url) => {
         if (url.includes("/ranked-checkpoint")) {
           return createJsonResponse({ success: true, verified: true, data: {} });
@@ -1745,13 +2391,120 @@ describe("online leaderboard terminal submission", () => {
     });
 
     const onlineRuntime = runtime.windowLike.OnlineLeaderboardRuntime as {
+      hasLocalRankedCheckpointMirror: (modeKey: string) => boolean;
       persistRankedCheckpointOnPageHide: (manager: Record<string, unknown>) => void;
     };
     onlineRuntime.persistRankedCheckpointOnPageHide(manager);
     await flushRuntimePromises();
 
-    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    const mirrorRaw = storage.getItem(CHECKPOINT_MIRROR_KEY);
+    expect(mirrorRaw).not.toBeNull();
+    const mirror = JSON.parse(mirrorRaw || "{}");
+    expect(mirror.replay_string).toBe("replay-v1");
+    expect(mirror).toMatchObject({
+      client_record_id: "rec_client_1",
+      ranked_session_token: "active-ranked-token",
+      challenge_id: "active-ranked-challenge",
+      initial_seed: 123,
+      seed: 123
+    });
+    expect(mirror.ui_state?.saved_state).toBeUndefined();
+    expect(buildSavedGameStatePayload).not.toHaveBeenCalled();
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(true);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      ...activeSession,
+      seed: 456
+    }));
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(false);
+    onlineRuntime.persistRankedCheckpointOnPageHide(manager);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      ...activeSession,
+      challenge_id: "different-ranked-challenge",
+      ranked_session_token: "different-ranked-token"
+    }));
+    expect(onlineRuntime.hasLocalRankedCheckpointMirror(MODE_KEY)).toBe(false);
     expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
+  });
+
+  it("keeps checkpoint application active after restart setup resets runtime state", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-checkpoint-replay",
+      seed: 101,
+      ranked_session_token: "checkpoint-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "ranked-checkpoint-replay",
+      ranked_session_token: "checkpoint-token",
+      initial_seed: 101,
+      seed: 101,
+      client_record_id: "rec_checkpoint",
+      replay_string: "checkpoint-replay",
+      duration_ms: 1200,
+      saved_at: Date.now(),
+      owner_user_id: "7",
+      ui_state: {}
+    }));
+    const moveStates: Array<{ applying: boolean; forcedSpawn: unknown }> = [];
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      successfulMoveCount: 0,
+      rankedSessionToken: "checkpoint-token",
+      challengeId: "ranked-checkpoint-replay",
+      initialSeed: 101,
+      needsRankedCheckpointRestore: false,
+      lastRankedCheckpointRestoreError: "",
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn(),
+      move: vi.fn(function (this: Record<string, unknown>) {
+        moveStates.push({
+          applying: this.rankCheckpointApplying === true,
+          forcedSpawn: this.forcedSpawn
+        });
+      })
+    });
+    const replaySpawns = [
+      { x: 0, y: 1, value: 2 },
+      { x: 1, y: 2, value: 2 },
+      { x: 2, y: 3, value: 4 }
+    ];
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      parseReplayImportEnvelope: () => ({
+        kind: "v1rpl",
+        modeKey: MODE_KEY,
+        initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        replayMoves: [0, 1, 2],
+        replaySpawns
+      }),
+      resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      restartWithBoard: (currentManager) => {
+        (currentManager as Record<string, unknown>).rankCheckpointApplying = false;
+      },
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    manager.needsRankedCheckpointRestore = true;
+    (runtime.windowLike.OnlineLeaderboardRuntime as {
+      scheduleRankedCheckpointRestore: (currentManager: Record<string, unknown>, options: unknown) => void;
+    }).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
+    await flushRuntimePromises();
+
+    expect(moveStates).toEqual(replaySpawns.map((forcedSpawn) => ({ applying: true, forcedSpawn })));
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
   });
 
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {
@@ -2004,6 +2757,85 @@ describe("online leaderboard terminal submission", () => {
     expect(runtime.windowLike.GAME_CHALLENGE_CONTEXT).toMatchObject({
       ranked_session_token: "next-ranked-token"
     });
+  });
+
+  it("does not clear a same-mode checkpoint or active session for a different game identity", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "same-token-current",
+      seed: 456,
+      ranked_session_token: "shared-ranked-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      client_record_id: "rec_client_2",
+      replay_string: "replay-v2",
+      owner_user_id: "7",
+      duration_ms: 1200,
+      saved_at: Date.now(),
+      ui_state: {}
+    }));
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify({
+      signature: "old-record-signature",
+      payload: {
+        mode_key: MODE_KEY,
+        score: 4096,
+        client_record_id: "rec_client_1",
+        replay_string: "replay-v1",
+        ranked_session_token: "shared-ranked-token",
+        challenge_id: "same-token-old"
+      },
+      ownerUserId: "7",
+      createdAt: Date.now(),
+      lastAttemptAt: 0,
+      retryCount: 0
+    }));
+    const recordSubmit = createDeferred<Record<string, unknown>>();
+    const clearSavedGameState = vi.fn();
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      sessionSubmitDone: false,
+      rankedSessionToken: "shared-ranked-token",
+      challengeId: "same-token-current",
+      initialSeed: 456,
+      clientRecordId: "rec_client_2",
+      serialize: vi.fn(() => "replay-v2"),
+      clearSavedGameState
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      disableOnlineLeaderboard: false,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          await recordSubmit.promise;
+          return createJsonResponse({ success: true, data: { id: "old-record" } });
+        }
+        if (url.includes("/ranked-checkpoint")) {
+          return createJsonResponse({ success: true, deleted: true });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await flushRuntimePromises();
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    recordSubmit.resolve({ success: true });
+    await flushRuntimePromises();
+
+    expect(storage.getItem(ACTIVE_SESSION_KEY)).not.toBeNull();
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+    expect(storage.getItem(CHECKPOINT_CLEAR_KEY)).toBeNull();
+    expect(runtime.fetchCalls.some((call) => call.url.includes("/ranked-checkpoint"))).toBe(false);
+    expect(clearSavedGameState).not.toHaveBeenCalled();
   });
 
   it("mirrors the next active storage when the manager has already advanced to the next ranked token", async () => {
@@ -2482,6 +3314,7 @@ describe("online leaderboard terminal submission", () => {
     };
 
     (manager.restart as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
 
     expect(confirmationShown).toBe(true);
     expect(runtime.windowLike.RankedSessionRuntime.startNextSession).not.toHaveBeenCalled();

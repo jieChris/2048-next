@@ -3,14 +3,11 @@ import { expect, test } from "@playwright/test";
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 
 test.describe("History smoke: export", () => {
-  test("backfills, displays, sorts, searches and exports board sum", async ({ page }) => {
+  test("computes, displays, sorts, searches and exports board sum", async ({ page }) => {
     await mockAcceptedBetaAccess(page);
-
-    const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
-    expect(response).not.toBeNull();
-    expect(response?.ok()).toBeTruthy();
-
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
+      const fixtureMarker = "history_smoke_legacy_fixture_seeded_v1";
+      if (window.sessionStorage.getItem(fixtureMarker) === "1") return;
       const now = Date.now();
       window.localStorage.setItem("local_game_history_v1", JSON.stringify([
         {
@@ -34,7 +31,12 @@ test.describe("History smoke: export", () => {
           ended_at: new Date(now - 1000).toISOString()
         }
       ]));
+      window.sessionStorage.setItem(fixtureMarker, "1");
     });
+
+    const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
 
     await page.click("#history-load-btn");
     await expect(page.locator(".history-item")).toHaveCount(2);
@@ -48,8 +50,8 @@ test.describe("History smoke: export", () => {
     await expect(page.locator(".history-item")).toHaveCount(1);
     await expect(page.locator(".history-item").first()).toContainText("盘面和: 30");
 
-    const exported = await page.evaluate(() => {
-      const payload = (window as any).LocalHistoryStore.exportRecords();
+    const exported = await page.evaluate(async () => {
+      const payload = await (window as any).LocalHistoryStore.exportRecordsAsync();
       return JSON.parse(String(payload || "{}"));
     });
     expect(exported.records).toHaveLength(2);
@@ -63,13 +65,13 @@ test.describe("History smoke: export", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const store = (window as any).LocalHistoryStore;
       if (!store) throw new Error("LocalHistoryStore missing");
-      store.clearAll();
+      await store.clearAllAsync();
 
       const now = Date.now();
-      store.saveRecord({
+      await store.saveRecordAsync({
         id: "export_1",
         mode: "local",
         mode_key: "standard_4x4_pow2_no_undo",
@@ -96,7 +98,7 @@ test.describe("History smoke: export", () => {
           }
         ]
       });
-      store.saveRecord({
+      await store.saveRecordAsync({
         id: "export_2",
         mode: "local",
         mode_key: "standard_4x4_pow2_no_undo",
@@ -112,28 +114,34 @@ test.describe("History smoke: export", () => {
     });
 
     await page.click("#history-load-btn");
+    await expect(page.locator(".history-item")).toHaveCount(2);
 
-    const snapshot = await page.evaluate(() => {
+    await page.evaluate(() => {
       const store = (window as any).LocalHistoryStore;
-      const calls: Array<{ file: string; size: number; mime: string; payload: string }> = [];
-      const originalDownload = store.download;
+      (window as any).__historyExportCalls = [];
+      (window as any).__historyOriginalDownload = store.download;
 
       store.download = function (file: string, payload: string, mimeType?: string) {
-        calls.push({
+        (window as any).__historyExportCalls.push({
           file: String(file || ""),
           size: String(payload || "").length,
           mime: String(mimeType || "application/json;charset=utf-8"),
           payload: String(payload || "")
         });
       };
+    });
 
-      const exportAllBtn = document.querySelector("#history-export-all-btn") as HTMLButtonElement | null;
-      if (exportAllBtn) exportAllBtn.click();
+    await page.click("#history-export-all-btn");
+    await expect.poll(() => page.evaluate(() => (window as any).__historyExportCalls.length)).toBe(1);
+    await page.click(".history-export-btn");
+    await expect.poll(() => page.evaluate(() => (window as any).__historyExportCalls.length)).toBe(3);
 
-      const exportOneBtn = document.querySelector(".history-export-btn") as HTMLButtonElement | null;
-      if (exportOneBtn) exportOneBtn.click();
-
-      store.download = originalDownload;
+    const snapshot = await page.evaluate(() => {
+      const store = (window as any).LocalHistoryStore;
+      const calls = (window as any).__historyExportCalls.slice();
+      store.download = (window as any).__historyOriginalDownload;
+      delete (window as any).__historyExportCalls;
+      delete (window as any).__historyOriginalDownload;
       return calls;
     });
 
