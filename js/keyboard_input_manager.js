@@ -1,3 +1,5 @@
+var nextKeyboardOperationFeedbackInputId = 0;
+
 function KeyboardInputManager() {
   this.events = {};
 
@@ -22,6 +24,26 @@ KeyboardInputManager.prototype.emit = function (event, data) {
 
 KeyboardInputManager.prototype.listen = function () {
   var self = this;
+
+  function createKeyboardMoveAttempt(direction, event) {
+    var arrowKeys = { 38: "arrow-up", 39: "arrow-right", 40: "arrow-down", 37: "arrow-left" };
+    var physicalKeys = {
+      ArrowUp: "arrow-up", ArrowRight: "arrow-right", ArrowDown: "arrow-down", ArrowLeft: "arrow-left",
+      Backspace: "backspace"
+    };
+    var code = String(event.code || "");
+    var key = physicalKeys[code] || (code.length === 4 && code.indexOf("Key") === 0
+      ? code.slice(3)
+      : event.which === 8 ? "backspace" : String(event.key || "").toUpperCase());
+    return {
+      direction: direction,
+      feedback: {
+        id: "keyboard-" + (++nextKeyboardOperationFeedbackInputId),
+        key: arrowKeys[event.which] || key,
+        repeat: event.repeat === true
+      }
+    };
+  }
 
   var map = {
     38: 0, // Up
@@ -56,25 +78,7 @@ KeyboardInputManager.prototype.listen = function () {
   function isDiagonalModeEnabled() {
     var body = document.body;
     var modeId = body && body.getAttribute ? body.getAttribute("data-mode-id") : "";
-    if (typeof modeId === "string" && modeId.indexOf("diag_") === 0) return true;
-
-    var manager = typeof window !== "undefined" ? window.game_manager : null;
-    if (!manager) return false;
-    if (typeof manager.isDirectionAllowed === "function") {
-      return !!(manager.isDirectionAllowed(4) && manager.isDirectionAllowed(7));
-    }
-    if (Array.isArray(manager.allowedDirections)) {
-      return manager.allowedDirections.indexOf(4) !== -1 &&
-        manager.allowedDirections.indexOf(7) !== -1;
-    }
-    var rules = manager.modeConfig && manager.modeConfig.special_rules;
-    if (!rules) return false;
-    if (rules.allow_diagonal_moves === true) return true;
-    if (Array.isArray(rules.movement_directions)) {
-      return rules.movement_directions.indexOf(4) !== -1 &&
-        rules.movement_directions.indexOf(7) !== -1;
-    }
-    return false;
+    return typeof modeId === "string" && modeId.indexOf("diag_") === 0;
   }
 
   function isCompactViewport() {
@@ -138,8 +142,9 @@ KeyboardInputManager.prototype.listen = function () {
       event.key === "y" ||
       event.key === "Y";
     if (!systemModifiers && isRedoKey) {
+      if (isDiagonalModeEnabled()) return;
       event.preventDefault();
-      self.emit("move", -2);
+      self.emit("move", createKeyboardMoveAttempt(-2, event));
       return;
     }
 
@@ -151,12 +156,15 @@ KeyboardInputManager.prototype.listen = function () {
       if (event.which === 90) {
         var useDiagonalZ = isDiagonalModeEnabled();
         event.preventDefault();
-        self.emit("move", useDiagonalZ ? 6 : -1);
+        self.emit("move", createKeyboardMoveAttempt(useDiagonalZ ? 6 : -1, event));
         return;
       }
       if (mapped !== undefined) {
+        var diagonalModeEnabled = isDiagonalModeEnabled();
+        if (mapped >= 4 && !diagonalModeEnabled) return;
+        if (mapped === -1 && diagonalModeEnabled && event.which !== 8) return;
         event.preventDefault();
-        self.emit("move", mapped);
+        self.emit("move", createKeyboardMoveAttempt(mapped, event));
       }
       var mappedItem = itemMap[event.which];
       if (mappedItem !== undefined) {

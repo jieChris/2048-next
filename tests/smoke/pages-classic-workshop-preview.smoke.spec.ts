@@ -9,6 +9,13 @@ const PREVIEW_PAGES = [
   "relay"
 ] as const;
 
+const PREVIEW_VIEWPORTS = {
+  "small-mobile": [320, 568],
+  mobile: [390, 844],
+  tablet: [768, 1024],
+  desktop: [1280, 720]
+} as const;
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("theme_profile_v1", "mist_cyan");
@@ -23,6 +30,7 @@ test("classic workshop preview shows one untransformed candidate safely", async 
 
   await expect(page.locator("[data-classic-workshop-preview]")).toBeVisible();
   await expect(page.locator("[data-preview-page-key]")).toHaveCount(PREVIEW_PAGES.length);
+  await expect(page.locator("[data-preview-device]")).toHaveCount(Object.keys(PREVIEW_VIEWPORTS).length);
 
   const candidateFrameElement = page.locator('[data-preview-frame="candidate"]');
   await expect(page.locator("[data-preview-frame]")).toHaveCount(1);
@@ -96,6 +104,10 @@ test("classic workshop preview shows one untransformed candidate safely", async 
 
   await page.locator('[data-preview-page-key="account-settings"]').click();
   await expect(candidateFrame.locator("body[data-page='account-settings-hub']")).toBeVisible();
+  await expect(candidateFrame.locator("body[data-page='account-settings-hub']")).toHaveAttribute("data-auth-state", "guest");
+  await expect(candidateFrame.locator("#account-auth-state-tag")).toHaveText("未登录");
+  await expect(candidateFrame.locator("#home-user-display")).toHaveCount(0);
+  await expect(candidateFrame.locator(".account-auth-form-surface")).toBeVisible();
   const settingsHeaderGap = await candidateFrame.locator("body").evaluate(() => {
     const badge = document.querySelector<HTMLElement>(".home-user-display--global:not([hidden])");
     const back = document.querySelector<HTMLElement>(".page-back-button");
@@ -106,6 +118,8 @@ test("classic workshop preview shows one untransformed candidate safely", async 
 
   await page.locator('[data-preview-device="mobile"]').click();
   await expect(page.locator("[data-preview-stage]")).toHaveAttribute("data-active-device", "mobile");
+  await expect(page.locator("[data-preview-viewport]")).toHaveCSS("width", "390px");
+  await expect(page.locator("[data-preview-viewport]")).toHaveCSS("height", "844px");
   const mobileSettingsLayout = await candidateFrame.locator("body").evaluate(() => {
     const badge = document.querySelector<HTMLElement>(".home-user-display--global:not([hidden])");
     const header = document.querySelector<HTMLElement>(".palette-page-header");
@@ -118,6 +132,15 @@ test("classic workshop preview shows one untransformed candidate safely", async 
   });
   expect(mobileSettingsLayout.horizontalOverflow).toBe(false);
   expect(mobileSettingsLayout.headerGap).toBeGreaterThanOrEqual(8);
+
+  for (const [device, [width, height]] of Object.entries(PREVIEW_VIEWPORTS)) {
+    await page.locator(`[data-preview-device="${device}"]`).click();
+    await expect(page.locator("[data-preview-stage]")).toHaveAttribute("data-active-device", device);
+    await expect(page.locator("[data-preview-viewport]")).toHaveCSS("width", `${width}px`);
+    await expect(page.locator("[data-preview-viewport]")).toHaveCSS("height", `${height}px`);
+  }
+
+  await page.locator('[data-preview-device="mobile"]').click();
 
   await page.locator('[data-preview-page-key="practice"]').click();
   await expect(candidateFrame.locator("body[data-page='practice']")).toBeVisible();

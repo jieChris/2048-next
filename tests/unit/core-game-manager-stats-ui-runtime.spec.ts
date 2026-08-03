@@ -20,6 +20,7 @@ function loadStatsUiRuntime(extraContext?: Record<string, unknown>) {
 
   vm.runInNewContext(script, context);
   return context as {
+    createStatsPanelOverlayHtml: (lang: string) => string;
     resolveStatsPanelCopy: (lang: string) => Record<string, string>;
     resolveStatsPanelLanguage: (manager: Record<string, unknown>, documentLike: Record<string, unknown>) => string;
   };
@@ -65,5 +66,16 @@ describe("core game manager stats ui runtime", () => {
     });
     expect(runtime.resolveStatsPanelCopy("en").title).toBe("Runtime Summary");
     expect(resolveStatsPanelCopy).toHaveBeenCalledWith("en");
+  });
+
+  it("renders valid and invalid input rows in the stats summary", () => {
+    const runtime = loadStatsUiRuntime();
+
+    const html = runtime.createStatsPanelOverlayHtml("en");
+
+    expect(html).toContain("id='stats-panel-valid-inputs-label'>Valid Inputs");
+    expect(html).toContain("id='stats-panel-valid-inputs'>0");
+    expect(html).toContain("id='stats-panel-invalid-inputs-label'>Invalid Inputs");
+    expect(html).toContain("id='stats-panel-invalid-inputs'>0");
   });
 });

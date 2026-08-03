@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 NEXT｜操作反馈草稿</title>
+  <link rel="icon" type="image/svg+xml" href="meta/favicon.svg?v=20260606-fillframe">
+  <style>
+    :root { color-scheme: light; font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif; background: #f8f6ed; color: #655f56; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: radial-gradient(circle at 50% 36%, #fffdf7 0 34%, #f4f0e5 80%); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .mobile-only { display: none; }
+    .preview { width: min(1440px, 100%); min-height: 100vh; margin: 0 auto; padding: 28px 32px 38px; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 auto 22px; max-width: 1240px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { display: block; width: 86px; height: 50px; object-fit: contain; object-position: left center; }
+    .brand-copy { display: grid; gap: 1px; }
+    .brand-copy strong { color: #49443d; font-size: 17px; letter-spacing: .04em; }
+    .brand-copy span { color: #9a9084; font-size: 12px; font-weight: 650; letter-spacing: .11em; }
+    .header-actions { display: flex; align-items: center; gap: 9px; }.draft-badge, .preview-settings-button { border: 1px solid #d8d0c0; border-radius: 999px; color: #80776d; background: rgba(255,255,255,.7); padding: 8px 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; }.preview-settings-button { color: #5f746f; transition: border-color .15s ease, color .15s ease, transform .15s ease; }.preview-settings-button:hover { border-color: #8bb4ae; color: #357a73; transform: translateY(-1px); }
+    .stage { position: relative; max-width: 1240px; min-height: 570px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(185,174,157,.42); border-radius: 26px; background: linear-gradient(145deg, rgba(255,254,249,.94), rgba(245,241,231,.93)); box-shadow: 0 22px 55px rgba(111, 98, 80, .12), inset 0 1px rgba(255,255,255,.8); }
+    .stage::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(184,168,144,.08) 1px, transparent 1px), linear-gradient(rgba(184,168,144,.06) 1px, transparent 1px); background-size: 40px 40px; mask-image: linear-gradient(to bottom, black, transparent 72%); }
+    .preview-controls { width: min(100%, 440px); margin: 22px auto 0; }
+    .preview-tools { border: 1px solid rgba(180,167,148,.54); border-radius: 15px; background: rgba(255,253,247,.78); box-shadow: 0 8px 22px rgba(92,77,59,.07); }.preview-tools summary { padding: 11px 14px; color: #817669; cursor: pointer; font-size: 12px; font-weight: 720; }.preview-tools[open] summary { border-bottom: 1px solid #ece5d8; }.preview-tools .test-console { border: 0; border-radius: 0 0 15px 15px; box-shadow: none; }
+    .settings { width: 100%; padding: 17px; border: 1px solid rgba(180,167,148,.54); border-radius: 18px; background: rgba(255,253,247,.9); box-shadow: 0 12px 30px rgba(92,77,59,.1); }
+    .settings h2 { margin: 0; color: #4b443b; font-size: 16px; letter-spacing: .02em; }
+    .settings > p { margin: 5px 0 15px; color: #958a7d; font-size: 12px; line-height: 1.55; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 0 12px; border-top: 1px solid #ece5d8; border-bottom: 1px solid #ece5d8; }
+    .switch-copy { display: grid; gap: 2px; }
+    .switch-copy strong { color: #5e554a; font-size: 13px; }
+    .switch-copy span { color: #9a9084; font-size: 11px; }
+    .switch { position: relative; width: 44px; height: 25px; flex: 0 0 auto; }
+    .switch input { position: absolute; opacity: 0; inset: 0; }
+    .switch span { display: block; width: 100%; height: 100%; border-radius: 999px; background: #c9c2b7; box-shadow: inset 0 1px 2px rgba(80,70,60,.18); transition: background .18s ease; }
+    .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(63,50,38,.28); transition: transform .18s ease; }
+    .switch input:checked + span { background: #4d9b95; }
+    .switch input:checked + span::after { transform: translateX(19px); }
+    .setting-label { display: block; margin: 15px 0 7px; color: #857a6d; font-size: 11px; font-weight: 750; letter-spacing: .04em; }
+    .segmented { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 4px; border-radius: 10px; background: #eee8dc; }
+    .segmented button { min-width: 0; border: 0; border-radius: 7px; background: transparent; color: #81776b; padding: 7px 3px; font-size: 11px; font-weight: 720; }
+    .segmented button.is-active { background: #fffdf8; color: #4d918b; box-shadow: 0 2px 5px rgba(92,76,58,.12); }
+    .settings-footer { display: flex; gap: 7px; margin-top: 15px; }
+    .settings-footer button, .test-button { border: 1px solid #ddd4c5; border-radius: 9px; background: rgba(255,255,255,.7); color: #756b5f; padding: 8px 9px; font-size: 11px; font-weight: 720; transition: transform .12s ease, border-color .12s ease, color .12s ease; }
+    .settings-footer button:hover, .test-button:hover { transform: translateY(-1px); border-color: #95b8b2; color: #397c76; }
+    .settings-footer button:first-child { flex: 1; }
+    .game-layout { position: relative; z-index: 1; display: grid; grid-template-columns: 450px 262px; gap: 24px; align-items: center; justify-content: center; width: max-content; margin: 62px auto 0; }
+    .game-main { width: 450px; }
+    .game-brand { display: flex; align-items: center; justify-content: space-between; min-height: 65px; margin-bottom: 12px; }
+    .game-brand img { width: 165px; height: 62px; object-fit: contain; object-position: left center; }
+    .mode-pill { border: 1px solid #d9d0c0; border-radius: 999px; background: rgba(255,255,255,.62); color: #8a7e6f; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+    .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; aspect-ratio: 1; padding: 14px; border-radius: 10px; background: #b7aa99; box-shadow: 0 15px 30px rgba(92,74,54,.16), inset 0 1px rgba(255,255,255,.23); }
+    .tile { display: grid; place-items: center; min-width: 0; border-radius: 4px; background: rgba(238,228,218,.38); color: #776e65; font-size: 29px; font-weight: 800; letter-spacing: -.05em; box-shadow: inset 0 1px rgba(255,255,255,.22); }
+    .tile--2 { background: #eee4d3; color: #776e65; }.tile--4 { background: #eee0c2; color: #776e65; }.tile--16 { background: #fa9a66; color: #fffaf2; }.tile--32 { background: #f67e5d; color: #fffaf2; }.tile--128 { background: #edcf72; color: #fffaf2; }.tile--512 { background: #edc53f; color: #fffaf2; }.tile--big { background: #111312; color: #fffdf8; font-size: 21px; }
+    .timer-column { align-self: center; width: 262px; }
+    .score-row { display: grid; grid-template-columns: 1fr 1.28fr; gap: 10px; margin-bottom: 10px; }
+    .stat-tile, .timer { position: relative; display: grid; place-items: center; min-height: 67px; padding: 19px 10px 8px; border-radius: 4px; background: #b7aa99; color: #fffdf9; font-size: 23px; font-weight: 800; box-shadow: inset 0 1px rgba(255,255,255,.2); }
+    .stat-tile::before, .timer::before { position: absolute; top: 8px; left: 0; width: 100%; color: rgba(255,255,255,.72); content: attr(data-label); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-align: center; }
+    .history-table { display: grid; gap: 7px; }
+    .history-row { display: grid; grid-template-columns: 51px 1fr; overflow: hidden; min-height: 44px; border-radius: 3px; background: rgba(239,232,220,.82); }
+    .history-row b { display: grid; place-items: center; color: #fffdf9; background: #eecc63; font-size: 14px; }.history-row:nth-child(2) b { background: #f47b59; }.history-row:nth-child(3) b { background: #f47b59; }.history-row:nth-child(4) b { background: #edc83f; }.history-row:nth-child(5) b { background: #111312; }
+    .history-row span { align-self: center; color: #746c61; font-size: 16px; font-weight: 750; text-align: center; }
+    .timer-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }.timer-buttons button { height: 32px; border: 0; border-radius: 3px; background: #eee7da; color: #7e766c; font-size: 17px; }
+    .feedback-panel { display: flex; flex-direction: column; justify-content: flex-end; width: 74px; min-height: 426px; transition: opacity .4s ease, transform .4s ease; }
+    .feedback-panel.is-muted { opacity: 0; transform: translateY(6px); pointer-events: none; }
+    .feedback-panel.is-off { opacity: 0; pointer-events: none; }
+    .feedback-stack { display: flex; flex: 1 1 auto; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 12px; }
+    .feedback-key { display: grid; place-items: center; width: 60px; height: 60px; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(255,255,255,.28); border-radius: 11px; background: linear-gradient(145deg, rgba(47,51,48,.93), rgba(16,18,17,.97)); color: #fff; box-shadow: 0 9px 17px rgba(36,35,31,.21), inset 0 1px rgba(255,255,255,.13); font-family: "Avenir Next", "PingFang SC", sans-serif; font-size: 31px; font-weight: 760; line-height: 1; text-shadow: 0 1px 1px rgba(0,0,0,.45); animation: key-rise .28s cubic-bezier(.2,.9,.25,1.18) both; }
+    .feedback-key.is-invalid { border-color: rgba(255,224,218,.72); background: linear-gradient(145deg, #ca5349, #842b28); color: #fff8f4; box-shadow: 0 9px 17px rgba(114,35,29,.22), inset 0 1px rgba(255,255,255,.18); }
+    .feedback-key.is-wide { width: 96px; font-size: 32px; }
+    .feedback-key[data-age="1"] { opacity: .80; }.feedback-key[data-age="2"] { opacity: .64; }.feedback-key[data-age="3"] { opacity: .50; }.feedback-key[data-age="4"] { opacity: .38; }.feedback-key[data-age="5"] { opacity: .29; }.feedback-key[data-age="6"] { opacity: .21; }.feedback-key[data-age="7"] { opacity: .14; }
+    @keyframes key-rise { from { opacity: 0; transform: translateY(24px) scale(.84); } to { transform: translateY(0) scale(1); } }
+    .feedback-panel.placement-timer { position: absolute; top: 66px; left: calc(50% + 395px); }.feedback-panel.placement-edge { position: absolute; right: 30px; bottom: 34px; }.feedback-panel.placement-custom { position: absolute; z-index: 4; }.feedback-panel.is-layout-editing .feedback-grip { display: block; }
+    .feedback-grip { display: none; width: 30px; height: 5px; margin: 0 auto 8px; border-radius: 999px; background: rgba(71,79,75,.35); cursor: grab; touch-action: none; }.feedback-grip:active { cursor: grabbing; }
+    .test-console { width: 100%; padding: 14px; border: 1px solid rgba(180,167,148,.54); border-radius: 18px; background: rgba(255,253,247,.9); box-shadow: 0 12px 30px rgba(92,77,59,.1); }
+    .test-console strong { display: block; margin-bottom: 4px; color: #5d554c; font-size: 13px; }.test-console p { margin: 0 0 10px; color: #9a9084; font-size: 11px; line-height: 1.5; }.test-buttons { display: flex; flex-wrap: wrap; gap: 6px; }.test-button { padding: 7px 8px; }.test-button.is-danger { color: #a54138; border-color: #e7bbb5; }.test-button.is-primary { color: #397c76; border-color: #aed0cb; }
+    .settings-modal { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(60,53,44,.34); backdrop-filter: blur(8px); }.settings-modal[hidden] { display: none; }.settings-dialog { width: min(100%, 440px); overflow: hidden; border: 1px solid rgba(255,255,255,.72); border-radius: 22px; background: #fffdf7; box-shadow: 0 26px 70px rgba(56,47,38,.28); }.settings-dialog > header { display: flex; align-items: center; justify-content: space-between; padding: 18px 19px 14px; border-bottom: 1px solid #ebe3d7; }.settings-dialog > header h1 { margin: 0; color: #4b443b; font-size: 18px; }.settings-dialog > header button { width: 30px; height: 30px; border: 0; border-radius: 9px; background: #f0eadf; color: #756d62; font-size: 21px; line-height: 1; }.settings-dialog .settings { border: 0; border-radius: 0; box-shadow: none; }
+    @media (max-width: 1050px) { .preview { padding: 20px; }.stage { min-height: 550px; }.game-layout { margin-top: 34px; transform: scale(.86); transform-origin: top center; } }
+    @media (max-width: 760px) { .preview { display: none; }.mobile-only { display: grid; min-height: 100vh; place-items: center; padding: 28px; background: #f8f6ed; color: #6c645a; text-align: center; }.mobile-only strong { display: block; margin-bottom: 9px; color: #4c453c; font-size: 18px; }.mobile-only p { margin: 0; font-size: 13px; line-height: 1.7; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="preview">
+    <header class="preview-header">
+      <div class="brand"><img src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 NEXT"><div class="brand-copy"><strong>操作反馈</strong><span>DESKTOP INTERACTION DRAFT</span></div></div>
+      <div class="header-actions"><button class="preview-settings-button" type="button" data-settings-open aria-expanded="false">⚙ 设置</button><span class="draft-badge">独立本地草稿 · 不接入正式对局</span></div>
+    </header>
+
+    <section class="stage" data-stage>
+      <div class="game-layout">
+        <section class="game-main" aria-label="经典 4×4 棋盘示意">
+          <div class="game-brand"><img src="meta/logo-tall.png?v=20260704-logo-hq" alt="2048 NEXT"><span class="mode-pill">标准版 4×4</span></div>
+          <div class="board" aria-label="4×4 游戏棋盘"><div class="tile tile--4">4</div><div class="tile tile--2">2</div><div class="tile"></div><div class="tile"></div><div class="tile tile--2">2</div><div class="tile tile--16">16</div><div class="tile"></div><div class="tile"></div><div class="tile tile--2">2</div><div class="tile tile--32">32</div><div class="tile"></div><div class="tile"></div><div class="tile tile--big">32768</div><div class="tile tile--4">4</div><div class="tile"></div><div class="tile"></div></div>
+        </section>
+        <aside class="timer-column" aria-label="计时器示意"><div class="score-row"><div class="stat-tile" data-label="分数">262192</div><div class="timer" data-label="时间">02.939</div></div><div class="history-table" aria-hidden="true"><div class="history-row"><b>32</b><span>0.366</span></div><div class="history-row"><b>64</b><span>0.597</span></div><div class="history-row"><b>128</b><span>0.794</span></div><div class="history-row"><b>512</b><span>1.190</span></div><div class="history-row"><b>32768</b><span>2.379</span></div></div><div class="timer-buttons"><button type="button" aria-label="上一项">⌃</button><button type="button" aria-label="下一项">⌄</button></div></aside>
+      </div>
+
+      <section class="feedback-panel is-off placement-timer" data-feedback aria-label="操作反馈" aria-live="polite">
+        <div class="feedback-grip" data-drag-handle title="拖动操作反馈"></div>
+        <div class="feedback-stack" data-feedback-stack></div>
+      </section>
+    </section>
+    <section class="preview-controls" aria-label="草稿控制">
+      <details class="preview-tools"><summary>草稿测试输入（非游戏界面）</summary><aside class="test-console" aria-label="草稿测试操作"><strong>草稿测试操作</strong><p>也可直接使用键盘。方向键长按只会留下有效输入。</p><div class="test-buttons"><button class="test-button is-primary" type="button" data-simulate="valid">有效 ↑</button><button class="test-button is-danger" type="button" data-simulate="invalid">无效 ←</button><button class="test-button is-primary" type="button" data-simulate="hold">长按 →</button><button class="test-button" type="button" data-simulate="undo">Z／撤回</button><button class="test-button" type="button" data-simulate="backspace">⌫／撤回</button><button class="test-button is-danger" type="button" data-simulate="undo-fail">⌫ 不可撤回</button><button class="test-button" type="button" data-mode-toggle>切换八方向</button></div></aside></details>
+    </section>
+  </main>
+  <section class="settings-modal" data-settings-modal hidden aria-label="设置" role="dialog" aria-modal="true">
+    <div class="settings-dialog">
+      <header><h1>设置</h1><button type="button" data-settings-close aria-label="关闭设置">×</button></header>
+      <section class="settings" aria-label="操作反馈设置">
+        <h2>操作反馈</h2>
+        <p>显示本局最近操作及有效／无效反馈</p>
+        <label class="switch-row"><span class="switch-copy"><strong>操作反馈</strong><span>默认关闭，仅桌面端显示</span></span><span class="switch"><input data-enabled type="checkbox" role="switch" aria-label="操作反馈"><span></span></span></label>
+        <span class="setting-label">预设位置</span>
+        <div class="segmented" role="group" aria-label="操作反馈位置"><button type="button" data-placement="timer">贴近计时器</button><button type="button" data-placement="edge">屏幕右侧</button><button type="button" data-placement="custom">自定义</button></div>
+        <div class="settings-footer"><button type="button" data-reset-position>恢复默认位置</button><button type="button" data-reset-preview title="清除本地草稿设置">重置</button></div>
+      </section>
+    </div>
+  </section>
+  <section class="mobile-only"><div><strong>操作反馈仅在桌面完整页面展示</strong><p>移动端与窄屏不显示开关、键帽历史和统计面板。</p></div></section>
+  <script type="module" src="/src/entries/operation-feedback-preview.ts"></script>
+</body>
+</html>

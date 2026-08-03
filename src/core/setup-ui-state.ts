@@ -9,7 +9,13 @@ export interface SetupUiStateManagerLike {
   applyTimerModuleView?: (preferredTimerModuleView: unknown, skipPersist: boolean) => void;
   actuate?: () => void;
   callWindowMethod?: (name: string) => boolean;
-  updateStatsPanel?: (totalSteps?: number, moveSteps?: number, undoSteps?: number) => void;
+  updateStatsPanel?: (
+    totalSteps?: number,
+    moveSteps?: number,
+    undoSteps?: number,
+    validInputs?: number,
+    invalidInputs?: number
+  ) => void;
   replayMode?: boolean;
   timerStatus?: number;
 }
@@ -85,7 +91,7 @@ export function finalizeSetupUiAndStatsState(
   if (restoredFromSavedState) {
     manager.updateStatsPanel?.();
   } else {
-    manager.updateStatsPanel?.(0, 0, 0);
+    manager.updateStatsPanel?.(0, 0, 0, 0, 0);
   }
   windowLike?.CoreNoXSelectionRuntime?.ensureNoXSelectionOverlayForManager?.(manager);
 }

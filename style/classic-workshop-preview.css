@@ -861,11 +861,6 @@ html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-pill {
 }
 
 @media (max-width: 520px) {
-  html[data-theme="mist_cyan"] body[data-page="account-settings-hub"] .account-settings-page-shell {
-    width: 100% !important;
-    margin: 56px auto 18px !important;
-  }
-
   html[data-theme="mist_cyan"] body[data-page="relay-5x5"] .relay-page {
     margin-top: 56px !important;
   }

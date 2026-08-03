@@ -164,7 +164,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiProxyTarget = (env.VITE_API_PROXY_TARGET || "http://127.0.0.1:3000").trim();
   const apiProxy = {
-    "/api": {
+    "^/api(?:/|$)": {
       target: apiProxyTarget,
       changeOrigin: true,
       secure: false,
@@ -227,6 +227,7 @@ export default defineConfig(({ mode }) => {
           relay_5x5: resolve(__dirname, "relay_5x5.html"),
           ui_preview: resolve(__dirname, "ui-preview.html"),
           visual_preview: resolve(__dirname, "visual-preview.html"),
+          operation_feedback_preview: resolve(__dirname, "operation-feedback-preview.html"),
           api_docs: resolve(__dirname, "api-docs.html"),
           cache_reset: resolve(__dirname, "cache-reset.html")
         }

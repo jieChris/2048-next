@@ -62,7 +62,7 @@ describe("module entry html pages", () => {
     const html = readHtml("2048.html");
 
     expect(html).toContain(
-      '<script nomodule src="/js/legacy_index_nomodule_loader.js?v=20260625-ranked-cache"></script>'
+      '<script nomodule src="/js/legacy_index_nomodule_loader.js?v=20260803-operation-feedback"></script>'
     );
     expect(html.indexOf("legacy_index_nomodule_loader.js")).toBeLessThan(
       html.indexOf('type="module" src="./src/entries/index.ts"')
@@ -76,10 +76,99 @@ describe("module entry html pages", () => {
     expect(html).toContain('id="palette-editor-fib"');
     expect(html).toContain('id="palette-preview-pow2"');
     expect(html).toContain('id="palette-preview-fib"');
-    expect(html).toContain('id="timer-settings"');
+    expect(html).toContain('id="timer-settings" class="palette-settings-section"');
+    expect(html).not.toContain('class="card-surface palette-settings-card"');
     expect(html).toContain('id="custom-secondary-timer-editor"');
+    expect(html).toContain('<strong>计时器</strong>');
+    expect(html).toContain('<small>自定义子计时器规则</small>');
     expect(html).not.toContain('id="custom-secondary-timer-editor" open');
     expect(html).not.toContain('id="palette-preview-legend"');
+  });
+
+  it("palette.html keeps the whole appearance workspace collapsed by default", () => {
+    const html = readHtml("palette.html");
+
+    expect(html).toContain('id="appearance-settings" class="palette-settings-section"');
+    expect(html).not.toContain('id="appearance-settings" class="palette-settings-section" hidden');
+    expect(html).toContain('class="settings-category-active-bookmark" aria-hidden="true"></span>');
+    expect(html).toContain('href="#timer-settings" aria-controls="timer-settings" aria-current="location"');
+    expect(html).toContain('href="#appearance-settings" aria-controls="appearance-settings"');
+    expect(html).toContain('id="appearance-settings-editor"');
+    expect(html).not.toContain('id="appearance-settings-editor" open');
+    expect(html).toContain('class="settings-disclosure appearance-settings-disclosure"');
+    expect(html).not.toContain('id="theme-selection-editor"');
+  });
+
+  it("palette.html exposes the interface language settings entry", () => {
+    const html = readHtml("palette.html");
+
+    expect(html).toContain('href="#language-settings" aria-controls="language-settings"');
+    expect(html).toContain('id="language-settings" class="palette-settings-section"');
+    expect(html).toContain('id="language-settings-editor"');
+    expect(html).not.toContain('id="language-settings-editor" open');
+    expect(html).toContain('id="ui-language-toggle"');
+    expect(html).not.toContain('id="operation-feedback-toggle"');
+  });
+
+  it("palette settings navigation keeps labels left aligned at every breakpoint", () => {
+    const css = readHtml("style/palette_page.css");
+    const categoryLinkRules = css.match(/\.settings-category-link \{[\s\S]*?\n  \}/g) || [];
+
+    expect(categoryLinkRules).toHaveLength(2);
+    expect(categoryLinkRules.every((rule) => rule.includes("justify-content: flex-start;"))).toBe(true);
+  });
+
+  it("palette settings keeps independent spacing between the right-side modules", () => {
+    const css = readHtml("style/palette_page.css");
+    const contentRule = css.match(/\.settings-category-content \{[\s\S]*?\n\}/)?.[0] || "";
+
+    expect(contentRule).toContain("display: grid;");
+    expect(contentRule).toContain("gap: 20px;");
+  });
+
+  it("operation feedback editor uses a real page overlay instead of a nested dialog", () => {
+    const css = readHtml("style/components/operation-feedback-settings.css");
+
+    expect(css).toContain(".operation-feedback-overlay {");
+    expect(css).not.toContain(".operation-feedback-layout-modal");
+    expect(css).toContain("--operation-feedback-slot-pitch: 66px;");
+    expect(css).toMatch(/\.operation-feedback-overlay,\s*\n\.operation-feedback-surface,\s*\n\.operation-feedback-key-stack \{[\s\S]*?width: 96px;[\s\S]*?height: 520px;/);
+    expect(css).toMatch(/\.operation-feedback-key \{[\s\S]*?width: 58px;[\s\S]*?height: 58px;[\s\S]*?border-radius: 17px;/);
+    expect(css).toMatch(/\.operation-feedback-key\.is-wide \{[\s\S]*?width: 96px;/);
+    expect(css).toContain("font-size: 28px;");
+    expect(css).toContain("font-weight: 780;");
+    expect(css).toContain("stroke-width: 4.8;");
+    expect(css).toContain('html[data-theme="mist_cyan"]');
+    expect(css).toContain(".operation-feedback-key.is-invalid");
+    expect(css).toContain("transition-duration: 240ms;");
+    expect(css).toContain("transition-duration: 280ms;");
+    ["0.80", "0.64", "0.50", "0.38", "0.29", "0.21", "0.14"].forEach((opacity) => {
+      expect(css).toContain(`opacity: ${opacity};`);
+    });
+    expect(css).toContain(".operation-feedback-overlay.placement-edge .operation-feedback-editor-tools {");
+    expect(css).toMatch(/\.operation-feedback-overlay\.is-locked \{[\s\S]*?pointer-events: auto;/);
+    expect(css).not.toMatch(/\.operation-feedback-overlay\.is-editing\s*\{[^}]*padding:/);
+    expect(css).not.toMatch(/\.operation-feedback-overlay\.is-locked\s*\{[^}]*padding:/);
+    expect(css).toContain(".operation-feedback-overlay.is-locked:hover .operation-feedback-lock");
+    expect(css).toMatch(/\.operation-feedback-overlay\.is-locked \.operation-feedback-lock::after \{[\s\S]*?top: 100%;[\s\S]*?height: 8px;/);
+    expect(css).toMatch(/\.operation-feedback-editor-tools \{[\s\S]*?position: absolute;[\s\S]*?left: 108px;/);
+    expect(css).toMatch(/\.operation-feedback-overlay\.placement-edge \.operation-feedback-editor-tools \{[\s\S]*?right: 108px;[\s\S]*?left: auto;/);
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*?transition-property: color, background-color, border-color, opacity;/);
+  });
+
+  it("operation feedback wakes immediately but fades out over 400ms", () => {
+    const css = readHtml("style/components/operation-feedback-settings.css");
+
+    expect(css).toMatch(/\.operation-feedback-key-stack \{[\s\S]*?transition: opacity 0ms ease;/);
+    expect(css).toMatch(/\.operation-feedback-overlay\.is-idle \.operation-feedback-key-stack \{[\s\S]*?opacity: 0;[\s\S]*?transition-duration: 400ms;/);
+  });
+
+  it("reduced motion keeps entering at its age and leaving at the top", () => {
+    const css = readHtml("style/components/operation-feedback-settings.css");
+
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*?\.operation-feedback-key\.is-entering \{[\s\S]*?translateY\(var\(--operation-feedback-age-y\)\) scale\(1\);/);
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*?\.operation-feedback-key\.is-leaving \{[\s\S]*?translateY\(calc\(-7 \* var\(--operation-feedback-slot-pitch\)\)\) scale\(1\);/);
   });
 
   for (const htmlPath of TIMER_LEADERBOARD_SHELL_PAGES) {

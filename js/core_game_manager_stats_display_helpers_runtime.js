@@ -391,7 +391,9 @@ function resolveStepStatsFastPath(manager) {
   return {
     totalSteps: normalizeActuateStatsNumber(Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0),
     moveSteps: normalizeActuateStatsNumber(manager.successfulMoveCount),
-    undoSteps: normalizeActuateStatsNumber(manager.undoUsed)
+    undoSteps: normalizeActuateStatsNumber(manager.undoUsed),
+    validInputs: normalizeActuateStatsNumber(manager.validInputCount),
+    invalidInputs: normalizeActuateStatsNumber(manager.invalidInputCount)
   };
 }
 
@@ -399,10 +401,12 @@ function updateActuateStatsAndPanel(manager) {
   if (!manager) return;
   var stepStats = resolveStepStatsFastPath(manager) || manager.computeStepStats();
   var stats = normalizeStatsDisplayRecordObject(stepStats, {});
+  stats.validInputs = normalizeActuateStatsNumber(manager.validInputCount);
+  stats.invalidInputs = normalizeActuateStatsNumber(manager.invalidInputCount);
   updateStatsLabelText(manager, "stats-total", "总操作数: ", stats.totalSteps);
   updateStatsLabelText(manager, "stats-moves", "有效移动数: ", stats.moveSteps);
   updateStatsLabelText(manager, "stats-undo", "撤回次数: ", stats.undoSteps);
-  manager.updateStatsPanel(stats.totalSteps, stats.moveSteps, stats.undoSteps);
+  manager.updateStatsPanel(stats.totalSteps, stats.moveSteps, stats.undoSteps, stats.validInputs, stats.invalidInputs);
 }
 
 function resolveActuateElapsedMs(manager) {

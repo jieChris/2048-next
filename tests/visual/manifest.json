@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "baselines": [
+    {
+      "baselineId": "account-settings-guest",
+      "revision": 1,
+      "page": "/account_settings.html?visual_preview=1",
+      "snapshotCount": 8,
+      "language": "zh-CN",
+      "authState": "guest",
+      "viewports": [
+        "320x568",
+        "390x844",
+        "768x1024",
+        "1280x720"
+      ],
+      "themes": [
+        "light",
+        "night"
+      ],
+      "updatedAt": "2026-08-02",
+      "reason": "建立账号设置游客登录页首批基线，覆盖全局游客标识移除、移动端适配和 768px 页头对齐修复。",
+      "baselineEnvironment": "Codex in-app Chromium on macOS; Playwright scale=css",
+      "status": "approved"
+    },
+    {
+      "baselineId": "all-pages-and-overlays",
+      "revision": 1,
+      "pageCount": 33,
+      "overlayCount": 18,
+      "snapshotCount": 408,
+      "pages": [
+        "game",
+        "not-found",
+        "practice-board",
+        "account",
+        "achievement-toast-reference",
+        "admin",
+        "api-docs",
+        "beta-access",
+        "beta-login",
+        "cache-reset",
+        "capped",
+        "favicon-preview",
+        "history",
+        "canonical-index",
+        "leaderboard-4x4",
+        "achievements",
+        "mobile-medal-preview",
+        "modes",
+        "operation-feedback-preview",
+        "palette",
+        "password",
+        "play",
+        "breakout",
+        "ranked-seed-validator",
+        "register",
+        "relay-5x5",
+        "replay",
+        "stone-2k-monitor",
+        "touch-sensitivity",
+        "ui-preview",
+        "undo",
+        "user-profile",
+        "visual-preview"
+      ],
+      "overlays": [
+        "settings",
+        "replay-export",
+        "announcement",
+        "mode-intro",
+        "practice-mode",
+        "practice-board-code",
+        "no-x-selection",
+        "game-dialog",
+        "replay-import",
+        "replay-stats",
+        "replay-speed",
+        "replay-file-drop",
+        "achievement-family",
+        "admin-import",
+        "operation-feedback-settings",
+        "palette-swatch",
+        "achievement-toast",
+        "breakout-easter-egg"
+      ],
+      "language": "zh-CN",
+      "authState": "deterministic visual fixtures",
+      "viewports": [
+        "320x568",
+        "390x844",
+        "768x1024",
+        "1280x720"
+      ],
+      "themes": [
+        "light",
+        "night"
+      ],
+      "updatedAt": "2026-08-02",
+      "reason": "按维护要求建立全项目页面与弹窗基线；同时修复 API 文档代理冲突及窄屏页面横向溢出，并固定页面状态、API、时间、Web Crypto 随机源、锚点滚动、iframe 主题和弹窗打开能力。",
+      "baselineEnvironment": "Playwright Chromium on macOS; scale=css",
+      "status": "approved"
+    }
+  ]
+}

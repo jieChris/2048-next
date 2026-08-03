@@ -1,7 +1,7 @@
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 
 type PreviewPageKey = "game" | "practice" | "account" | "account-settings" | "achievements" | "relay";
-type PreviewDevice = "desktop" | "mobile";
+type PreviewDevice = "small-mobile" | "mobile" | "tablet" | "desktop";
 type PreviewTheme = "light" | "night";
 interface PreviewPageDefinition {
   path: string;
@@ -16,6 +16,13 @@ const PREVIEW_PAGES: Record<PreviewPageKey, PreviewPageDefinition> = {
   "account-settings": { path: "account_settings.html", zh: "账号设置", en: "Account Settings" },
   achievements: { path: "medal-wall.html", zh: "成就", en: "Achievements" },
   relay: { path: "relay_5x5.html", zh: "接力工具", en: "Relay Tools" }
+};
+
+const PREVIEW_VIEWPORTS: Record<PreviewDevice, { width: number; height: number }> = {
+  "small-mobile": { width: 320, height: 568 },
+  mobile: { width: 390, height: 844 },
+  tablet: { width: 768, height: 1024 },
+  desktop: { width: 1280, height: 720 }
 };
 
 const COPY = {
@@ -199,6 +206,29 @@ function accountFixture(documentLike: Document): void {
   if (tip) tip.textContent = "";
 }
 
+function accountSettingsFixture(documentLike: Document): void {
+  if (!documentLike.body?.matches('body[data-page="account-settings-hub"]')) return;
+  const isEnglish = documentLike.documentElement.lang.toLowerCase().startsWith("en");
+  documentLike.body.dataset.authState = "guest";
+  const stateTag = documentLike.getElementById("account-auth-state-tag");
+  if (stateTag) stateTag.textContent = isEnglish ? "Signed out" : "未登录";
+  const form = documentLike.querySelector<HTMLElement>(".account-auth-form-surface");
+  if (form) form.style.removeProperty("display");
+  const actionRow = documentLike.getElementById("account-action-row");
+  if (actionRow) {
+    actionRow.style.removeProperty("display");
+    Array.from(actionRow.children).forEach((node) => {
+      (node as HTMLElement).style.removeProperty("display");
+    });
+  }
+  ["account-auth-tip", "settings-tip"].forEach((id) => {
+    const tip = documentLike.getElementById(id);
+    if (tip) tip.textContent = "";
+  });
+  const userNav = documentLike.getElementById("settings-nav-user") as HTMLElement | null;
+  if (userNav) userNav.hidden = true;
+}
+
 function achievementFixture(documentLike: Document): void {
   const list = documentLike.getElementById("achievements-list");
   if (!list) return;
@@ -245,6 +275,7 @@ function relayFixture(documentLike: Document): void {
 function applyFixture(documentLike: Document): void {
   documentLike.documentElement.dataset.previewFixture = "1";
   if (state.page === "account") accountFixture(documentLike);
+  if (state.page === "account-settings") accountSettingsFixture(documentLike);
   if (state.page === "achievements") achievementFixture(documentLike);
   if (state.page === "relay") relayFixture(documentLike);
 }
@@ -268,8 +299,7 @@ function prepareFrame(frame: HTMLIFrameElement): void {
 
 function syncViewportSizes(): void {
   if (!stage) return;
-  const width = state.device === "mobile" ? 390 : 1180;
-  const height = state.device === "mobile" ? 844 : 760;
+  const { width, height } = PREVIEW_VIEWPORTS[state.device];
   stage.dataset.activeDevice = state.device;
   document.querySelectorAll<HTMLElement>("[data-preview-viewport]").forEach((viewport) => {
     const frame = viewport.querySelector<HTMLIFrameElement>("iframe");

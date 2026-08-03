@@ -24,6 +24,9 @@ const CUSTOM_TIMER_PREVIEW_STYLE_SLOTS = [
   32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
 ];
 let customTimerFamily: CustomSecondaryTimerFamily = "pow2";
+const SETTINGS_SECTION_IDS = ["timer-settings", "appearance-settings", "language-settings"] as const;
+type SettingsSectionId = typeof SETTINGS_SECTION_IDS[number];
+const settingsSectionVisibility = new Map<SettingsSectionId, number>();
 
 const globalWindow = window as Window & {
   ThemeManager?: Record<string, unknown>;
@@ -331,23 +334,24 @@ function applyThemePageCopy(): void {
   const isEnglish = isEnglishUi();
   const title = isEnglish ? "Settings" : "\u8bbe\u7f6e";
   const subtitle = isEnglish
-    ? "Manage timers, themes, and palettes in clearly grouped sections."
-    : "\u96c6\u4e2d\u7ba1\u7406\u8ba1\u65f6\u5668\u3001\u4e3b\u9898\u4e0e\u8272\u677f\uff0c\u76f8\u5173\u9009\u9879\u6309\u7c7b\u522b\u6536\u7eb3\u3002";
+    ? "Manage timers, language, themes, and palettes in clearly grouped sections."
+    : "\u96c6\u4e2d\u7ba1\u7406\u8ba1\u65f6\u5668\u3001\u754c\u9762\u8bed\u8a00\u3001\u4e3b\u9898\u4e0e\u8272\u677f\uff0c\u76f8\u5173\u9009\u9879\u6309\u7c7b\u522b\u6536\u7eb3\u3002";
   const copy = isEnglish
     ? {
         kicker: "2048 Settings",
         navHome: "Home",
         navPractice: "Practice Board",
         navTouch: "Touch Sensitivity",
+        appearanceDisclosureTitle: "Appearance & Palette",
+        appearanceDisclosureDesc: "Theme, palettes, and board preview",
         themeSelectLabel: "Select Theme",
         timerCategory: "Timer",
-        timerCategoryDesc: "Custom sub-timer rules",
         appearanceCategory: "Appearance & Palette",
-        appearanceCategoryDesc: "Theme and palette settings",
-        timerSettingsTitle: "Timer Settings",
-        timerPill: "Timer",
-        customTimerTitle: "Custom sub-timers",
-        customTimerDesc: "Saved by ruleset; enter one complete rule per line.",
+        languageCategory: "Language",
+        languageDisclosureTitle: "Interface Language",
+        languageDisclosureDesc: "Switch the website display language",
+        customTimerTitle: "Timer",
+        customTimerDesc: "Custom sub-timer rules",
         expandSettings: "Expand settings",
         collapseSettings: "Collapse settings",
         rulesLabel: "Rule text",
@@ -377,15 +381,16 @@ function applyThemePageCopy(): void {
         navHome: "\u56de\u9996\u9875",
         navPractice: "\u7ec3\u4e60\u677f",
         navTouch: "\u89e6\u5c4f\u7075\u654f\u5ea6",
+        appearanceDisclosureTitle: "\u5916\u89c2\u4e0e\u914d\u8272",
+        appearanceDisclosureDesc: "\u4e3b\u9898\u3001\u8272\u677f\u4e0e\u68cb\u76d8\u9884\u89c8",
         themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
         timerCategory: "\u8ba1\u65f6\u5668",
-        timerCategoryDesc: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668\u89c4\u5219",
         appearanceCategory: "\u5916\u89c2\u4e0e\u914d\u8272",
-        appearanceCategoryDesc: "\u4e3b\u9898\u4e0e\u8272\u677f\u8bbe\u7f6e",
-        timerSettingsTitle: "\u8ba1\u65f6\u5668\u8bbe\u7f6e",
-        timerPill: "\u8ba1\u65f6",
-        customTimerTitle: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668",
-        customTimerDesc: "\u6309\u89c4\u5219\u4f53\u7cfb\u4fdd\u5b58\uff0c\u6bcf\u884c\u586b\u5199\u4e00\u6761\u5b8c\u6574\u89c4\u5219\u3002",
+        languageCategory: "\u754c\u9762\u8bed\u8a00",
+        languageDisclosureTitle: "\u754c\u9762\u8bed\u8a00",
+        languageDisclosureDesc: "\u5207\u6362\u7f51\u7ad9\u663e\u793a\u8bed\u8a00",
+        customTimerTitle: "\u8ba1\u65f6\u5668",
+        customTimerDesc: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668\u89c4\u5219",
         expandSettings: "\u5c55\u5f00\u8bbe\u7f6e",
         collapseSettings: "\u6536\u8d77\u8bbe\u7f6e",
         rulesLabel: "\u89c4\u5219\u5185\u5bb9",
@@ -417,6 +422,10 @@ function applyThemePageCopy(): void {
   const pageTitle = document.querySelector(".palette-title");
   const pageSubtitle = document.querySelector(".palette-subtitle");
   const navLinks = document.querySelectorAll(".palette-nav .palette-nav-btn");
+  const appearanceDisclosureTitle = document.querySelector(".appearance-settings-disclosure-copy strong");
+  const appearanceDisclosureDesc = document.querySelector(".appearance-settings-disclosure-copy small");
+  const languageDisclosureTitle = document.querySelector(".language-settings-disclosure-copy strong");
+  const languageDisclosureDesc = document.querySelector(".language-settings-disclosure-copy small");
   const themeSelectLabel = document.querySelector(".theme-selection-col > label");
   const listTitle = document.querySelector(".palette-sidebar .panel-head h2");
   const paletteMappingNote = document.querySelector(".palette-variant-note");
@@ -431,8 +440,6 @@ function applyThemePageCopy(): void {
   const dimensionTabs = document.querySelectorAll(".palette-dimension-tab");
   const dimensionTabList = document.getElementById("palette-dimension-tabs");
   const categoryLinks = document.querySelectorAll(".settings-category-link");
-  const timerSettingsTitle = document.querySelector("#timer-settings .panel-head h2");
-  const timerPill = document.querySelector("#timer-settings .panel-pill");
   const customTimerTitle = document.querySelector(".settings-disclosure-copy strong");
   const customTimerDesc = document.querySelector(".settings-disclosure-copy small");
   const expandSettings = document.querySelector(".settings-disclosure-open");
@@ -451,6 +458,10 @@ function applyThemePageCopy(): void {
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
   if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
+  if (appearanceDisclosureTitle) appearanceDisclosureTitle.textContent = copy.appearanceDisclosureTitle;
+  if (appearanceDisclosureDesc) appearanceDisclosureDesc.textContent = copy.appearanceDisclosureDesc;
+  if (languageDisclosureTitle) languageDisclosureTitle.textContent = copy.languageDisclosureTitle;
+  if (languageDisclosureDesc) languageDisclosureDesc.textContent = copy.languageDisclosureDesc;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
   if (listTitle) listTitle.textContent = copy.paletteList;
   if (paletteMappingNote) paletteMappingNote.textContent = copy.paletteMappingNote;
@@ -469,23 +480,21 @@ function applyThemePageCopy(): void {
   if (dimensionTabs[3]) dimensionTabs[3].textContent = copy.glow;
   if (categoryLinks[0]) {
     const titleNode = categoryLinks[0].querySelector("strong");
-    const descNode = categoryLinks[0].querySelector("span");
     if (titleNode) titleNode.textContent = copy.timerCategory;
-    if (descNode) descNode.textContent = copy.timerCategoryDesc;
   }
   if (categoryLinks[1]) {
     const titleNode = categoryLinks[1].querySelector("strong");
-    const descNode = categoryLinks[1].querySelector("span");
     if (titleNode) titleNode.textContent = copy.appearanceCategory;
-    if (descNode) descNode.textContent = copy.appearanceCategoryDesc;
+  }
+  if (categoryLinks[2]) {
+    const titleNode = categoryLinks[2].querySelector("strong");
+    if (titleNode) titleNode.textContent = copy.languageCategory;
   }
   document.querySelector(".settings-category-nav")?.setAttribute("aria-label", isEnglish ? "Settings categories" : "\u8bbe\u7f6e\u5206\u7c7b");
   document.querySelector(".custom-secondary-timer-family-tabs")?.setAttribute(
     "aria-label",
     isEnglish ? "Sub-timer ruleset" : "\u5b50\u8ba1\u65f6\u5668\u89c4\u5219\u4f53\u7cfb"
   );
-  if (timerSettingsTitle) timerSettingsTitle.textContent = copy.timerSettingsTitle;
-  if (timerPill) timerPill.textContent = copy.timerPill;
   if (customTimerTitle) customTimerTitle.textContent = copy.customTimerTitle;
   if (customTimerDesc) customTimerDesc.textContent = copy.customTimerDesc;
   if (expandSettings) expandSettings.textContent = copy.expandSettings;
@@ -500,20 +509,89 @@ function applyThemePageCopy(): void {
   syncCustomTimerEditor(false);
 }
 
-function syncSettingsCategory(): void {
-  const activeId = window.location.hash === "#appearance-settings"
-    ? "appearance-settings"
-    : "timer-settings";
+function syncSettingsBookmarkPosition(): void {
+  const navigation = document.querySelector<HTMLElement>(".settings-category-nav");
+  const activeLink = document.querySelector<HTMLAnchorElement>(".settings-category-link.is-active");
 
-  for (const id of ["timer-settings", "appearance-settings"]) {
+  if (!navigation || !activeLink) return;
+
+  const bookmarkHeight = 10;
+  const offset = activeLink.offsetTop + ((activeLink.offsetHeight - bookmarkHeight) / 2);
+  navigation.style.setProperty("--settings-bookmark-y", `${offset}px`);
+}
+
+function setActiveSettingsCategory(activeId: SettingsSectionId): void {
+  for (const id of SETTINGS_SECTION_IDS) {
     const active = id === activeId;
-    const section = document.getElementById(id);
     const link = document.querySelector<HTMLAnchorElement>(`.settings-category-link[href="#${id}"]`);
-    if (section) section.hidden = !active;
     if (link) {
       link.classList.toggle("is-active", active);
-      link.setAttribute("aria-current", active ? "page" : "false");
+      link.setAttribute("aria-current", active ? "location" : "false");
     }
+  }
+
+  syncSettingsBookmarkPosition();
+}
+
+function openAndScrollSettingsCategory(targetId: SettingsSectionId): void {
+  const section = document.getElementById(targetId);
+  const disclosure = section?.querySelector<HTMLDetailsElement>("details");
+  if (disclosure) disclosure.open = true;
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+export function syncSettingsCategory(): void {
+  const targetId = SETTINGS_SECTION_IDS.find((id) => window.location.hash === `#${id}`);
+  const activeId = targetId ?? "timer-settings";
+  setActiveSettingsCategory(activeId);
+
+  if (!targetId) return;
+  openAndScrollSettingsCategory(targetId);
+}
+
+export function bindSettingsCategoryNavigation(): void {
+  for (const id of SETTINGS_SECTION_IDS) {
+    document.querySelector<HTMLAnchorElement>(`.settings-category-link[href="#${id}"]`)?.addEventListener("click", () => {
+      setActiveSettingsCategory(id);
+      openAndScrollSettingsCategory(id);
+    });
+  }
+}
+
+export function syncSettingsCategoryFromEntries(entries: IntersectionObserverEntry[]): void {
+  for (const entry of entries) {
+    const id = entry.target.id as SettingsSectionId;
+    if (SETTINGS_SECTION_IDS.includes(id)) {
+      settingsSectionVisibility.set(id, entry.isIntersecting ? entry.intersectionRatio : 0);
+    }
+  }
+
+  const currentId = SETTINGS_SECTION_IDS.find((id) =>
+    document.querySelector(`.settings-category-link[href="#${id}"]`)?.classList.contains("is-active")
+  ) ?? "timer-settings";
+  let activeId = currentId;
+  let activeRatio = settingsSectionVisibility.get(currentId) ?? 0;
+
+  for (const id of SETTINGS_SECTION_IDS) {
+    const ratio = settingsSectionVisibility.get(id) ?? 0;
+    if (ratio > activeRatio) {
+      activeId = id;
+      activeRatio = ratio;
+    }
+  }
+
+  setActiveSettingsCategory(activeId);
+}
+
+function observeSettingsCategories(): void {
+  if (typeof window.IntersectionObserver !== "function") return;
+
+  const observer = new window.IntersectionObserver(syncSettingsCategoryFromEntries, {
+    threshold: [0, 0.25, 0.5, 0.75, 1]
+  });
+  for (const id of SETTINGS_SECTION_IDS) {
+    const section = document.getElementById(id);
+    if (section) observer.observe(section);
   }
 }
 
@@ -549,8 +627,11 @@ export function bootstrapPalettePage(): void {
   }
 
   initCustomTimerEditor();
+  bindSettingsCategoryNavigation();
   syncSettingsCategory();
+  observeSettingsCategories();
   applyThemePageCopy();
-  window.addEventListener("hashchange", syncSettingsCategory);
+  window.addEventListener("hashchange", () => syncSettingsCategory());
+  window.addEventListener("resize", syncSettingsBookmarkPosition);
   window.addEventListener("uilanguagechange", applyThemePageCopy);
 }

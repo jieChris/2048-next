@@ -26,6 +26,8 @@ export interface GameManagerRuntimeStateManagerLike {
   itemProgress?: number;
   comboStreak?: number;
   successfulMoveCount?: number;
+  validInputCount?: number;
+  invalidInputCount?: number;
   ipsInputCount?: number;
   ipsInputTimes?: unknown[];
   undoUsed?: number;
@@ -105,6 +107,8 @@ export function initializeGameManagerRuntimeState(
   manager.timerModuleBaseHeight = 0;
   manager.timerUpdateIntervalMs = 33;
   manager.lastStatsPanelUpdateAt = 0;
+  manager.validInputCount = 0;
+  manager.invalidInputCount = 0;
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
@@ -146,6 +150,8 @@ export function resetRoundStatsState(
   if (!manager) return;
   manager.comboStreak = 0;
   manager.successfulMoveCount = 0;
+  manager.validInputCount = 0;
+  manager.invalidInputCount = 0;
   manager.ipsInputCount = 0;
   manager.ipsInputTimes = [];
   manager.undoUsed = 0;

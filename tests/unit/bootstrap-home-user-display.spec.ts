@@ -254,10 +254,13 @@ describe("bootstrap home user display", () => {
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "replay" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account-hub" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account-settings" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "achievements" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette-hub" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "modes" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "password" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "register" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "user-profile" })).toBe(false);
     expect(appended).toHaveLength(0);
   });

@@ -29,6 +29,7 @@ function loadSessionInitRuntime(options?: {
       manager: Record<string, unknown> | null,
       operations: Record<string, unknown>
     ) => void;
+    publishOperationFeedbackReset?: (manager: Record<string, unknown>) => boolean;
   };
   persistenceBindingRuntime?: {
     bindGameManagerSavedStatePersistence?: (
@@ -103,9 +104,14 @@ describe("core game manager session init runtime", () => {
 
   it("delegates round stats reset to the TypeScript runtime", () => {
     const resetRoundStatsState = vi.fn();
+    const publishOperationFeedbackReset = vi.fn();
     const runtime = loadSessionInitRuntime({
       runtimeStateRuntime: {
         resetRoundStatsState
+      },
+      inputEventsRuntime: {
+        bindGameManagerInputEvents: vi.fn(),
+        publishOperationFeedbackReset
       }
     });
     const manager = {
@@ -124,6 +130,24 @@ describe("core game manager session init runtime", () => {
         nowMs: expect.any(Number)
       })
     );
+    expect(publishOperationFeedbackReset).toHaveBeenCalledWith(manager);
+  });
+
+  it("resets current-round input counts in the legacy fallback", () => {
+    const runtime = loadSessionInitRuntime();
+    const manager = {
+      mode: "practice",
+      validInputCount: 8,
+      invalidInputCount: 3,
+      loadUndoSettingForMode: vi.fn(() => true)
+    } as Record<string, unknown>;
+
+    runtime.resetRoundStatsState(manager);
+
+    expect(manager).toMatchObject({
+      validInputCount: 0,
+      invalidInputCount: 0
+    });
   });
 
   it("delegates input event binding to the TypeScript runtime", () => {
