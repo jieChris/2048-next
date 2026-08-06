@@ -52,6 +52,8 @@ server {
 
     root /usr/share/nginx/html;
     index index.html;
+    # The API accepts third-party import files up to 8 MiB; leave room for multipart metadata.
+    client_max_body_size 10m;
 
     access_log /var/log/nginx/2048-next.access.log;
     error_log /var/log/nginx/2048-next.error.log warn;

@@ -50,6 +50,12 @@ describe("self-hosted nginx cache policy", () => {
     expect(config).toContain('/404.html "private, no-store";');
   });
 
+  it("accepts multipart bodies large enough for the 8 MiB third-party import limit", () => {
+    const config = readFileSync("deploy/nginx/2048-next.nginx.conf.example", "utf8");
+
+    expect(config).toContain("client_max_body_size 10m;");
+  });
+
   it("publishes the repo nginx config during self-hosted deploy", () => {
     const workflow = readFileSync(".github/workflows/deploy-self-hosted.yml", "utf8");
 
