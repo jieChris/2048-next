@@ -18,6 +18,7 @@ Frontend code may:
 - Store short-lived browser state needed for UX, such as local history, current auth token, pending form state, and local retry queues.
 - Call `2048-game-api` through `/api/*` or a configured API base.
 - Attach `Authorization: Bearer <token>` when a route requires authentication.
+- Administrator API requests may rely on the backend-issued HttpOnly `/api/admin` session cookie when browser storage has no token; the frontend must still send the request instead of rejecting it locally.
 
 Frontend code must not:
 

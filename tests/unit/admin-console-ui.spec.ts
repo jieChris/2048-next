@@ -61,6 +61,26 @@ describe("Next admin console", () => {
     expect(dom.window.document.body.textContent).not.toContain("内测资格");
   });
 
+  it("authorizes through the server session when the local auth token is missing", async () => {
+    const dom = installDom();
+    dom.window.localStorage.removeItem("2048_auth_token_v1");
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } })
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
+
+    bootstrapAdminPage();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.test/api/admin/me",
+      expect.objectContaining({ method: "GET" })
+    );
+    expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
+    expect(dom.window.location.pathname).toBe("/admin.html");
+  });
+
   it("renders record import as an independent URL module", async () => {
     const dom = installDom("https://example.test/admin.html?view=imports&user_id=42");
     vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } }) })));
