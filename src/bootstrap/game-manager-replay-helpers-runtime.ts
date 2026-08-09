@@ -6,6 +6,7 @@ import {
   decodeReplayV1Rpl,
   encodeReplay128 as encodeReplay128Core,
   encodeReplayV1Rpl,
+  encodeUleb128,
   replayV1InitTilesToBoard,
   replayV1RecordsToReplayActions,
   type ReplayV1EncodeInput,
@@ -22,6 +23,7 @@ const REPLAY_V1_EXT_SEED = 4;
 const REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 const REPLAY_V1_EXT_OWNER_USER_ID = 6;
 const REPLAY_V1_EXT_OWNER_NICKNAME = 7;
+const REPLAY_V1_EXT_EXACT_SPAWN = 8;
 const LEGACY_VRS_NEW_CHARSET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
   Array.from({ length: 64 }, (_unused, index) => String.fromCharCode(0xc0 + index)).join("") +
@@ -995,16 +997,39 @@ export function recordSessionReplayV1Move(
   if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= width || y >= height) return;
   const isFibonacciMode = asFunction<() => unknown>(manager.isFibonacciMode);
   const fib = !!(isFibonacciMode && isFibonacciMode.call(manager));
-  if (fib ? value !== 1 && value !== 2 : value !== 2 && value !== 4) return;
+  const exactSpawn = isSessionReplayV1ExactSpawn(value, fib);
+  if (fib ? value !== 1 && value !== 2 && !exactSpawn : value !== 2 && value !== 4 && !exactSpawn) return;
   const records = Array.isArray(session.records) ? session.records : [];
   session.records = records;
+  if (exactSpawn) {
+    records.push({
+      kind: "ext",
+      extType: REPLAY_V1_EXT_EXACT_SPAWN,
+      payload: new Uint8Array(encodeUleb128(value))
+    });
+  }
   records.push({
     kind: "move",
     dir: numericDirection,
     spawnIndex: y * width + x,
-    spawnValueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0),
+    spawnValueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0,
     deltaMs: resolveSessionReplayV1DeltaMs(session, Date.now())
   });
+}
+
+function isSessionReplayV1ExactSpawn(value: number, fib: boolean): boolean {
+  if (!Number.isSafeInteger(value)) return false;
+  if (!fib) return value > 4 && (BigInt(value) & (BigInt(value) - 1n)) === 0n;
+  if (value <= 2) return false;
+  let previous = 1;
+  let current = 2;
+  while (current < value) {
+    const next = previous + current;
+    if (!Number.isSafeInteger(next)) return false;
+    previous = current;
+    current = next;
+  }
+  return current === value;
 }
 
 export function refreshSpawnRateDisplay(manager: ManagerLike): void {

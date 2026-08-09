@@ -1492,6 +1492,8 @@ function resolveRankedSpawnFallbackValue(manager) {
 }
 
 function resolveRankedSpawnTable(manager) {
+  var sustainableTable = resolveSustainableUndoSpawnTable(manager);
+  if (sustainableTable) return sustainableTable;
   if (Array.isArray(manager && manager.spawnTable) && manager.spawnTable.length) {
     return manager.spawnTable;
   }
@@ -1538,12 +1540,12 @@ function insertRankedDeterministicSpawnTile(manager, available) {
   var seed = resolveRankedDeterministicSeed(manager);
   if (seed === null) return;
   var stepCount = resolveSpawnStepCount(manager);
-  var value = consumeItemSpawnValueOverride(
-    manager,
-    resolveRankedDeterministicSpawnValue(manager, seed, stepCount)
-  );
   var cellRoll = resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:cell");
   var cell = available[Math.min(available.length - 1, Math.floor(cellRoll * available.length))];
+  var sustainableValue = resolveSustainableUndoSpawnValue(manager, cell);
+  var value = sustainableValue === null
+    ? consumeItemSpawnValueOverride(manager, resolveRankedDeterministicSpawnValue(manager, seed, stepCount))
+    : sustainableValue;
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
   manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
@@ -1554,141 +1556,195 @@ function resolveMasterSpawnValueByDefault() {
   return resolveMoveInputRandomUnitFloat() < 0.9 ? 2 : 4;
 }
 
-function getClassicUndoForceStageOneValues() {
-  return [131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8];
+function resolveSustainableSpawnBaseValues(manager) {
+  return String(manager && manager.ruleset || "").toLowerCase() === "fibonacci"
+    ? [1, 2]
+    : [2, 4];
 }
 
-function getClassicUndoForceStageTwoValues() {
-  return [262144, 131072, 65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16];
-}
-
-function getClassicUndoStageOneSpawnRules() {
-  return [{ value: 2, weight: 87 }, { value: 4, weight: 10 }, { value: 8, weight: 3 }];
-}
-
-function getClassicUndoStageTwoSpawnRules() {
-  return [{ value: 2, weight: 84 }, { value: 4, weight: 10 }, { value: 16, weight: 3 }, { value: 32, weight: 2 }, { value: 64, weight: 1 }];
-}
-
-function isClassicUndo4x4SpawnRuleMode(manager) {
-  if (!manager || manager.replayMode) return false;
-  if (manager.width !== 4 || manager.height !== 4) return false;
-  return String(manager.modeKey || manager.mode || "").toLowerCase() === "classic_4x4_pow2_undo";
-}
-
-function createSpawnBoardStats() {
-  return {
-    counts: {},
-    filled: 0,
-    maxValue: 0
-  };
-}
-
-function collectSpawnBoardStats(manager) {
-  var stats = createSpawnBoardStats();
-  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) return stats;
-  manager.grid.eachCell(function (_x, _y, tile) {
-    if (!tile) return;
-    var value = Number(tile.value);
-    if (!Number.isInteger(value) || value <= 0) return;
-    var key = String(value);
-    stats.counts[key] = (stats.counts[key] || 0) + 1;
-    stats.filled += 1;
-    if (value > stats.maxValue) stats.maxValue = value;
-  });
-  return stats;
-}
-
-function buildSpawnValueCountMap(values) {
-  if (!Array.isArray(values) || !values.length) return null;
-  var required = {};
-  for (var i = 0; i < values.length; i++) {
-    var value = Number(values[i]);
-    if (!Number.isInteger(value) || value <= 0) return null;
-    var key = String(value);
-    required[key] = (required[key] || 0) + 1;
+function hasStandardSustainableSpawnTable(manager) {
+  var table = Array.isArray(manager && manager.spawnTable) ? manager.spawnTable : [];
+  if (!table.length) return true;
+  var baseValues = resolveSustainableSpawnBaseValues(manager);
+  var totalWeight = 0;
+  var secondaryWeight = 0;
+  for (var i = 0; i < table.length; i++) {
+    var value = Number(table[i] && table[i].value);
+    var weight = Number(table[i] && table[i].weight);
+    if (!(Number.isFinite(weight) && weight > 0)) return false;
+    if (value !== baseValues[0] && value !== baseValues[1]) return false;
+    totalWeight += weight;
+    if (value === baseValues[1]) secondaryWeight += weight;
   }
-  return required;
+  return totalWeight > 0 && Math.abs(secondaryWeight / totalWeight - 0.1) < 0.0000001;
 }
 
-function hasAllRequiredSpawnCounts(actualCounts, requiredCounts) {
-  for (var key in requiredCounts) {
-    if (!Object.prototype.hasOwnProperty.call(requiredCounts, key)) continue;
-    if (Number(actualCounts[key] || 0) !== Number(requiredCounts[key] || 0)) return false;
-  }
-  return true;
-}
-
-function hasNoUnexpectedSpawnCounts(actualCounts, requiredCounts) {
-  for (var key in actualCounts) {
-    if (!Object.prototype.hasOwnProperty.call(actualCounts, key)) continue;
-    if (!Object.prototype.hasOwnProperty.call(requiredCounts, key)) return false;
-  }
-  return true;
-}
-
-function hasExactSpawnBoardValues(stats, values) {
-  if (!stats || !Array.isArray(values)) return false;
-  if (stats.filled !== values.length) return false;
-  var required = buildSpawnValueCountMap(values);
-  if (!required) return false;
-  return (
-    hasAllRequiredSpawnCounts(stats.counts, required) &&
-    hasNoUnexpectedSpawnCounts(stats.counts, required)
+function shouldUseSustainableUndoSpawn(manager) {
+  var ruleset = String(manager && manager.ruleset || "").toLowerCase();
+  return !!(
+    manager &&
+    !manager.replayMode &&
+    (ruleset === "pow2" || ruleset === "fibonacci") &&
+    shouldCaptureUndoHistoryForMove(manager) &&
+    hasStandardSustainableSpawnTable(manager) &&
+    !(Number.isFinite(Number(manager.maxTile)) && Number(manager.maxTile) > 0)
   );
 }
 
-function resolveTotalPositiveSpawnWeight(rules) {
-  var totalWeight = 0;
-  for (var i = 0; i < rules.length; i++) {
-    var item = rules[i];
-    var weight = Number(item && item.weight);
-    if (Number.isFinite(weight) && weight > 0) totalWeight += weight;
+function countBigIntBinaryOnes(value) {
+  var count = 0;
+  var remaining = value;
+  while (remaining > 0n) {
+    remaining &= remaining - 1n;
+    count += 1;
   }
-  return totalWeight;
+  return count;
 }
 
-function resolveWeightedSpawnValueCursor(rules, cursor, fallbackValue) {
-  var acc = 0;
-  for (var ruleIndex = 0; ruleIndex < rules.length; ruleIndex++) {
-    var rule = rules[ruleIndex];
-    var ruleWeight = Number(rule && rule.weight);
-    var ruleValue = Number(rule && rule.value);
-    if (!(Number.isFinite(ruleWeight) && ruleWeight > 0 && Number.isInteger(ruleValue) && ruleValue > 0)) continue;
-    acc += ruleWeight;
-    if (cursor < acc) return ruleValue;
+function collectSustainableSpawnBoardState(manager) {
+  var state = { values: [], playable: 0, minValue: null, valid: true };
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) state.valid = false;
+  if (!state.valid) return state;
+  manager.grid.eachCell(function (x, y, tile) {
+    if (typeof manager.isBlockedCell === "function" && manager.isBlockedCell(x, y)) return;
+    state.playable += 1;
+    if (!tile) return;
+    var value = Number(tile.value);
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      state.valid = false;
+      return;
+    }
+    state.values.push(value);
+    if (state.minValue === null || value < state.minValue) state.minValue = value;
+  });
+  return state;
+}
+
+function isSafePowerOfTwo(value) {
+  if (!Number.isSafeInteger(value) || value <= 0) return false;
+  var bigValue = BigInt(value);
+  return (bigValue & (bigValue - 1n)) === 0n;
+}
+
+function resolvePow2CapacitySpawnValue(state) {
+  var threshold = state.playable - 1;
+  if (!state.valid || threshold < 1 || state.values.length !== threshold) return null;
+  var sum = 0n;
+  for (var i = 0; i < state.values.length; i++) {
+    if (!isSafePowerOfTwo(state.values[i])) return null;
+    sum += BigInt(state.values[i]);
+  }
+  return countBigIntBinaryOnes(sum) === threshold ? state.minValue : null;
+}
+
+function resolveSpawnValueCount(manager, value) {
+  var counts = manager && manager.spawnValueCounts;
+  if (!(counts && typeof counts === "object")) return 0;
+  var count = Number(counts[String(value)]);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function resolveUnlockedFibonacciSpawnValues(manager) {
+  var values = [];
+  var previous = 1;
+  var current = 2;
+  while (true) {
+    var next = previous + current;
+    if (!Number.isSafeInteger(next) || resolveSpawnValueCount(manager, next) <= 0) break;
+    values.push(next);
+    previous = current;
+    current = next;
+  }
+  return values;
+}
+
+function resolveUnlockedPow2SpawnValues(manager) {
+  var counts = manager && manager.spawnValueCounts;
+  var values = [];
+  var seen = {};
+  if (!(counts && typeof counts === "object")) return values;
+  for (var key in counts) {
+    if (!Object.prototype.hasOwnProperty.call(counts, key) || !(Number(counts[key]) > 0)) continue;
+    var value = Number(key);
+    if (value <= 4 || !isSafePowerOfTwo(value) || seen[String(value)]) continue;
+    seen[String(value)] = true;
+    values.push(value);
+  }
+  values.sort(function (a, b) { return a - b; });
+  return values;
+}
+
+function resolveUnlockedSustainableSpawnValues(manager) {
+  return String(manager && manager.ruleset || "").toLowerCase() === "fibonacci"
+    ? resolveUnlockedFibonacciSpawnValues(manager)
+    : resolveUnlockedPow2SpawnValues(manager);
+}
+
+function resolveSustainableUndoSpawnTable(manager) {
+  if (!shouldUseSustainableUndoSpawn(manager)) return null;
+  var baseValues = resolveSustainableSpawnBaseValues(manager);
+  var unlocked = resolveUnlockedSustainableSpawnValues(manager);
+  if (!unlocked.length) {
+    return [{ value: baseValues[0], weight: 90 }, { value: baseValues[1], weight: 10 }];
+  }
+  var scale = unlocked.length;
+  var table = [
+    { value: baseValues[0], weight: 87 * scale },
+    { value: baseValues[1], weight: 10 * scale }
+  ];
+  for (var i = 0; i < unlocked.length; i++) table.push({ value: unlocked[i], weight: 3 });
+  return table;
+}
+
+function buildFibonacciValuesThroughRank(rank) {
+  var values = [0, 1, 2];
+  for (var currentRank = 3; currentRank <= rank; currentRank++) {
+    var next = values[currentRank - 2] + values[currentRank - 1];
+    if (!Number.isSafeInteger(next)) return null;
+    values[currentRank] = next;
+  }
+  return values;
+}
+
+function resolveFibonacciCapacitySpawnValue(manager, state) {
+  var threshold = state.playable - 1;
+  if (!state.valid || threshold < 1 || state.values.length !== threshold) return null;
+  var highestDirectRank = 2 + resolveUnlockedFibonacciSpawnValues(manager).length;
+  var highestFrontierRank = highestDirectRank + 2 * threshold;
+  var fibonacciValues = buildFibonacciValuesThroughRank(highestFrontierRank);
+  if (!fibonacciValues) return null;
+  var boardValues = state.values.slice().sort(function (a, b) { return a - b; });
+  for (var i = 0; i < threshold; i++) {
+    if (boardValues[i] !== fibonacciValues[highestDirectRank + 2 * (i + 1)]) return null;
+  }
+  return fibonacciValues[highestDirectRank + 1];
+}
+
+function resolveSustainableUndoSpawnValue(manager, cell) {
+  if (!shouldUseSustainableUndoSpawn(manager)) return null;
+  if (!(cell && Number.isInteger(cell.x) && Number.isInteger(cell.y))) return null;
+  if (!(manager.grid && typeof manager.grid.cellContent === "function") || manager.grid.cellContent(cell)) return null;
+  var state = collectSustainableSpawnBoardState(manager);
+  return String(manager.ruleset || "").toLowerCase() === "fibonacci"
+    ? resolveFibonacciCapacitySpawnValue(manager, state)
+    : resolvePow2CapacitySpawnValue(state);
+}
+
+function resolveSpawnValueByUnitRoll(table, unitRoll, fallbackValue) {
+  var list = Array.isArray(table) ? table : [];
+  var totalWeight = 0;
+  for (var i = 0; i < list.length; i++) totalWeight += Math.max(0, Number(list[i] && list[i].weight) || 0);
+  if (!(totalWeight > 0)) return fallbackValue;
+  var roll = Number(unitRoll);
+  if (!Number.isFinite(roll)) roll = 0;
+  roll = Math.max(0, Math.min(roll, 0.9999999999999999));
+  var cursor = roll * totalWeight;
+  var running = 0;
+  for (var j = 0; j < list.length; j++) {
+    running += Math.max(0, Number(list[j] && list[j].weight) || 0);
+    if (cursor < running) return Number(list[j].value) || fallbackValue;
   }
   return fallbackValue;
-}
-
-function resolveSpawnValueByWeightedRules(weightRules, fallbackValue) {
-  var rules = Array.isArray(weightRules) ? weightRules : [];
-  var totalWeight = resolveTotalPositiveSpawnWeight(rules);
-  if (!(totalWeight > 0)) return fallbackValue;
-  var cursor = resolveMoveInputRandomUnitFloat() * totalWeight;
-  return resolveWeightedSpawnValueCursor(rules, cursor, fallbackValue);
-}
-
-function resolveClassicUndo4x4ForcedSpawnValue(manager, stats) {
-  if (!isClassicUndo4x4SpawnRuleMode(manager)) return null;
-  if (hasExactSpawnBoardValues(stats, getClassicUndoForceStageTwoValues())) return 16;
-  if (hasExactSpawnBoardValues(stats, getClassicUndoForceStageOneValues())) return 8;
-  return null;
-}
-
-function resolveClassicUndo4x4WeightedSpawnRules(maxValue) {
-  if (maxValue >= 262144) return getClassicUndoStageTwoSpawnRules();
-  if (maxValue >= 131072) return getClassicUndoStageOneSpawnRules();
-  return null;
-}
-
-function resolveClassicUndo4x4WeightedSpawnValue(manager, stats) {
-  if (!isClassicUndo4x4SpawnRuleMode(manager)) return null;
-  var maxValue = Number(stats && stats.maxValue);
-  if (!Number.isFinite(maxValue) || maxValue <= 0) return null;
-  var rules = resolveClassicUndo4x4WeightedSpawnRules(maxValue);
-  if (!rules) return null;
-  return resolveSpawnValueByWeightedRules(rules, 2);
 }
 
 function applySpawnTableWeightSummaryItem(summary, item) {
@@ -1732,14 +1788,13 @@ function shouldUseModeSpawnValue(manager) {
 }
 
 function resolveSpawnValueByCoreRule(manager) {
-  var boardStats = collectSpawnBoardStats(manager);
-  var forcedValue = resolveClassicUndo4x4ForcedSpawnValue(manager, boardStats);
-  if (forcedValue !== null) {
-    return consumeItemSpawnValueOverride(manager, forcedValue);
-  }
-  var weightedValue = resolveClassicUndo4x4WeightedSpawnValue(manager, boardStats);
-  if (weightedValue !== null) {
-    return consumeItemSpawnValueOverride(manager, weightedValue);
+  var sustainableTable = resolveSustainableUndoSpawnTable(manager);
+  if (sustainableTable) {
+    var fallbackValue = resolveSustainableSpawnBaseValues(manager)[0];
+    return consumeItemSpawnValueOverride(
+      manager,
+      resolveSpawnValueByUnitRoll(sustainableTable, resolveMoveInputRandomUnitFloat(), fallbackValue)
+    );
   }
   if (shouldUseModeSpawnValue(manager)) {
     return consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
@@ -1769,7 +1824,8 @@ function insertMasterRandomSpawnTile(manager) {
   if (!manager.grid.cellsAvailable()) return;
   var cell = resolveMasterSpawnCell(manager);
   if (!cell) return;
-  var value = resolveSpawnValueByCoreRule(manager);
+  var sustainableValue = resolveSustainableUndoSpawnValue(manager, cell);
+  var value = sustainableValue === null ? resolveSpawnValueByCoreRule(manager) : sustainableValue;
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
   manager.lastSpawn = { x: cell.x, y: cell.y, value: value };

@@ -269,6 +269,38 @@ describe("core replay codec", () => {
     expect(mapped.replaySpawns[3]).toBeNull();
   });
 
+  it.each([
+    { ruleset: "pow2" as const, value: 8, payload: new Uint8Array([8]) },
+    { ruleset: "pow2" as const, value: 128, payload: new Uint8Array(encodeUleb128(128)) },
+    { ruleset: "fibonacci" as const, value: 3, payload: new Uint8Array([3]) },
+    { ruleset: "fibonacci" as const, value: 13, payload: new Uint8Array([13]) }
+  ])("maps exact $ruleset spawn $value from its ULEB128 extension", ({ ruleset, value, payload }) => {
+    const mapped = replayV1RecordsToReplayActions(
+      [
+        { kind: "ext", extType: 8, payload },
+        { kind: "move", dir: 1, spawnIndex: 8, spawnValueBit: 0, deltaMs: 10 }
+      ],
+      3,
+      ruleset
+    );
+
+    expect(mapped.replayMoves).toEqual([1]);
+    expect(mapped.replaySpawns).toEqual([{ x: 2, y: 2, value }]);
+  });
+
+  it("rejects an exact spawn outside the active ruleset sequence", () => {
+    expect(() =>
+      replayV1RecordsToReplayActions(
+        [
+          { kind: "ext", extType: 8, payload: new Uint8Array([4]) },
+          { kind: "move", dir: 1, spawnIndex: 8, spawnValueBit: 0, deltaMs: 10 }
+        ],
+        3,
+        "fibonacci"
+      )
+    ).toThrow("Invalid replay v1 exact spawn extension");
+  });
+
   it("maps replay v1 init tiles and actions for fibonacci ruleset", () => {
     const board = replayV1InitTilesToBoard(
       4,

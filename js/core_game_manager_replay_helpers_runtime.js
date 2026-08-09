@@ -51,6 +51,7 @@ var REPLAY_V1_EXT_RULESET = 2;
 var REPLAY_V1_EXT_CHALLENGE_ID = 3;
 var REPLAY_V1_EXT_SEED = 4;
 var REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
+var REPLAY_V1_EXT_EXACT_SPAWN = 8;
 var LEGACY_VRS_VARIANT_CONFIG_MAP = {
   "2x4": { key: "2x4", width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
   "3x3": { key: "3x3", width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
@@ -134,18 +135,42 @@ function canRecordSessionReplayV1(manager, session) {
   return !(Array.isArray(manager.replayMoves) && manager.replayMoves.length > 0);
 }
 
+function isSessionReplayV1ExactSpawn(value, fib) {
+  if (!Number.isSafeInteger(value)) return false;
+  if (!fib) return value > 4 && (BigInt(value) & (BigInt(value) - 1n)) === 0n;
+  if (value <= 2) return false;
+  var previous = 1;
+  var current = 2;
+  while (current < value) {
+    var next = previous + current;
+    if (!Number.isSafeInteger(next)) return false;
+    previous = current;
+    current = next;
+  }
+  return current === value;
+}
+
+function appendSessionReplayV1ExactSpawn(manager, session, value) {
+  var codec = resolveReplayV1CodecRuntime(manager);
+  if (!(codec && typeof codec.encodeUleb128 === "function")) return false;
+  session.records.push({
+    kind: "ext",
+    extType: REPLAY_V1_EXT_EXACT_SPAWN,
+    payload: new Uint8Array(codec.encodeUleb128(value))
+  });
+  return true;
+}
+
 function recordSessionReplayV1Move(manager, direction, spawn) {
   var session = manager && manager.sessionReplayV1;
   if (!canRecordSessionReplayV1(manager, session)) return;
   if (!Number.isInteger(direction) || direction < 0 || direction > 7) return;
   if (!(spawn && Number.isInteger(spawn.x) && Number.isInteger(spawn.y))) return;
   var fib = !!(manager && typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode());
-  if (fib) {
-    if (spawn.value !== 1 && spawn.value !== 2) return;
-  } else if (spawn.value !== 2 && spawn.value !== 4) {
-    return;
-  }
+  var exactSpawn = isSessionReplayV1ExactSpawn(spawn.value, fib);
+  if (fib ? spawn.value !== 1 && spawn.value !== 2 && !exactSpawn : spawn.value !== 2 && spawn.value !== 4 && !exactSpawn) return;
   if (spawn.x < 0 || spawn.x >= manager.width || spawn.y < 0 || spawn.y >= manager.height) return;
+  if (exactSpawn && !appendSessionReplayV1ExactSpawn(manager, session, spawn.value)) return;
   var nowMs = Date.now();
   session.records.push({
     kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
