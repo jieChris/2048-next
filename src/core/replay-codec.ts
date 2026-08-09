@@ -14,6 +14,7 @@ export const REPLAY_V1_RECORD_CHECKPOINT = 0x82;
 export const REPLAY_V1_RECORD_EXT = 0x83;
 export const REPLAY_V1_RECORD_END = 0x84;
 export const REPLAY_V1_RECORD_MOVE8 = 0x85;
+const REPLAY_V1_EXT_EXACT_SPAWN = 8;
 
 export const REPLAY128_EXTRA_CODES: number[] = (() => {
   const codes: number[] = [];
@@ -603,16 +604,37 @@ export function replayV1RecordsToReplayActions(
   const replaySpawns: Array<{ x: number; y: number; value: number } | null> = [];
   const source = Array.isArray(records) ? records : [];
   const fib = ruleset === "fibonacci";
+  let exactSpawn: number | null = null;
   for (let i = 0; i < source.length; i += 1) {
     const record = source[i];
     if (!record) continue;
+    if (record.kind === "ext" && record.extType === REPLAY_V1_EXT_EXACT_SPAWN) {
+      if (exactSpawn !== null) throw "Invalid replay v1 exact spawn extension";
+      const decoded = decodeUleb128(record.payload, 0);
+      const value = decoded.value;
+      if (
+        decoded.nextOffset !== record.payload.length ||
+        !isReplayV1ExactSpawnValue(value, fib)
+      ) {
+        throw "Invalid replay v1 exact spawn extension";
+      }
+      exactSpawn = value;
+      continue;
+    }
+    if (exactSpawn !== null && record.kind !== "move") {
+      throw "Invalid replay v1 exact spawn pair";
+    }
     if (record.kind === "move") {
+      if (exactSpawn !== null && record.spawnValueBit !== 0) {
+        throw "Invalid replay v1 exact spawn value bit";
+      }
       replayMoves.push(record.dir);
       replaySpawns.push({
         x: record.spawnIndex % width,
         y: Math.floor(record.spawnIndex / width),
-        value: fib ? (record.spawnValueBit === 1 ? 2 : 1) : record.spawnValueBit === 1 ? 4 : 2
+        value: exactSpawn ?? (fib ? (record.spawnValueBit === 1 ? 2 : 1) : record.spawnValueBit === 1 ? 4 : 2)
       });
+      exactSpawn = null;
       continue;
     }
     if (record.kind === "undo1") {
@@ -627,7 +649,23 @@ export function replayV1RecordsToReplayActions(
       }
     }
   }
+  if (exactSpawn !== null) throw "Invalid replay v1 exact spawn pair";
   return { replayMoves, replaySpawns };
+}
+
+function isReplayV1ExactSpawnValue(value: number, fib: boolean): boolean {
+  if (!Number.isSafeInteger(value)) return false;
+  if (!fib) return value > 4 && (BigInt(value) & (BigInt(value) - 1n)) === 0n;
+  if (value <= 2) return false;
+  let previous = 1;
+  let current = 2;
+  while (current < value) {
+    const next = previous + current;
+    if (!Number.isSafeInteger(next)) return false;
+    previous = current;
+    current = next;
+  }
+  return current === value;
 }
 
 export function encodeReplay128(code: number): string {

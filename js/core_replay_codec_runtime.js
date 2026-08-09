@@ -17,6 +17,7 @@
   var REPLAY_V1_RECORD_EXT = 0x83;
   var REPLAY_V1_RECORD_END = 0x84;
   var REPLAY_V1_RECORD_MOVE8 = 0x85;
+  var REPLAY_V1_EXT_EXACT_SPAWN = 8;
   var REPLAY128_EXTRA_CODES = (function () {
     var codes = [];
     var c;
@@ -614,16 +615,40 @@
     var replaySpawns = [];
     var source = Array.isArray(records) ? records : [];
     var fib = String(ruleset || "pow2") === "fibonacci";
+    var exactSpawn = null;
     for (var i = 0; i < source.length; i++) {
       var record = source[i];
       if (!record) continue;
+      if (record.kind === "ext" && record.extType === REPLAY_V1_EXT_EXACT_SPAWN) {
+        if (exactSpawn !== null) throw "Invalid replay v1 exact spawn extension";
+        var exactPayload = toUint8Array(record.payload || []);
+        var exactDecoded = decodeUleb128(exactPayload, 0);
+        var exactValue = exactDecoded.value;
+        if (
+          exactDecoded.nextOffset !== exactPayload.length ||
+          !isReplayV1ExactSpawnValue(exactValue, fib)
+        ) {
+          throw "Invalid replay v1 exact spawn extension";
+        }
+        exactSpawn = exactValue;
+        continue;
+      }
+      if (exactSpawn !== null && record.kind !== "move") {
+        throw "Invalid replay v1 exact spawn pair";
+      }
       if (record.kind === "move") {
+        if (exactSpawn !== null && record.spawnValueBit !== 0) {
+          throw "Invalid replay v1 exact spawn value bit";
+        }
         replayMoves.push(record.dir);
         replaySpawns.push({
           x: record.spawnIndex % width,
           y: Math.floor(record.spawnIndex / width),
-          value: fib ? (record.spawnValueBit === 1 ? 2 : 1) : (record.spawnValueBit === 1 ? 4 : 2)
+          value: exactSpawn !== null
+            ? exactSpawn
+            : (fib ? (record.spawnValueBit === 1 ? 2 : 1) : (record.spawnValueBit === 1 ? 4 : 2))
         });
+        exactSpawn = null;
         continue;
       }
       if (record.kind === "undo1") {
@@ -638,10 +663,26 @@
         }
       }
     }
+    if (exactSpawn !== null) throw "Invalid replay v1 exact spawn pair";
     return {
       replayMoves: replayMoves,
       replaySpawns: replaySpawns
     };
+  }
+
+  function isReplayV1ExactSpawnValue(value, fib) {
+    if (!Number.isSafeInteger(value)) return false;
+    if (!fib) return value > 4 && (BigInt(value) & (BigInt(value) - 1n)) === 0n;
+    if (value <= 2) return false;
+    var previous = 1;
+    var current = 2;
+    while (current < value) {
+      var next = previous + current;
+      if (!Number.isSafeInteger(next)) return false;
+      previous = current;
+      current = next;
+    }
+    return current === value;
   }
 
   global.CoreReplayCodecRuntime = global.CoreReplayCodecRuntime || {};

@@ -368,6 +368,54 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     vi.useRealTimers();
   });
 
+  it("records an exact 128 spawn before its move using ULEB128", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_456);
+    const manager = {
+      width: 3,
+      height: 3,
+      replayMode: false,
+      isFibonacciMode: () => false,
+      sessionReplayV1: {
+        supported: true,
+        last_event_at_ms: 1_000,
+        records: [] as unknown[]
+      }
+    };
+
+    recordSessionReplayV1Move(manager, 1, { x: 2, y: 2, value: 128 });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      { kind: "ext", extType: 8, payload: new Uint8Array([0x80, 0x01]) },
+      { kind: "move", dir: 1, spawnIndex: 8, spawnValueBit: 0, deltaMs: 456 }
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("records an exact fibonacci spawn before its move using ULEB128", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_456);
+    const manager = {
+      width: 3,
+      height: 3,
+      replayMode: false,
+      isFibonacciMode: () => true,
+      sessionReplayV1: {
+        supported: true,
+        last_event_at_ms: 1_000,
+        records: [] as unknown[]
+      }
+    };
+
+    recordSessionReplayV1Move(manager, 1, { x: 2, y: 2, value: 13 });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      { kind: "ext", extType: 8, payload: new Uint8Array([13]) },
+      { kind: "move", dir: 1, spawnIndex: 8, spawnValueBit: 0, deltaMs: 456 }
+    ]);
+    vi.useRealTimers();
+  });
+
   it("serializes diagonal sessions with structured seed, mode key, and actions for cloud replay", () => {
     const manager = {
       width: 4,
