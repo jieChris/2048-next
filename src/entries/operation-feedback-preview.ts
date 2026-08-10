@@ -1,3 +1,5 @@
+import { resolveStorageByName, safeReadStorageItem, safeRemoveStorageItem, safeSetStorageItem } from "../bootstrap/storage";
+
 type Placement = "timer" | "edge" | "custom";
 
 type Preferences = {
@@ -16,6 +18,10 @@ type InputEntry = {
 
 const preferenceKey = "operation_feedback_preview_preferences_v1";
 const defaults: Preferences = { enabled: false, placement: "timer", customLeft: 880, customTop: 168 };
+const storageLike = resolveStorageByName({
+  windowLike: window as unknown as Record<string, unknown>,
+  storageName: "localStorage"
+});
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
   if (!element) throw new Error(`操作反馈草稿缺少必要元素：${selector}`);
@@ -34,7 +40,7 @@ const settingsClose = requiredElement<HTMLButtonElement>("[data-settings-close]"
 
 function readPreferences(): Preferences {
   try {
-    const source = JSON.parse(localStorage.getItem(preferenceKey) || "{}") as Partial<Preferences>;
+    const source = JSON.parse(safeReadStorageItem({ storageLike, key: preferenceKey }) || "{}") as Partial<Preferences>;
     return {
       enabled: source.enabled === true,
       placement: source.placement === "edge" || source.placement === "custom" ? source.placement : "timer",
@@ -58,7 +64,11 @@ let customLayoutEditing = false;
 let dragOffset: { x: number; y: number } | undefined;
 
 function savePreferences(): void {
-  localStorage.setItem(preferenceKey, JSON.stringify(preferences));
+  safeSetStorageItem({
+    storageLike,
+    key: preferenceKey,
+    value: JSON.stringify(preferences)
+  });
 }
 
 function openSettings(): void {
@@ -143,7 +153,7 @@ function recordInput(entry: InputEntry, repeated = false): void {
 
 function resetPreview(): void {
   window.clearTimeout(hiddenTimer);
-  localStorage.removeItem(preferenceKey);
+  safeRemoveStorageItem({ storageLike, key: preferenceKey });
   preferences = { ...defaults };
   entries = [];
   visualEntries = [];

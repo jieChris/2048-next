@@ -3,6 +3,7 @@ import {
   OPERATION_FEEDBACK_RESULT_EVENT,
   type ConfirmedOperationFeedbackResult
 } from "../core/game-manager-input-events";
+import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from "./storage";
 
 export type OperationFeedbackPlacement = "timer" | "edge" | "custom";
 
@@ -53,7 +54,11 @@ let backspaceMaskSequence = 0;
 function readPreferences(windowLike: Window | null): OperationFeedbackPreferences {
   if (!windowLike) return { ...DEFAULT_PREFERENCES };
   try {
-    const parsed = JSON.parse(windowLike.localStorage.getItem(STORAGE_KEY) || "{}") as Partial<OperationFeedbackPreferences>;
+    const storageLike = resolveStorageByName({
+      windowLike: windowLike as unknown as Record<string, unknown>,
+      storageName: "localStorage"
+    });
+    const parsed = JSON.parse(safeReadStorageItem({ storageLike, key: STORAGE_KEY }) || "{}") as Partial<OperationFeedbackPreferences>;
     return {
       enabled: parsed.enabled === true,
       placement: ["timer", "edge", "custom"].includes(String(parsed.placement))
@@ -69,9 +74,15 @@ function readPreferences(windowLike: Window | null): OperationFeedbackPreference
 }
 
 function savePreferences(windowLike: Window | null, preferences: OperationFeedbackPreferences): void {
-  try {
-    windowLike?.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
-  } catch (_error) {}
+  const storageLike = resolveStorageByName({
+    windowLike: windowLike as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  safeSetStorageItem({
+    storageLike,
+    key: STORAGE_KEY,
+    value: JSON.stringify(preferences)
+  });
 }
 
 function isDesktop(windowLike: Window | null): boolean {
