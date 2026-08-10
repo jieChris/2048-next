@@ -629,6 +629,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
       12_000
     );
 
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankedSetupBlockedUntilSessionReady !== true &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
+
     const beforeReload = await page.evaluate(() => {
       const manager = (window as any).game_manager;
       const save = (window as any).saveGameState;
@@ -1225,6 +1238,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const manager = (window as any).game_manager;
         return !!manager && manager.rankCheckpointRestorePending !== true;
       },
+      { timeout: 12_000 }
+    );
+    await page.waitForFunction(
+      () =>
+        !!(window as any).OnlineLeaderboardRuntime &&
+        (window as any).game_manager?.__onlineImmediateSubmitHooksBound === true,
       { timeout: 12_000 }
     );
 

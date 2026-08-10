@@ -4249,6 +4249,11 @@ async function refreshLeaderboard(modeLike) {
     manager.__onlineImmediateSubmitHooksBound = true;
   }
 
+  function notifyGameManagerReady(manager) {
+    if (!manager || manager.replayMode) return;
+    bindImmediateOnlineSubmitHooks();
+  }
+
   function flushTerminalSubmitOnPageHide() {
     runPromiseSafely(function () {
       return flushRankedAttemptOutbox({ keepalive: true });
@@ -4511,6 +4516,7 @@ function init() {
     isLeaderboardModeSupported: isLeaderboardModeSupported,
     syncAccountBestScoreForCurrentMode: syncAccountBestScoreForCurrentMode,
     hasLocalRankedCheckpointMirror: hasRankedCheckpointLocalMirror,
+    notifyGameManagerReady: notifyGameManagerReady,
     scheduleRankedCheckpointRestore: scheduleRankedCheckpointRestore,
     persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide
   };
