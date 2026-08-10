@@ -689,6 +689,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(reloadResponse?.ok(), "Reloaded undo response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
     await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
+      () => {
+        const manager = (window as any).game_manager;
+        return (
+          !!manager &&
+          manager.rankedSetupBlockedUntilSessionReady !== true &&
+          manager.rankCheckpointRestorePending !== true &&
+          manager.needsRankedCheckpointRestore !== true
+        );
+      },
+      { timeout: 12_000 }
+    );
 
     const afterReload = await page.evaluate(() => {
       const manager = (window as any).game_manager;
