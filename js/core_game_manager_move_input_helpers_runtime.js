@@ -425,9 +425,10 @@ function publishConfirmedMoveInput(manager, attempt, valid) {
 function executeImmediateMoveInput(manager, attempt, now) {
   if (!manager || isRankCheckpointRestoreActive(manager)) return false;
   var normalizedAttempt = normalizeMoveInputAttempt(attempt);
+  var terminatedBeforeInput = manager.replayMode ? !!manager.over : resolveGameTerminatedFallback(manager);
   if (!isUndoMoveDirection(normalizedAttempt.direction)) manager.lastMoveInputAt = now;
   var valid = manager.move(normalizedAttempt.direction) === true;
-  publishConfirmedMoveInput(manager, normalizedAttempt, valid);
+  if (!terminatedBeforeInput) publishConfirmedMoveInput(manager, normalizedAttempt, valid);
   return valid;
 }
 

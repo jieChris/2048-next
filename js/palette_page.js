@@ -23,9 +23,12 @@
     "renameTilePalette",
     "deleteTilePalette",
     "updateTilePaletteColor",
+    "updateTilePaletteGlowIntensity",
+    "updateTilePaletteGlowMultiplier",
     "exportTilePalettes",
     "importTilePalettes"
   ];
+  var NO_EFFECT_COLOR = "transparent";
   var MAX_RUNTIME_RETRY = 25;
   var runtimeRetryCount = 0;
   var bootCompleted = false;
@@ -144,6 +147,53 @@
       ).toLowerCase();
     }
     return /^#[0-9a-fA-F]{6}$/.test(safe) ? safe.toLowerCase() : "#000000";
+  }
+
+  function normalizeSixDigitHex(value) {
+    var input = resolveText(value).trim();
+    if (input.charAt(0) !== "#") input = "#" + input;
+    return /^#[0-9a-fA-F]{6}$/.test(input) ? input.toLowerCase() : "";
+  }
+
+  function isNoEffectColor(value) {
+    return resolveText(value).trim().toLowerCase() === NO_EFFECT_COLOR;
+  }
+
+  function normalizeGlowIntensity(value) {
+    if (value === null || value === "") return 50;
+    var numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 50;
+    return Math.max(0, Math.min(100, Math.round(numeric)));
+  }
+
+  function normalizeGlowMultiplier(value) {
+    if (value === null || value === "") return 100;
+    var numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 100;
+    return Math.max(0, Math.min(200, Math.round(numeric)));
+  }
+
+  function getGlowMultipliers(palette) {
+    var source = resolveArray(toRecord(palette).glowMultipliers);
+    var result = [];
+    for (var i = 0; i < POW2_VALUES.length; i += 1) {
+      result.push(normalizeGlowMultiplier(source[i]));
+    }
+    return result;
+  }
+
+  function effectiveGlowIntensity(overall, multiplier) {
+    return Math.min(100, Math.round(normalizeGlowIntensity(overall) * normalizeGlowMultiplier(multiplier) / 100));
+  }
+
+  function glowPreviewShadow(color, intensity) {
+    if (isNoEffectColor(color)) return "none";
+    var scale = normalizeGlowIntensity(intensity) / 50;
+    if (scale <= 0) return "none";
+    var rgb = hexToRgb(normalizeHexColor(color, "#000000"));
+    var alpha = Math.min(0.9, 0.46 * scale);
+    return "0 0 " + Math.round(10 * scale) + "px " + Math.round(2 * scale) + "px rgba(" +
+      rgb.r + ", " + rgb.g + ", " + rgb.b + ", " + alpha.toFixed(2) + ")";
   }
 
   function hexToRgb(hex) {
@@ -310,13 +360,15 @@
     ];
   }
 
-  function normalize16(input, fallback) {
+  function normalize16(input, fallback, allowNoEffect) {
     var source = resolveArray(input);
     var count = Math.min(POW2_VALUES.length, Math.max(16, source.length, resolveArray(fallback).length));
     var out = resolveArray(fallback).slice(0, count);
     while (out.length < count) out.push(out.length ? out[out.length - 1] : "#000000");
     for (var i = 0; i < count; i += 1) {
-      out[i] = normalizeHexColor(source[i], out[i]);
+      out[i] = allowNoEffect && isNoEffectColor(source[i])
+        ? NO_EFFECT_COLOR
+        : normalizeHexColor(source[i], out[i]);
     }
     return out;
   }
@@ -355,8 +407,8 @@
     var bgColors = normalize16(toRecord(palette)[bgKey], defaultBackgrounds(ruleset));
     if (dimension === "background") return bgColors;
     if (dimension === "text") return normalize16(toRecord(palette)[dimensionKey(ruleset, "text")], deriveTextColors(bgColors));
-    if (dimension === "border") return normalize16(toRecord(palette)[dimensionKey(ruleset, "border")], deriveBorderColors(bgColors));
-    return normalize16(toRecord(palette)[dimensionKey(ruleset, "glow")], deriveGlowColors(bgColors));
+    if (dimension === "border") return normalize16(toRecord(palette)[dimensionKey(ruleset, "border")], deriveBorderColors(bgColors), true);
+    return normalize16(toRecord(palette)[dimensionKey(ruleset, "glow")], deriveGlowColors(bgColors), true);
   }
 
   function resolvePreviewVisualRuleset(ruleset) {
@@ -397,6 +449,8 @@
     var renameTilePalette = asFunction(themeManager.renameTilePalette);
     var deleteTilePalette = asFunction(themeManager.deleteTilePalette);
     var updateTilePaletteColor = asFunction(themeManager.updateTilePaletteColor);
+    var updateTilePaletteGlowIntensity = asFunction(themeManager.updateTilePaletteGlowIntensity);
+    var updateTilePaletteGlowMultiplier = asFunction(themeManager.updateTilePaletteGlowMultiplier);
     var exportTilePalettes = asFunction(themeManager.exportTilePalettes);
     var importTilePalettes = asFunction(themeManager.importTilePalettes);
     var syncTimerLegendStyles = asFunction(themeManager.syncTimerLegendStyles);
@@ -427,6 +481,19 @@
     var pickerRInputEl = byId("palette-picker-r");
     var pickerGInputEl = byId("palette-picker-g");
     var pickerBInputEl = byId("palette-picker-b");
+    var pickerHexInputEl = byId("palette-picker-hex");
+    var pickerEyeDropperBtnEl = byId("palette-picker-eyedropper");
+    var pickerNativeInputEl = byId("palette-picker-native");
+    var pickerNativeLabelEl = byId("palette-picker-native-label");
+    var glowIntensityRowEl = byId("palette-glow-intensity-row");
+    var glowIntensityLabelEl = byId("palette-glow-intensity-label");
+    var glowIntensityInputEl = byId("palette-glow-intensity");
+    var glowIntensityValueEl = byId("palette-glow-intensity-value");
+    var tileGlowIntensityRowEl = byId("palette-tile-glow-intensity-row");
+    var tileGlowIntensityLabelEl = byId("palette-tile-glow-intensity-label");
+    var tileGlowIntensityInputEl = byId("palette-tile-glow-intensity");
+    var tileGlowIntensityValueEl = byId("palette-tile-glow-intensity-value");
+    var tileGlowIntensityHintEl = byId("palette-tile-glow-intensity-hint");
     var previewBoardEl = byId("palette-preview-board");
     var legendPreviewEl = byId("palette-preview-legend");
     var themeModePreviewEl = byId("theme-preview-grid");
@@ -481,6 +548,12 @@
         : "\u5185\u7f6e\u4e3b\u9898\u4e0d\u53ef\u76f4\u63a5\u4fee\u6539\u989c\u8272\uff0c\u8bf7\u5148\u65b0\u5efa\u526f\u672c\u540e\u518d\u7f16\u8f91\u3002";
     }
 
+    function paletteSaveFailureMessage() {
+      return isEnglishUi()
+        ? "Unable to save the glow setting. Check available browser storage."
+        : "无法保存发光设置，请检查浏览器存储空间。";
+    }
+
     function dimensionText(dimension, field) {
       var isEn = isEnglishUi();
       for (var i = 0; i < DIMENSIONS.length; i += 1) {
@@ -516,6 +589,19 @@
       { id: "palette-picker-r", node: pickerRInputEl },
       { id: "palette-picker-g", node: pickerGInputEl },
       { id: "palette-picker-b", node: pickerBInputEl },
+      { id: "palette-picker-hex", node: pickerHexInputEl },
+      { id: "palette-picker-eyedropper", node: pickerEyeDropperBtnEl },
+      { id: "palette-picker-native", node: pickerNativeInputEl },
+      { id: "palette-picker-native-label", node: pickerNativeLabelEl },
+      { id: "palette-glow-intensity-row", node: glowIntensityRowEl },
+      { id: "palette-glow-intensity-label", node: glowIntensityLabelEl },
+      { id: "palette-glow-intensity", node: glowIntensityInputEl },
+      { id: "palette-glow-intensity-value", node: glowIntensityValueEl },
+      { id: "palette-tile-glow-intensity-row", node: tileGlowIntensityRowEl },
+      { id: "palette-tile-glow-intensity-label", node: tileGlowIntensityLabelEl },
+      { id: "palette-tile-glow-intensity", node: tileGlowIntensityInputEl },
+      { id: "palette-tile-glow-intensity-value", node: tileGlowIntensityValueEl },
+      { id: "palette-tile-glow-intensity-hint", node: tileGlowIntensityHintEl },
       { id: "palette-preview-board", node: previewBoardEl },
       { id: "palette-note", node: noteEl }
     ]);
@@ -608,6 +694,7 @@
       var source = resolveArray(baseColors);
       var result = [];
       function pushUnique(color) {
+        if ((dimension === "border" || dimension === "glow") && isNoEffectColor(color)) return;
         var normalized = normalizeHexColor(color, "#000000");
         if (result.indexOf(normalized) === -1) result.push(normalized);
       }
@@ -638,6 +725,18 @@
       if (top + popoverHeight > editorWorkspaceEl.clientHeight - 2) {
         top = Math.max(0, editorWorkspaceEl.clientHeight - popoverHeight - 2);
       }
+      var viewportWidth = global.innerWidth || global.document.documentElement.clientWidth;
+      var viewportHeight = global.innerHeight || global.document.documentElement.clientHeight;
+      var viewportLeft = workspaceRect.left + left;
+      var viewportTop = workspaceRect.top + top;
+      if (viewportLeft + popoverWidth > viewportWidth - 6) {
+        left -= viewportLeft + popoverWidth - viewportWidth + 6;
+      }
+      if (workspaceRect.left + left < 6) left += 6 - workspaceRect.left - left;
+      if (viewportTop + popoverHeight > viewportHeight - 6) {
+        top -= viewportTop + popoverHeight - viewportHeight + 6;
+      }
+      if (workspaceRect.top + top < 6) top += 6 - workspaceRect.top - top;
       swatchPopoverEl.style.left = String(Math.round(left)) + "px";
       swatchPopoverEl.style.top = String(Math.round(top)) + "px";
     }
@@ -673,18 +772,95 @@
     function renderSwatchPalette(paletteId, palette, ruleset, dimension, locked) {
       var currentColors = getDimensionColors(palette, ruleset, dimension);
       var selectedIndex = Math.max(0, Math.min(boardValues(ruleset).length - 1, Number(state.activeColorIndex) || 0));
-      var selectedColor = normalizeHexColor(currentColors[selectedIndex], "#000000");
+      var supportsEmptyColor = dimension === "border" || dimension === "glow";
+      var selectedHasNoColor = supportsEmptyColor && isNoEffectColor(currentColors[selectedIndex]);
+      var selectedColor = selectedHasNoColor
+        ? NO_EFFECT_COLOR
+        : normalizeHexColor(currentColors[selectedIndex], "#000000");
+      var pickerColor = selectedHasNoColor
+        ? (dimension === "border" ? deriveBorderColors : deriveGlowColors)(
+            getDimensionColors(palette, ruleset, "background")
+          )[selectedIndex]
+        : selectedColor;
       var selectedValue = valueText(boardValues(ruleset)[selectedIndex], ruleset);
       var swatches = buildSwatchPaletteColors(currentColors, dimension);
-      var hsv = rgbToHsv(hexToRgb(selectedColor));
+      var hsv = rgbToHsv(hexToRgb(pickerColor));
       var hue = hsv.h;
       var saturation = hsv.s;
       var value = hsv.v;
+      var isEnglish = isEnglishUi();
+      var hasEyeDropper = typeof global.EyeDropper === "function";
+      var glowIntensity = normalizeGlowIntensity(toRecord(palette).glowIntensity);
+      var glowMultiplier = getGlowMultipliers(palette)[selectedIndex];
+      var actualGlowIntensity = selectedHasNoColor
+        ? 0
+        : effectiveGlowIntensity(glowIntensity, glowMultiplier);
 
       swatchGridEl.innerHTML = "";
 
+      tileGlowIntensityRowEl.hidden = dimension !== "glow";
+      tileGlowIntensityHintEl.hidden = dimension !== "glow";
+      if (dimension === "glow") {
+        tileGlowIntensityLabelEl.textContent = isEnglish
+          ? "Current tile glow multiplier"
+          : "当前方块发光倍率";
+        tileGlowIntensityInputEl.value = String(glowMultiplier);
+        tileGlowIntensityInputEl.disabled = !!locked || selectedHasNoColor;
+        tileGlowIntensityInputEl.setAttribute(
+          "aria-label",
+          isEnglish ? "Tile " + selectedValue + " glow multiplier" : "方块 " + selectedValue + " 发光倍率"
+        );
+        tileGlowIntensityInputEl.setAttribute(
+          "aria-valuetext",
+          (isEnglish ? "Relative " : "相对 ") + glowMultiplier + "%, " +
+            (isEnglish ? "actual " : "实际 ") + actualGlowIntensity + "%"
+        );
+        tileGlowIntensityValueEl.textContent = glowMultiplier + "% · " +
+          (isEnglish ? "actual " : "实际 ") + actualGlowIntensity + "%";
+        tileGlowIntensityRowEl.classList.toggle("is-disabled", !!locked || selectedHasNoColor);
+        tileGlowIntensityHintEl.hidden = !selectedHasNoColor && glowIntensity !== 0;
+        tileGlowIntensityHintEl.textContent = selectedHasNoColor
+          ? (isEnglish ? "Set a glow color first." : "请先设置发光颜色。")
+          : (isEnglish ? "Overall intensity is 0, so all tile glow is temporarily off." : "整体强度为 0，所有方块暂不发光。");
+        tileGlowIntensityInputEl.oninput = function () {
+          if (locked || selectedHasNoColor) return;
+          var nextMultiplier = normalizeGlowMultiplier(tileGlowIntensityInputEl.value);
+          var nextActual = effectiveGlowIntensity(glowIntensity, nextMultiplier);
+          tileGlowIntensityValueEl.textContent = nextMultiplier + "% · " +
+            (isEnglish ? "actual " : "实际 ") + nextActual + "%";
+          tileGlowIntensityInputEl.setAttribute(
+            "aria-valuetext",
+            (isEnglish ? "Relative " : "相对 ") + nextMultiplier + "%, " +
+              (isEnglish ? "actual " : "实际 ") + nextActual + "%"
+          );
+          if (!updateTilePaletteGlowMultiplier.call(themeManager, paletteId, selectedIndex, nextMultiplier)) {
+            refresh();
+            setNote(paletteSaveFailureMessage(), "err");
+            return;
+          }
+          setNote("", "");
+        };
+      } else {
+        tileGlowIntensityInputEl.oninput = null;
+      }
+
+      pickerHexInputEl.disabled = !!locked;
+      pickerHexInputEl.setAttribute("aria-label", isEnglish ? "6-digit HEX color" : "6 位 HEX 颜色");
+      pickerEyeDropperBtnEl.hidden = !hasEyeDropper;
+      pickerEyeDropperBtnEl.disabled = !!locked;
+      pickerEyeDropperBtnEl.textContent = isEnglish ? "Pick color" : "取色";
+      pickerEyeDropperBtnEl.setAttribute("aria-label", isEnglish ? "Pick a color from the screen" : "从屏幕取色");
+      pickerEyeDropperBtnEl.title = isEnglish ? "Pick a color from the screen" : "从屏幕取色";
+      pickerNativeInputEl.disabled = !!locked;
+      pickerNativeInputEl.setAttribute("aria-label", isEnglish ? "Open system color picker" : "打开系统色板");
+      pickerNativeInputEl.title = isEnglish ? "Open system color picker" : "打开系统色板";
+      pickerNativeLabelEl.textContent = isEnglish ? "System picker" : "系统色板";
+      pickerNativeInputEl.parentElement.classList.toggle("is-disabled", !!locked);
+
       function applySelectedColor(nextColor) {
-        var normalizedColor = normalizeHexColor(nextColor, selectedColor);
+        var normalizedColor = supportsEmptyColor && isNoEffectColor(nextColor)
+          ? NO_EFFECT_COLOR
+          : normalizeHexColor(nextColor, pickerColor);
         var updated = !!updateTilePaletteColor.call(
           themeManager,
           paletteId,
@@ -729,6 +905,11 @@
         if (pickerRInputEl) pickerRInputEl.value = String(rgb.r);
         if (pickerGInputEl) pickerGInputEl.value = String(rgb.g);
         if (pickerBInputEl) pickerBInputEl.value = String(rgb.b);
+        if (pickerHexInputEl) {
+          pickerHexInputEl.value = hex;
+          pickerHexInputEl.removeAttribute("aria-invalid");
+        }
+        if (pickerNativeInputEl) pickerNativeInputEl.value = hex;
       }
 
       function applyCurrentHsvColor() {
@@ -765,11 +946,38 @@
         global.addEventListener("pointercancel", onStop);
       }
 
-      if (swatchTileEl) swatchTileEl.style.background = selectedColor;
+      if (swatchTileEl) {
+        swatchTileEl.style.background = dimension === "glow"
+          ? getDimensionColors(palette, ruleset, "background")[selectedIndex]
+          : selectedColor;
+        swatchTileEl.style.boxShadow = dimension === "glow"
+          ? glowPreviewShadow(selectedColor, actualGlowIntensity)
+          : "";
+      }
       if (swatchValueEl) swatchValueEl.textContent = selectedValue;
       syncPickerByHsv();
 
-      var presetColors = swatches.slice(0, 10);
+      if (supportsEmptyColor) {
+        var noneChip = createEl("button", "swatch-chip swatch-chip-none", "");
+        noneChip.type = "button";
+        noneChip.setAttribute("data-color", NO_EFFECT_COLOR);
+        var removeLabel = dimension === "border"
+          ? (isEnglishUi() ? "Remove border color" : "\u53d6\u6d88\u8fb9\u6846\u989c\u8272")
+          : (isEnglishUi() ? "Remove glow color" : "\u53d6\u6d88\u53d1\u5149\u989c\u8272");
+        noneChip.setAttribute("aria-label", removeLabel);
+        noneChip.title = removeLabel;
+        if (selectedHasNoColor) noneChip.classList.add("is-active-swatch");
+        if (locked) noneChip.disabled = true;
+        noneChip.addEventListener("click", function (eventLike) {
+          if (eventLike && typeof eventLike.stopPropagation === "function") {
+            eventLike.stopPropagation();
+          }
+          if (!locked) applySelectedColor(NO_EFFECT_COLOR);
+        });
+        swatchGridEl.appendChild(noneChip);
+      }
+
+      var presetColors = swatches.slice(0, supportsEmptyColor ? 9 : 10);
       for (var i = 0; i < presetColors.length; i += 1) {
         var color = presetColors[i];
         var chip = createEl("button", "swatch-chip", "");
@@ -824,12 +1032,73 @@
       bindRgbInput(pickerRInputEl);
       bindRgbInput(pickerGInputEl);
       bindRgbInput(pickerBInputEl);
+
+      function applyHexInput() {
+        if (locked) return;
+        var normalized = normalizeSixDigitHex(pickerHexInputEl.value);
+        if (!normalized) {
+          pickerHexInputEl.setAttribute("aria-invalid", "true");
+          setNote(
+            isEnglish
+              ? "Enter a 6-digit HEX color, for example #A1B2C3."
+              : "请输入 6 位 HEX 颜色，例如 #A1B2C3。",
+            "err"
+          );
+          return;
+        }
+        var nextHsv = rgbToHsv(hexToRgb(normalized));
+        hue = nextHsv.h;
+        saturation = nextHsv.s;
+        value = nextHsv.v;
+        syncPickerByHsv();
+        applySelectedColor(normalized);
+      }
+
+      pickerHexInputEl.onchange = applyHexInput;
+      pickerHexInputEl.onkeydown = function (eventLike) {
+        if (!eventLike || eventLike.key !== "Enter") return;
+        eventLike.preventDefault();
+        applyHexInput();
+      };
+
+      pickerEyeDropperBtnEl.onclick = async function handleEyeDropper() {
+        if (locked || typeof global.EyeDropper !== "function") return;
+        pickerEyeDropperBtnEl.disabled = true;
+        try {
+          var result = await new global.EyeDropper().open();
+          if (pickerEyeDropperBtnEl.onclick !== handleEyeDropper || !state.swatchOpen) return;
+          var pickedColor = normalizeSixDigitHex(toRecord(result).sRGBHex);
+          if (!pickedColor) throw new Error("Invalid EyeDropper color");
+          applySelectedColor(pickedColor);
+        } catch (error) {
+          if (
+            pickerEyeDropperBtnEl.onclick === handleEyeDropper &&
+            state.swatchOpen &&
+            resolveText(toRecord(error).name) !== "AbortError"
+          ) {
+            setNote(isEnglish ? "Unable to pick a color from the screen." : "无法从屏幕取色。", "err");
+          }
+        } finally {
+          if (pickerEyeDropperBtnEl.onclick === handleEyeDropper) {
+            pickerEyeDropperBtnEl.disabled = pickerHexInputEl.disabled;
+          }
+        }
+      };
+
+      pickerNativeInputEl.onchange = function () {
+        if (!locked) applySelectedColor(pickerNativeInputEl.value);
+      };
       syncSwatchPopoverVisibility();
     }
 
     function renderColorEditor(paletteId, palette, ruleset, dimension, locked) {
       var values = boardValues(ruleset);
       var colors = getDimensionColors(palette, ruleset, dimension);
+      var backgrounds = dimension === "glow"
+        ? getDimensionColors(palette, ruleset, "background")
+        : colors;
+      var glowIntensity = normalizeGlowIntensity(toRecord(palette).glowIntensity);
+      var glowMultipliers = getGlowMultipliers(palette);
       var startIndex = ruleset === "pow2" && state.pow2Expanded ? 16 : 0;
       var endIndex = ruleset === "pow2" && state.pow2Expanded ? values.length : Math.min(16, values.length);
       editorHostEl.innerHTML = "";
@@ -840,11 +1109,18 @@
         if (ruleset === "pow2" && i >= 9) item.classList.add("is-compact-value");
         if (ruleset === "pow2" && i >= 16) item.classList.add("is-extended");
         if (i === state.activeColorIndex) item.classList.add("is-active-target");
+        if (dimension === "glow") item.classList.add("is-glow-target");
 
         var chip = createEl("span", "color-target-chip", "");
-        chip.style.background = colors[i];
+        chip.style.background = backgrounds[i];
+        if (dimension === "glow") {
+          chip.style.boxShadow = glowPreviewShadow(
+            colors[i],
+            effectiveGlowIntensity(glowIntensity, glowMultipliers[i])
+          );
+        }
         var text = createEl("span", "color-target-label", valueText(values[i], ruleset));
-        text.style.color = deriveTextColors([colors[i]])[0];
+        text.style.color = deriveTextColors([backgrounds[i]])[0];
         item.appendChild(chip);
         item.appendChild(text);
         editorHostEl.appendChild(item);
@@ -899,6 +1175,9 @@
         var value = visibleValues[i];
         var tile = createEl("div", "preview-tile tile tile-" + String(value), "");
         tile.setAttribute("data-value", String(value));
+        if (state.selectedDimension === "glow" && startIndex + i === state.activeColorIndex) {
+          tile.classList.add("is-active-glow-preview");
+        }
         if (value > 2048) tile.classList.add("tile-super");
         tile.appendChild(createEl("div", "tile-inner", valueText(value, valueRuleset)));
         previewBoardEl.appendChild(tile);
@@ -988,6 +1267,7 @@
       var activePalette = toRecord(map[activeId]);
       var activeName = resolveText(activePalette.name || activeId || "--");
       var locked = isLockedPalette(activePalette);
+      var glowIntensity = normalizeGlowIntensity(activePalette.glowIntensity);
       state.activeColorIndex = Math.max(
         0,
         Math.min(POW2_VALUES.length - 1, Number(state.activeColorIndex) || 0)
@@ -999,6 +1279,27 @@
         : "";
       renameBtn.disabled = locked;
       deleteBtn.disabled = locked;
+      glowIntensityRowEl.hidden = state.selectedDimension !== "glow";
+      glowIntensityLabelEl.textContent = isEnglishUi() ? "Overall glow intensity" : "整体发光强度";
+      glowIntensityInputEl.value = String(glowIntensity);
+      glowIntensityInputEl.disabled = locked;
+      glowIntensityInputEl.setAttribute("aria-label", isEnglishUi() ? "Overall glow intensity" : "整体发光强度");
+      glowIntensityInputEl.setAttribute("aria-valuetext", String(glowIntensity) + "%");
+      glowIntensityValueEl.textContent = String(glowIntensity) + "%";
+      glowIntensityRowEl.classList.toggle("is-disabled", locked);
+      glowIntensityInputEl.oninput = function () {
+        var nextIntensity = normalizeGlowIntensity(glowIntensityInputEl.value);
+        glowIntensityValueEl.textContent = String(nextIntensity) + "%";
+        glowIntensityInputEl.setAttribute("aria-valuetext", String(nextIntensity) + "%");
+        if (locked) return;
+        var updated = !!updateTilePaletteGlowIntensity.call(themeManager, activeId, nextIntensity);
+        if (!updated) {
+          refresh();
+          setNote(paletteSaveFailureMessage(), "err");
+          return;
+        }
+        setNote("", "");
+      };
       if (editorHostEl && editorHostEl.classList) {
         editorHostEl.classList.toggle("is-readonly", locked);
       }
@@ -1172,7 +1473,6 @@
     global.setTimeout(syncPreviewLegendSize, 0);
     global.setTimeout(syncPreviewBoardTileGeometry, 0);
 
-    setNote(isEnglishUi() ? "Palette center loaded." : "\u5df2\u52a0\u8f7d\u8272\u677f\u4e2d\u5fc3\u3002", "ok");
     refresh();
   }
 

@@ -80,6 +80,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(await touchPage.locator("#palette-preview-board .tile-inner").evaluateAll((nodes) =>
       nodes.every((node) => node.scrollWidth <= node.clientWidth + 1)
     )).toBe(true);
+    await touchPage.locator(".palette-expand-target").click();
+    await touchPage.locator("#palette-create-btn").click();
+    await touchPage.locator('.palette-dimension-tab[data-dimension="glow"]').click();
+    await touchPage.locator('.color-target[data-index="0"]').click();
+    await expect(touchPage.locator("#palette-swatch-popover")).toHaveClass(/is-open/);
+    expect(await touchPage.evaluate(() => {
+      const rect = document.querySelector("#palette-swatch-popover")?.getBoundingClientRect();
+      return !!rect &&
+        document.documentElement.scrollWidth <= window.innerWidth &&
+        rect.left >= 0 && rect.top >= 0 &&
+        rect.right <= window.innerWidth && rect.bottom <= window.innerHeight;
+    })).toBe(true);
     await touchContext.close();
   });
 
@@ -120,7 +132,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".palette-variant-note")).toHaveText("色板颜色会按方块等级映射到其他棋盘变体。");
     await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
       "href",
-      "style/palette_page.css?v=20260802-settings-sidebar-v17"
+      "style/palette_page.css?v=20260811-glow-controls-v24"
     );
 
     await page.waitForSelector(".swatch-chip", { state: "attached" });
@@ -460,6 +472,323 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
       })
       .toEqual(["#123456", "#123456"]);
+  });
+
+  test("HEX, EyeDropper and native color input share the palette update path", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("ui_language_v1", "en");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+      Object.defineProperty(window, "EyeDropper", {
+        configurable: true,
+        value: class {
+          open() {
+            return Promise.resolve({ sRGBHex: "#0a1b2c" });
+          }
+        }
+      });
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
+
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.color-target[data-index="0"]').click();
+
+    const hexInput = page.locator("#palette-picker-hex");
+    const eyeDropperButton = page.locator("#palette-picker-eyedropper");
+    const nativeInput = page.locator("#palette-picker-native");
+    const readColors = () => page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const activeId = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === activeId);
+      return [palette?.pow2?.[0], palette?.fibonacci?.[0]];
+    });
+
+    await expect(hexInput).toHaveAttribute("aria-label", "6-digit HEX color");
+    await expect(eyeDropperButton).toHaveAttribute("aria-label", "Pick a color from the screen");
+    await expect(eyeDropperButton).toBeVisible();
+    await expect(nativeInput).toHaveAttribute("type", "color");
+    await expect(nativeInput).toHaveAttribute("aria-label", "Open system color picker");
+
+    const colorsBeforeInvalidInput = await readColors();
+    await hexInput.fill("12345");
+    await hexInput.press("Enter");
+    await expect(hexInput).toHaveAttribute("aria-invalid", "true");
+    await expect(page.locator("#palette-note")).toContainText("6-digit HEX");
+    expect(await readColors()).toEqual(colorsBeforeInvalidInput);
+
+    await hexInput.fill("ABCDEF");
+    await hexInput.press("Enter");
+    await expect.poll(readColors).toEqual(["#abcdef", "#abcdef"]);
+    await expect(hexInput).toHaveValue("#abcdef");
+    await expect(hexInput).not.toHaveAttribute("aria-invalid", "true");
+
+    await eyeDropperButton.click();
+    await expect.poll(readColors).toEqual(["#0a1b2c", "#0a1b2c"]);
+    await expect(hexInput).toHaveValue("#0a1b2c");
+
+    await nativeInput.evaluate((node) => {
+      const input = node as HTMLInputElement;
+      input.value = "#654321";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await expect.poll(readColors).toEqual(["#654321", "#654321"]);
+    await expect(hexInput).toHaveValue("#654321");
+  });
+
+  test("unsupported EyeDropper stays hidden and native controls respect palette locks", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("ui_language_v1", "zh");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+      Object.defineProperty(window, "EyeDropper", {
+        configurable: true,
+        value: undefined
+      });
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
+
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.color-target[data-index="0"]').click();
+    await expect(page.locator("#palette-picker-hex")).toHaveAttribute("aria-label", "6 位 HEX 颜色");
+    await expect(page.locator("#palette-picker-native")).toHaveAttribute("aria-label", "打开系统色板");
+    await expect(page.locator("#palette-picker-eyedropper")).toBeHidden();
+    await expect(page.locator("#palette-picker-hex")).toBeEnabled();
+    await expect(page.locator("#palette-picker-native")).toBeEnabled();
+
+    await page.locator('[data-palette-id="follow-theme"]').click();
+    await expect(page.locator("#palette-picker-hex")).toBeDisabled();
+    await expect(page.locator("#palette-picker-native")).toBeDisabled();
+    await expect(page.locator("#palette-picker-eyedropper")).toBeDisabled();
+  });
+
+  test("stale EyeDropper results do not update a palette after the editor changes", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("ui_language_v1", "zh");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+      Object.defineProperty(window, "EyeDropper", {
+        configurable: true,
+        value: class {
+          open() {
+            return new Promise((resolve) => {
+              (window as any).__resolvePaletteEyeDropper = resolve;
+            });
+          }
+        }
+      });
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
+
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.color-target[data-index="0"]').click();
+    const original = await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const id = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === id);
+      return { id, color: palette?.pow2?.[0] };
+    });
+
+    await page.locator("#palette-picker-eyedropper").click();
+    await page.waitForFunction(() => typeof (window as any).__resolvePaletteEyeDropper === "function");
+    await page.locator('[data-palette-id="follow-theme"]').click();
+    await page.evaluate(async () => {
+      (window as any).__resolvePaletteEyeDropper({ sRGBHex: "#010203" });
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    });
+
+    expect(await page.evaluate((paletteId) => {
+      const manager = (window as any).ThemeManager;
+      return manager.getTilePalettes().find((item: any) => item.id === paletteId)?.pow2?.[0];
+    }, original.id)).toBe(original.color);
+    await expect(page.locator("#palette-picker-eyedropper")).toBeDisabled();
+  });
+
+  test("border presets start with an accessible remove option and persist it", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("ui_language_v1", "zh");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
+
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.palette-dimension-tab[data-dimension="border"]').click();
+    await page.locator('.color-target[data-index="0"]').click();
+
+    const removeBorder = page.locator("#palette-swatch-grid .swatch-chip").first();
+    await expect(removeBorder).toHaveClass(/swatch-chip-none/);
+    await expect(removeBorder).toHaveAttribute("aria-label", "取消边框颜色");
+    await expect(removeBorder).toHaveAttribute("data-color", "transparent");
+    await removeBorder.click();
+
+    await expect.poll(async () => page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const activeId = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === activeId);
+      return [palette?.pow2Border?.[0], palette?.fibonacciBorder?.[0]];
+    })).toEqual(["transparent", "transparent"]);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner'))
+      .toHaveCSS("border-top-style", "none");
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect.poll(async () => page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const activeId = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === activeId);
+      return palette?.pow2Border?.[0];
+    })).toBe("transparent");
+  });
+
+  test("glow intensity visibly controls preview shadows and persists", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("theme_profile_v1", "classic");
+      window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
+      window.localStorage.setItem("ui_language_v1", "zh");
+      window.localStorage.removeItem("tile_palette_profiles_v1");
+    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
+    await openAppearanceWorkspace(page);
+
+    await page.locator("#palette-create-btn").click();
+    await page.locator('.palette-dimension-tab[data-dimension="glow"]').click();
+    const slider = page.locator("#palette-glow-intensity");
+    const previewTile = page.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner');
+    const previewTile4 = page.locator('#palette-preview-board .preview-tile[data-value="4"] .tile-inner');
+    const readPreviewGlow = () => previewTile.evaluate((node) => (
+      window.getComputedStyle(node, "::before").boxShadow
+    ));
+    const readPreviewGlow4 = () => previewTile4.evaluate((node) => (
+      window.getComputedStyle(node, "::before").boxShadow
+    ));
+    await expect(slider).toHaveAttribute("min", "0");
+    await expect(slider).toHaveAttribute("max", "100");
+    await expect(slider).toHaveAttribute("aria-label", "整体发光强度");
+    await expect(slider).toHaveValue("50");
+    await expect(slider).toBeEnabled();
+
+    await page.evaluate(() => {
+      const storage = Object.getPrototypeOf(window.localStorage);
+      (window as any).__paletteSetItem = storage.setItem;
+      storage.setItem = () => {
+        throw new Error("storage full");
+      };
+    });
+    await slider.fill("12");
+    await expect(slider).toHaveValue("50");
+    await expect(page.locator("#palette-glow-intensity-value")).toHaveText("50%");
+    await expect(page.locator("#palette-note")).toContainText("无法保存发光设置");
+    await page.evaluate(() => {
+      Object.getPrototypeOf(window.localStorage).setItem = (window as any).__paletteSetItem;
+    });
+
+    await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const id = manager.getActiveTilePaletteId();
+      manager.updateTilePaletteColor(id, "pow2", "border", 0, "transparent");
+      manager.updateTilePaletteColor(id, "pow2", "glow", 0, "#010203");
+    });
+    await slider.fill("0");
+    await expect(page.locator("#palette-glow-intensity-value")).toHaveText("0%");
+    expect(await readPreviewGlow()).toBe("none");
+    expect(await readPreviewGlow4()).toBe("none");
+
+    await slider.fill("100");
+    await expect(page.locator("#palette-glow-intensity-value")).toHaveText("100%");
+    const strongShadow = await readPreviewGlow();
+    const tile4StrongShadow = await readPreviewGlow4();
+    expect(strongShadow).not.toBe("none");
+    expect(tile4StrongShadow).not.toBe("none");
+    expect(strongShadow.replace(/\s/g, "")).toContain("1,2,3");
+    await expect(page.locator('.color-target[data-index="0"]')).toHaveClass(/is-glow-target/);
+    await expect(page.locator('#palette-preview-board .preview-tile[data-value="2"]'))
+      .toHaveClass(/is-active-glow-preview/);
+
+    await page.locator('.color-target[data-index="0"]').click();
+    const tileSlider = page.locator("#palette-tile-glow-intensity");
+    await expect(tileSlider).toBeVisible();
+    await expect(tileSlider).toHaveAttribute("min", "0");
+    await expect(tileSlider).toHaveAttribute("max", "200");
+    await expect(tileSlider).toHaveAttribute("aria-label", "方块 2 发光倍率");
+    await expect(tileSlider).toHaveValue("100");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("100% · 实际 100%");
+
+    await page.evaluate(() => {
+      const storage = Object.getPrototypeOf(window.localStorage);
+      (window as any).__paletteSetItem = storage.setItem;
+      storage.setItem = () => {
+        throw new Error("storage full");
+      };
+    });
+    await tileSlider.fill("123");
+    await expect(tileSlider).toHaveValue("100");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("100% · 实际 100%");
+    await expect(page.locator("#palette-note")).toContainText("无法保存发光设置");
+    await page.evaluate(() => {
+      Object.getPrototypeOf(window.localStorage).setItem = (window as any).__paletteSetItem;
+    });
+
+    await tileSlider.fill("0");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("0% · 实际 0%");
+    expect(await readPreviewGlow()).toBe("none");
+    expect(await readPreviewGlow4()).toBe(tile4StrongShadow);
+    await tileSlider.fill("200");
+    await slider.fill("50");
+    await expect(tileSlider).toHaveValue("200");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("200% · 实际 100%");
+    expect(await readPreviewGlow()).toBe(strongShadow);
+    await slider.fill("0");
+    await expect(tileSlider).toHaveValue("200");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("200% · 实际 0%");
+    await expect(page.locator("#palette-tile-glow-intensity-hint")).toContainText("整体强度为 0");
+    expect(await readPreviewGlow()).toBe("none");
+    await slider.fill("100");
+
+    const removeGlow = page.locator("#palette-swatch-grid .swatch-chip").first();
+    await expect(removeGlow).toHaveClass(/swatch-chip-none/);
+    await expect(removeGlow).toHaveAttribute("aria-label", "取消发光颜色");
+    await expect(removeGlow).toHaveAttribute("data-color", "transparent");
+    await removeGlow.click();
+    await expect(tileSlider).toBeDisabled();
+    await expect(tileSlider).toHaveValue("200");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("200% · 实际 0%");
+    await expect(page.locator("#palette-tile-glow-intensity-hint")).toContainText("请先设置发光颜色");
+    expect(await readPreviewGlow()).toBe("none");
+    expect(await readPreviewGlow4()).toBe(tile4StrongShadow);
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("#palette-glow-intensity")).toHaveValue("100");
+    expect(await page.evaluate(() => {
+      const manager = (window as any).ThemeManager;
+      const id = manager.getActiveTilePaletteId();
+      const palette = manager.getTilePalettes().find((item: any) => item.id === id);
+      const exported = JSON.parse(manager.exportTilePalettes()).palettes.find((item: any) => item.id === id);
+      return [
+        palette?.glowIntensity,
+        exported?.glowIntensity,
+        palette?.pow2Glow?.[0],
+        palette?.fibonacciGlow?.[0],
+        exported?.pow2Glow?.[0],
+        palette?.glowMultipliers?.[0],
+        exported?.glowMultipliers?.[0]
+      ];
+    })).toEqual([100, 100, "transparent", "transparent", "transparent", 200, 200]);
+    expect(await readPreviewGlow()).toBe("none");
+
+    await page.locator('.palette-dimension-tab[data-dimension="glow"]').click();
+    await page.locator('.color-target[data-index="0"]').click();
+    await expect(tileSlider).toHaveValue("200");
+    await expect(tileSlider).toBeDisabled();
+
+    await page.locator('[data-palette-id="follow-theme"]').click();
+    await expect(page.locator("#palette-glow-intensity")).toBeDisabled();
   });
 
   test("pow2 palette extension edits colors through the 5x5 theoretical maximum", async ({ page }) => {
