@@ -24,6 +24,10 @@
   var TILE_PALETTE_VERSION = 1;
   var FOLLOW_THEME_TILE_PALETTE_ID = "follow-theme";
   var DEFAULT_TILE_PALETTE_ID = "cold-cyan-steps";
+  var NO_EFFECT_COLOR = "transparent";
+  var DEFAULT_GLOW_INTENSITY = 50;
+  var DEFAULT_GLOW_MULTIPLIER = 100;
+  var MAX_GLOW_MULTIPLIER = 200;
   var TILE_PALETTE_DIMENSION_SUFFIX = {
     background: "",
     text: "Text",
@@ -1075,6 +1079,42 @@
     return String(fallback || "#000000").toLowerCase();
   }
 
+  function isNoEffectColor(value) {
+    return typeof value === "string" && value.trim().toLowerCase() === NO_EFFECT_COLOR;
+  }
+
+  function normalizeGlowIntensity(value) {
+    if (value === null || value === "") return DEFAULT_GLOW_INTENSITY;
+    var numeric = Number(value);
+    if (!isFinite(numeric)) return DEFAULT_GLOW_INTENSITY;
+    return Math.max(0, Math.min(100, Math.round(numeric)));
+  }
+
+  function normalizeGlowMultiplier(value) {
+    if (value === null || value === "") return DEFAULT_GLOW_MULTIPLIER;
+    var numeric = Number(value);
+    if (!isFinite(numeric)) return DEFAULT_GLOW_MULTIPLIER;
+    return Math.max(0, Math.min(MAX_GLOW_MULTIPLIER, Math.round(numeric)));
+  }
+
+  function normalizeGlowMultiplierArray(input) {
+    var source = Array.isArray(input) ? input : [];
+    var result = [];
+    for (var i = 0; i < POW2_TILE_VALUES.length; i++) {
+      result.push(normalizeGlowMultiplier(source[i]));
+    }
+    return result;
+  }
+
+  function resolvePaletteGlowScale(paletteStyles, index) {
+    var overall = normalizeGlowIntensity(paletteStyles && paletteStyles.glowIntensity);
+    var multipliers = paletteStyles && Array.isArray(paletteStyles.glowMultipliers)
+      ? paletteStyles.glowMultipliers
+      : [];
+    var effective = Math.min(100, Math.round(overall * normalizeGlowMultiplier(multipliers[index]) / 100));
+    return effective / DEFAULT_GLOW_INTENSITY;
+  }
+
   function buildThemePaletteColors(theme, ruleset) {
     var values = ruleset === "fibonacci" ? FIB_PREVIEW_VALUES : POW2_TILE_VALUES;
     var colors = [];
@@ -1084,7 +1124,7 @@
     return colors;
   }
 
-  function normalizePaletteColorArray(input, fallbackColors) {
+  function normalizePaletteColorArray(input, fallbackColors, allowNoEffect) {
     var count = Math.max(16, Math.min(POW2_TILE_VALUES.length, Array.isArray(fallbackColors) ? fallbackColors.length : 0));
     var fallback = Array.isArray(fallbackColors) ? fallbackColors.slice(0, count) : [];
     while (fallback.length < count) fallback.push(fallback.length ? fallback[fallback.length - 1] : "#000000");
@@ -1092,7 +1132,9 @@
     if (!Array.isArray(input)) return result;
     for (var i = 0; i < count; i++) {
       var fallbackColor = i >= input.length && i > 0 ? result[i - 1] : result[i];
-      result[i] = normalizePaletteColor(input[i], fallbackColor);
+      result[i] = allowNoEffect && isNoEffectColor(input[i])
+        ? NO_EFFECT_COLOR
+        : normalizePaletteColor(input[i], fallbackColor);
     }
     return result;
   }
@@ -1178,7 +1220,11 @@
     } else {
       fallback = buildDefaultPaletteGlowColors(theme, targetRuleset, backgroundColors);
     }
-    return normalizePaletteColorArray(paletteRecord ? paletteRecord[targetKey] : null, fallback);
+    return normalizePaletteColorArray(
+      paletteRecord ? paletteRecord[targetKey] : null,
+      fallback,
+      targetDimension === "border" || targetDimension === "glow"
+    );
   }
 
   function resolvePaletteStyleBundle(theme, paletteRecord, ruleset) {
@@ -1187,7 +1233,9 @@
       background: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "background"),
       text: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "text"),
       border: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "border"),
-      glow: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "glow")
+      glow: resolvePaletteDimensionColors(theme, paletteRecord, targetRuleset, "glow"),
+      glowIntensity: normalizeGlowIntensity(paletteRecord && paletteRecord.glowIntensity),
+      glowMultipliers: normalizeGlowMultiplierArray(paletteRecord && paletteRecord.glowMultipliers)
     };
   }
 
@@ -1203,6 +1251,8 @@
       fibonacciBorder: Array.isArray(record.fibonacciBorder) ? record.fibonacciBorder.slice(0, FIB_PREVIEW_VALUES.length) : [],
       pow2Glow: Array.isArray(record.pow2Glow) ? record.pow2Glow.slice(0, POW2_TILE_VALUES.length) : [],
       fibonacciGlow: Array.isArray(record.fibonacciGlow) ? record.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
+      glowIntensity: normalizeGlowIntensity(record.glowIntensity),
+      glowMultipliers: normalizeGlowMultiplierArray(record.glowMultipliers),
       createdAt: Number(record.createdAt) || Date.now(),
       updatedAt: Number(record.updatedAt) || Date.now(),
       source: String(record.source || "custom"),
@@ -1233,6 +1283,8 @@
       fibonacciBorder: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "fibonacci", "border") : [],
       pow2Glow: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "pow2", "glow") : [],
       fibonacciGlow: linkedPalette ? resolvePaletteDimensionColors(theme, linkedPalette, "fibonacci", "glow") : [],
+      glowIntensity: normalizeGlowIntensity(linkedPalette && linkedPalette.glowIntensity),
+      glowMultipliers: normalizeGlowMultiplierArray(linkedPalette && linkedPalette.glowMultipliers),
       createdAt: 0,
       updatedAt: 0,
       source: "follow",
@@ -1257,6 +1309,8 @@
         fibonacciBorder: resolvePaletteDimensionColors(theme, item, "fibonacci", "border"),
         pow2Glow: resolvePaletteDimensionColors(theme, item, "pow2", "glow"),
         fibonacciGlow: resolvePaletteDimensionColors(theme, item, "fibonacci", "glow"),
+        glowIntensity: normalizeGlowIntensity(item.glowIntensity),
+        glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
         createdAt: 0,
         updatedAt: 0,
         source: "builtin",
@@ -1296,6 +1350,8 @@
         fibonacciBorder: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "border"),
         pow2Glow: resolvePaletteDimensionColors(fallbackTheme, item, "pow2", "glow"),
         fibonacciGlow: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "glow"),
+        glowIntensity: normalizeGlowIntensity(item.glowIntensity),
+        glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now(),
         source: "custom",
@@ -1401,6 +1457,8 @@
       var lo = mixHex(base, "#000000", theme.neon ? 0.25 : 0.1);
       var bg = theme.gradient ? "linear-gradient(140deg," + hi + "," + base + "," + lo + ")" : base;
       var text = normalizePaletteColor(paletteText[i], tileTextColor(i, theme.lightTextFrom));
+      var noBorder = isNoEffectColor(paletteBorder[i]);
+      var noGlow = isNoEffectColor(paletteGlow[i]);
       var borderColor = normalizePaletteColor(
         paletteBorder[i],
         mixHex(base, "#ffffff", theme.blackTiles ? 0.35 : 0.24)
@@ -1409,30 +1467,62 @@
         paletteGlow[i],
         mixHex(base, "#ffffff", theme.neon ? 0.06 : 0.14)
       );
-      var glowAlpha = theme.neon ? 0.56 : 0.34;
-      var shadow = "0 0 20px 3px " + rgba(glowColor, glowAlpha) + ", inset 0 0 0 1px " + rgba(borderColor, 0.5);
-      var border = "border:1px solid " + borderColor + ";";
+      var glowScale = resolvePaletteGlowScale(paletteStyles, i);
+      var shadowParts = [];
+      if (glowScale > 0 && !noGlow) {
+        shadowParts.push(
+          "0 0 " + Math.round(20 * glowScale) + "px " + Math.round(3 * glowScale) + "px " +
+          rgba(glowColor, Math.min(0.95, (theme.neon ? 0.56 : 0.34) * glowScale))
+        );
+      }
+      if (!noBorder) shadowParts.push("inset 0 0 0 1px " + rgba(borderColor, 0.5));
+      var shadow = shadowParts.length ? shadowParts.join(", ") : "none";
+      var border = noBorder ? "border:none !important;" : "border:1px solid " + borderColor + ";";
 
       if (theme.blackTiles) {
         var darkHi = mixHex("#101523", "#ffffff", 0.08);
         var darkLo = mixHex("#040509", "#000000", 0.25);
         bg = "linear-gradient(145deg," + darkHi + "," + "#090b12" + "," + darkLo + ")";
         text = normalizePaletteColor(paletteText[i], "#f4f7ff");
-        border = "border:2px solid " + normalizePaletteColor(paletteBorder[i], mixHex(base, "#ffffff", 0.35)) + ";";
-        shadow =
-          "0 0 18px 2px " + rgba(glowColor, 0.78) +
-          ", 0 0 30px 6px " + rgba(glowColor, 0.38) +
-          ", inset 0 0 0 1px " + rgba("#ffffff", 0.24);
+        border = noBorder
+          ? "border:none !important;"
+          : "border:2px solid " + normalizePaletteColor(paletteBorder[i], mixHex(base, "#ffffff", 0.35)) + ";";
+        shadowParts = [];
+        if (glowScale > 0 && !noGlow) {
+          shadowParts.push(
+            "0 0 " + Math.round(18 * glowScale) + "px " + Math.round(2 * glowScale) + "px " +
+            rgba(glowColor, Math.min(0.95, 0.78 * glowScale))
+          );
+          shadowParts.push(
+            "0 0 " + Math.round(30 * glowScale) + "px " + Math.round(6 * glowScale) + "px " +
+            rgba(glowColor, Math.min(0.75, 0.38 * glowScale))
+          );
+        }
+        if (!noBorder) shadowParts.push("inset 0 0 0 1px " + rgba("#ffffff", 0.24));
+        shadow = shadowParts.length ? shadowParts.join(", ") : "none";
       }
       var tileSelector = scopeSelector + " .tile.tile-" + val + " .tile-inner";
       var previewSelector = scopeSelector + " .theme-color-" + val;
 
       css += tileSelector + "," + previewSelector + "{";
-      css += "color:" + text + " !important;background:" + bg + " !important;box-shadow:" + shadow + ";" + border + "box-sizing:border-box;";
+      css += "color:" + text + " !important;background:" + bg + " !important;position:relative;" + border + "box-sizing:border-box;";
       if (theme.neon) {
-        css += "text-shadow:0 0 10px " + rgba(glowColor, 0.85) + ";";
+        css += glowScale > 0 && !noGlow
+          ? "text-shadow:0 0 " + Math.round(10 * glowScale) + "px " + rgba(glowColor, Math.min(0.95, 0.85 * glowScale)) + " !important;"
+          : "text-shadow:none !important;";
       }
       css += "}\n";
+      css += tileSelector + "::before," + previewSelector + "::before{";
+      css += "content:'' !important;position:absolute;inset:0;border-radius:inherit;box-shadow:" + shadow + " !important;pointer-events:none;";
+      css += "}\n";
+      if (theme.mecha || (theme.bauhaus && (val === 8 || val === 64))) {
+        css += scopeSelector + " .tile.tile-" + val + "{filter:";
+        css += glowScale > 0 && !noGlow
+          ? "drop-shadow(0 0 " + Math.round((theme.blackTiles ? 18 : 20) * glowScale) + "px " +
+            rgba(glowColor, Math.min(0.95, (theme.blackTiles ? 0.78 : 0.34) * glowScale)) + ")"
+          : "none";
+        css += ";}\n";
+      }
 
       if (theme.neon) {
         css += scopeSelector + " .theme-preview-tile.theme-color-" + val + "{background-size:200% 200%;}\n";
@@ -1570,19 +1660,15 @@
     var css = "";
     var tile2Selectors = [];
     var tile4Selectors = [];
-    var tile2048Selectors = [];
     for (var i = 0; i < scopes.length; i++) {
       var scope = scopes[i] || "body";
       tile2Selectors.push(scope + " .tile.tile-2 .tile-inner");
       tile2Selectors.push(scope + " .theme-preview-tile.theme-color-2");
       tile4Selectors.push(scope + " .tile.tile-4 .tile-inner");
       tile4Selectors.push(scope + " .theme-preview-tile.theme-color-4");
-      tile2048Selectors.push(scope + " .tile.tile-2048 .tile-inner");
-      tile2048Selectors.push(scope + " .theme-preview-tile.theme-color-2048");
     }
-    css += tile2Selectors.join(",") + "{background:linear-gradient(145deg,#f4fdff,#d9f1ff,#b7deff) !important;color:#12213e !important;border:1px solid #78d3ff !important;box-shadow:0 0 18px rgba(120,211,255,0.36), inset 0 0 0 1px rgba(255,255,255,0.56) !important;text-shadow:none !important;}\n";
-    css += tile4Selectors.join(",") + "{background:linear-gradient(145deg,#f4f0ff,#d7d2ff,#b7afff) !important;color:#24194b !important;border:1px solid #9e93ff !important;box-shadow:0 0 18px rgba(158,147,255,0.34), inset 0 0 0 1px rgba(255,255,255,0.48) !important;text-shadow:none !important;}\n";
-    css += tile2048Selectors.join(",") + "{box-shadow:0 0 24px rgba(154,90,255,0.34), 0 0 48px rgba(102,155,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.22) !important;}\n";
+    css += tile2Selectors.join(",") + "{background:linear-gradient(145deg,#f4fdff,#d9f1ff,#b7deff) !important;color:#12213e !important;border:1px solid #78d3ff !important;text-shadow:none;}\n";
+    css += tile4Selectors.join(",") + "{background:linear-gradient(145deg,#f4f0ff,#d7d2ff,#b7afff) !important;color:#24194b !important;border:1px solid #9e93ff !important;text-shadow:none;}\n";
     return css;
   }
 
@@ -1638,7 +1724,8 @@
   function lowPerfCss() {
     var css = "";
     css += "body.board-low-perf .tile{transition:none !important;-webkit-transition:none !important;-moz-transition:none !important;}\n";
-    css += "body.board-low-perf .tile .tile-inner{animation:none !important;-webkit-animation:none !important;-moz-animation:none !important;";
+    css += "html[data-theme] body.board-low-perf .tile-container .tile{filter:none !important;}\n";
+    css += "html[data-theme] body.board-low-perf .tile-container .tile .tile-inner{animation:none !important;-webkit-animation:none !important;-moz-animation:none !important;";
     css += "box-shadow:none !important;background-image:none !important;text-shadow:none !important;filter:none !important;}\n";
     css += "body.board-low-perf .tile.tile-new .tile-inner,body.board-low-perf .tile.tile-merged .tile-inner{animation:none !important;-webkit-animation:none !important;-moz-animation:none !important;}\n";
     css += "body.board-low-perf .tile .tile-inner::before,body.board-low-perf .tile .tile-inner::after{display:none !important;animation:none !important;}\n";
@@ -2329,8 +2416,8 @@
     }
     
     if (theme.horse_year) {
-         css += horseYearTileCss(theme, POW2_TILE_VALUES, "html[data-theme='horse_year'] body:not([data-ruleset=\"fibonacci\"])", pow2PaletteColors);
-         css += horseYearTileCss(theme, FIB_TILE_VALUES, "html[data-theme='horse_year'] body[data-ruleset=\"fibonacci\"]", fibPaletteColors);
+         css += horseYearTileCss(theme, POW2_TILE_VALUES, "html[data-theme='horse_year'] body:not([data-ruleset=\"fibonacci\"])", pow2PaletteStyles);
+         css += horseYearTileCss(theme, FIB_TILE_VALUES, "html[data-theme='horse_year'] body[data-ruleset=\"fibonacci\"]", fibPaletteStyles);
     } else {
          css += tileCssForValues(theme, POW2_TILE_VALUES, "body:not([data-ruleset=\"fibonacci\"])", pow2PaletteStyles);
          css += tileCssForValues(theme, FIB_TILE_VALUES, "body[data-ruleset=\"fibonacci\"]", fibPaletteStyles);
@@ -2340,10 +2427,10 @@
     }
 
     if (theme.id === "yanyuan") {
-      css += "html[data-theme='yanyuan'] .tile .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile{border-radius:4px !important;text-shadow:none !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16) !important;}\n";
+      css += "html[data-theme='yanyuan'] .tile .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile{border-radius:4px !important;text-shadow:none !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16);}\n";
       css += "html[data-theme='yanyuan'] .tile.tile-512 .tile-inner,html[data-theme='yanyuan'] .tile.tile-1024 .tile-inner,html[data-theme='yanyuan'] .tile.tile-2048 .tile-inner,html[data-theme='yanyuan'] .tile.tile-4096 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-512,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-1024,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-2048,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-4096{color:#fff7ec !important;}\n";
       css += "html[data-theme='yanyuan'] .tile.tile-8192 .tile-inner,html[data-theme='yanyuan'] .tile.tile-16384 .tile-inner,html[data-theme='yanyuan'] .tile.tile-32768 .tile-inner,html[data-theme='yanyuan'] .tile.tile-65536 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-8192,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-16384,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-32768,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-65536{color:#f7e2d0 !important;}\n";
-      css += "html[data-theme='yanyuan'] .tile.tile-2048 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-2048{box-shadow:inset 0 0 0 1px rgba(255,248,235,0.22),0 0 0 2px rgba(203,150,56,0.16) !important;}\n";
+      css += "html[data-theme='yanyuan'] .tile.tile-2048 .tile-inner,html[data-theme='yanyuan'] .theme-preview-tile.theme-color-2048{box-shadow:inset 0 0 0 1px rgba(255,248,235,0.22),0 0 0 2px rgba(203,150,56,0.16);}\n";
     }
     
     css += timerCss(theme);
@@ -2616,8 +2703,8 @@
 
     // Tiles
     if (theme.horse_year) {
-      css += horseYearTileCss(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteColors);
-      css += horseYearTileCss(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteColors);
+      css += horseYearTileCss(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteStyles);
+      css += horseYearTileCss(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteStyles);
     } else {
       css += tileCssForValues(theme, POW2_TILE_VALUES, pow2Selector, pow2PaletteStyles);
       css += tileCssForValues(theme, FIB_PREVIEW_VALUES, fibSelector, fibPaletteStyles);
@@ -2629,8 +2716,12 @@
     return css;
   }
   
-  function horseYearTileCss(theme, values, scopeSelector, paletteColors) {
+  function horseYearTileCss(theme, values, scopeSelector, paletteStyles) {
       var css = "";
+      var paletteColors = Array.isArray(paletteStyles)
+        ? paletteStyles
+        : (paletteStyles && Array.isArray(paletteStyles.background) ? paletteStyles.background : []);
+      var paletteGlow = paletteStyles && Array.isArray(paletteStyles.glow) ? paletteStyles.glow : [];
       // Assets
       var horseIcon = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzViMTAwZSI+PHBhdGggZD0iTTE4LCAzIEMxNi41LCAzLCAxNS41LCAzLjUsIDE0LjUsIDQgQzEzLjUsIDQuNSwgMTIuNSwgNSwgMTEuNSwgNSBDMTAuNSwgNSwgOS41LCA0LjUsIDguNSwgNCBDNy41LCAzLjUsIDYuNSwgMywgNSwgMyBMNSwgNSBDNiwgNSwgNywgNS41LCA4LCA2IEM5LCA2LjUsIDEwLCA3LCAxMSw3IEMxMiw3LCAxMywgNi41LCAxNCwgNiBDMTUsIDUuNSwgMTYsIDUsIDE3LCA1IEwxOCwgMyBaIE02LCA4IEM1LCA4LCA0LCA4LjUsIDMsIDkgQzIsIDkuNSwgMSwgMTAsIDAsIDEwIEwwLCAxMiBDMSwgMTIsIDIsIDExLjUsIDMsIDExIEM0LCAxMC41LCA1LCAxMCwgNiwgMTAgQzcsIDEwLCA4LCAxMC41LCA5LCAxMSBDMTAsIDExLjUsIDExLCAxMiwgMTIsIDEyIEwxMiwgMTAgQzExLCAxMCwgMTAsIDkuNSwgOSwgOSBDOCwgOC41LCA3LCA4LCA2LCA4IFogTTIwLCAxMiBDMTksIDEyLCAxOCwgMTIuNSwgMTcsIDEzIEMxNiwgMTMuNSwgMTUsIDE0LCAxNCwgMTQgQzEzLCAxNCwgMTIsIDEzLjUsIDExLCAxMyBDMTAsIDEyLjUsIDksIDEyLCA4LCAxMiBMOCwgMTQgQzksIDE0LCAxMCwgMTQuNSwgMTEsIDE1IEMxMiwgMTUuNSwgMTMsIDE2LCAxNCwgMTYgQzE1LCAxNiwgMTYsIDE1LjUsIDE3LCAxNSBDMTgsIDE0LjUsIDE5LCAxNCwgMjAsIDE0IEwyMCwgMTIgWiIvPjwvc3ZnPg==";
 
@@ -2638,6 +2729,9 @@
       for (var i = 0; i < values.length; i++) {
         var val = values[i];
         var base = resolvePaletteBaseColor(theme, paletteColors, i, values.length);
+        var noGlow = isNoEffectColor(paletteGlow[i]);
+        var glowColor = normalizePaletteColor(paletteGlow[i], mixHex(base, "#ffffff", 0.14));
+        var glowScale = resolvePaletteGlowScale(paletteStyles, i);
         var text = (val >= 128 && val <= 2048) ? "#f0b800" : "#f9f6f2";
         
         // Base selector construction
@@ -2651,7 +2745,14 @@
         css += "border-radius: 4px !important;";
         css += "font-family: 'KaiTi', 'STKaiti', serif !important;";
         css += "font-weight: bold;";
-        css += "box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;";
+        var shadows = ["0 4px 8px rgba(0,0,0,0.3)"];
+        if (glowScale > 0 && !noGlow) {
+          shadows.push(
+            "0 0 " + Math.round(20 * glowScale) + "px " + Math.round(3 * glowScale) + "px " +
+            rgba(glowColor, Math.min(0.95, 0.34 * glowScale))
+          );
+        }
+        css += "box-shadow:" + shadows.join(", ") + " !important;";
 
         // Setup background and border
         css += "background-color: " + base + " !important;";
@@ -2743,6 +2844,8 @@
       fibonacciBorder: resolvePaletteDimensionColors(theme, base, "fibonacci", "border"),
       pow2Glow: resolvePaletteDimensionColors(theme, base, "pow2", "glow"),
       fibonacciGlow: resolvePaletteDimensionColors(theme, base, "fibonacci", "glow"),
+      glowIntensity: normalizeGlowIntensity(base.glowIntensity),
+      glowMultipliers: normalizeGlowMultiplierArray(base.glowMultipliers),
       createdAt: now,
       updatedAt: now,
       source: "custom",
@@ -2800,8 +2903,11 @@
     var item = custom[idx];
     var targetKey = resolveTilePaletteDimensionKey(targetRuleset, targetDimension);
     var fallback = resolvePaletteDimensionColors(theme, item, targetRuleset, targetDimension);
-    item[targetKey] = normalizePaletteColorArray(item[targetKey], fallback);
-    item[targetKey][targetIndex] = normalizePaletteColor(color, fallback[targetIndex]);
+    var allowNoEffect = targetDimension === "border" || targetDimension === "glow";
+    item[targetKey] = normalizePaletteColorArray(item[targetKey], fallback, allowNoEffect);
+    item[targetKey][targetIndex] = allowNoEffect && isNoEffectColor(color)
+      ? NO_EFFECT_COLOR
+      : normalizePaletteColor(color, fallback[targetIndex]);
     if (targetDimension === "background") {
       var textKey = resolveTilePaletteDimensionKey(targetRuleset, "text");
       var borderKey = resolveTilePaletteDimensionKey(targetRuleset, "border");
@@ -2813,16 +2919,42 @@
       );
       item[borderKey] = normalizePaletteColorArray(
         item[borderKey],
-        buildDefaultPaletteBorderColors(theme, targetRuleset, nextBackground)
+        buildDefaultPaletteBorderColors(theme, targetRuleset, nextBackground),
+        true
       );
       item[glowKey] = normalizePaletteColorArray(
         item[glowKey],
-        buildDefaultPaletteGlowColors(theme, targetRuleset, nextBackground)
+        buildDefaultPaletteGlowColors(theme, targetRuleset, nextBackground),
+        true
       );
     }
     item.updatedAt = Date.now();
     custom[idx] = item;
     writeStoredTilePaletteProfiles(custom);
+    applyTheme(currentThemeId);
+    return true;
+  }
+
+  function updateTilePaletteGlowIntensity(id, intensity) {
+    var custom = readStoredTilePaletteProfiles();
+    var idx = findCustomPaletteIndexById(custom, id);
+    if (idx < 0) return false;
+    custom[idx].glowIntensity = normalizeGlowIntensity(intensity);
+    custom[idx].updatedAt = Date.now();
+    if (!writeStoredTilePaletteProfiles(custom)) return false;
+    applyTheme(currentThemeId);
+    return true;
+  }
+
+  function updateTilePaletteGlowMultiplier(id, index, multiplier) {
+    var custom = readStoredTilePaletteProfiles();
+    var idx = findCustomPaletteIndexById(custom, id);
+    if (idx < 0) return false;
+    var targetIndex = Math.max(0, Math.min(POW2_TILE_VALUES.length - 1, Number(index) || 0));
+    custom[idx].glowMultipliers = normalizeGlowMultiplierArray(custom[idx].glowMultipliers);
+    custom[idx].glowMultipliers[targetIndex] = normalizeGlowMultiplier(multiplier);
+    custom[idx].updatedAt = Date.now();
+    if (!writeStoredTilePaletteProfiles(custom)) return false;
     applyTheme(currentThemeId);
     return true;
   }
@@ -2840,6 +2972,8 @@
         fibonacciBorder: Array.isArray(item.fibonacciBorder) ? item.fibonacciBorder.slice(0, FIB_PREVIEW_VALUES.length) : [],
         pow2Glow: Array.isArray(item.pow2Glow) ? item.pow2Glow.slice(0, POW2_TILE_VALUES.length) : [],
         fibonacciGlow: Array.isArray(item.fibonacciGlow) ? item.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
+        glowIntensity: normalizeGlowIntensity(item.glowIntensity),
+        glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now()
       };
@@ -2889,6 +3023,8 @@
         fibonacciBorder: resolvePaletteDimensionColors(theme, item, "fibonacci", "border"),
         pow2Glow: resolvePaletteDimensionColors(theme, item, "pow2", "glow"),
         fibonacciGlow: resolvePaletteDimensionColors(theme, item, "fibonacci", "glow"),
+        glowIntensity: normalizeGlowIntensity(item.glowIntensity),
+        glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
         createdAt: Number(item.createdAt) || now,
         updatedAt: Number(item.updatedAt) || now,
         source: "custom",
@@ -2919,6 +3055,8 @@
     renameTilePalette: renameTilePalette,
     deleteTilePalette: deleteTilePalette,
     updateTilePaletteColor: updateTilePaletteColor,
+    updateTilePaletteGlowIntensity: updateTilePaletteGlowIntensity,
+    updateTilePaletteGlowMultiplier: updateTilePaletteGlowMultiplier,
     exportTilePalettes: exportTilePalettes,
     importTilePalettes: importTilePalettes,
     syncTimerLegendStyles: syncTimerLegendStyles,

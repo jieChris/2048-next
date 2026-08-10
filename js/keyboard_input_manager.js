@@ -78,7 +78,20 @@ KeyboardInputManager.prototype.listen = function () {
   function isDiagonalModeEnabled() {
     var body = document.body;
     var modeId = body && body.getAttribute ? body.getAttribute("data-mode-id") : "";
-    return typeof modeId === "string" && modeId.indexOf("diag_") === 0;
+    if (typeof modeId === "string" && modeId.indexOf("diag_") === 0) return true;
+    var manager = typeof window !== "undefined" ? window.game_manager : null;
+    if (manager && typeof manager.isDirectionAllowed === "function") {
+      return !!manager.isDirectionAllowed(4);
+    }
+    if (manager && Array.isArray(manager.allowedDirections) && manager.allowedDirections.indexOf(4) !== -1) {
+      return true;
+    }
+    var rules = manager && manager.modeConfig && manager.modeConfig.special_rules;
+    return !!(
+      rules &&
+      (rules.allow_diagonal_moves === true ||
+        (Array.isArray(rules.movement_directions) && rules.movement_directions.indexOf(4) !== -1))
+    );
   }
 
   function isCompactViewport() {

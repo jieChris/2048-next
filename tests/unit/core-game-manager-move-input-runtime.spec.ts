@@ -106,6 +106,52 @@ describe("core game manager move input runtime", () => {
     expect(publishConfirmedOperationFeedback).toHaveBeenCalledWith(manager, attempt, true);
   });
 
+  it("stops publishing inputs that begin after game termination while preserving undo", () => {
+    const { runtime, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
+    const manager = {
+      over: true,
+      won: false,
+      keepPlaying: false,
+      lastMoveInputAt: 0,
+      move: vi.fn((direction: number) => {
+        if (direction !== -1) return false;
+        manager.over = false;
+        return true;
+      })
+    };
+
+    expect(runtime.executeImmediateMoveInput(manager, createAttempt("key-after-over"), 1_234)).toBe(
+      false
+    );
+    expect(manager.move).toHaveBeenCalledWith(0);
+    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
+
+    expect(
+      runtime.executeImmediateMoveInput(manager, createAttempt("key-rescue-undo", -1), 1_235)
+    ).toBe(true);
+    expect(manager.move).toHaveBeenCalledWith(-1);
+    expect(manager.over).toBe(false);
+    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
+  });
+
+  it("still publishes the final valid input that terminates the game", () => {
+    const { runtime, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
+    const attempt = createAttempt("key-final");
+    const manager = {
+      over: false,
+      won: false,
+      keepPlaying: false,
+      lastMoveInputAt: 0,
+      move: vi.fn(() => {
+        manager.over = true;
+        return true;
+      })
+    };
+
+    expect(runtime.executeImmediateMoveInput(manager, attempt, 1_234)).toBe(true);
+    expect(publishConfirmedOperationFeedback).toHaveBeenCalledWith(manager, attempt, true);
+  });
+
   it("keeps the latest complete throttled attempt and only publishes that execution", () => {
     const { runtime, publishConfirmedOperationFeedback, setNow } = loadMoveInputRuntime({
       throttleMs: 50
