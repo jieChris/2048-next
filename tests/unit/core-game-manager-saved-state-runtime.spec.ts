@@ -343,7 +343,6 @@ describe("core game manager saved state runtime", () => {
       manager,
       saved,
       expect.objectContaining({
-        normalizeSavedReplayV1Session: expect.any(Function),
         shouldRestoreSavedStateUndoHistory: expect.any(Function)
       })
     );
