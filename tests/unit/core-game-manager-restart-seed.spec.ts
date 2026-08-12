@@ -675,6 +675,46 @@ describe("core game manager restart seed runtime", () => {
     );
   });
 
+  it("schedules checkpoint restore only when a local mirror exists", () => {
+    let operations: Record<string, unknown> | null = null;
+    const resolveSetupRestoreAndInitialBoardState = vi.fn(
+      (_manager, _hasInputSeed, _normalizedOptions, runtimeOperations) => {
+        operations = runtimeOperations;
+        return { restoredFromSavedState: false };
+      }
+    );
+    const hasLocalMirror = vi.fn(() => false);
+    const storage = {
+      getItem: vi.fn((key: string) => (key === "2048_auth_token_v1" ? "auth-token" : null))
+    };
+    const windowLike = {
+      localStorage: storage,
+      CoreRankedCheckpointLocalMirrorSetupRuntime: {
+        hasRankedCheckpointLocalMirrorForSetup: hasLocalMirror
+      }
+    };
+    const { runtime } = loadRestartSeedRuntime({
+      setupRestoreInitialBoardStateRuntime: {
+        resolveSetupRestoreAndInitialBoardState
+      }
+    });
+    const manager = {
+      rankPolicy: "ranked",
+      modeKey: "standard_4x4_pow2_no_undo",
+      getWindowLike: () => windowLike
+    } as Record<string, unknown>;
+
+    runtime.resolveSetupRestoreAndInitialBoardState(manager, false, {});
+    expect(operations).not.toBeNull();
+    const shouldSchedule = operations?.shouldScheduleRankedCheckpointRestoreInSetup as
+      | ((target: Record<string, unknown>, hasInputSeed: boolean, options: Record<string, unknown>) => boolean)
+      | undefined;
+
+    expect(shouldSchedule?.(manager, false, {})).toBe(false);
+    hasLocalMirror.mockReturnValue(true);
+    expect(shouldSchedule?.(manager, false, {})).toBe(true);
+  });
+
   it("delegates setup state initialization orchestration to the TypeScript runtime", () => {
     const runSetupStateInitialization = vi.fn();
     const { runtime } = loadRestartSeedRuntime({
