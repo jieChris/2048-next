@@ -709,7 +709,7 @@ function shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, nor
   if (!manager || manager.rankPolicy !== "ranked") return false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
   if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
-  return hasRankedCheckpointAuthTokenForSetup(manager) || hasRankedCheckpointLocalMirrorForSetup(manager);
+  return hasRankedCheckpointLocalMirrorForSetup(manager);
 }
 
 function seedInitialTilesAndSnapshotBoard(manager) {
