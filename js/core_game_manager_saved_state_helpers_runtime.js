@@ -758,6 +758,16 @@ function normalizeSavedReplayV1Session(manager, session) {
   if (!isNonArrayObject(cloned)) return null;
   if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
   if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
+  var recordedElapsedMs = Number(cloned.recorded_elapsed_ms);
+  if (!(Number.isFinite(recordedElapsedMs) && recordedElapsedMs >= 0)) {
+    recordedElapsedMs = cloned.records.reduce(function (total, record) {
+      if (!isNonArrayObject(record)) return total;
+      if (record.kind !== "move" && record.kind !== "undo1" && record.kind !== "undon") return total;
+      var deltaMs = Number(record.deltaMs);
+      return total + (Number.isFinite(deltaMs) && deltaMs >= 0 ? Math.floor(deltaMs) : 0);
+    }, 0);
+  }
+  cloned.recorded_elapsed_ms = Math.floor(recordedElapsedMs);
   var lastEventAtMs = Number(cloned.last_event_at_ms);
   cloned.last_event_at_ms = Number.isFinite(lastEventAtMs) && lastEventAtMs >= 0
     ? Math.floor(lastEventAtMs)

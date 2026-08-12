@@ -76,6 +76,16 @@ function cloneReplayV1SessionFallback(
   if (!isRecord(cloned)) return null;
   if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
   if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
+  const recordedElapsedMs = Number(cloned.recorded_elapsed_ms);
+  cloned.recorded_elapsed_ms =
+    Number.isFinite(recordedElapsedMs) && recordedElapsedMs >= 0
+      ? Math.floor(recordedElapsedMs)
+      : cloned.records.reduce((total, record) => {
+          if (!isRecord(record)) return total;
+          if (record.kind !== "move" && record.kind !== "undo1" && record.kind !== "undon") return total;
+          const deltaMs = Number(record.deltaMs);
+          return total + (Number.isFinite(deltaMs) && deltaMs >= 0 ? Math.floor(deltaMs) : 0);
+        }, 0);
   const lastEventAtMs = Number(cloned.last_event_at_ms);
   cloned.last_event_at_ms =
     Number.isFinite(lastEventAtMs) && lastEventAtMs >= 0 ? Math.floor(lastEventAtMs) : Date.now();

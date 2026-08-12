@@ -410,6 +410,88 @@ function resolveCustomSecondaryTimerRuleTextFromDecoded(decoded: Record<string, 
   return "";
 }
 
+function resolveReplayV1ExtTextFromDecoded(decoded: Record<string, unknown>, extType: number): string {
+  const records = Array.isArray(decoded.records) ? decoded.records : [];
+  for (const source of records) {
+    const record = toRecord(source);
+    if (Number(record.extType) === extType) {
+      return decodeReplayV1ExtTextPayload(record.payload);
+    }
+  }
+  return "";
+}
+
+function replayV1RecordsEqual(left: ReplayV1Record, right: ReplayV1Record): boolean {
+  if (left.kind !== right.kind) return false;
+  if (left.kind !== "ext" || right.kind !== "ext" || left.extType !== right.extType) return false;
+  if (left.payload.length !== right.payload.length) return false;
+  return left.payload.every((value, index) => value === right.payload[index]);
+}
+
+function cloneReplayV1Record(record: ReplayV1Record): ReplayV1Record {
+  if (record.kind === "ext") return { ...record, payload: record.payload.slice() };
+  if (record.kind === "checkpoint") return { ...record, boardCodes: record.boardCodes.slice() };
+  return { ...record };
+}
+
+function createReplayV1SessionFromDecoded(
+  decoded: ReturnType<typeof decodeReplayV1Rpl>,
+  modeKey: string,
+  ruleset: "pow2" | "fibonacci"
+): Record<string, unknown> | null {
+  const seedText = resolveReplayV1ExtTextFromDecoded(
+    decoded as unknown as Record<string, unknown>,
+    REPLAY_V1_EXT_SEED
+  ).trim();
+  const seed = Number(seedText);
+  const session: Record<string, unknown> = {
+    v: 1,
+    mode_key: modeKey,
+    ruleset,
+    board_width: decoded.width,
+    board_height: decoded.height,
+    start_unix_ms: decoded.startUnixMs,
+    owner_user_id:
+      resolveReplayV1ExtTextFromDecoded(
+        decoded as unknown as Record<string, unknown>,
+        REPLAY_V1_EXT_OWNER_USER_ID
+      ).trim() || null,
+    owner_nickname: resolveReplayV1ExtTextFromDecoded(
+      decoded as unknown as Record<string, unknown>,
+      REPLAY_V1_EXT_OWNER_NICKNAME
+    ).trim(),
+    challenge_id:
+      resolveReplayV1ExtTextFromDecoded(
+        decoded as unknown as Record<string, unknown>,
+        REPLAY_V1_EXT_CHALLENGE_ID
+      ).trim() || null,
+    seed: seedText && Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
+    custom_secondary_timer_rule_text: resolveCustomSecondaryTimerRuleTextFromDecoded(
+      decoded as unknown as Record<string, unknown>
+    ),
+    init_tiles: decoded.initTiles.map((tile) => ({ ...tile })),
+    records: [],
+    recorded_elapsed_ms: decoded.records.reduce(
+      (total, record) =>
+        record.kind === "move" || record.kind === "undo1" || record.kind === "undon"
+          ? total + record.deltaMs
+          : total,
+      0
+    ),
+    last_event_at_ms: Date.now(),
+    supported: true
+  };
+  const header = createReplayV1ExtRecords(session);
+  if (
+    header.length > decoded.records.length ||
+    header.some((record, index) => !replayV1RecordsEqual(record, decoded.records[index]))
+  ) {
+    return null;
+  }
+  session.records = decoded.records.slice(header.length).map(cloneReplayV1Record);
+  return session;
+}
+
 function applyReplayCustomSecondaryTimerRuleText(
   manager: ManagerLike,
   ruleText: unknown
@@ -859,6 +941,7 @@ function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<s
         initialBoard,
         replayMoves: actions.replayMoves,
         replaySpawns: actions.replaySpawns,
+        sessionReplayV1: createReplayV1SessionFromDecoded(decoded, modeKey, ruleset),
         customSecondaryTimerRuleText: resolveCustomSecondaryTimerRuleTextFromDecoded(
           decoded as unknown as Record<string, unknown>
         )
@@ -964,12 +1047,41 @@ export function computePostMoveRecord(manager: ManagerLike, direction: unknown):
   });
 }
 
-function resolveSessionReplayV1DeltaMs(session: Record<string, unknown>, nowMs: number): number {
+function resolveRecordedReplayV1ElapsedMs(session: Record<string, unknown>): number {
+  const stored = Number(session.recorded_elapsed_ms);
+  if (Number.isFinite(stored) && stored >= 0) return Math.floor(stored);
+  const records = Array.isArray(session.records) ? (session.records as ReplayV1Record[]) : [];
+  return records.reduce(
+    (total, record) =>
+      record.kind === "move" || record.kind === "undo1" || record.kind === "undon"
+        ? total + record.deltaMs
+        : total,
+    0
+  );
+}
+
+export function resolveSessionReplayV1ActionDeltaMs(
+  manager: ManagerLike,
+  session: Record<string, unknown>,
+  nowMs: number
+): number {
+  const getDurationMs = asFunction<() => unknown>(manager.getDurationMs);
+  if (getDurationMs) {
+    const previousElapsedMs = resolveRecordedReplayV1ElapsedMs(session);
+    const currentElapsedMs = Math.max(
+      previousElapsedMs,
+      Math.floor(Number(getDurationMs.call(manager)) || 0)
+    );
+    session.recorded_elapsed_ms = currentElapsedMs;
+    session.last_event_at_ms = nowMs;
+    return currentElapsedMs - previousElapsedMs;
+  }
   let lastAt = Number(session.last_event_at_ms);
   if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
   let delta = Math.floor(nowMs - lastAt);
   if (!Number.isFinite(delta) || delta < 0) delta = 0;
   session.last_event_at_ms = nowMs;
+  session.recorded_elapsed_ms = resolveRecordedReplayV1ElapsedMs(session) + delta;
   return delta;
 }
 
@@ -1013,7 +1125,7 @@ export function recordSessionReplayV1Move(
     dir: numericDirection,
     spawnIndex: y * width + x,
     spawnValueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0,
-    deltaMs: resolveSessionReplayV1DeltaMs(session, Date.now())
+    deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, Date.now())
   });
 }
 
@@ -1612,6 +1724,7 @@ export function installGameManagerReplayHelperGlobals(
     refreshSpawnRateDisplay,
     computePostMoveRecord,
     recordSessionReplayV1Move,
+    resolveSessionReplayV1ActionDeltaMs,
     detectMode,
     clearTransientTileVisualState,
     insertCustomTile,
@@ -1620,6 +1733,7 @@ export function installGameManagerReplayHelperGlobals(
     serializeReplayAsV9Verse,
     exportReplayAsV9VerseBlob,
     serializeReplayAsV9RplBase64,
+    parseReplayImportEnvelope,
     tryAutoSubmitOnGameOver,
     isTerminalSessionForPersistence,
     isSessionTerminated,

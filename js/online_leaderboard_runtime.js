@@ -344,6 +344,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function normalizeRankedSessionSeed(valueLike) {
+    if (valueLike == null || valueLike === "") return null;
     var seed = Math.floor(Number(valueLike));
     return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
   }
@@ -2395,8 +2396,12 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!activeSession) return false;
     var activeChallengeId = toText(activeSession.challenge_id).trim().toLowerCase();
     var checkpointChallengeId = resolveRankedCheckpointSessionId(checkpointData);
-    if (activeChallengeId && checkpointChallengeId && activeChallengeId === checkpointChallengeId) {
-      return false;
+    if (activeChallengeId && checkpointChallengeId) {
+      if (activeChallengeId !== checkpointChallengeId) return true;
+      var activeSeed = normalizeRankedSessionSeed(activeSession.seed);
+      var checkpointSeed = normalizeRankedSessionSeed(checkpointData.initial_seed);
+      if (checkpointSeed === null) checkpointSeed = normalizeRankedSessionSeed(checkpointData.seed);
+      return activeSeed !== null && checkpointSeed !== null && activeSeed !== checkpointSeed;
     }
     if (checkpointChallengeId) {
       return false;
@@ -2422,6 +2427,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return {
       mode: toText(rawValue.mode).trim(),
       mode_key: modeKey,
+      ranked_session_token: toText(rawValue.ranked_session_token).trim() || null,
+      challenge_id: toText(rawValue.challenge_id).trim() || null,
+      initial_seed: normalizeRankedSessionSeed(rawValue.initial_seed),
+      seed: normalizeRankedSessionSeed(rawValue.seed),
       client_record_id: toText(rawValue.client_record_id).trim() || null,
       replay_string: replayString,
       duration_ms: durationMs,
@@ -2475,11 +2484,15 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function buildRankedCheckpointLocalMirrorPayload(manager) {
     if (!shouldUseRankedCheckpoint(manager) || isSessionTerminated(manager)) return null;
-    var payload = buildRankedCheckpointPayload(manager);
+    var payload = buildRankedCheckpointPayload(manager, { includeSavedState: false });
     if (!payload) return null;
     return {
       mode: toText(payload.mode).trim(),
       mode_key: toText(payload.mode_key).trim(),
+      ranked_session_token: toText(payload.ranked_session_token).trim() || null,
+      challenge_id: toText(payload.challenge_id).trim() || null,
+      initial_seed: normalizeRankedSessionSeed(payload.initial_seed),
+      seed: normalizeRankedSessionSeed(payload.seed),
       client_record_id: toText(payload.client_record_id).trim() || null,
       replay_string: toText(payload.replay_string).trim(),
       duration_ms: Math.max(0, Math.floor(Number(payload.duration_ms) || 0)),
@@ -2529,10 +2542,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       return false;
     }
     var restored = restoreRankedCheckpointForManager(manager, restoreData);
-    if (!restored) {
-      clearRankedCheckpointLocalMirror(modeKey);
-      return false;
-    }
+    if (!restored) return false;
     persistRankedCheckpointLocalMirror(manager);
     return true;
   }
@@ -2738,11 +2748,20 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.hasGameStarted =
       !!savedLike.has_game_started ||
       (Array.isArray(manager.moveHistory) && manager.moveHistory.length > 0);
-    manager.accumulatedTime = Math.max(0, Math.floor(Number(savedLike.duration_ms) || 0));
+    var savedDurationMs = Math.max(0, Math.floor(Number(savedLike.duration_ms) || 0));
+    var savedAtMs = Math.max(0, Math.floor(Number(checkpointData && checkpointData.saved_at) || 0));
+    var activeElapsedMs = savedDurationMs;
+    if (savedLike.timer_status === 1 && savedAtMs > 0) {
+      activeElapsedMs += Math.max(0, Date.now() - savedAtMs);
+    }
+    manager.accumulatedTime = activeElapsedMs;
     manager.time = manager.accumulatedTime;
     manager.startTime = null;
     manager.timerStatus = 0;
     manager.timerFrozen = !!savedLike.timer_frozen;
+    manager.timerElapsedOffsetMs = savedDurationMs;
+    manager.timerAnchorLocalMs = savedLike.timer_status === 1 && savedAtMs > 0 ? savedAtMs : null;
+    manager.timerAnchorServerMs = null;
     if (
       typeof applySavedTimerDomState === "function" &&
       typeof applySavedTimerPostRestoreState === "function" &&
@@ -2760,6 +2779,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         manager.startTimer();
       }
     }
+    return true;
   }
 
   function restoreManagerFromRankedCheckpointReplay(manager, checkpointData) {
@@ -2779,7 +2799,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     } catch (_errParse) {
       return failRankedCheckpointRestore(manager, "parse_failed");
     }
-    if (!(envelope && (envelope.kind === "v1rpl" || envelope.kind === "v9rpl" || envelope.kind === "v4c"))) {
+    if (!(envelope && envelope.kind === "v1rpl" && isPlainRecord(envelope.sessionReplayV1))) {
       return failRankedCheckpointRestore(manager, "envelope_unsupported");
     }
     var replayModeConfig =
@@ -2793,29 +2813,114 @@ function shouldAutoLoadOnlineLeaderboard() {
 
     var replayMoves = Array.isArray(envelope.replayMoves) ? envelope.replayMoves : [];
     var replaySpawns = Array.isArray(envelope.replaySpawns) ? envelope.replaySpawns : [];
+    var restoredSessionReplayV1 = envelope.sessionReplayV1;
+    var recordedElapsedMs = Math.max(0, Math.floor(Number(restoredSessionReplayV1.recorded_elapsed_ms) || 0));
+    var checkpointDurationMs = Math.max(0, Math.floor(Number(checkpointData.duration_ms) || 0));
+    if (checkpointDurationMs < recordedElapsedMs) {
+      return failRankedCheckpointRestore(manager, "duration_before_replay");
+    }
+    var rollbackState = null;
+    if (typeof buildSavedGameStatePayload === "function" && typeof applySavedStateRestore === "function") {
+      try {
+        rollbackState = buildSavedGameStatePayload(manager, Date.now(), {
+          force: true,
+          forceFull: true
+        });
+      } catch (_errSnapshot) {
+        rollbackState = null;
+      }
+    }
+    if (!isPlainRecord(rollbackState)) {
+      manager.needsRankedCheckpointRestore = true;
+      manager.rankCheckpointRestorePending = true;
+      return failRankedCheckpointRestore(manager, "rollback_snapshot_unavailable");
+    }
     var originalActuate = manager.actuate;
+    var originalStartTimer = manager.startTimer;
+    var rankedIdentity = {
+      rankedSessionToken: manager.rankedSessionToken,
+      challengeId: manager.challengeId,
+      initialSeed: manager.initialSeed,
+      seed: manager.seed
+    };
+    var replayApplied = false;
+    var restoreError = "";
+    var rollbackSucceeded = true;
+    var rollbackTimerWasActive = rollbackState.timer_status === 1;
     manager.rankCheckpointApplying = true;
     manager.actuate = function () {};
+    manager.startTimer = function () {};
     try {
       restartWithBoard(manager, envelope.initialBoard, replayModeConfig);
+      manager.rankCheckpointApplying = true;
       manager.disableSessionSync = true;
       for (var actionIndex = 0; actionIndex < replayMoves.length; actionIndex++) {
         var action = replayMoves[actionIndex];
-        if (action === -1) {
-          manager.move(-1);
-          continue;
+        if (action !== -1 && !Number.isInteger(action)) {
+          restoreError = "action_invalid";
+          break;
         }
-        if (!Number.isInteger(action)) return failRankedCheckpointRestore(manager, "action_invalid");
-        manager.forcedSpawn = replaySpawns[actionIndex] || null;
-        manager.move(action);
+        var expectedSpawn = action === -1 ? null : (replaySpawns[actionIndex] || null);
+        manager.forcedSpawn = expectedSpawn;
+        manager.rankCheckpointReplayExecuting = true;
+        try {
+          if (manager.move(action) !== true) {
+            restoreError = "action_apply_failed";
+            break;
+          }
+          if (expectedSpawn && manager.forcedSpawn !== null) {
+            restoreError = "spawn_apply_failed";
+            break;
+          }
+        } finally {
+          manager.rankCheckpointReplayExecuting = false;
+        }
+      }
+      if (!restoreError) {
+        manager.sessionReplayV1 = restoredSessionReplayV1;
+        manager.rankedSessionToken = toText(checkpointData.ranked_session_token).trim() || rankedIdentity.rankedSessionToken;
+        manager.challengeId = toText(checkpointData.challenge_id).trim() || rankedIdentity.challengeId;
+        var checkpointSeed = normalizeRankedSessionSeed(checkpointData.initial_seed);
+        if (checkpointSeed === null) checkpointSeed = normalizeRankedSessionSeed(checkpointData.seed);
+        manager.initialSeed = checkpointSeed === null ? rankedIdentity.initialSeed : checkpointSeed;
+        manager.seed = checkpointSeed === null ? rankedIdentity.seed : checkpointSeed;
+        if (typeof manager.serialize !== "function" || toText(manager.serialize()).trim() !== normalizedReplay) {
+          restoreError = "replay_prefix_mismatch";
+        } else {
+          replayApplied = true;
+        }
       }
     } catch (_err) {
-      return failRankedCheckpointRestore(manager, "replay_apply_failed");
+      restoreError = "replay_apply_failed";
     } finally {
       manager.forcedSpawn = null;
-      manager.disableSessionSync = false;
-      manager.rankCheckpointApplying = false;
+      manager.rankCheckpointReplayExecuting = false;
+      if (!replayApplied) {
+        try {
+          rollbackSucceeded = applySavedStateRestore(manager, rollbackState) === true;
+        } catch (_errRollback) {
+          rollbackSucceeded = false;
+        }
+      }
+      manager.disableSessionSync = !replayApplied && !rollbackSucceeded;
+      manager.rankCheckpointApplying = !replayApplied && !rollbackSucceeded;
       manager.actuate = originalActuate;
+      manager.startTimer = originalStartTimer;
+    }
+    if (!replayApplied) {
+      if (rollbackSucceeded && rollbackTimerWasActive && manager.timerStatus === 0) {
+        try {
+          originalStartTimer.call(manager);
+        } catch (_errRestartTimer) {
+          rollbackSucceeded = false;
+          manager.disableSessionSync = true;
+          manager.rankCheckpointApplying = true;
+        }
+      }
+      return failRankedCheckpointRestore(
+        manager,
+        rollbackSucceeded ? (restoreError || "replay_apply_failed") : "rollback_failed"
+      );
     }
     manager.lastRankedCheckpointRestoreError = "";
     return true;
@@ -2840,7 +2945,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.notifyUndoSettingsStateChanged();
     manager.updateStatsPanel();
     if (!(isPlainRecord(checkpointData.ui_state) && isPlainRecord(checkpointData.ui_state.saved_state))) {
-      applyRankedCheckpointTimerState(manager, checkpointData);
+      if (!applyRankedCheckpointTimerState(manager, checkpointData)) return false;
     }
     var checkpointPayload = buildRankedCheckpointPayload(manager);
     manager.lastRankedCheckpointSignature = checkpointPayload
@@ -2927,8 +3032,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (global && typeof global.alert === "function") {
       global.alert(
         getLanguage() === "en"
-          ? "This ranked session has expired. Please start a new ranked game."
-          : "本次排位会话已过期，请重新开始排位。"
+          ? "This leaderboard game session has expired. Please start a new game."
+          : "本次排行榜对局会话已过期，请重新开局。"
       );
     }
   }
@@ -3019,6 +3124,11 @@ function shouldAutoLoadOnlineLeaderboard() {
       return false;
     }
     var candidates = buildRankedCheckpointRestoreCandidates(localMirror, null);
+    if (!candidates.length) {
+      manager.needsRankedCheckpointRestore = false;
+      manager.rankCheckpointRestorePending = false;
+      return false;
+    }
     var restored = false;
     for (var i = 0; i < candidates.length; i += 1) {
       var candidate = candidates[i];
@@ -3027,12 +3137,15 @@ function shouldAutoLoadOnlineLeaderboard() {
         : restoreRankedCheckpointForManager(manager, candidate.data);
       if (restored) break;
     }
-    manager.needsRankedCheckpointRestore = false;
-    manager.rankCheckpointRestorePending = false;
     if (restored) {
+      manager.needsRankedCheckpointRestore = false;
+      manager.rankCheckpointRestorePending = false;
       manager.rankCheckpointSaveConflict = "";
       manager.lastRankedCheckpointSaveError = "";
       persistRankedCheckpointLocalMirror(manager);
+    } else {
+      manager.needsRankedCheckpointRestore = true;
+      manager.rankCheckpointRestorePending = true;
     }
     return restored;
   }
@@ -3046,8 +3159,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (!Number.isFinite(delayMs) || delayMs < 0) delayMs = 0;
     global.setTimeout(function () {
       maybeRestoreRankedCheckpoint(manager, opts).catch(function () {
-        manager.needsRankedCheckpointRestore = false;
-        manager.rankCheckpointRestorePending = false;
+        manager.needsRankedCheckpointRestore = true;
+        manager.rankCheckpointRestorePending = true;
       }).finally(function () {
         manager.rankCheckpointRestoreScheduled = false;
       });
@@ -3056,6 +3169,7 @@ function shouldAutoLoadOnlineLeaderboard() {
 
   function persistRankedCheckpointOnPageHide(manager) {
     clearRankedCheckpointSaveTimer();
+    if (manager && manager.rankCheckpointRestorePending === true) return;
     persistRankedCheckpointLocalMirror(manager);
   }
 
@@ -4147,6 +4261,8 @@ async function refreshLeaderboard(modeLike) {
 
   function triggerImmediateOnlineSubmit(options) {
     var opts = options && typeof options === "object" ? options : {};
+    var manager = opts.manager || global.game_manager;
+    if (manager && (manager.rankCheckpointApplying === true || manager.rankCheckpointRestorePending === true)) return;
     runPromiseSafely(function () {
       return maybeSubmitRecordOnGameOver(opts);
     });
@@ -4220,7 +4336,11 @@ async function refreshLeaderboard(modeLike) {
       var result = original.apply(this, arguments);
       if (timing === "after") {
         triggerImmediateOnlineSubmit();
-        if (methodName === "move" && currentManager.rankCheckpointApplying !== true) {
+        if (
+          methodName === "move" &&
+          currentManager.rankCheckpointApplying !== true &&
+          currentManager.rankCheckpointRestorePending !== true
+        ) {
           maybeQueueRankedBeginAttempt(currentManager);
           persistRankedCheckpointLocalMirror(currentManager);
           scheduleRankedCheckpointSave(currentManager, { reason: "move" });

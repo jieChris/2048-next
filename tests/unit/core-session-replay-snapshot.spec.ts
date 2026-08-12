@@ -107,6 +107,7 @@ describe("core session replay snapshot runtime", () => {
       seed: 987654321,
       init_tiles: [],
       records: [],
+      recorded_elapsed_ms: 0,
       last_event_at_ms: 1_700_000_000_222,
       supported: true
     });

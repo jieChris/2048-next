@@ -12,7 +12,7 @@ import {
   stepReplay,
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
-import { decodeReplayV1Rpl, encodeReplayV1Rpl } from "../../src/core/replay-codec";
+import { decodeReplayV1Rpl, encodeReplayV1Rpl, encodeUleb128 } from "../../src/core/replay-codec";
 
 function createGrid() {
   return {
@@ -36,6 +36,79 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(windowLike.serializeReplay).toBeTypeOf("function");
     expect(windowLike.importReplay).toBeTypeOf("function");
     expect(windowLike.stepReplay).toBeTypeOf("function");
+  });
+
+  it("keeps the complete v1 session when parsing an active-game checkpoint", () => {
+    const text = (value: string) => new TextEncoder().encode(value);
+    const replayBytes = encodeReplayV1Rpl({
+      width: 4,
+      height: 4,
+      initTiles: [
+        { cellIndex: 0, valueBit: 0 },
+        { cellIndex: 5, valueBit: 1 }
+      ],
+      startUnixMs: 1_780_000_000,
+      records: [
+        { kind: "ext", extType: 1, payload: text("standard_4x4_pow2_no_undo") },
+        { kind: "ext", extType: 2, payload: text("pow2") },
+        { kind: "ext", extType: 3, payload: text("checkpoint-session") },
+        { kind: "ext", extType: 6, payload: text("7") },
+        { kind: "ext", extType: 7, payload: text("Player") },
+        { kind: "ext", extType: 4, payload: text("101") },
+        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 750 },
+        { kind: "ext", extType: 8, payload: new Uint8Array(encodeUleb128(128)) },
+        { kind: "move", dir: 2, spawnIndex: 7, spawnValueBit: 0, deltaMs: 1_250 }
+      ]
+    });
+    const replayString = `REPLAY_v1RPL_B64_${Buffer.from(replayBytes).toString("base64")}`;
+    const windowLike: Record<string, unknown> = {
+      atob(value: string) {
+        return Buffer.from(value, "base64").toString("binary");
+      },
+      btoa(value: string) {
+        return Buffer.from(value, "binary").toString("base64");
+      },
+      GameManager: { REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_" }
+    };
+    installGameManagerReplayHelperGlobals(windowLike);
+    const manager = {
+      width: 4,
+      height: 4,
+      modeKey: "standard_4x4_pow2_no_undo",
+      resolveModeConfig: () => ({ ruleset: "pow2" }),
+      getWindowLike: () => windowLike
+    };
+    const parse = windowLike.parseReplayImportEnvelope as (
+      managerLike: Record<string, unknown>,
+      replay: string
+    ) => Record<string, any>;
+
+    const envelope = parse(manager, replayString);
+
+    expect(envelope.sessionReplayV1).toMatchObject({
+      board_width: 4,
+      board_height: 4,
+      start_unix_ms: 1_780_000_000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      ruleset: "pow2",
+      challenge_id: "checkpoint-session",
+      owner_user_id: "7",
+      owner_nickname: "Player",
+      seed: 101,
+      recorded_elapsed_ms: 2_000,
+      supported: true
+    });
+    expect(envelope.sessionReplayV1.records).toEqual([
+      { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 750 },
+      { kind: "ext", extType: 8, payload: new Uint8Array(encodeUleb128(128)) },
+      { kind: "move", dir: 2, spawnIndex: 7, spawnValueBit: 0, deltaMs: 1_250 }
+    ]);
+    expect(
+      serializeReplay({
+        ...manager,
+        sessionReplayV1: envelope.sessionReplayV1
+      })
+    ).toBe(replayString);
   });
 
   it("serializes a manager without loading the retired replay helpers script", () => {
@@ -319,6 +392,35 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     ]);
     expect(manager.sessionReplayV1.last_event_at_ms).toBe(1_456);
     vi.useRealTimers();
+  });
+
+  it("continues move timing from the restored replay total", () => {
+    const previousRecord = {
+      kind: "move",
+      dir: 0,
+      spawnIndex: 0,
+      spawnValueBit: 0,
+      deltaMs: 2_000
+    };
+    const manager = {
+      width: 2,
+      height: 2,
+      replayMode: false,
+      getDurationMs: () => 5_000,
+      sessionReplayV1: {
+        supported: true,
+        recorded_elapsed_ms: 2_000,
+        records: [previousRecord] as unknown[]
+      }
+    };
+
+    recordSessionReplayV1Move(manager, 1, { x: 1, y: 0, value: 4 });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      previousRecord,
+      { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 3_000 }
+    ]);
+    expect(manager.sessionReplayV1.recorded_elapsed_ms).toBe(5_000);
   });
 
   it("records an exact 128 spawn before its move using ULEB128", () => {

@@ -291,4 +291,25 @@ describe("core game manager move input runtime", () => {
     expect(undo.runtime.move(manager, -1)).toBe(true);
     expect(undo.executeUndoMove).toHaveBeenCalledWith(manager, -1, expect.any(Object));
   });
+
+  it("allows only the synchronous checkpoint replay action through the restore guard", () => {
+    const loaded = loadMoveInputRuntime();
+    loaded.context.buildMovePlan = vi.fn(() => ({ vector: { x: 0, y: -1 } }));
+    loaded.context.buildTraversals = vi.fn(() => ({ x: [], y: [] }));
+    loaded.context.resetGridMergeStateBeforeMove = vi.fn();
+    loaded.context.processMoveTraversals = vi.fn(() => true);
+    loaded.context.finalizeSuccessfulMove = vi.fn();
+    loaded.context.resolveLockedDirection = vi.fn(() => null);
+    const manager = {
+      isDirectionAllowed: vi.fn(() => true),
+      rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: false,
+      rankedSetupBlockedUntilSessionReady: false,
+      noXSelectionPending: false
+    };
+
+    expect(loaded.runtime.move(manager, 0)).toBe(false);
+    manager.rankCheckpointReplayExecuting = true;
+    expect(loaded.runtime.move(manager, 0)).toBe(true);
+  });
 });

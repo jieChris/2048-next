@@ -120,12 +120,30 @@ function decodeReplayV1Utf8Text(payload) {
   }
 }
 
-function resolveSessionReplayV1DeltaMs(session, nowMs) {
+function resolveSessionReplayV1RecordedElapsedMs(session) {
+  var stored = Number(session && session.recorded_elapsed_ms);
+  if (Number.isFinite(stored) && stored >= 0) return Math.floor(stored);
+  return Array.isArray(session && session.records) ? session.records.reduce(function (total, record) {
+    if (!record || (record.kind !== "move" && record.kind !== "undo1" && record.kind !== "undon")) return total;
+    var deltaMs = Number(record.deltaMs);
+    return total + (Number.isFinite(deltaMs) && deltaMs >= 0 ? Math.floor(deltaMs) : 0);
+  }, 0) : 0;
+}
+
+function resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) {
+  if (manager && typeof manager.getDurationMs === "function") {
+    var previousElapsedMs = resolveSessionReplayV1RecordedElapsedMs(session);
+    var currentElapsedMs = Math.max(previousElapsedMs, Math.floor(Number(manager.getDurationMs()) || 0));
+    session.recorded_elapsed_ms = currentElapsedMs;
+    session.last_event_at_ms = nowMs;
+    return currentElapsedMs - previousElapsedMs;
+  }
   var lastAt = Number(session && session.last_event_at_ms);
   if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
   var delta = Math.floor(nowMs - lastAt);
   if (!Number.isFinite(delta) || delta < 0) delta = 0;
   session.last_event_at_ms = nowMs;
+  session.recorded_elapsed_ms = resolveSessionReplayV1RecordedElapsedMs(session) + delta;
   return delta;
 }
 
@@ -174,7 +192,7 @@ function recordSessionReplayV1Move(manager, direction, spawn) {
   var nowMs = Date.now();
   session.records.push({
     kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
-    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs)
+    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs)
   });
 }
 
@@ -185,10 +203,10 @@ function recordSessionReplayV1Undo(manager, undoCount) {
   if (!Number.isInteger(count) || count <= 0) count = 1;
   var nowMs = Date.now();
   if (count === 1) {
-    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
     return;
   }
-  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
 }
 
 function resolveReplayPauseStateFallback() {

@@ -122,6 +122,7 @@ export function initializeSetupSessionReplaySnapshot(
     seed: manager.initialSeed,
     init_tiles: [],
     records: [],
+    recorded_elapsed_ms: 0,
     last_event_at_ms: Date.now(),
     supported: true
   };
