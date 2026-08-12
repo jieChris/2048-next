@@ -316,6 +316,7 @@ describe("core game manager move input runtime", () => {
     const manager = {
       disableSessionSync: true,
       rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: true,
       rankedSetupBlockedUntilSessionReady: false,
       noXSelectionPending: false,
       pendingMoveInput: null,
@@ -337,6 +338,7 @@ describe("core game manager move input runtime", () => {
     const manager = {
       replayMode: false,
       rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: true,
       rankPolicy: "ranked",
       forcedSpawn: { x: 2, y: 3, value: 4 },
       lastSpawn: null as { x: number; y: number; value: number } | null,
@@ -352,5 +354,26 @@ describe("core game manager move input runtime", () => {
     expect(insertTile).toHaveBeenCalledWith(expect.objectContaining({ x: 2, y: 3, value: 4 }));
     expect(manager.lastSpawn).toEqual({ x: 2, y: 3, value: 4 });
     expect(manager.forcedSpawn).toBeNull();
+  });
+
+  it("allows only the synchronous checkpoint replay action through the restore guard", () => {
+    const loaded = loadMoveInputRuntime();
+    loaded.context.buildMovePlan = vi.fn(() => ({ vector: { x: 0, y: -1 } }));
+    loaded.context.buildTraversals = vi.fn(() => ({ x: [], y: [] }));
+    loaded.context.resetGridMergeStateBeforeMove = vi.fn();
+    loaded.context.processMoveTraversals = vi.fn(() => true);
+    loaded.context.finalizeSuccessfulMove = vi.fn();
+    loaded.context.resolveLockedDirection = vi.fn(() => null);
+    const manager = {
+      isDirectionAllowed: vi.fn(() => true),
+      rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: false,
+      rankedSetupBlockedUntilSessionReady: false,
+      noXSelectionPending: false
+    };
+
+    expect(loaded.runtime.move(manager, 0)).toBe(false);
+    manager.rankCheckpointReplayExecuting = true;
+    expect(loaded.runtime.move(manager, 0)).toBe(true);
   });
 });

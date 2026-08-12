@@ -333,6 +333,10 @@ function isRankCheckpointRestoreActive(manager) {
   ));
 }
 
+function isRankCheckpointReplayExecuting(manager) {
+  return !!(manager && manager.rankCheckpointReplayExecuting === true);
+}
+
 function executeImmediateUndoMoveInput(manager, attempt) {
   manager.pendingMoveInput = null;
   executeImmediateMoveInput(manager, attempt, Date.now());
@@ -471,8 +475,10 @@ function flushPendingMoveInput(manager) {
 
 function shouldAbortMoveBeforeUndo(manager) {
   if (!manager) return true;
-  if (manager.rankedSetupBlockedUntilSessionReady) return true;
-  if (isRankCheckpointRestoreActive(manager) && manager.disableSessionSync !== true) return true;
+  if (
+    manager.rankedSetupBlockedUntilSessionReady ||
+    (isRankCheckpointRestoreActive(manager) && !isRankCheckpointReplayExecuting(manager))
+  ) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
@@ -1339,7 +1345,7 @@ function resolveGameTerminatedFallback(manager) {
 function isGameTerminated(manager) {
   if (!manager) return false;
   // Replay must follow the recorded action stream; hitting 2048 should not block replay moves.
-  if (manager.replayMode) {
+  if (manager.replayMode || isRankCheckpointReplayExecuting(manager)) {
     if (!manager.over) return false;
     manager.stopTimer();
     manager.timerEnd = Date.now();
@@ -1355,7 +1361,7 @@ function isGameTerminated(manager) {
 }
 
 function resolveForcedReplaySpawn(manager) {
-  if (!manager || !(manager.replayMode || manager.rankCheckpointApplying === true)) return null;
+  if (!manager || (!manager.replayMode && !isRankCheckpointReplayExecuting(manager))) return null;
   return manager.forcedSpawn || null;
 }
 

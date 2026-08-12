@@ -429,6 +429,7 @@ function refreshActuateTimerAndIps(manager) {
 function actuate(manager) {
   if (!manager) return;
   if (manager.rankedSetupBlockedUntilSessionReady) return;
+  if (manager.rankCheckpointApplying === true || manager.rankCheckpointRestorePending === true) return;
   syncBestScoreBeforeActuate(manager);
   manager.actuator.actuate(manager.grid, createActuatorPayloadState(manager));
   updateActuateStatsAndPanel(manager);

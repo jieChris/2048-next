@@ -222,10 +222,11 @@ function loadOnlineLeaderboardRuntime(options: {
   disableOnlineLeaderboard?: boolean;
   apiBases?: string[];
   storage?: MemoryStorage;
-  buildSavedGameStatePayload?: (...args: unknown[]) => Record<string, unknown>;
   parseReplayImportEnvelope?: (...args: unknown[]) => Record<string, unknown> | null;
   restartWithBoard?: (...args: unknown[]) => void;
   resolveStructuredReplayModeConfig?: (...args: unknown[]) => Record<string, unknown> | null;
+  buildSavedGameStatePayload?: (...args: unknown[]) => Record<string, unknown> | null;
+  applySavedStateRestore?: (...args: unknown[]) => boolean;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
@@ -280,23 +281,29 @@ function loadOnlineLeaderboardRuntime(options: {
 
   const scriptPath = path.resolve(process.cwd(), "js/online_leaderboard_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
-  vm.runInNewContext(script, {
+  const context: Record<string, unknown> = {
     window: windowLike,
     console,
     setTimeout,
     clearTimeout,
-    buildSavedGameStatePayload: options.buildSavedGameStatePayload,
     parseReplayImportEnvelope: options.parseReplayImportEnvelope,
     restartWithBoard: options.restartWithBoard,
     resolveStructuredReplayModeConfig: options.resolveStructuredReplayModeConfig,
     applySavedStateRestore(manager: Record<string, unknown>, savedState: Record<string, unknown>) {
+      if (options.applySavedStateRestore) {
+        return options.applySavedStateRestore(manager, savedState);
+      }
       manager.score = Number(savedState.score || 0);
       manager.over = !!savedState.over;
       manager.won = !!savedState.won;
       manager.keepPlaying = !!savedState.keep_playing;
       return true;
     }
-  });
+  };
+  if (options.buildSavedGameStatePayload) {
+    context.buildSavedGameStatePayload = options.buildSavedGameStatePayload;
+  }
+  vm.runInNewContext(script, context);
 
   return { fetchCalls, fetchImpl, storage, windowLike };
 }
@@ -2429,6 +2436,18 @@ describe("online leaderboard terminal submission", () => {
   it("keeps checkpoint application active after restart setup resets runtime state", async () => {
     const storage = new MemoryStorage();
     const nowSec = Math.floor(Date.now() / 1000);
+    const replayString = "checkpoint-replay";
+    const originalSession = {
+      v: 1,
+      mode_key: MODE_KEY,
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      init_tiles: [],
+      records: [],
+      recorded_elapsed_ms: 0,
+      supported: true
+    };
     storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
       mode_key: MODE_KEY,
       challenge_id: "ranked-checkpoint-replay",
@@ -2445,13 +2464,22 @@ describe("online leaderboard terminal submission", () => {
       initial_seed: 101,
       seed: 101,
       client_record_id: "rec_checkpoint",
-      replay_string: "checkpoint-replay",
-      duration_ms: 1200,
+      replay_string: replayString,
+      duration_ms: 1_200,
       saved_at: Date.now(),
       owner_user_id: "7",
       ui_state: {}
     }));
-    const moveStates: Array<{ applying: boolean; forcedSpawn: unknown }> = [];
+    const moveStates: Array<{
+      applying: boolean;
+      executing: boolean;
+      forcedSpawn: unknown;
+    }> = [];
+    const replaySpawns = [
+      { x: 0, y: 1, value: 2 },
+      { x: 1, y: 2, value: 2 },
+      { x: 2, y: 3, value: 4 }
+    ];
     const manager = createTerminatedManager({
       rankPolicy: "ranked",
       over: false,
@@ -2468,18 +2496,19 @@ describe("online leaderboard terminal submission", () => {
       updateUndoUiState: vi.fn(),
       notifyUndoSettingsStateChanged: vi.fn(),
       updateStatsPanel: vi.fn(),
+      serialize: vi.fn(function (this: Record<string, unknown>) {
+        return this.sessionReplayV1 === originalSession ? replayString : "rewritten";
+      }),
       move: vi.fn(function (this: Record<string, unknown>) {
         moveStates.push({
           applying: this.rankCheckpointApplying === true,
+          executing: this.rankCheckpointReplayExecuting === true,
           forcedSpawn: this.forcedSpawn
         });
+        this.forcedSpawn = null;
+        return true;
       })
     });
-    const replaySpawns = [
-      { x: 0, y: 1, value: 2 },
-      { x: 1, y: 2, value: 2 },
-      { x: 2, y: 3, value: 4 }
-    ];
     const runtime = loadOnlineLeaderboardRuntime({
       manager,
       storage,
@@ -2488,9 +2517,12 @@ describe("online leaderboard terminal submission", () => {
         modeKey: MODE_KEY,
         initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
         replayMoves: [0, 1, 2],
-        replaySpawns
+        replaySpawns,
+        sessionReplayV1: originalSession
       }),
       resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      buildSavedGameStatePayload: () => ({ mode_key: MODE_KEY }),
+      applySavedStateRestore: () => true,
       restartWithBoard: (currentManager) => {
         (currentManager as Record<string, unknown>).rankCheckpointApplying = false;
       },
@@ -2503,8 +2535,384 @@ describe("online leaderboard terminal submission", () => {
     }).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
     await flushRuntimePromises();
 
-    expect(moveStates).toEqual(replaySpawns.map((forcedSpawn) => ({ applying: true, forcedSpawn })));
+    expect(moveStates).toEqual(replaySpawns.map((forcedSpawn) => ({
+      applying: true,
+      executing: true,
+      forcedSpawn
+    })));
     expect(manager.lastRankedCheckpointRestoreError).toBe("");
+  });
+
+  it("restores the original v1 session after checkpoint replay instead of recording machine replay time", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const replayString = "checkpoint-v1-original";
+    const originalSession = {
+      v: 1,
+      mode_key: MODE_KEY,
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      start_unix_ms: 1_780_000_000,
+      challenge_id: "ranked-checkpoint-prefix",
+      seed: 202,
+      init_tiles: [{ cellIndex: 0, valueBit: 0 }, { cellIndex: 5, valueBit: 0 }],
+      records: [
+        { kind: "move", dir: 0, spawnIndex: 2, spawnValueBit: 0, deltaMs: 700 },
+        { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 1, deltaMs: 1_300 }
+      ],
+      recorded_elapsed_ms: 2_000,
+      supported: true
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: originalSession.challenge_id,
+      seed: originalSession.seed,
+      ranked_session_token: "checkpoint-prefix-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: originalSession.challenge_id,
+      ranked_session_token: "checkpoint-prefix-token",
+      initial_seed: originalSession.seed,
+      seed: originalSession.seed,
+      replay_string: replayString,
+      duration_ms: 4_000,
+      saved_at: Date.now(),
+      owner_user_id: "7",
+      ui_state: { has_game_started: true, timer_status: 1 }
+    }));
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 0,
+      hasGameStarted: false,
+      moveHistory: [],
+      successfulMoveCount: 0,
+      rankedSessionToken: "checkpoint-prefix-token",
+      challengeId: originalSession.challenge_id,
+      initialSeed: originalSession.seed,
+      needsRankedCheckpointRestore: false,
+      sessionReplayV1: null,
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn(),
+      startTimer: vi.fn(function (this: Record<string, unknown>) {
+        this.timerStatus = 1;
+      }),
+      serialize: vi.fn(function (this: Record<string, unknown>) {
+        return this.sessionReplayV1 === originalSession ? replayString : "rewritten-machine-replay";
+      }),
+      move: vi.fn(function (this: Record<string, unknown>, direction: number) {
+        expect(this.rankCheckpointReplayExecuting).toBe(true);
+        const session = this.sessionReplayV1 as { records?: unknown[] } | null;
+        session?.records?.push({ kind: "move", dir: direction, deltaMs: 1 });
+        (this.moveHistory as number[]).push(direction);
+        this.forcedSpawn = null;
+        return true;
+      })
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      parseReplayImportEnvelope: () => ({
+        kind: "v1rpl",
+        modeKey: MODE_KEY,
+        initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        replayMoves: [0, 1],
+        replaySpawns: [{ x: 2, y: 0, value: 2 }, { x: 3, y: 0, value: 4 }],
+        sessionReplayV1: originalSession
+      }),
+      resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      buildSavedGameStatePayload: (currentManager) => ({
+        mode_key: MODE_KEY,
+        score: Number((currentManager as Record<string, unknown>).score || 0),
+        over: !!(currentManager as Record<string, unknown>).over,
+        won: !!(currentManager as Record<string, unknown>).won,
+        keep_playing: !!(currentManager as Record<string, unknown>).keepPlaying
+      }),
+      applySavedStateRestore: () => true,
+      restartWithBoard: (currentManager) => {
+        (currentManager as Record<string, unknown>).sessionReplayV1 = { records: [] };
+        (currentManager as Record<string, unknown>).moveHistory = [];
+      },
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    manager.needsRankedCheckpointRestore = true;
+    (runtime.windowLike.OnlineLeaderboardRuntime as any).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
+    await flushRuntimePromises();
+
+    expect(manager.sessionReplayV1).toBe(originalSession);
+    expect(originalSession.records).toEqual([
+      { kind: "move", dir: 0, spawnIndex: 2, spawnValueBit: 0, deltaMs: 700 },
+      { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 1, deltaMs: 1_300 }
+    ]);
+    expect(manager.serialize).toHaveReturnedWith(replayString);
+    expect(manager.lastRankedCheckpointRestoreError).toBe("");
+    expect(manager.rankCheckpointReplayExecuting).toBe(false);
+  });
+
+  it("rolls back a partial checkpoint replay and keeps restore locked when a later action fails", async () => {
+    const storage = new MemoryStorage();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const replayString = "checkpoint-v1-partial-failure";
+    const priorSession = { records: [{ kind: "move", dir: 3, deltaMs: 900 }] };
+    const priorBoard = [[4, 2], [0, 0]];
+    const originalSession = {
+      v: 1,
+      mode_key: MODE_KEY,
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      challenge_id: "ranked-checkpoint-partial",
+      seed: 404,
+      init_tiles: [],
+      records: [
+        { kind: "move", dir: 0, spawnIndex: 2, spawnValueBit: 0, deltaMs: 700 },
+        { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 800 }
+      ],
+      recorded_elapsed_ms: 1_500,
+      supported: true
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: originalSession.challenge_id,
+      seed: originalSession.seed,
+      ranked_session_token: "checkpoint-partial-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: originalSession.challenge_id,
+      ranked_session_token: "checkpoint-partial-token",
+      initial_seed: originalSession.seed,
+      seed: originalSession.seed,
+      replay_string: replayString,
+      duration_ms: 2_000,
+      saved_at: Date.now(),
+      owner_user_id: "7",
+      ui_state: { has_game_started: true, timer_status: 1 }
+    }));
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      score: 64,
+      hasGameStarted: true,
+      moveHistory: [3],
+      successfulMoveCount: 1,
+      rankedSessionToken: "checkpoint-partial-token",
+      challengeId: originalSession.challenge_id,
+      initialSeed: originalSession.seed,
+      seed: originalSession.seed,
+      sessionReplayV1: priorSession,
+      board: priorBoard,
+      timerStatus: 1,
+      accumulatedTime: 1_900,
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn(),
+      startTimer: vi.fn(function (this: Record<string, unknown>) {
+        this.timerStatus = 1;
+      }),
+      serialize: vi.fn(() => replayString),
+      move: vi.fn(function (this: Record<string, unknown>, direction: number) {
+        if (direction === 0) {
+          this.score = 128;
+          this.board = [[8, 0], [0, 0]];
+          (this.moveHistory as number[]).push(direction);
+          this.forcedSpawn = null;
+          return true;
+        }
+        return false;
+      })
+    });
+    const rollbackSnapshot = {
+      mode_key: MODE_KEY,
+      score: 64,
+      board: priorBoard.map((row) => row.slice()),
+      move_history: [3],
+      successful_move_count: 1,
+      session_replay_v1: priorSession,
+      duration_ms: 1_900,
+      timer_status: 1,
+      ranked_session_token: "checkpoint-partial-token",
+      challenge_id: originalSession.challenge_id,
+      initial_seed: originalSession.seed,
+      seed: originalSession.seed
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      parseReplayImportEnvelope: () => ({
+        kind: "v1rpl",
+        modeKey: MODE_KEY,
+        initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        replayMoves: [0, 1],
+        replaySpawns: [{ x: 2, y: 0, value: 2 }, { x: 3, y: 0, value: 2 }],
+        sessionReplayV1: originalSession
+      }),
+      resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      buildSavedGameStatePayload: () => rollbackSnapshot,
+      applySavedStateRestore: (currentManager, savedState) => {
+        const target = currentManager as Record<string, unknown>;
+        target.score = savedState.score;
+        target.board = (savedState.board as number[][]).map((row) => row.slice());
+        target.moveHistory = (savedState.move_history as number[]).slice();
+        target.successfulMoveCount = savedState.successful_move_count;
+        target.sessionReplayV1 = savedState.session_replay_v1;
+        target.accumulatedTime = savedState.duration_ms;
+        target.timerStatus = 0;
+        target.rankedSessionToken = savedState.ranked_session_token;
+        target.challengeId = savedState.challenge_id;
+        target.initialSeed = savedState.initial_seed;
+        target.seed = savedState.seed;
+        return true;
+      },
+      restartWithBoard: (currentManager) => {
+        const target = currentManager as Record<string, unknown>;
+        target.score = 0;
+        target.board = [[2, 0], [0, 2]];
+        target.moveHistory = [];
+        target.sessionReplayV1 = { records: [] };
+      },
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    manager.needsRankedCheckpointRestore = true;
+    (runtime.windowLike.OnlineLeaderboardRuntime as any).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
+    await flushRuntimePromises();
+
+    expect(manager).toMatchObject({
+      score: 64,
+      board: priorBoard,
+      moveHistory: [3],
+      successfulMoveCount: 1,
+      sessionReplayV1: priorSession,
+      accumulatedTime: 1_900,
+      timerStatus: 1,
+      rankedSessionToken: "checkpoint-partial-token",
+      challengeId: originalSession.challenge_id,
+      initialSeed: originalSession.seed,
+      seed: originalSession.seed,
+      needsRankedCheckpointRestore: true,
+      rankCheckpointRestorePending: true,
+      rankCheckpointApplying: false,
+      lastRankedCheckpointRestoreError: "action_apply_failed"
+    });
+    expect(manager.startTimer).toHaveBeenCalledTimes(1);
+    const checkpointBeforePageHide = storage.getItem(CHECKPOINT_MIRROR_KEY);
+    expect(checkpointBeforePageHide).not.toBeNull();
+    (runtime.windowLike.OnlineLeaderboardRuntime as any).persistRankedCheckpointOnPageHide(manager);
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).toBe(checkpointBeforePageHide);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("keeps the checkpoint when its saved duration predates the replay timeline", async () => {
+    const storage = new MemoryStorage();
+    const replayString = "checkpoint-duration-invalid";
+    const nowSec = Math.floor(Date.now() / 1000);
+    const originalSession = {
+      v: 1,
+      mode_key: MODE_KEY,
+      ruleset: "pow2",
+      board_width: 4,
+      board_height: 4,
+      init_tiles: [],
+      records: [{ kind: "move", dir: 0, spawnIndex: 2, spawnValueBit: 0, deltaMs: 2_000 }],
+      recorded_elapsed_ms: 2_000,
+      supported: true
+    };
+    storage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "duration-invalid",
+      seed: 303,
+      ranked_session_token: "duration-invalid-token",
+      issued_at: nowSec,
+      exp: nowSec + 3600,
+      owner_user_id: "7"
+    }));
+    storage.setItem(CHECKPOINT_MIRROR_KEY, JSON.stringify({
+      mode_key: MODE_KEY,
+      challenge_id: "duration-invalid",
+      ranked_session_token: "duration-invalid-token",
+      initial_seed: 303,
+      replay_string: replayString,
+      duration_ms: 1_000,
+      saved_at: Date.now(),
+      owner_user_id: "7",
+      ui_state: { has_game_started: true, timer_status: 1 }
+    }));
+    const manager = createTerminatedManager({
+      rankPolicy: "ranked",
+      over: false,
+      rankedSessionToken: "duration-invalid-token",
+      challengeId: "duration-invalid",
+      initialSeed: 303,
+      sessionReplayV1: null,
+      actuate: vi.fn(),
+      updateUndoUiState: vi.fn(),
+      notifyUndoSettingsStateChanged: vi.fn(),
+      updateStatsPanel: vi.fn(),
+      startTimer: vi.fn(),
+      serialize: vi.fn(function (this: Record<string, unknown>) {
+        return this.sessionReplayV1 === originalSession ? replayString : "rewritten";
+      }),
+      move: vi.fn()
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      storage,
+      parseReplayImportEnvelope: () => ({
+        kind: "v1rpl",
+        modeKey: MODE_KEY,
+        initialBoard: [[2, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+        replayMoves: [],
+        replaySpawns: [],
+        sessionReplayV1: originalSession
+      }),
+      resolveStructuredReplayModeConfig: () => ({ key: MODE_KEY }),
+      buildSavedGameStatePayload: () => ({ mode_key: MODE_KEY }),
+      applySavedStateRestore: () => true,
+      restartWithBoard: () => undefined,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    manager.needsRankedCheckpointRestore = true;
+    (runtime.windowLike.OnlineLeaderboardRuntime as any).scheduleRankedCheckpointRestore(manager, { delayMs: 0 });
+    await flushRuntimePromises();
+
+    expect(manager.lastRankedCheckpointRestoreError).toBe("duration_before_replay");
+    expect(storage.getItem(CHECKPOINT_MIRROR_KEY)).not.toBeNull();
+  });
+
+  it("does not submit an intermediate terminal board while replaying a checkpoint", async () => {
+    const manager = createTerminatedManager({
+      rankCheckpointApplying: true,
+      score: 2048
+    });
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager,
+      fetchImpl: async (url) => {
+        if (url.endsWith("/records")) {
+          return createJsonResponse({ success: true, data: { id: "unexpected" } });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(runtime.storage.getItem(PENDING_RECORD_KEY)).toBeNull();
   });
 
   it("marks ranked checkpoints cleared synchronously before restart delete completes", async () => {

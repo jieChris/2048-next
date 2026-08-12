@@ -140,6 +140,30 @@ if (!getAuthToken()) return;
 writePendingRecordSubmitSignature(signature, pendingState, payload);
 ```
 
+## Scenario: Replay Timing Integrity Across Active-Game Restore
+
+### Scope
+
+This contract applies whenever an ongoing game that may produce leaderboard metrics is restored from a local save, compact checkpoint, cloud checkpoint, or rescue payload.
+
+### Contracts
+
+- Restoring a V1 replay must preserve its root and all existing records as an exact prefix, including initial tiles, start time, directions, spawns, `deltaMs`, undo records, checkpoints, and extensions.
+- Replaying historical actions to reconstruct the board is an internal restore operation. It must not enter live input capture, achievements, terminal submission, checkpoint saving, dialogs, or other user-action side effects.
+- The page timer, replay cumulative `deltaMs`, submitted duration, and target-tile times must use one elapsed-time source. At a real action boundary, replay cumulative time must equal the page timer elapsed time for that boundary.
+- The first effective move establishes the timer origin and records `deltaMs = 0`. Ineffective inputs neither start the timer nor create replay records.
+- After restore, let `Ecp` be the sum of timed records already in the checkpoint and `Tnext` the existing timer runtime's elapsed value at the next real action. The next record must use `max(0, Tnext - Ecp)`.
+- A timed restore that cannot preserve the V1 prefix or reconcile timer state must fail closed while retaining the original checkpoint. Formats without per-action time must not be rewritten into leaderboard speed evidence.
+- Server-side speed integrity is target-specific. A confirmed timing fault for one target must not hide the record, its normal score, its replay, or unrelated target metrics. Missing fields on historical records do not by themselves mean the records are untrusted.
+
+### Required Tests
+
+- Unit: serialize immediately before and after restore and compare the V1 lineage as `identical`.
+- Unit: restore, advance the timer, make one real move, and assert the old records are unchanged and the new `deltaMs` bridges the same timer timeline.
+- Unit: assert internal restore actions cause no submit, achievement, checkpoint-save, or terminal side effects.
+- Integration: verify public speed leaderboard, personal best, and speed achievements apply the same target-specific exclusion rule while the normal score leaderboard remains unchanged.
+- Built-in browser smoke: refresh an ongoing game, continue it, finish it, and compare the visible timer with server-derived target times.
+
 #### Correct
 
 ```js
