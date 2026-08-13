@@ -178,9 +178,12 @@ export function runSetupStateInitialization(
     seedState.rankedSessionContext
   );
   manager.rankedSessionToken = operations.resolveSetupRankedSessionToken?.(seedState.rankedSessionContext);
-  manager.spawnSequenceVersion = operations.resolveSetupSpawnSequenceVersion?.(
+  const requestedSpawnSequenceVersion = operations.resolveSetupSpawnSequenceVersion?.(
     seedState.rankedSessionContext
-  ) === 2 ? 2 : 1;
+  );
+  manager.spawnSequenceVersion = seedState.rankedSessionContext
+    ? requestedSpawnSequenceVersion === 2 ? 2 : 1
+    : seedState.hasInputSeed ? 1 : 2;
   operations.initializeSetupSessionReplaySnapshot?.(manager);
   operations.initializeTimerMilestones?.(manager);
   operations.resetRoundStatsState?.(manager);

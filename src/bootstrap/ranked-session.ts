@@ -586,13 +586,18 @@ export function createRankedSessionRuntime(
       { allowExpired: true }
     );
 
-  const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null =>
-    readRankedSessionRecord(
+  const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null => {
+    const storageKey = resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey);
+    const record = readRankedSessionRecord(
       storageLike,
-      resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey),
+      storageKey,
       modeKey,
       ownerUserIdResolver()
     );
+    if (!record || record.spawn_sequence_version === SPAWN_SEQUENCE_VERSION) return record;
+    removeStorageKey(storageLike, storageKey);
+    return null;
+  };
 
   const writeActiveSession = (modeKey: string, record: RankedSessionRecord): boolean =>
     writeRankedSessionRecord(
@@ -685,7 +690,10 @@ export function createRankedSessionRuntime(
               return null;
             }
             const session = normalizeRankedSessionRecord(payload.data || null, modeKey);
-            if (!session) lastFailureReason = "invalid_response";
+            if (!session || session.spawn_sequence_version !== SPAWN_SEQUENCE_VERSION) {
+              lastFailureReason = "spawn_sequence_version_mismatch";
+              return null;
+            }
             return session
               ? {
                   ...session,
