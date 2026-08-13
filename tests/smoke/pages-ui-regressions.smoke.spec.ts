@@ -360,7 +360,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
               seed: 2468,
               ranked_session_token: "leaderboard-shell-token",
               issued_at: Math.floor(Date.now() / 1000),
-              exp: Math.floor(Date.now() / 1000) + 3600
+              exp: Math.floor(Date.now() / 1000) + 3600,
+              spawn_sequence_version: 2
             }
           })
         });

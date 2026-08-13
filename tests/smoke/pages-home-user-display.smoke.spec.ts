@@ -318,7 +318,8 @@ test.describe("Home user display", () => {
             seed: 1357,
             ranked_session_token: "slow-ranked-layout-token",
             issued_at: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -407,7 +408,8 @@ test.describe("Home user display", () => {
             seed: 2468,
             ranked_session_token: "auth-transition-token",
             issued_at: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            spawn_sequence_version: 2
           }
         })
       });

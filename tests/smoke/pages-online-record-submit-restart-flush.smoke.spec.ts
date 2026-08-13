@@ -71,7 +71,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 700 + prefetchCounter,
             ranked_session_token: `prefetch-ranked-token-${prefetchCounter}`,
             issued_at: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -256,7 +257,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: isFirst ? 456 : 800 + sessionStartRequests,
             ranked_session_token: isFirst ? "next-ranked-token" : `prefetch-ranked-token-${sessionStartRequests}`,
             issued_at: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -867,7 +869,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 900 + sessionStartRequests,
             ranked_session_token: `next-ranked-undo-token-${sessionStartRequests}`,
             issued_at: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + 3600
+            exp: Math.floor(Date.now() / 1000) + 3600,
+            spawn_sequence_version: 2
           }
         })
       });

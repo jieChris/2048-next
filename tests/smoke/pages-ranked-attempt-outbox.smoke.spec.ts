@@ -55,7 +55,8 @@ test.describe("Ranked attempt outbox smoke", () => {
             issued_at: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600,
             status: "created",
-            record_era: "official_v1"
+            record_era: "official_v1",
+            spawn_sequence_version: 2
           }
         })
       });
