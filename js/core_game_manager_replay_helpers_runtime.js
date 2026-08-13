@@ -3477,18 +3477,10 @@ function createReplayV1ExtRecords(session) {
   if (ruleset !== "pow2" && ruleset !== "fibonacci") return records;
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_RULESET, ruleset);
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CHALLENGE_ID, session && session.challenge_id);
-  appendReplayV1ExtRecord(
-    records,
-    REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS,
-    session && session.custom_secondary_timer_rule_text
-  );
+  appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS, session && session.custom_secondary_timer_rule_text);
   var seedValue = Math.floor(Number(session && session.seed));
-  if (Number.isInteger(seedValue) && seedValue >= 0) {
-    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
-  }
-  if (session && session.spawn_sequence_version === 2) {
-    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION, "2");
-  }
+  if (Number.isInteger(seedValue) && seedValue >= 0) appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
+  if (session && session.spawn_sequence_version === 2) appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION, "2");
   return records;
 }
 
