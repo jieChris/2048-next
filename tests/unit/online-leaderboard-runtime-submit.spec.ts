@@ -749,6 +749,7 @@ describe("online leaderboard terminal submission", () => {
         challenge_id: `ranked-${modeKey}`,
         seed: 123,
         ranked_session_token: `ranked-token-${modeKey}`,
+        spawn_sequence_version: 2,
         issued_at: Math.floor(Date.now() / 1000) - 60,
         exp: Math.floor(Date.now() / 1000) + 3600,
         owner_user_id: "7"
@@ -764,6 +765,8 @@ describe("online leaderboard terminal submission", () => {
       rankedBucket: modeBucket,
       rankedSessionToken: `ranked-token-${modeKey}`,
       challengeId: `ranked-${modeKey}`,
+      spawnSequenceVersion: 2,
+      sessionReplayV1: { spawn_sequence_version: 2 },
       tryAutoSubmitOnGameOver: localAutoSubmit
     });
     let recordPayload: Record<string, unknown> | null = null;
@@ -789,6 +792,7 @@ describe("online leaderboard terminal submission", () => {
       ranked_session_token: `ranked-token-${modeKey}`,
       challenge_id: `ranked-${modeKey}`,
       seed: 123,
+      ranked_verification: expect.objectContaining({ spawn_sequence_version: 2 }),
       end_reason: "game_over"
     });
   });
@@ -2291,6 +2295,7 @@ describe("online leaderboard terminal submission", () => {
       replay_format: "v1",
       challenge_id: "ranked-old",
       seed: 123,
+      spawn_sequence_version: 1,
       mode_key: MODE_KEY,
       ranked_session_token: "old-ranked-token"
     });

@@ -95,6 +95,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       owner_user_id: "7",
       owner_nickname: "Player",
       seed: 101,
+      action_count: 2,
       recorded_elapsed_ms: 2_000,
       supported: true
     });
@@ -390,6 +391,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.sessionReplayV1.records).toEqual([
       { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 456 }
     ]);
+    expect(manager.sessionReplayV1.action_count).toBe(1);
     expect(manager.sessionReplayV1.last_event_at_ms).toBe(1_456);
     vi.useRealTimers();
   });
@@ -421,6 +423,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 3_000 }
     ]);
     expect(manager.sessionReplayV1.recorded_elapsed_ms).toBe(5_000);
+    expect(manager.sessionReplayV1.action_count).toBe(1);
   });
 
   it("records an exact 128 spawn before its move using ULEB128", () => {

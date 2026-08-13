@@ -100,7 +100,7 @@ function applyStaticCopy() {
   if (labels[4]) labels[4].textContent = "Current Board JSON";
   const help = document.querySelectorAll(".validator-field small");
   if (help[0]) help[0].textContent = "Use a decimal non-negative integer. The backend currently issues unsigned 32-bit integer seeds.";
-  if (help[1]) help[1].textContent = "Enter the deterministic step count for this spawn. For the two opening tiles, use 0 and 1.";
+  if (help[1]) help[1].textContent = "Enter the deterministic sequence index. The opening tiles use 0 and 1; sequence v2 later uses consumed move/undo actions + 2.";
   if (help[2]) help[2].textContent = "Enter the board matrix before the next tile is spawned.";
   const viewGroup = document.querySelector(".validator-view-switch");
   if (viewGroup) viewGroup.setAttribute("aria-label", "Validation type");

@@ -756,9 +756,11 @@ function recordSessionReplayV1Undo(manager, undoCount) {
   var nowMs = Date.now();
   if (count === 1) {
     session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1UndoDeltaMs(manager, session, nowMs) });
+    session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
     return;
   }
   session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1UndoDeltaMs(manager, session, nowMs) });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {

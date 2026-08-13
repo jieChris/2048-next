@@ -135,13 +135,14 @@ describe("core saved manager replay state", () => {
         records: [
           { kind: "move", dir: 1, deltaMs: 700 },
           { kind: "ext", extType: 8 },
-          { kind: "undo1", deltaMs: 300 }
+          { kind: "undon", undoCount: 2, deltaMs: 300 }
         ]
       },
       session_replay_v3: null
     });
 
     expect((manager.sessionReplayV1 as Record<string, unknown>).recorded_elapsed_ms).toBe(1_000);
+    expect((manager.sessionReplayV1 as Record<string, unknown>).action_count).toBe(2);
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {

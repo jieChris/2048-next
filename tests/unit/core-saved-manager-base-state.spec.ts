@@ -36,6 +36,7 @@ describe("core saved manager base state", () => {
         client_record_id: "rec_saved",
         challenge_id: "daily-1",
         ranked_session_token: "ranked-token",
+        spawn_sequence_version: 2,
         has_game_started: true
       },
       { setRuntimeScore, clonePlain, assignClientRecordId }
@@ -56,6 +57,7 @@ describe("core saved manager base state", () => {
         clientRecordId: "rec_saved",
         challengeId: "daily-1",
         rankedSessionToken: "ranked-token",
+        spawnSequenceVersion: 2,
         hasGameStarted: true,
         sessionSubmitDone: false
       })
@@ -86,7 +88,8 @@ describe("core saved manager base state", () => {
         capped64_unlocked: ["bad"],
         client_record_id: 42,
         challenge_id: "",
-        ranked_session_token: 123
+        ranked_session_token: 123,
+        spawn_sequence_version: 9
       },
       { setRuntimeScore, assignClientRecordId }
     );
@@ -100,6 +103,7 @@ describe("core saved manager base state", () => {
         capped64Unlocked: { existing: true },
         clientRecordId: "generated-client",
         challengeId: null,
+        spawnSequenceVersion: 1,
         sessionSubmitDone: false
       })
     );

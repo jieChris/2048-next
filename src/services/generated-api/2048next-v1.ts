@@ -3061,6 +3061,8 @@ export interface components {
         RankedSessionStartRequest: {
             /** @enum {integer} */
             attempt_schema_version?: 1;
+            /** @enum {integer} */
+            spawn_sequence_version?: 1 | 2;
             mode_key: string;
             mode?: string;
             mode_bucket?: string;
@@ -3094,6 +3096,8 @@ export interface components {
             status?: "created" | "started" | "consumed" | "abandoned" | "expired";
             /** @enum {string} */
             record_era?: "beta" | "official_v1";
+            /** @enum {integer} */
+            spawn_sequence_version?: 1 | 2;
             /** Format: date-time */
             issued_at?: string;
         } & {

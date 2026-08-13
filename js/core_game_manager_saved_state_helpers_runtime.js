@@ -731,6 +731,7 @@ function applySavedManagerBaseStateFallback(manager, saved) {
   assignManagerClientRecordId(manager, typeof saved.client_record_id === "string" ? saved.client_record_id : "");
   manager.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
   if (typeof saved.ranked_session_token === "string") manager.rankedSessionToken = saved.ranked_session_token;
+  manager.spawnSequenceVersion = Number(saved.spawn_sequence_version) === 2 ? 2 : 1;
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
 }
@@ -1130,7 +1131,8 @@ function buildSavedGameStateProgressPayload(manager) {
     combo_streak: Number.isInteger(manager.comboStreak) ? manager.comboStreak : 0,
     successful_move_count: Number.isInteger(manager.successfulMoveCount) ? manager.successfulMoveCount : 0,
     undo_used: Number.isInteger(manager.undoUsed) ? manager.undoUsed : 0, challenge_id: manager.challengeId || null,
-    ranked_session_token: manager.rankedSessionToken || null
+    ranked_session_token: manager.rankedSessionToken || null,
+    spawn_sequence_version: manager.spawnSequenceVersion === 2 ? 2 : 1
   };
 }
 
@@ -1232,7 +1234,8 @@ function buildLiteSavedGameStateProgressPayload(payload) {
     undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
     lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
     locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null, locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
-    challenge_id: payload.challenge_id || null, ranked_session_token: payload.ranked_session_token || null
+    challenge_id: payload.challenge_id || null, ranked_session_token: payload.ranked_session_token || null,
+    spawn_sequence_version: Number(payload.spawn_sequence_version) === 2 ? 2 : 1
   };
 }
 function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {

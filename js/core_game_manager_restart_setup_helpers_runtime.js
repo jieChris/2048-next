@@ -491,6 +491,10 @@ function resolveSetupRankedSessionToken(rankedSessionContext) {
     : "";
 }
 
+function resolveSetupSpawnSequenceVersion(rankedSessionContext) {
+  return Number(rankedSessionContext && rankedSessionContext.spawn_sequence_version) === 2 ? 2 : 1;
+}
+
 function initializeSetupSessionReplaySnapshot(manager) {
   var runtime = resolveCoreSessionReplaySnapshotRuntime(manager);
   if (runtime && typeof runtime.initializeSetupSessionReplaySnapshot === "function") {
@@ -539,6 +543,7 @@ function syncSetupSessionReplayV1InitTiles(manager) {
   manager.sessionReplayV1.board_height = manager.height;
   manager.sessionReplayV1.challenge_id = manager.challengeId || null;
   manager.sessionReplayV1.seed = manager.initialSeed;
+  manager.sessionReplayV1.spawn_sequence_version = manager.spawnSequenceVersion === 2 ? 2 : 1;
   manager.sessionReplayV1.init_tiles = Array.isArray(initTiles) ? initTiles : [];
   manager.sessionReplayV1.supported = !!initTiles;
 }
@@ -806,6 +811,7 @@ function createSetupStateInitializationOperations() {
     resetSetupRuntimeState: resetSetupRuntimeState,
     resolveSetupChallengeId: resolveSetupChallengeId,
     resolveSetupRankedSessionToken: resolveSetupRankedSessionToken,
+    resolveSetupSpawnSequenceVersion: resolveSetupSpawnSequenceVersion,
     initializeSetupSessionReplaySnapshot: initializeSetupSessionReplaySnapshot,
     initializeTimerMilestones: typeof initializeTimerMilestones === "function" ? initializeTimerMilestones : undefined,
     resetRoundStatsState: typeof resetRoundStatsState === "function" ? resetRoundStatsState : undefined,

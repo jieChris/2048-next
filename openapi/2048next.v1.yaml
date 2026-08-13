@@ -2057,6 +2057,9 @@ components:
         attempt_schema_version:
           type: integer
           enum: [1]
+        spawn_sequence_version:
+          type: integer
+          enum: [1, 2]
         mode_key:
           type: string
         mode:
@@ -2112,6 +2115,9 @@ components:
         record_era:
           type: string
           enum: [beta, official_v1]
+        spawn_sequence_version:
+          type: integer
+          enum: [1, 2]
         issued_at:
           type: string
           format: date-time

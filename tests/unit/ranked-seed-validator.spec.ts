@@ -17,6 +17,7 @@ import {
 } from "../../scripts/ranked-seed-validator.mjs";
 
 type MoveInputRuntime = {
+  resolveSpawnStepCount: (manager: Record<string, unknown>) => number;
   insertSeededRandomSpawnTile: (
     manager: Record<string, unknown>,
     available: Array<{ x: number; y: number }>
@@ -259,6 +260,46 @@ function simulateMoveByRuntimeHelpers(
 }
 
 describe("ranked seed validator", () => {
+  it("keeps legacy spawn indices and advances v2 past the two opening spawns", () => {
+    const runtime = loadMoveInputRuntime();
+    const manager = {
+      moveHistory: [] as number[],
+      spawnValueCounts: {} as Record<string, number>,
+      hasOwnKey: (value: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key)
+    };
+
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(0);
+    manager.spawnValueCounts = { "2": 1 };
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(1);
+    manager.spawnValueCounts = { "2": 2 };
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(0);
+    manager.moveHistory = [3];
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(1);
+
+    Object.assign(manager, { spawnSequenceVersion: 2, moveHistory: [] });
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(2);
+    manager.moveHistory = [3];
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(3);
+    manager.moveHistory = [3, -1];
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(4);
+
+    Object.assign(manager, {
+      moveHistory: [],
+      spawnValueCounts: {},
+      sessionReplayV1: {
+        init_tiles: [{ cellIndex: 0 }, { cellIndex: 1 }],
+        action_count: 3,
+        records: [
+          { kind: "move" },
+          { kind: "ext" },
+          { kind: "undon", undoCount: 2 },
+          { kind: "move" }
+        ]
+      }
+    });
+    expect(runtime.resolveSpawnStepCount(manager)).toBe(5);
+  });
+
   it("accepts npm-friendly positional mode and seed arguments", () => {
     expect(parseArgs(["standard_4x4_pow2_no_undo", "424242"])).toMatchObject({
       modeKey: "standard_4x4_pow2_no_undo",

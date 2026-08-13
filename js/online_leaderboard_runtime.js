@@ -349,6 +349,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     return Number.isSafeInteger(seed) && seed >= 0 ? seed : null;
   }
 
+  function normalizeSpawnSequenceVersion(valueLike) {
+    return Number(valueLike) === 2 ? 2 : 1;
+  }
+
   function resolveRankedContextChallengeId(context) {
     return toText(context && context.id).trim() || toText(context && context.challenge_id).trim();
   }
@@ -363,6 +367,10 @@ function shouldAutoLoadOnlineLeaderboard() {
     var contextToken = toText(context && context.ranked_session_token).trim();
     var contextChallengeId = resolveRankedContextChallengeId(context);
     var contextSeed = normalizeRankedSessionSeed(context && context.seed);
+    var contextSpawnSequenceVersion = normalizeSpawnSequenceVersion(context && context.spawn_sequence_version);
+    var directReplaySpawnSequenceVersion = normalizeSpawnSequenceVersion(
+      manager && manager.sessionReplayV1 && manager.sessionReplayV1.spawn_sequence_version
+    );
 
     if (directToken) {
       if (directSeed === null) return null;
@@ -374,14 +382,18 @@ function shouldAutoLoadOnlineLeaderboard() {
           modeKey: modeKey,
           challengeId: directChallengeId || null,
           seed: directSeed,
-          token: directToken
+          token: directToken,
+          spawnSequenceVersion: directReplaySpawnSequenceVersion
         };
       }
       return {
         modeKey: modeKey,
         challengeId: directChallengeId || contextChallengeId || null,
         seed: directSeed,
-        token: directToken
+        token: directToken,
+        spawnSequenceVersion: contextToken === directToken
+          ? contextSpawnSequenceVersion
+          : directReplaySpawnSequenceVersion
       };
     }
 
@@ -391,7 +403,8 @@ function shouldAutoLoadOnlineLeaderboard() {
       modeKey: modeKey,
       challengeId: contextChallengeId || null,
       seed: contextSeed,
-      token: contextToken
+      token: contextToken,
+      spawnSequenceVersion: contextSpawnSequenceVersion
     };
   }
 
@@ -403,6 +416,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       replay_format: "v1",
       challenge_id: rankedContext.challengeId,
       seed: rankedContext.seed,
+      spawn_sequence_version: rankedContext.spawnSequenceVersion,
       mode_key: rankedContext.modeKey,
       ranked_session_token: rankedContext.token
     };
@@ -592,6 +606,9 @@ function shouldAutoLoadOnlineLeaderboard() {
         challenge_id: challengeId,
         seed: seed,
         ranked_session_token: rankedToken,
+        spawn_sequence_version: normalizeSpawnSequenceVersion(
+          manager.spawnSequenceVersion || (context && context.spawn_sequence_version)
+        ),
         issued_at: nowSec,
         exp: nowSec + 3600,
         owner_user_id: toText(getUserId()).trim() || null,
@@ -603,7 +620,10 @@ function shouldAutoLoadOnlineLeaderboard() {
         id: challengeId,
         mode_key: modeKey,
         seed: seed,
-        ranked_session_token: rankedToken
+        ranked_session_token: rankedToken,
+        spawn_sequence_version: normalizeSpawnSequenceVersion(
+          manager.spawnSequenceVersion || (context && context.spawn_sequence_version)
+        )
       };
     }
     return true;
@@ -660,6 +680,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       seed: manager.seed,
       rankPolicy: manager.rankPolicy,
       rankedSessionToken: manager.rankedSessionToken,
+      spawnSequenceVersion: manager.spawnSequenceVersion,
       challengeId: manager.challengeId,
       hasGameStarted: manager.hasGameStarted,
       successfulMoveCount: manager.successfulMoveCount,
@@ -679,6 +700,7 @@ function shouldAutoLoadOnlineLeaderboard() {
     manager.seed = snapshot.seed;
     manager.rankPolicy = snapshot.rankPolicy;
     manager.rankedSessionToken = snapshot.rankedSessionToken;
+    manager.spawnSequenceVersion = normalizeSpawnSequenceVersion(snapshot.spawnSequenceVersion);
     manager.challengeId = snapshot.challengeId;
     manager.hasGameStarted = snapshot.hasGameStarted;
     manager.successfulMoveCount = snapshot.successfulMoveCount;
@@ -2431,6 +2453,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       challenge_id: toText(rawValue.challenge_id).trim() || null,
       initial_seed: normalizeRankedSessionSeed(rawValue.initial_seed),
       seed: normalizeRankedSessionSeed(rawValue.seed),
+      spawn_sequence_version: normalizeSpawnSequenceVersion(rawValue.spawn_sequence_version),
       client_record_id: toText(rawValue.client_record_id).trim() || null,
       replay_string: replayString,
       duration_ms: durationMs,
@@ -2493,6 +2516,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       challenge_id: toText(payload.challenge_id).trim() || null,
       initial_seed: normalizeRankedSessionSeed(payload.initial_seed),
       seed: normalizeRankedSessionSeed(payload.seed),
+      spawn_sequence_version: normalizeSpawnSequenceVersion(payload.spawn_sequence_version),
       client_record_id: toText(payload.client_record_id).trim() || null,
       replay_string: toText(payload.replay_string).trim(),
       duration_ms: Math.max(0, Math.floor(Number(payload.duration_ms) || 0)),
@@ -2626,6 +2650,7 @@ function shouldAutoLoadOnlineLeaderboard() {
       challenge_id: rankedContext ? rankedContext.challengeId : null,
       initial_seed: rankedContext ? rankedContext.seed : null,
       seed: rankedContext ? rankedContext.seed : null,
+      spawn_sequence_version: rankedContext ? rankedContext.spawnSequenceVersion : 1,
       ranked_verification: buildRankedVerificationPayload(manager),
       client_record_id: resolveManagerClientRecordIdForSubmit(manager) || null,
       duration_ms: resolveManagerDurationMs(manager),
@@ -2878,6 +2903,9 @@ function shouldAutoLoadOnlineLeaderboard() {
       }
       if (!restoreError) {
         manager.sessionReplayV1 = restoredSessionReplayV1;
+        manager.spawnSequenceVersion = normalizeSpawnSequenceVersion(
+          restoredSessionReplayV1.spawn_sequence_version || checkpointData.spawn_sequence_version
+        );
         manager.rankedSessionToken = toText(checkpointData.ranked_session_token).trim() || rankedIdentity.rankedSessionToken;
         manager.challengeId = toText(checkpointData.challenge_id).trim() || rankedIdentity.challengeId;
         var checkpointSeed = normalizeRankedSessionSeed(checkpointData.initial_seed);

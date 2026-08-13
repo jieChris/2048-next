@@ -1380,18 +1380,25 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
 function resolveSpawnStepCount(manager) {
   if (!manager) return 0;
   if (manager.replayMode) return manager.replayIndex;
-  var moveCount = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+  var moveCount = resolveSpawnActionCount(manager);
   var spawnCount = resolveRecordedSpawnCount(manager);
   // 新局起手两块需要使用不同随机步进，避免第二块复用第一块同一随机序列位置。
   if (spawnCount < 2) {
     return moveCount + spawnCount;
   }
-  return moveCount;
+  return moveCount + (manager.spawnSequenceVersion === 2 ? 2 : 0);
+}
+
+function resolveSpawnActionCount(manager) {
+  var moveHistoryCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
+  var replayActionCount = Number(manager && manager.sessionReplayV1 && manager.sessionReplayV1.action_count);
+  if (!Number.isInteger(replayActionCount) || replayActionCount < 0) replayActionCount = 0;
+  return Math.max(moveHistoryCount, replayActionCount);
 }
 
 function resolveRecordedSpawnCount(manager) {
-  if (!(manager && manager.spawnValueCounts)) return 0;
-  var counts = manager.spawnValueCounts;
+  if (!manager) return 0;
+  var counts = manager.spawnValueCounts || {};
   var total = 0;
   for (var key in counts) {
     if (!manager.hasOwnKey(counts, key)) continue;
@@ -1399,6 +1406,8 @@ function resolveRecordedSpawnCount(manager) {
     if (!Number.isFinite(count) || count <= 0) continue;
     total += Math.floor(count);
   }
+  var initTiles = manager.sessionReplayV1 && manager.sessionReplayV1.init_tiles;
+  if (Array.isArray(initTiles)) total = Math.max(total, initTiles.length);
   return total;
 }
 
