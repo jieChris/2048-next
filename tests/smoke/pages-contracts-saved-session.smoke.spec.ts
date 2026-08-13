@@ -861,7 +861,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 909,
             ranked_session_token: "resume-prefetch-token",
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -1025,7 +1026,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 800 + sessionRequestCount,
             ranked_session_token: `expired-local-prefetch-token-${sessionRequestCount}`,
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -1451,7 +1453,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 303,
             ranked_session_token: "next-prefetch-token",
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
