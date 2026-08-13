@@ -619,7 +619,8 @@ describe("core game manager restart seed runtime", () => {
       id: "rch_seeded",
       mode_key: "standard_4x4_pow2_no_undo",
       seed: 424242,
-      ranked_session_token: "rs1.token"
+      ranked_session_token: "rs1.token",
+      spawn_sequence_version: 1
     });
     expect(manager.initialSeed).toBe(424242);
     expect(manager.seed).toBe(424242);
