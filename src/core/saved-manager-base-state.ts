@@ -9,6 +9,7 @@ export interface SavedManagerBaseStateTarget {
   capped64Unlocked?: unknown;
   challengeId?: unknown;
   rankedSessionToken?: unknown;
+  spawnSequenceVersion?: unknown;
   hasGameStarted?: unknown;
   sessionSubmitDone?: unknown;
 }
@@ -26,6 +27,7 @@ export interface SavedManagerBaseStateSource {
   client_record_id?: unknown;
   challenge_id?: unknown;
   ranked_session_token?: unknown;
+  spawn_sequence_version?: unknown;
   has_game_started?: unknown;
 }
 
@@ -89,6 +91,7 @@ export function applySavedManagerBaseState(
   );
   manager.challengeId = typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null;
   if (typeof source.ranked_session_token === "string") manager.rankedSessionToken = source.ranked_session_token;
+  manager.spawnSequenceVersion = Number(source.spawn_sequence_version) === 2 ? 2 : 1;
   manager.hasGameStarted = !!source.has_game_started;
   manager.sessionSubmitDone = false;
 }

@@ -403,7 +403,12 @@ export function buildLiteSavedGameStatePayload(
     locked_direction: Number.isInteger(payload.locked_direction)
       ? Number(payload.locked_direction)
       : null,
-    challenge_id: payload.challenge_id || null
+    challenge_id: payload.challenge_id || null,
+    ranked_session_token: payload.ranked_session_token || null,
+    spawn_sequence_version: Number(payload.spawn_sequence_version) === 2 ? 2 : 1,
+    session_replay_v1: isObjectRecord(payload.session_replay_v1)
+      ? safeClonePlain(payload.session_replay_v1, null)
+      : null
   };
 }
 

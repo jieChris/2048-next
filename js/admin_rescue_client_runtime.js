@@ -660,6 +660,15 @@
       sessionReplayV3.expiresAt,
       tokenPayload.exp
     ]));
+    var spawnSequenceVersion = Number(firstPresent([
+      readOfferValue(offer, "spawn_sequence_version"),
+      readOfferValue(offer, "spawnSequenceVersion"),
+      sessionReplayV1.spawn_sequence_version,
+      sessionReplayV1.spawnSequenceVersion,
+      sessionReplayV3.spawn_sequence_version,
+      sessionReplayV3.spawnSequenceVersion,
+      tokenPayload.spawn_sequence_version
+    ])) === 2 ? 2 : 1;
     if (!token && !challengeId && seed === null) return null;
     return {
       rankedSessionToken: token,
@@ -667,7 +676,8 @@
       seed: seed,
       modeKey: modeKey,
       issuedAt: issuedAt,
-      exp: exp
+      exp: exp,
+      spawnSequenceVersion: spawnSequenceVersion
     };
   }
 
@@ -695,6 +705,7 @@
       ranked_session_token: token,
       issued_at: issuedAt,
       exp: exp,
+      spawn_sequence_version: rankedState.spawnSequenceVersion === 2 ? 2 : 1,
       owner_user_id: readAuthUserId() || null,
       client_received_at_ms: Date.now()
     };
@@ -706,6 +717,7 @@
   function applyRankedSessionStateToManager(manager, rankedState) {
     if (!manager || !rankedState) return;
     if (rankedState.rankedSessionToken) manager.rankedSessionToken = rankedState.rankedSessionToken;
+    manager.spawnSequenceVersion = rankedState.spawnSequenceVersion === 2 ? 2 : 1;
     if (rankedState.challengeId) manager.challengeId = rankedState.challengeId;
     if (rankedState.seed !== null) {
       manager.initialSeed = rankedState.seed;
@@ -715,18 +727,21 @@
       if (rankedState.challengeId) manager.sessionReplayV1.challenge_id = rankedState.challengeId;
       if (rankedState.seed !== null) manager.sessionReplayV1.seed = rankedState.seed;
       if (rankedState.rankedSessionToken) manager.sessionReplayV1.ranked_session_token = rankedState.rankedSessionToken;
+      manager.sessionReplayV1.spawn_sequence_version = manager.spawnSequenceVersion;
     }
     if (manager.sessionReplayV3 && typeof manager.sessionReplayV3 === "object") {
       if (rankedState.challengeId) manager.sessionReplayV3.challenge_id = rankedState.challengeId;
       if (rankedState.seed !== null) manager.sessionReplayV3.seed = rankedState.seed;
       if (rankedState.rankedSessionToken) manager.sessionReplayV3.ranked_session_token = rankedState.rankedSessionToken;
+      manager.sessionReplayV3.spawn_sequence_version = manager.spawnSequenceVersion;
     }
     if (rankedState.challengeId) {
       global.GAME_CHALLENGE_CONTEXT = {
         id: rankedState.challengeId,
         mode_key: rankedState.modeKey || toText(manager.modeKey).trim(),
         seed: rankedState.seed !== null ? rankedState.seed : manager.initialSeed,
-        ranked_session_token: rankedState.rankedSessionToken || toText(manager.rankedSessionToken).trim()
+        ranked_session_token: rankedState.rankedSessionToken || toText(manager.rankedSessionToken).trim(),
+        spawn_sequence_version: manager.spawnSequenceVersion
       };
     }
     persistRankedSessionState(manager, rankedState);

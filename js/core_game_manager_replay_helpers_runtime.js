@@ -52,6 +52,7 @@ var REPLAY_V1_EXT_CHALLENGE_ID = 3;
 var REPLAY_V1_EXT_SEED = 4;
 var REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 var REPLAY_V1_EXT_EXACT_SPAWN = 8;
+var REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION = 9;
 var LEGACY_VRS_VARIANT_CONFIG_MAP = {
   "2x4": { key: "2x4", width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
   "3x3": { key: "3x3", width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
@@ -194,6 +195,7 @@ function recordSessionReplayV1Move(manager, direction, spawn) {
     kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
     spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs)
   });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function recordSessionReplayV1Undo(manager, undoCount) {
@@ -204,9 +206,11 @@ function recordSessionReplayV1Undo(manager, undoCount) {
   var nowMs = Date.now();
   if (count === 1) {
     session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
+    session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
     return;
   }
   session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function resolveReplayPauseStateFallback() {
@@ -3359,6 +3363,11 @@ function resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded) {
   return decodeReplayV1Utf8Text(payload).trim();
 }
 
+function resolveReplayV1SpawnSequenceVersionFromExt(decoded) {
+  var payload = resolveReplayV1ExtPayload(decoded, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION);
+  return decodeReplayV1Utf8Text(payload).trim() === "2" ? 2 : 1;
+}
+
 function resolveReplayV1ModeKeyByShape(width, height, hasUndo) {
   if (width === 4 && height === 4) return hasUndo ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo";
   if (width === 4 && height === 3) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
@@ -3405,7 +3414,8 @@ function createReplayV1StructuredReplayEnvelope(manager, decoded) {
     initialBoard: initialBoard,
     replayMoves: actions.replayMoves,
     replaySpawns: actions.replaySpawns,
-    customSecondaryTimerRuleText: resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded)
+    customSecondaryTimerRuleText: resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded),
+    spawnSequenceVersion: resolveReplayV1SpawnSequenceVersionFromExt(decoded)
   };
 }
 
@@ -3516,6 +3526,9 @@ function createReplayV1ExtRecords(session) {
   var seedValue = Math.floor(Number(session && session.seed));
   if (Number.isInteger(seedValue) && seedValue >= 0) {
     appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
+  }
+  if (session && session.spawn_sequence_version === 2) {
+    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION, "2");
   }
   return records;
 }

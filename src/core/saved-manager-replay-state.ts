@@ -76,6 +76,16 @@ function cloneReplayV1SessionFallback(
   if (!isRecord(cloned)) return null;
   if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
   if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
+  const actionCount = Number(cloned.action_count);
+  cloned.action_count =
+    Number.isInteger(actionCount) && actionCount >= 0
+      ? actionCount
+      : cloned.records.reduce((total, record) => {
+          if (!isRecord(record)) return total;
+          return record.kind === "move" || record.kind === "undo1" || record.kind === "undon"
+            ? total + 1
+            : total;
+        }, 0);
   const recordedElapsedMs = Number(cloned.recorded_elapsed_ms);
   cloned.recorded_elapsed_ms =
     Number.isFinite(recordedElapsedMs) && recordedElapsedMs >= 0

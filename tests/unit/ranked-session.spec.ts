@@ -320,11 +320,13 @@ describe("ranked session runtime", () => {
     expect(fetchImpl).toHaveBeenCalled();
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body || "{}"))).toMatchObject({
       mode_key: modeKey,
-      attempt_schema_version: 1
+      attempt_schema_version: 1,
+      spawn_sequence_version: 2
     });
     expect(JSON.parse(storage.getItem(activeKey) || "{}")).toMatchObject({
       mode_key: modeKey,
-      ranked_session_token: "fib-token"
+      ranked_session_token: "fib-token",
+      spawn_sequence_version: 1
     });
   });
 
@@ -554,7 +556,8 @@ describe("ranked session runtime", () => {
       JSON.stringify(
         createSession({
           issued_at: nowSec - 7200,
-          exp: nowSec - 1
+          exp: nowSec - 1,
+          spawn_sequence_version: 2
         })
       )
     );
@@ -575,7 +578,8 @@ describe("ranked session runtime", () => {
         over: false,
         initial_seed: 111,
         challenge_id: "ranked-active",
-        ranked_session_token: "active-token"
+        ranked_session_token: "active-token",
+        spawn_sequence_version: 2
       })
     );
     const fetchImpl = vi.fn(async () => {
@@ -610,7 +614,8 @@ describe("ranked session runtime", () => {
     expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}")).toMatchObject({
       ranked_session_token: "active-token",
       seed: 111,
-      exp: nowSec - 1
+      exp: nowSec - 1,
+      spawn_sequence_version: 2
     });
     expect(JSON.parse(storage.getItem(PREFETCH_KEY) || "{}")).toMatchObject({
       ranked_session_token: "next-after-expiry-token",
@@ -620,7 +625,8 @@ describe("ranked session runtime", () => {
       id: "ranked-active",
       mode_key: MODE_KEY,
       ranked_session_token: "active-token",
-      seed: 111
+      seed: 111,
+      spawn_sequence_version: 2
     });
   });
 

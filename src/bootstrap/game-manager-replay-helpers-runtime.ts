@@ -25,6 +25,7 @@ const REPLAY_V1_EXT_OWNER_USER_ID = 6;
 const REPLAY_V1_EXT_OWNER_NICKNAME = 7;
 const REPLAY_V1_EXT_EXACT_SPAWN = 8;
 const REPLAY_STATE_HISTORY_WINDOW = 512;
+const REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION = 9;
 const LEGACY_VRS_NEW_CHARSET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
   Array.from({ length: 64 }, (_unused, index) => String.fromCharCode(0xc0 + index)).join("") +
@@ -313,6 +314,9 @@ function createReplayV1ExtRecords(session: Record<string, unknown>): ReplayV1Rec
   if (Number.isInteger(seedValue) && seedValue >= 0) {
     appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
   }
+  if (session.spawn_sequence_version === 2) {
+    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION, "2");
+  }
   return records;
 }
 
@@ -446,6 +450,11 @@ function createReplayV1SessionFromDecoded(
     REPLAY_V1_EXT_SEED
   ).trim();
   const seed = Number(seedText);
+  const spawnSequenceVersion =
+    resolveReplayV1ExtTextFromDecoded(
+      decoded as unknown as Record<string, unknown>,
+      REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION
+    ).trim() === "2" ? 2 : 1;
   const session: Record<string, unknown> = {
     v: 1,
     mode_key: modeKey,
@@ -468,11 +477,19 @@ function createReplayV1SessionFromDecoded(
         REPLAY_V1_EXT_CHALLENGE_ID
       ).trim() || null,
     seed: seedText && Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
+    spawn_sequence_version: spawnSequenceVersion,
     custom_secondary_timer_rule_text: resolveCustomSecondaryTimerRuleTextFromDecoded(
       decoded as unknown as Record<string, unknown>
     ),
     init_tiles: decoded.initTiles.map((tile) => ({ ...tile })),
     records: [],
+    action_count: decoded.records.reduce(
+      (total, record) =>
+        record.kind === "move" || record.kind === "undo1" || record.kind === "undon"
+          ? total + 1
+          : total,
+      0
+    ),
     recorded_elapsed_ms: decoded.records.reduce(
       (total, record) =>
         record.kind === "move" || record.kind === "undo1" || record.kind === "undon"
@@ -1129,6 +1146,7 @@ export function recordSessionReplayV1Move(
     spawnValueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0,
     deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, Date.now())
   });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function isSessionReplayV1ExactSpawn(value: number, fib: boolean): boolean {

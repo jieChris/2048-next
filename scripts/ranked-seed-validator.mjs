@@ -91,8 +91,8 @@ function printUsage() {
       "  --initial-board           print the deterministic 2-tile opening board",
       "  --board <json>            board matrix JSON for next-spawn validation",
       "  --board-file <path>       read board JSON from a file",
-      "  --step-count <int>        deterministic spawn step for this spawn",
-      "  --successful-moves <int>  alias of --step-count for replay-style counting",
+      "  --step-count <int>        deterministic spawn sequence index for this spawn",
+      "  --successful-moves <int>  legacy alias of --step-count; pass the sequence index",
       "  --json                    output machine-readable JSON",
       "  --help                    show this help",
       "",
@@ -100,7 +100,7 @@ function printUsage() {
       "  - This validator is for local security verification only.",
       "  - It is intended for ranked modes that still expose a client-known seed.",
       "  - For the opening board, the two deterministic spawn steps are 0 and 1.",
-      "  - For a later spawn, provide the post-move board state plus the matching step count."
+      "  - In sequence v2, a later spawn uses the number of consumed move/undo actions plus 2."
     ].join("\n") + "\n"
   );
 }
