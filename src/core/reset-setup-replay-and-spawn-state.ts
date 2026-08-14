@@ -18,6 +18,7 @@ export interface ResetSetupReplayAndSpawnStateManagerLike {
   lastRankedCheckpointSaveError?: unknown;
   lastSpawn?: unknown;
   forcedSpawn?: unknown;
+  spawnSequenceVersion?: unknown;
 }
 
 export interface ResetSetupReplayAndSpawnStateOperations {
@@ -51,6 +52,7 @@ export function resetSetupReplayAndSpawnState(
   manager.rescueReplayString = "";
   manager.lastReplayStringSavedAt = 0;
   manager.rankedSessionToken = "";
+  manager.spawnSequenceVersion = 1;
   if (typeof operations.assignManagerClientRecordId === "function") {
     operations.assignManagerClientRecordId(manager, "");
   } else {

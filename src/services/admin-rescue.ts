@@ -29,6 +29,11 @@ export function createAdminService(options: AdminServiceOptions = {}): AdminServ
   });
 
   return {
-    request: client.request
+    async request(path, requestOptions) {
+      if (!token) {
+        return { success: false, code: "NO_TOKEN", error: "未登录或 token 不存在" };
+      }
+      return client.request(path, requestOptions);
+    }
   };
 }

@@ -164,9 +164,6 @@ function loadRestartSeedRuntime(options?: {
     Date: { now: dateNow },
     performance: { now: performanceNow },
     isNonArrayObject: (value: unknown) => !!value && typeof value === "object" && !Array.isArray(value),
-    cloneBoardMatrix: (board: unknown) => Array.isArray(board)
-      ? board.map((row) => Array.isArray(row) ? row.slice() : row)
-      : board,
     resolveManagerDocumentLike: options?.resolveManagerDocumentLike,
     setBoardFromMatrix: options?.setBoardFromMatrix,
     getFinalBoardMatrix: options?.getFinalBoardMatrix,
@@ -483,42 +480,6 @@ describe("core game manager restart seed runtime", () => {
     expect(manager.actuate).not.toHaveBeenCalled();
   });
 
-  it("resyncs replay init tiles after replacing the setup board", () => {
-    const board = [[2, 0], [0, 4]];
-    const { runtime } = loadRestartSeedRuntime({
-      setBoardFromMatrix: vi.fn(),
-      getFinalBoardMatrix: vi.fn(() => board)
-    });
-    const manager = {
-      actuator: { continue: vi.fn() },
-      rankedSetupBlockedUntilSessionReady: false,
-      setup: vi.fn(function (this: Record<string, unknown>) {
-        this.sessionReplayV1 = {
-          supported: false,
-          init_tiles: [],
-          records: []
-        };
-      }),
-      actuate: vi.fn(),
-      modeKey: "standard_2x2_pow2_no_undo",
-      ruleset: "pow2",
-      width: 2,
-      height: 2,
-      challengeId: "checkpoint-board",
-      initialSeed: 101
-    } as Record<string, unknown>;
-
-    runtime.restartWithBoard(manager, board, null);
-
-    expect(manager.sessionReplayV1).toMatchObject({
-      supported: true,
-      init_tiles: [
-        { cellIndex: 0, valueBit: 0 },
-        { cellIndex: 3, valueBit: 1 }
-      ]
-    });
-  });
-
   it("does not repeat fallback fresh seeds without Math.random", () => {
     const cryptoLike = {
       getRandomValues: vi.fn(() => {
@@ -619,7 +580,8 @@ describe("core game manager restart seed runtime", () => {
       id: "rch_seeded",
       mode_key: "standard_4x4_pow2_no_undo",
       seed: 424242,
-      ranked_session_token: "rs1.token"
+      ranked_session_token: "rs1.token",
+      spawn_sequence_version: 1
     });
     expect(manager.initialSeed).toBe(424242);
     expect(manager.seed).toBe(424242);
@@ -673,6 +635,46 @@ describe("core game manager restart seed runtime", () => {
         seedInitialTilesAndSnapshotBoard: expect.any(Function)
       })
     );
+  });
+
+  it("schedules checkpoint restore only when a local mirror exists", () => {
+    let operations: Record<string, unknown> | null = null;
+    const resolveSetupRestoreAndInitialBoardState = vi.fn(
+      (_manager, _hasInputSeed, _normalizedOptions, runtimeOperations) => {
+        operations = runtimeOperations;
+        return { restoredFromSavedState: false };
+      }
+    );
+    const hasLocalMirror = vi.fn(() => false);
+    const storage = {
+      getItem: vi.fn((key: string) => (key === "2048_auth_token_v1" ? "auth-token" : null))
+    };
+    const windowLike = {
+      localStorage: storage,
+      CoreRankedCheckpointLocalMirrorSetupRuntime: {
+        hasRankedCheckpointLocalMirrorForSetup: hasLocalMirror
+      }
+    };
+    const { runtime } = loadRestartSeedRuntime({
+      setupRestoreInitialBoardStateRuntime: {
+        resolveSetupRestoreAndInitialBoardState
+      }
+    });
+    const manager = {
+      rankPolicy: "ranked",
+      modeKey: "standard_4x4_pow2_no_undo",
+      getWindowLike: () => windowLike
+    } as Record<string, unknown>;
+
+    runtime.resolveSetupRestoreAndInitialBoardState(manager, false, {});
+    expect(operations).not.toBeNull();
+    const shouldSchedule = operations?.shouldScheduleRankedCheckpointRestoreInSetup as
+      | ((target: Record<string, unknown>, hasInputSeed: boolean, options: Record<string, unknown>) => boolean)
+      | undefined;
+
+    expect(shouldSchedule?.(manager, false, {})).toBe(false);
+    hasLocalMirror.mockReturnValue(true);
+    expect(shouldSchedule?.(manager, false, {})).toBe(true);
   });
 
   it("delegates setup state initialization orchestration to the TypeScript runtime", () => {

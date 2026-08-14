@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  applyReplayImportActions,
   getFinalBoardMatrix,
   importReplay,
   insertCustomTile,
@@ -13,7 +12,7 @@ import {
   stepReplay,
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
-import { decodeReplayV1Rpl, encodeReplayV1Rpl } from "../../src/core/replay-codec";
+import { decodeReplayV1Rpl, encodeReplayV1Rpl, encodeUleb128 } from "../../src/core/replay-codec";
 
 function createGrid() {
   return {
@@ -23,47 +22,6 @@ function createGrid() {
       callback(0, 1, { value: 4 });
       callback(1, 1, null);
     }
-  };
-}
-
-function createReplaySeekTestManager() {
-  const windowLike = {
-    createCurrentUndoStackEntrySnapshot(manager: Record<string, unknown>) {
-      return {
-        score: manager.score,
-        tiles: [],
-        testState: manager.testState,
-        comboStreak: 0,
-        successfulMoveCount: 0,
-        lockConsumedAtMoveCount: -1,
-        lockedDirectionTurn: null,
-        lockedDirection: null,
-        undoUsed: 0
-      };
-    },
-    applyUndoRestoredTiles(manager: Record<string, unknown>, entry: Record<string, unknown>) {
-      manager.testState = entry.testState;
-    },
-    applyUndoRestoreState(manager: Record<string, unknown>, entry: Record<string, unknown>) {
-      manager.score = entry.score;
-    }
-  };
-  return {
-    replayMoves: [],
-    replaySpawns: [],
-    replayIndex: 0,
-    replayMode: true,
-    replayStartBoardMatrix: [[2, 0], [0, 0]],
-    score: 0,
-    testState: 0,
-    getWindowLike: () => windowLike,
-    restartWithBoard: vi.fn(),
-    move: vi.fn(function (this: { score: number; testState: number }) {
-      this.testState += 1;
-      this.score += 2;
-    }),
-    actuate: vi.fn(),
-    clearTransientTileVisualState: vi.fn()
   };
 }
 
@@ -77,8 +35,81 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(windowLike.keepPlaying).toBeTypeOf("function");
     expect(windowLike.serializeReplay).toBeTypeOf("function");
     expect(windowLike.importReplay).toBeTypeOf("function");
-    expect(windowLike.parseReplayImportEnvelope).toBeTypeOf("function");
     expect(windowLike.stepReplay).toBeTypeOf("function");
+  });
+
+  it("keeps the complete v1 session when parsing an active-game checkpoint", () => {
+    const text = (value: string) => new TextEncoder().encode(value);
+    const replayBytes = encodeReplayV1Rpl({
+      width: 4,
+      height: 4,
+      initTiles: [
+        { cellIndex: 0, valueBit: 0 },
+        { cellIndex: 5, valueBit: 1 }
+      ],
+      startUnixMs: 1_780_000_000,
+      records: [
+        { kind: "ext", extType: 1, payload: text("standard_4x4_pow2_no_undo") },
+        { kind: "ext", extType: 2, payload: text("pow2") },
+        { kind: "ext", extType: 3, payload: text("checkpoint-session") },
+        { kind: "ext", extType: 6, payload: text("7") },
+        { kind: "ext", extType: 7, payload: text("Player") },
+        { kind: "ext", extType: 4, payload: text("101") },
+        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 750 },
+        { kind: "ext", extType: 8, payload: new Uint8Array(encodeUleb128(128)) },
+        { kind: "move", dir: 2, spawnIndex: 7, spawnValueBit: 0, deltaMs: 1_250 }
+      ]
+    });
+    const replayString = `REPLAY_v1RPL_B64_${Buffer.from(replayBytes).toString("base64")}`;
+    const windowLike: Record<string, unknown> = {
+      atob(value: string) {
+        return Buffer.from(value, "base64").toString("binary");
+      },
+      btoa(value: string) {
+        return Buffer.from(value, "binary").toString("base64");
+      },
+      GameManager: { REPLAY_V1_RPL_BASE64_PREFIX: "REPLAY_v1RPL_B64_" }
+    };
+    installGameManagerReplayHelperGlobals(windowLike);
+    const manager = {
+      width: 4,
+      height: 4,
+      modeKey: "standard_4x4_pow2_no_undo",
+      resolveModeConfig: () => ({ ruleset: "pow2" }),
+      getWindowLike: () => windowLike
+    };
+    const parse = windowLike.parseReplayImportEnvelope as (
+      managerLike: Record<string, unknown>,
+      replay: string
+    ) => Record<string, any>;
+
+    const envelope = parse(manager, replayString);
+
+    expect(envelope.sessionReplayV1).toMatchObject({
+      board_width: 4,
+      board_height: 4,
+      start_unix_ms: 1_780_000_000,
+      mode_key: "standard_4x4_pow2_no_undo",
+      ruleset: "pow2",
+      challenge_id: "checkpoint-session",
+      owner_user_id: "7",
+      owner_nickname: "Player",
+      seed: 101,
+      action_count: 2,
+      recorded_elapsed_ms: 2_000,
+      supported: true
+    });
+    expect(envelope.sessionReplayV1.records).toEqual([
+      { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 750 },
+      { kind: "ext", extType: 8, payload: new Uint8Array(encodeUleb128(128)) },
+      { kind: "move", dir: 2, spawnIndex: 7, spawnValueBit: 0, deltaMs: 1_250 }
+    ]);
+    expect(
+      serializeReplay({
+        ...manager,
+        sessionReplayV1: envelope.sessionReplayV1
+      })
+    ).toBe(replayString);
   });
 
   it("serializes a manager without loading the retired replay helpers script", () => {
@@ -144,11 +175,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     const ok = importReplay(manager, replayText);
 
     expect(ok).toBe(true);
-    expect(manager.restartWithSeed).toHaveBeenCalledWith(
-      0.5,
-      { key: "standard_4x4_pow2_no_undo" },
-      { asReplay: true }
-    );
+    expect(manager.restartWithSeed).toHaveBeenCalledWith(0.5, { key: "standard_4x4_pow2_no_undo" });
     expect(manager.replayMoves).toEqual([1, 2]);
     expect(manager.replayIndex).toBe(0);
     expect(manager.replayMode).toBe(true);
@@ -364,8 +391,39 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.sessionReplayV1.records).toEqual([
       { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 456 }
     ]);
+    expect(manager.sessionReplayV1.action_count).toBe(1);
     expect(manager.sessionReplayV1.last_event_at_ms).toBe(1_456);
     vi.useRealTimers();
+  });
+
+  it("continues move timing from the restored replay total", () => {
+    const previousRecord = {
+      kind: "move",
+      dir: 0,
+      spawnIndex: 0,
+      spawnValueBit: 0,
+      deltaMs: 2_000
+    };
+    const manager = {
+      width: 2,
+      height: 2,
+      replayMode: false,
+      getDurationMs: () => 5_000,
+      sessionReplayV1: {
+        supported: true,
+        recorded_elapsed_ms: 2_000,
+        records: [previousRecord] as unknown[]
+      }
+    };
+
+    recordSessionReplayV1Move(manager, 1, { x: 1, y: 0, value: 4 });
+
+    expect(manager.sessionReplayV1.records).toEqual([
+      previousRecord,
+      { kind: "move", dir: 1, spawnIndex: 1, spawnValueBit: 1, deltaMs: 3_000 }
+    ]);
+    expect(manager.sessionReplayV1.recorded_elapsed_ms).toBe(5_000);
+    expect(manager.sessionReplayV1.action_count).toBe(1);
   });
 
   it("records an exact 128 spawn before its move using ULEB128", () => {
@@ -481,11 +539,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.replayMoves).toEqual([3]);
     expect(manager.replayIndex).toBe(0);
     expect(manager.replayMode).toBe(true);
-    expect(manager.restartWithSeed).toHaveBeenCalledWith(
-      0.25,
-      { key: "standard_4x4_pow2_no_undo" },
-      { asReplay: true }
-    );
+    expect(manager.restartWithSeed).toHaveBeenCalledWith(0.25, { key: "standard_4x4_pow2_no_undo" });
     expect(applyCustomSecondaryTimerRuleText).toHaveBeenCalledWith(manager, "32\n32+2");
   });
 
@@ -665,59 +719,6 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.restartWithBoard).toHaveBeenCalled();
     expect(moves).toEqual([[1, { x: 0, y: 0, value: 2 }]]);
     expect(manager.replayIndex).toBe(1);
-  });
-
-  it("restores recent backward steps from replay state history", () => {
-    const manager: any = createReplaySeekTestManager();
-
-    applyReplayImportActions(manager, { replayMoves: [1, 1, 1], replaySpawns: [] });
-    seekReplay(manager, 3);
-    expect(manager.move).toHaveBeenCalledTimes(3);
-
-    stepReplay(manager, -1);
-    expect(manager.move).toHaveBeenCalledTimes(3);
-    expect(manager.restartWithBoard).not.toHaveBeenCalled();
-    expect(manager.testState).toBe(2);
-    expect(manager.score).toBe(4);
-
-    stepReplay(manager, 1);
-    expect(manager.move).toHaveBeenCalledTimes(4);
-    expect(manager.testState).toBe(3);
-  });
-
-  it("uses bounded generated checkpoints for long backward seeks", () => {
-    const manager: any = createReplaySeekTestManager();
-
-    applyReplayImportActions(manager, {
-      replayMoves: Array.from({ length: 600 }, () => 1),
-      replaySpawns: []
-    });
-    seekReplay(manager, 600);
-
-    expect(manager.replayStateHistory.filter(Boolean).length).toBeLessThanOrEqual(513);
-    expect(manager.replaySeekCheckpointHistory.length).toBeGreaterThanOrEqual(18);
-
-    const moveCountBeforeBackwardSeek = manager.move.mock.calls.length;
-    seekReplay(manager, 50);
-
-    expect(manager.restartWithBoard).not.toHaveBeenCalled();
-    expect(manager.move.mock.calls.length - moveCountBeforeBackwardSeek).toBeLessThanOrEqual(31);
-    expect(manager.testState).toBe(50);
-    expect(manager.replayIndex).toBe(50);
-  });
-
-  it("keeps undo-action replays on the original rebuild path", () => {
-    const manager: any = createReplaySeekTestManager();
-
-    applyReplayImportActions(manager, { replayMoves: [1, ["u"], 1], replaySpawns: [] });
-    seekReplay(manager, 3);
-    manager.restartWithBoard.mockClear();
-    manager.move.mockClear();
-
-    stepReplay(manager, -1);
-
-    expect(manager.restartWithBoard).toHaveBeenCalled();
-    expect(manager.move).toHaveBeenCalledTimes(2);
   });
 
   it("restores checkpoint scores when seeking legacy text replays", () => {
@@ -978,132 +979,5 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(String(savedRecords[0].replay_string)).toMatch(/^REPLAY_v1RPL_B64_/);
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });
     expect(manager.sessionSubmitDone).toBe(true);
-  });
-
-  it("waits for durable async history saves and retries after a failure", async () => {
-    const saveRecord = vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "local-async-record" });
-    const syncSaveRecord = vi.fn(() => {
-      throw new Error("sync_fallback_must_not_run");
-    });
-    const manager = {
-      sessionSubmitDone: false,
-      replayMode: false,
-      over: true,
-      won: false,
-      keepPlaying: false,
-      modeKey: "standard_4x4_pow2_no_undo",
-      clientRecordId: "rec_async_1",
-      score: 4096,
-      grid: createGrid(),
-      getDurationMs: vi.fn(() => 1200),
-      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore") return null;
-        if (methodName === "saveRecordAsync") return { scope: {}, method: saveRecord };
-        if (methodName === "saveRecord") return { scope: {}, method: syncSaveRecord };
-        return null;
-      }),
-      writeLocalStorageJsonPayload: vi.fn()
-    };
-
-    const firstAttempt = tryAutoSubmitOnGameOver(manager) as unknown;
-    expect(firstAttempt).toBeInstanceOf(Promise);
-    expect(manager.sessionSubmitDone).toBe(false);
-    await expect(firstAttempt).resolves.toBe(false);
-    expect(manager.sessionSubmitDone).toBe(false);
-
-    const secondAttempt = tryAutoSubmitOnGameOver(manager) as unknown;
-    expect(manager.sessionSubmitDone).toBe(false);
-    await expect(secondAttempt).resolves.toBe(true);
-
-    expect(saveRecord).toHaveBeenCalledTimes(2);
-    expect(syncSaveRecord).not.toHaveBeenCalled();
-    expect(manager.sessionSubmitDone).toBe(true);
-  });
-
-  it("keeps the rescue identity when live replay serialization recovers before async save completion", async () => {
-    let liveReplayAvailable = false;
-    let resolveSave!: (record: Record<string, unknown>) => void;
-    const savePromise = new Promise<Record<string, unknown>>((resolve) => {
-      resolveSave = resolve;
-    });
-    const savedRecords: Record<string, unknown>[] = [];
-    const manager = {
-      sessionSubmitDone: false,
-      replayMode: false,
-      over: true,
-      won: false,
-      keepPlaying: false,
-      modeKey: "standard_4x4_pow2_no_undo",
-      clientRecordId: "",
-      initialSeed: 123,
-      width: 2,
-      height: 2,
-      score: 4096,
-      successfulMoveCount: 2,
-      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
-      grid: createGrid(),
-      getDurationMs: vi.fn(() => 1200),
-      getWindowLike: vi.fn(() => ({
-        btoa() {
-          if (!liveReplayAvailable) throw new Error("live_replay_unavailable");
-          return "live-replay";
-        }
-      })),
-      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
-        return {
-          scope: {},
-          method(record: Record<string, unknown>) {
-            savedRecords.push(record);
-            return savePromise;
-          }
-        };
-      }),
-      writeLocalStorageJsonPayload: vi.fn()
-    };
-
-    const saveAttempt = tryAutoSubmitOnGameOver(manager) as Promise<boolean>;
-    expect(savedRecords[0]?.replay_string).toBe("REPLAY_v1RPL_B64_rescue");
-
-    liveReplayAvailable = true;
-    resolveSave({ id: "local-rescue-async" });
-
-    await expect(saveAttempt).resolves.toBe(true);
-    expect(manager.sessionSubmitDone).toBe(true);
-  });
-
-  it("does not let an old async history save mark a newly started game as submitted", async () => {
-    let resolveSave!: (record: Record<string, unknown>) => void;
-    const savePromise = new Promise<Record<string, unknown>>((resolve) => {
-      resolveSave = resolve;
-    });
-    const manager = {
-      sessionSubmitDone: false,
-      replayMode: false,
-      over: true,
-      won: false,
-      keepPlaying: false,
-      modeKey: "standard_4x4_pow2_no_undo",
-      clientRecordId: "rec_old",
-      score: 4096,
-      grid: createGrid(),
-      getDurationMs: vi.fn(() => 1200),
-      resolveWindowNamespaceMethod: vi.fn((_namespace: string, methodName: string) =>
-        methodName === "saveRecordAsync" ? { scope: {}, method: () => savePromise } : null
-      ),
-      writeLocalStorageJsonPayload: vi.fn()
-    };
-
-    const oldSave = tryAutoSubmitOnGameOver(manager) as unknown;
-    manager.over = false;
-    manager.clientRecordId = "rec_new";
-    manager.sessionSubmitDone = false;
-    resolveSave({ id: "local-old-record" });
-
-    await expect(oldSave).resolves.toBe(true);
-    expect(manager.sessionSubmitDone).toBe(false);
   });
 });

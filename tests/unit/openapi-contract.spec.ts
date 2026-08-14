@@ -40,40 +40,6 @@ describe("OpenAPI contract", () => {
     expect(stats.rating).toEqual({ value: null, status: "insufficient_data" });
   });
 
-  it("types third-party record imports and their source metadata", () => {
-    const request: components["schemas"]["ThirdPartyRecordImportRequest"] = {
-      file: "records.zip",
-      reason: "Restore exported history"
-    };
-    const result: components["schemas"]["ThirdPartyRecordImportResult"] = {
-      user_id: 42,
-      commit: false,
-      container: "zip",
-      archive_entry_count: 2,
-      total: 2,
-      valid: 1,
-      would_insert: 1,
-      inserted: 0,
-      skipped_duplicates: 0,
-      rejected: 1,
-      batch_id: null,
-      batch_audit_recorded: null,
-      items: [{ index: 0, status: "would_insert", source_platform_name: "2048Verse" }]
-    };
-    const record: components["schemas"]["GameRecord"] = {
-      id: "record_1",
-      source_platform_id: "2048verse",
-      source_platform_name: "2048Verse",
-      source_adapter_version: "replay-text-v1",
-      source_filename: "game.txt"
-    };
-
-    expect({ request, result, record }).toMatchObject({
-      result: { container: "zip", would_insert: 1 },
-      record: { source_platform_name: "2048Verse" }
-    });
-  });
-
   it("types ranked attempt capability versions without client-authoritative outcome fields", () => {
     const start: components["schemas"]["RankedSessionStartRequest"] = {
       mode_key: "standard_4x4_pow2_no_undo",
@@ -129,8 +95,6 @@ describe("OpenAPI contract", () => {
       "/relay/cases/{caseId}/submit:",
       "/rescue-offers/active:",
       "/admin/me:",
-      "/admin/users/{id}/third-party-record-import/preview:",
-      "/admin/users/{id}/third-party-record-import/commit:",
       "/admin/rescue-offers:",
       "/achievements:",
       "/user/me/achievements:",
@@ -147,7 +111,6 @@ describe("OpenAPI contract", () => {
       "LeaderboardEntry:",
       "LeaderboardShowcaseEntry:",
       "GameRecord:",
-      "ThirdPartyRecordImportResult:",
       "RankedSession:",
       "RankedSessionAttemptRequest:",
       "RankedCheckpoint:",

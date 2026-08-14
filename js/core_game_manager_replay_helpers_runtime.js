@@ -52,6 +52,7 @@ var REPLAY_V1_EXT_CHALLENGE_ID = 3;
 var REPLAY_V1_EXT_SEED = 4;
 var REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 var REPLAY_V1_EXT_EXACT_SPAWN = 8;
+var REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION = 9;
 var LEGACY_VRS_VARIANT_CONFIG_MAP = {
   "2x4": { key: "2x4", width: 4, height: 2, modeKey: "board_2x4_pow2_no_undo" },
   "3x3": { key: "3x3", width: 3, height: 3, modeKey: "board_3x3_pow2_no_undo" },
@@ -120,12 +121,30 @@ function decodeReplayV1Utf8Text(payload) {
   }
 }
 
-function resolveSessionReplayV1DeltaMs(session, nowMs) {
+function resolveSessionReplayV1RecordedElapsedMs(session) {
+  var stored = Number(session && session.recorded_elapsed_ms);
+  if (Number.isFinite(stored) && stored >= 0) return Math.floor(stored);
+  return Array.isArray(session && session.records) ? session.records.reduce(function (total, record) {
+    if (!record || (record.kind !== "move" && record.kind !== "undo1" && record.kind !== "undon")) return total;
+    var deltaMs = Number(record.deltaMs);
+    return total + (Number.isFinite(deltaMs) && deltaMs >= 0 ? Math.floor(deltaMs) : 0);
+  }, 0) : 0;
+}
+
+function resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) {
+  if (manager && typeof manager.getDurationMs === "function") {
+    var previousElapsedMs = resolveSessionReplayV1RecordedElapsedMs(session);
+    var currentElapsedMs = Math.max(previousElapsedMs, Math.floor(Number(manager.getDurationMs()) || 0));
+    session.recorded_elapsed_ms = currentElapsedMs;
+    session.last_event_at_ms = nowMs;
+    return currentElapsedMs - previousElapsedMs;
+  }
   var lastAt = Number(session && session.last_event_at_ms);
   if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
   var delta = Math.floor(nowMs - lastAt);
   if (!Number.isFinite(delta) || delta < 0) delta = 0;
   session.last_event_at_ms = nowMs;
+  session.recorded_elapsed_ms = resolveSessionReplayV1RecordedElapsedMs(session) + delta;
   return delta;
 }
 
@@ -174,8 +193,9 @@ function recordSessionReplayV1Move(manager, direction, spawn) {
   var nowMs = Date.now();
   session.records.push({
     kind: "move", dir: direction, spawnIndex: spawn.y * manager.width + spawn.x,
-    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs)
+    spawnValueBit: fib ? (spawn.value === 2 ? 1 : 0) : (spawn.value === 4 ? 1 : 0), deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs)
   });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function recordSessionReplayV1Undo(manager, undoCount) {
@@ -185,10 +205,12 @@ function recordSessionReplayV1Undo(manager, undoCount) {
   if (!Number.isInteger(count) || count <= 0) count = 1;
   var nowMs = Date.now();
   if (count === 1) {
-    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
+    session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
     return;
   }
-  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1DeltaMs(session, nowMs) });
+  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs) });
+  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
 }
 
 function resolveReplayPauseStateFallback() {
@@ -543,7 +565,7 @@ function applyReplaySeekRestartPlan(manager, restartPlan) {
     restartWithBoard(manager, manager.replayStartBoardMatrix, manager.modeConfig, { asReplay: true });
   }
   if (restartPlan.shouldRestartWithSeed) {
-    restartWithSeed(manager, manager.initialSeed, manager.modeConfig, { asReplay: true });
+    restartWithSeed(manager, manager.initialSeed, manager.modeConfig);
   }
   if (restartPlan.shouldApplyReplayIndex) {
     setRuntimeReplayIndexForReplay(manager, restartPlan.replayIndex);
@@ -1750,8 +1772,7 @@ function writeAutoSubmitErrorResult(manager, endedAt, payload, error) {
 
 function resolveLocalHistorySaveRecord(manager) {
   if (!manager) return null;
-  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecordAsync") ||
-    manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
 }
 
 function writeLocalHistoryStoreMissingResult(manager) {
@@ -1775,78 +1796,38 @@ function isPromiseLike(value) {
   return !!value && typeof value.then === "function";
 }
 
-function buildTerminalLocalHistoryIdentity(manager, replayString) {
-  var clientRecordId = String(manager.clientRecordId || "").trim();
-  if (clientRecordId) return "client:" + clientRecordId;
-  return [manager.modeKey || manager.mode || "", manager.initialSeed || "", replayString].join("|");
-}
-
-function isSameTerminalLocalHistoryIdentity(manager, identity) {
-  if (!isTerminalSessionForPersistence(manager)) return false;
-  if (identity.indexOf("client:") === 0) {
-    return "client:" + String(manager.clientRecordId || "").trim() === identity;
-  }
-  var rescueReplayString = String(manager.rescueReplayString || "").trim();
-  if (rescueReplayString && buildTerminalLocalHistoryIdentity(manager, rescueReplayString) === identity) {
-    return true;
-  }
-  try {
-    return buildTerminalLocalHistoryIdentity(manager, serializeReplay(manager)) === identity;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function completeAutoSubmitWithLocalHistory(manager, executionContext, identity, savedRecord) {
-  if (!savedRecord || typeof savedRecord !== "object") throw new Error("local_save_failed");
-  if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = true;
-  writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
-  return true;
-}
-
-function failAutoSubmitWithLocalHistory(manager, executionContext, identity, error) {
-  if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = false;
-  writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
-  return false;
-}
-
-function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext, identity) {
-  var complete = function (savedRecord) { return completeAutoSubmitWithLocalHistory(manager, executionContext, identity, savedRecord); };
-  var fail = function (error) { return failAutoSubmitWithLocalHistory(manager, executionContext, identity, error); };
+function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext) {
   try {
     var saveResult = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
-    if (!isPromiseLike(saveResult)) return complete(saveResult);
-    var state = { identity: identity, promise: null };
-    state.promise = Promise.resolve(saveResult).then(complete).catch(fail).finally(function () {
-      if (manager.localHistorySaveInFlight === state) delete manager.localHistorySaveInFlight;
-    });
-    manager.localHistorySaveInFlight = state;
-    return state.promise;
+    if (isPromiseLike(saveResult)) {
+      saveResult.then(function (savedRecord) {
+        writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
+      }).catch(function (error) {
+        writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
+      });
+      return;
+    }
+    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, saveResult);
   } catch (error) {
-    return fail(error);
+    writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
   }
-}
-
-function shouldSkipAutoSubmitOnGameOver(manager) {
-  var skippedReason = resolveAutoSubmitSkippedReason(manager);
-  if (!skippedReason) return false;
-  writeAutoSubmitSkippedResult(manager, skippedReason);
-  return true;
 }
 
 function tryAutoSubmitOnGameOver(manager) {
   if (!manager || manager.sessionSubmitDone) return;
-  if (shouldSkipAutoSubmitOnGameOver(manager)) return;
-  var executionContext = createAutoSubmitExecutionContext(manager);
-  var identity = buildTerminalLocalHistoryIdentity(manager, executionContext.payload.replay_string);
-  var inFlight = manager.localHistorySaveInFlight;
-  if (inFlight && inFlight.identity === identity && isPromiseLike(inFlight.promise)) return inFlight.promise;
+  var skippedReason = resolveAutoSubmitSkippedReason(manager);
+  if (skippedReason) {
+    writeAutoSubmitSkippedResult(manager, skippedReason);
+    return;
+  }
   var localHistorySaveRecord = resolveLocalHistorySaveRecord(manager);
   if (!localHistorySaveRecord) {
     writeLocalHistoryStoreMissingResult(manager);
-    return false;
+    return;
   }
-  return executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext, identity);
+  manager.sessionSubmitDone = true;
+  var executionContext = createAutoSubmitExecutionContext(manager);
+  executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext);
 }
 
 function isSessionTerminated(manager) {
@@ -3341,6 +3322,11 @@ function resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded) {
   return decodeReplayV1Utf8Text(payload).trim();
 }
 
+function resolveReplayV1SpawnSequenceVersionFromExt(decoded) {
+  var payload = resolveReplayV1ExtPayload(decoded, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION);
+  return decodeReplayV1Utf8Text(payload).trim() === "2" ? 2 : 1;
+}
+
 function resolveReplayV1ModeKeyByShape(width, height, hasUndo) {
   if (width === 4 && height === 4) return hasUndo ? "classic_4x4_pow2_undo" : "standard_4x4_pow2_no_undo";
   if (width === 4 && height === 3) return hasUndo ? "board_3x4_pow2_undo" : "board_3x4_pow2_no_undo";
@@ -3387,7 +3373,8 @@ function createReplayV1StructuredReplayEnvelope(manager, decoded) {
     initialBoard: initialBoard,
     replayMoves: actions.replayMoves,
     replaySpawns: actions.replaySpawns,
-    customSecondaryTimerRuleText: resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded)
+    customSecondaryTimerRuleText: resolveReplayV1CustomSecondaryTimerRulesFromExt(decoded),
+    spawnSequenceVersion: resolveReplayV1SpawnSequenceVersionFromExt(decoded)
   };
 }
 
@@ -3490,15 +3477,10 @@ function createReplayV1ExtRecords(session) {
   if (ruleset !== "pow2" && ruleset !== "fibonacci") return records;
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_RULESET, ruleset);
   appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CHALLENGE_ID, session && session.challenge_id);
-  appendReplayV1ExtRecord(
-    records,
-    REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS,
-    session && session.custom_secondary_timer_rule_text
-  );
+  appendReplayV1ExtRecord(records, REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS, session && session.custom_secondary_timer_rule_text);
   var seedValue = Math.floor(Number(session && session.seed));
-  if (Number.isInteger(seedValue) && seedValue >= 0) {
-    appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
-  }
+  if (Number.isInteger(seedValue) && seedValue >= 0) appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SEED, String(seedValue));
+  if (session && session.spawn_sequence_version === 2) appendReplayV1ExtRecord(records, REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION, "2");
   return records;
 }
 
@@ -4023,7 +4005,7 @@ function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
   if (!Number.isFinite(envelope && envelope.seed)) {
     throw "Missing v3 replay seed";
   }
-  restartWithSeed(manager, envelope.seed, replayModeConfig, { asReplay: true });
+  restartWithSeed(manager, envelope.seed, replayModeConfig);
   if (
     typeof envelope.customSecondaryTimerRuleText === "string" &&
     typeof applyCustomSecondaryTimerRuleText === "function"

@@ -42,6 +42,7 @@ export function finalizeActuatePersistence(
   if (operations.consumeSkipActuatePersistenceOnce?.(manager)) return;
   operations.publishSavedStateSyncSnapshot?.(manager);
   if (shouldFinalizeAsTerminated(manager, operations)) {
+    manager.clearSavedGameState?.(manager.modeKey);
     manager.tryAutoSubmitOnGameOver?.();
     return;
   }

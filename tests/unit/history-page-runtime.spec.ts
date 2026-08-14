@@ -131,62 +131,6 @@ describe("history page runtime", () => {
     expect(dom.window.document.getElementById("history-status")?.textContent).toBe("");
   });
 
-  it("prefers durable async history APIs when compatibility methods also exist", async () => {
-    const dom = createHistoryDocument();
-    const windowLike = dom.window as unknown as Window & {
-      LocalHistoryStore?: unknown;
-    };
-    const listRecords = vi.fn(() => {
-      throw new Error("sync_list_must_not_run");
-    });
-    const getAll = vi.fn(() => {
-      throw new Error("sync_get_all_must_not_run");
-    });
-    const listRecordsAsync = vi.fn(async () => ({ items: [], total: 0, page: 1, page_size: 30 }));
-    const getAllAsync = vi.fn(async () => []);
-    const exportRecords = vi.fn(() => {
-      throw new Error("sync_export_must_not_run");
-    });
-    const exportRecordsAsync = vi.fn(async () => '{"records":[]}');
-    const download = vi.fn();
-
-    bootstrapHistoryPageRuntime({
-      windowLike,
-      documentLike: dom.window.document,
-      modeCatalog: {
-        listModes: () => [],
-        getMode: () => null
-      },
-      historyStore: {
-        getAll,
-        getAllAsync,
-        exportRecords,
-        exportRecordsAsync,
-        download,
-        listRecords,
-        listRecordsAsync
-      }
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(listRecordsAsync).toHaveBeenCalledTimes(1);
-    expect(getAllAsync).toHaveBeenCalled();
-    expect(listRecords).not.toHaveBeenCalled();
-    expect(getAll).not.toHaveBeenCalled();
-    expect(dom.window.document.getElementById("history-status")?.textContent).toBe("");
-
-    (dom.window.document.getElementById("history-export-all-btn") as HTMLButtonElement).click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(exportRecordsAsync).toHaveBeenCalledTimes(1);
-    expect(exportRecords).not.toHaveBeenCalled();
-    expect(download).toHaveBeenCalledWith(
-      expect.stringMatching(/^2048_local_history_\d{4}-\d{2}-\d{2}\.json$/),
-      '{"records":[]}'
-    );
-  });
-
   it("removes a deleted local record without reloading the history list", async () => {
     const dom = createHistoryDocument();
     const windowLike = dom.window as unknown as Window & {

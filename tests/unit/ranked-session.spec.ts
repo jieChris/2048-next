@@ -40,6 +40,7 @@ function createSession(overrides: Record<string, unknown> = {}) {
     issued_at: nowSec,
     exp: nowSec + 3600,
     owner_user_id: "7",
+    spawn_sequence_version: 2,
     ...overrides
   };
 }
@@ -320,11 +321,60 @@ describe("ranked session runtime", () => {
     expect(fetchImpl).toHaveBeenCalled();
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body || "{}"))).toMatchObject({
       mode_key: modeKey,
-      attempt_schema_version: 1
+      attempt_schema_version: 1,
+      spawn_sequence_version: 2
     });
     expect(JSON.parse(storage.getItem(activeKey) || "{}")).toMatchObject({
       mode_key: modeKey,
-      ranked_session_token: "fib-token"
+      ranked_session_token: "fib-token",
+      spawn_sequence_version: 2
+    });
+  });
+
+  it("rejects a new session response that does not confirm spawn sequence v2", async () => {
+    const storage = new MemoryStorage();
+    const fetchImpl = vi.fn(async () => {
+      const { spawn_sequence_version: _version, ...session } = createSession({
+        ranked_session_token: "legacy-token"
+      });
+      return new Response(JSON.stringify({ success: true, data: session }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    });
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(false);
+
+    expect(runtime.getLastFailureReason()).toBe("spawn_sequence_version_mismatch");
+    expect(storage.getItem(ACTIVE_KEY)).toBeNull();
+  });
+
+  it("discards a legacy prefetched session before starting the next game", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(ACTIVE_KEY, JSON.stringify(createSession({ spawn_sequence_version: 1 })));
+    storage.setItem(PREFETCH_KEY, JSON.stringify(createSession({
+      challenge_id: "legacy-prefetch",
+      seed: 222,
+      ranked_session_token: "legacy-prefetch-token",
+      spawn_sequence_version: 1
+    })));
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      data: createSession({
+        challenge_id: "v2-next",
+        seed: 333,
+        ranked_session_token: "v2-next-token"
+      })
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    const runtime = createRankedSessionRuntime(createWindowLike(storage, fetchImpl), "index");
+
+    expect(runtime.getCurrentContext(MODE_KEY)).toMatchObject({ spawn_sequence_version: 1 });
+    await expect(runtime.startNextSession(MODE_KEY)).resolves.toBe(true);
+
+    expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}")).toMatchObject({
+      ranked_session_token: "v2-next-token",
+      spawn_sequence_version: 2
     });
   });
 
@@ -554,7 +604,8 @@ describe("ranked session runtime", () => {
       JSON.stringify(
         createSession({
           issued_at: nowSec - 7200,
-          exp: nowSec - 1
+          exp: nowSec - 1,
+          spawn_sequence_version: 2
         })
       )
     );
@@ -575,7 +626,8 @@ describe("ranked session runtime", () => {
         over: false,
         initial_seed: 111,
         challenge_id: "ranked-active",
-        ranked_session_token: "active-token"
+        ranked_session_token: "active-token",
+        spawn_sequence_version: 2
       })
     );
     const fetchImpl = vi.fn(async () => {
@@ -610,7 +662,8 @@ describe("ranked session runtime", () => {
     expect(JSON.parse(storage.getItem(ACTIVE_KEY) || "{}")).toMatchObject({
       ranked_session_token: "active-token",
       seed: 111,
-      exp: nowSec - 1
+      exp: nowSec - 1,
+      spawn_sequence_version: 2
     });
     expect(JSON.parse(storage.getItem(PREFETCH_KEY) || "{}")).toMatchObject({
       ranked_session_token: "next-after-expiry-token",
@@ -620,7 +673,8 @@ describe("ranked session runtime", () => {
       id: "ranked-active",
       mode_key: MODE_KEY,
       ranked_session_token: "active-token",
-      seed: 111
+      seed: 111,
+      spawn_sequence_version: 2
     });
   });
 

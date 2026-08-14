@@ -2,7 +2,6 @@ import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/pag
 import { installGameDialog } from "../bootstrap/game-dialog";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
-import { installAchievementUnlockToastRuntime } from "../bootstrap/achievement-unlock-toast";
 import { getPageManifest } from "../entries/runtime-manifest";
 import { bindStandaloneInternalNavigation } from "./standalone-navigation";
 
@@ -74,7 +73,6 @@ export async function bootstrapDirectPage(
   }
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     installGameDialog(window);
-    installAchievementUnlockToastRuntime();
     bindHomeUserDisplay({
       documentLike: document,
       pageId: manifest.pageId,

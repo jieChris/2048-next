@@ -20,7 +20,7 @@ const MODES_PAGE_COPY: Record<
   }
 > = {
   zh: {
-    title: "2048 游戏模式大全 — 2048 NEXT",
+    title: "2048 模式选择",
     homeAria: "返回首页",
     brandTitle: "模式选择",
     frequentTitle: "常用模式",
@@ -105,7 +105,7 @@ const MODES_PAGE_COPY: Record<
     }
   },
   en: {
-    title: "2048 Game Modes — 2048 NEXT",
+    title: "2048 Modes",
     homeAria: "Back to Home",
     brandTitle: "Mode Selection",
     frequentTitle: "Common Modes",

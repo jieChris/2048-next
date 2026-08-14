@@ -333,6 +333,10 @@ function isRankCheckpointRestoreActive(manager) {
   ));
 }
 
+function isRankCheckpointReplayExecuting(manager) {
+  return !!(manager && manager.rankCheckpointReplayExecuting === true);
+}
+
 function executeImmediateUndoMoveInput(manager, attempt) {
   manager.pendingMoveInput = null;
   executeImmediateMoveInput(manager, attempt, Date.now());
@@ -425,9 +429,10 @@ function publishConfirmedMoveInput(manager, attempt, valid) {
 function executeImmediateMoveInput(manager, attempt, now) {
   if (!manager || isRankCheckpointRestoreActive(manager)) return false;
   var normalizedAttempt = normalizeMoveInputAttempt(attempt);
+  var terminatedBeforeInput = manager.replayMode ? !!manager.over : resolveGameTerminatedFallback(manager);
   if (!isUndoMoveDirection(normalizedAttempt.direction)) manager.lastMoveInputAt = now;
   var valid = manager.move(normalizedAttempt.direction) === true;
-  publishConfirmedMoveInput(manager, normalizedAttempt, valid);
+  if (!terminatedBeforeInput) publishConfirmedMoveInput(manager, normalizedAttempt, valid);
   return valid;
 }
 
@@ -470,8 +475,10 @@ function flushPendingMoveInput(manager) {
 
 function shouldAbortMoveBeforeUndo(manager) {
   if (!manager) return true;
-  if (manager.rankedSetupBlockedUntilSessionReady) return true;
-  if (isRankCheckpointRestoreActive(manager) && manager.disableSessionSync !== true) return true;
+  if (
+    manager.rankedSetupBlockedUntilSessionReady ||
+    (isRankCheckpointRestoreActive(manager) && !isRankCheckpointReplayExecuting(manager))
+  ) return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
@@ -1338,7 +1345,7 @@ function resolveGameTerminatedFallback(manager) {
 function isGameTerminated(manager) {
   if (!manager) return false;
   // Replay must follow the recorded action stream; hitting 2048 should not block replay moves.
-  if (manager.replayMode) {
+  if (manager.replayMode || isRankCheckpointReplayExecuting(manager)) {
     if (!manager.over) return false;
     manager.stopTimer();
     manager.timerEnd = Date.now();
@@ -1354,7 +1361,7 @@ function isGameTerminated(manager) {
 }
 
 function resolveForcedReplaySpawn(manager) {
-  if (!manager || !(manager.replayMode || manager.rankCheckpointApplying === true)) return null;
+  if (!manager || (!manager.replayMode && !isRankCheckpointReplayExecuting(manager))) return null;
   return manager.forcedSpawn || null;
 }
 
@@ -1366,9 +1373,6 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
   var forcedTile = new Tile(forcedSpawn, forcedSpawn.value);
   manager.grid.insertTile(forcedTile);
   recordSpawnValue(manager, forcedSpawn.value);
-  if (manager.rankCheckpointApplying === true) {
-    manager.lastSpawn = { x: forcedSpawn.x, y: forcedSpawn.y, value: forcedSpawn.value };
-  }
   manager.forcedSpawn = null;
   return true;
 }
@@ -1376,18 +1380,25 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
 function resolveSpawnStepCount(manager) {
   if (!manager) return 0;
   if (manager.replayMode) return manager.replayIndex;
-  var moveCount = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
+  var moveCount = resolveSpawnActionCount(manager);
   var spawnCount = resolveRecordedSpawnCount(manager);
   // 新局起手两块需要使用不同随机步进，避免第二块复用第一块同一随机序列位置。
   if (spawnCount < 2) {
     return moveCount + spawnCount;
   }
-  return moveCount;
+  return moveCount + (manager.spawnSequenceVersion === 2 ? 2 : 0);
+}
+
+function resolveSpawnActionCount(manager) {
+  var moveHistoryCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
+  var replayActionCount = Number(manager && manager.sessionReplayV1 && manager.sessionReplayV1.action_count);
+  if (!Number.isInteger(replayActionCount) || replayActionCount < 0) replayActionCount = 0;
+  return Math.max(moveHistoryCount, replayActionCount);
 }
 
 function resolveRecordedSpawnCount(manager) {
-  if (!(manager && manager.spawnValueCounts)) return 0;
-  var counts = manager.spawnValueCounts;
+  if (!manager) return 0;
+  var counts = manager.spawnValueCounts || {};
   var total = 0;
   for (var key in counts) {
     if (!manager.hasOwnKey(counts, key)) continue;
@@ -1395,6 +1406,8 @@ function resolveRecordedSpawnCount(manager) {
     if (!Number.isFinite(count) || count <= 0) continue;
     total += Math.floor(count);
   }
+  var initTiles = manager.sessionReplayV1 && manager.sessionReplayV1.init_tiles;
+  if (Array.isArray(initTiles)) total = Math.max(total, initTiles.length);
   return total;
 }
 

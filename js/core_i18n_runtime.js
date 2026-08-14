@@ -43,15 +43,15 @@
   }
 
   var PAGE_TITLE_MAP = {
-    "2048.html": { zh: "2048 NEXT — 免费在线 2048 多模式数字合并游戏", en: "2048 NEXT — Free Online 2048 Puzzle Game" },
-    "index.html": { zh: "2048 NEXT — 免费在线 2048 多模式数字合并游戏", en: "2048 NEXT — Free Online 2048 Puzzle Game" },
+    "2048.html": { zh: "2048", en: "2048" },
+    "index.html": { zh: "2048", en: "2048" },
     "undo_2048.html": { zh: "2048（可撤回）", en: "2048 (Undo)" },
     "capped_2048.html": { zh: "2048（封顶）", en: "2048 (Capped)" },
     "practice_board.html": { zh: "2048练习板", en: "2048 Practice Board" },
     "play.html": { zh: "2048 多玩法", en: "2048 Multi Modes" },
     "replay.html": { zh: "回放", en: "Replay" },
     "history.html": { zh: "2048 本地历史记录", en: "2048 Local History" },
-    "modes.html": { zh: "2048 游戏模式大全 — 2048 NEXT", en: "2048 Game Modes — 2048 NEXT" },
+    "modes.html": { zh: "2048 模式选择", en: "2048 Modes" },
     "palette.html": { zh: "2048 设置", en: "2048 Settings" }
   };
 

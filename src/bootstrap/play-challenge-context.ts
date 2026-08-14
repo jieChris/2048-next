@@ -7,6 +7,7 @@ export interface PlayChallengeContext {
   mode_key: string;
   seed?: number;
   ranked_session_token?: string;
+  spawn_sequence_version?: 1 | 2;
 }
 
 export interface ResolvePlayChallengeContextOptions {
@@ -38,6 +39,7 @@ function normalizeExistingPlayChallengeContext(
   if (rankedSessionToken) {
     out.ranked_session_token = rankedSessionToken;
   }
+  out.spawn_sequence_version = Number(raw.spawn_sequence_version) === 2 ? 2 : 1;
   return out;
 }
 

@@ -200,7 +200,7 @@ jobs:
           set -euo pipefail
           for attempt in 1 2 3; do
             if ssh ${SSH_COMMON_OPTS} -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-              "sudo -n bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}' '/tmp/2048-next-nginx-${RELEASE_ID}.conf'" <<'REMOTE'
+              "bash -s -- '${DEPLOY_ROOT}' '${ARTIFACT_NAME}' '${RELEASE_ID}' '${DEPLOY_KEEP_RELEASES}' '/tmp/2048-next-nginx-${RELEASE_ID}.conf'" <<'REMOTE'
             set -euo pipefail
             deploy_root="$1"
             artifact_name="$2"
@@ -210,48 +210,52 @@ jobs:
 
             releases_dir="${deploy_root}/releases"
             release_dir="${releases_dir}/${release_id}"
-            previous_release="$(readlink -f "${deploy_root}/current" 2>/dev/null || true)"
+            sudo -n true
+            previous_release="$(sudo -n readlink -f "${deploy_root}/current" 2>/dev/null || true)"
             previous_nginx_config="$(mktemp)"
 
             cleanup_release_dir() {
               local target_dir="$1"
               [ -e "${target_dir}" ] || return 0
-              if rm -rf -- "${target_dir}"; then
+              if sudo -n rm -rf -- "${target_dir}"; then
                 return 0
               fi
               echo "WARN: failed to fully remove ${target_dir}; skipping." >&2
               return 0
             }
 
-            mkdir -p "${releases_dir}" "${deploy_root}/shared"
+            sudo -n mkdir -p "${releases_dir}" "${deploy_root}/shared"
             cleanup_release_dir "${release_dir}"
-            mkdir -p "${release_dir}"
+            sudo -n mkdir -p "${release_dir}"
 
-            tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
+            sudo -n tar -xzf "/tmp/${artifact_name}" -C "${release_dir}"
             rm -f "/tmp/${artifact_name}"
 
-            command -v docker >/dev/null 2>&1
+            sudo -n docker --version >/dev/null 2>&1
             test -f "${nginx_config_path}"
-            docker network inspect edge-migrate-net >/dev/null
             if [ -f "${deploy_root}/nginx.conf" ]; then
-              cp "${deploy_root}/nginx.conf" "${previous_nginx_config}"
+              sudo -n cp "${deploy_root}/nginx.conf" "${previous_nginx_config}"
             fi
-            docker run --rm \
-              --network edge-migrate-net \
+            sudo -n docker run --rm \
               -v "${nginx_config_path}:/etc/nginx/conf.d/default.conf:ro" \
               nginx:1.27-alpine nginx -t
 
-            cp "${nginx_config_path}" "${deploy_root}/nginx.conf"
+            sudo -n cp "${nginx_config_path}" "${deploy_root}/nginx.conf"
             rm -f "${nginx_config_path}"
-            ln -sfn "${release_dir}" "${deploy_root}/current"
+            sudo -n ln -sfn "${release_dir}" "${deploy_root}/current"
 
             start_site_container() {
-              if docker ps -a --format '{{.Names}}' | grep -qx 'site-2048-next'; then
-                docker rm -f site-2048-next >/dev/null
+              docker_network_args=()
+              if sudo -n docker network inspect edge-migrate-net >/dev/null 2>&1; then
+                docker_network_args=(--network edge-migrate-net)
               fi
 
-              docker run -d \
-                --network edge-migrate-net \
+              if sudo -n docker ps -a --format '{{.Names}}' | grep -qx 'site-2048-next'; then
+                sudo -n docker rm -f site-2048-next >/dev/null
+              fi
+
+              sudo -n docker run -d \
+                "${docker_network_args[@]}" \
                 --name site-2048-next \
                 --restart unless-stopped \
                 -p 127.0.0.1:2048:80 \
@@ -262,7 +266,7 @@ jobs:
 
             wait_for_site() {
               for health_attempt in $(seq 1 20); do
-                if docker exec site-2048-next wget -q --spider http://127.0.0.1/2048.html; then
+                if sudo -n docker exec site-2048-next wget -q --spider http://127.0.0.1/2048.html; then
                   return 0
                 fi
                 sleep 1
@@ -272,11 +276,11 @@ jobs:
 
             start_site_container
             if ! wait_for_site; then
-              docker logs --tail=80 site-2048-next || true
+              sudo -n docker logs --tail=80 site-2048-next || true
               if [ -n "${previous_release}" ] && [ -d "${previous_release}" ]; then
-                ln -sfn "${previous_release}" "${deploy_root}/current"
+                sudo -n ln -sfn "${previous_release}" "${deploy_root}/current"
                 if [ -s "${previous_nginx_config}" ]; then
-                  cp "${previous_nginx_config}" "${deploy_root}/nginx.conf"
+                  sudo -n cp "${previous_nginx_config}" "${deploy_root}/nginx.conf"
                 fi
                 start_site_container
                 wait_for_site || true
@@ -289,7 +293,7 @@ jobs:
             rm -f "${previous_nginx_config}"
 
             cd "${releases_dir}"
-            (ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
+            (sudo -n ls -1dt -- */ 2>/dev/null || true) | tail -n "+$((keep_releases + 1))" | while IFS= read -r old_release; do
               [ -n "${old_release}" ] || continue
               cleanup_release_dir "${old_release}"
             done

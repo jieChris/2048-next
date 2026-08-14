@@ -1,6 +1,7 @@
 export interface SetupStateInitializationManagerLike {
   challengeId?: unknown;
   rankedSessionToken?: unknown;
+  spawnSequenceVersion?: unknown;
   needsRankedCheckpointRestore?: boolean;
   timerID?: unknown;
   timerStatus?: unknown;
@@ -53,6 +54,7 @@ export interface SetupStateInitializationOperations {
     rankedSessionContext: unknown
   ) => unknown;
   resolveSetupRankedSessionToken?: (rankedSessionContext: unknown) => unknown;
+  resolveSetupSpawnSequenceVersion?: (rankedSessionContext: unknown) => unknown;
   initializeSetupSessionReplaySnapshot?: (manager: SetupStateInitializationManagerLike) => void;
   initializeTimerMilestones?: (manager: SetupStateInitializationManagerLike) => void;
   resetRoundStatsState?: (manager: SetupStateInitializationManagerLike) => void;
@@ -176,6 +178,12 @@ export function runSetupStateInitialization(
     seedState.rankedSessionContext
   );
   manager.rankedSessionToken = operations.resolveSetupRankedSessionToken?.(seedState.rankedSessionContext);
+  const requestedSpawnSequenceVersion = operations.resolveSetupSpawnSequenceVersion?.(
+    seedState.rankedSessionContext
+  );
+  manager.spawnSequenceVersion = seedState.rankedSessionContext
+    ? requestedSpawnSequenceVersion === 2 ? 2 : 1
+    : seedState.hasInputSeed ? 1 : 2;
   operations.initializeSetupSessionReplaySnapshot?.(manager);
   operations.initializeTimerMilestones?.(manager);
   operations.resetRoundStatsState?.(manager);

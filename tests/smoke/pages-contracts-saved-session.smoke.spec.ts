@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
-import { waitForRankedMoveReady, waitForWindowCondition } from "./support/runtime-ready";
+import { waitForWindowCondition } from "./support/runtime-ready";
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -624,18 +624,22 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("body")).toBeVisible();
     await waitForWindowCondition(
       page,
+      () =>
+        Boolean((window as any).game_manager) && typeof (window as any).saveGameState === "function",
+      12_000
+    );
+
+    await page.waitForFunction(
       () => {
         const manager = (window as any).game_manager;
         return (
-          Boolean(manager) &&
-          typeof (window as any).saveGameState === "function" &&
+          !!manager &&
           manager.rankedSetupBlockedUntilSessionReady !== true &&
           manager.rankCheckpointRestorePending !== true &&
-          manager.rankCheckpointApplying !== true &&
           manager.needsRankedCheckpointRestore !== true
         );
       },
-      12_000
+      { timeout: 12_000 }
     );
 
     const beforeReload = await page.evaluate(() => {
@@ -684,19 +688,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(reloadResponse, "Reloaded undo response should exist").not.toBeNull();
     expect(reloadResponse?.ok(), "Reloaded undo response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(
-      page,
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForFunction(
       () => {
         const manager = (window as any).game_manager;
         return (
-          Boolean(manager) &&
+          !!manager &&
           manager.rankedSetupBlockedUntilSessionReady !== true &&
           manager.rankCheckpointRestorePending !== true &&
-          manager.rankCheckpointApplying !== true &&
           manager.needsRankedCheckpointRestore !== true
         );
       },
-      12_000
+      { timeout: 12_000 }
     );
 
     const afterReload = await page.evaluate(() => {
@@ -858,7 +861,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 909,
             ranked_session_token: "resume-prefetch-token",
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -895,7 +899,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Initial ranked play response should exist").not.toBeNull();
     expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(page);
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
 
     const liveSnapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1022,7 +1026,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 800 + sessionRequestCount,
             ranked_session_token: `expired-local-prefetch-token-${sessionRequestCount}`,
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -1060,7 +1065,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Initial ranked play response should exist").not.toBeNull();
     expect(response?.ok(), "Initial ranked play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(page);
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
 
     const liveSnapshot = await page.evaluate((activeModeKey) => {
       const manager = (window as any).game_manager;
@@ -1249,6 +1254,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       },
       { timeout: 12_000 }
     );
+    await page.waitForFunction(
+      () =>
+        !!(window as any).OnlineLeaderboardRuntime &&
+        (window as any).game_manager?.__onlineImmediateSubmitHooksBound === true,
+      { timeout: 12_000 }
+    );
 
     await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1319,7 +1330,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
     expect(reloadResponse?.ok(), "Reloaded ranked play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(page, 12_000);
+    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await page.waitForTimeout(3000);
 
     const restoredSnapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1441,7 +1453,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
             seed: 303,
             ranked_session_token: "next-prefetch-token",
             issued_at: nowSec,
-            exp: nowSec + 3600
+            exp: nowSec + 3600,
+            spawn_sequence_version: 2
           }
         })
       });
@@ -1512,13 +1525,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
     await page.locator("#game-dialog-confirm").click();
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
-    await page.waitForFunction(
-      () =>
-        !!window.localStorage.getItem(
-          "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
-        ),
-      { timeout: 12_000 }
+    const clearMarkerWritten = await page.evaluate(() =>
+      !!window.localStorage.getItem(
+        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
+      )
     );
+    expect(clearMarkerWritten).toBe(true);
 
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
     expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();

@@ -7,6 +7,7 @@ export interface GameManagerRuntimeStateManagerLike {
   rankedBucket?: string;
   disableSessionSync?: boolean;
   spawnTable?: Array<{ value: number; weight: number }>;
+  spawnSequenceVersion?: number;
   sessionSubmitDone?: boolean;
   sessionReplayV3?: unknown;
   timerModuleView?: string;
@@ -100,6 +101,7 @@ export function initializeGameManagerRuntimeState(
     { value: 2, weight: 90 },
     { value: 4, weight: 10 }
   ];
+  manager.spawnSequenceVersion = 1;
   manager.sessionSubmitDone = false;
   manager.sessionReplayV3 = null;
   manager.timerModuleView = "timer";

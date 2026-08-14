@@ -346,7 +346,7 @@ test("production button families use mist cyan semantic tones while excluded pag
   });
 
   await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#appearance-settings-editor")).toHaveAttribute("open", "");
+  await page.locator("#appearance-settings-editor summary").click();
   const disabledButton = page.locator("#palette-rename-btn");
   await expect(disabledButton).toBeVisible();
   await expect(disabledButton).toBeDisabled();

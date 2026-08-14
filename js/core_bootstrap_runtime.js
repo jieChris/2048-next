@@ -70,6 +70,14 @@
 
     global.game_manager = manager;
     if (
+      global.OnlineLeaderboardRuntime &&
+      typeof global.OnlineLeaderboardRuntime.notifyGameManagerReady === "function"
+    ) {
+      try {
+        global.OnlineLeaderboardRuntime.notifyGameManagerReady(manager);
+      } catch (_errOnlineReady) {}
+    }
+    if (
       global.AdminRescueClientRuntime &&
       typeof global.AdminRescueClientRuntime.scheduleCheck === "function"
     ) {

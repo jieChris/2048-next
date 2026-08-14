@@ -1942,74 +1942,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/users/{id}/third-party-record-import/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Parse and verify a third-party replay file or ZIP without writing records. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: components["parameters"]["AdminUserIdPath"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "multipart/form-data": components["schemas"]["ThirdPartyRecordImportRequest"];
-                };
-            };
-            responses: {
-                200: components["responses"]["ThirdPartyRecordImportResponse"];
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{id}/third-party-record-import/commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Import verified third-party replay records as noncompetitive beta history. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: components["parameters"]["AdminUserIdPath"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "multipart/form-data": components["schemas"]["ThirdPartyRecordImportRequest"];
-                };
-            };
-            responses: {
-                200: components["responses"]["ThirdPartyRecordImportResponse"];
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/records": {
         parameters: {
             query?: never;
@@ -2959,50 +2891,6 @@ export interface components {
             ended_at?: string;
             reason: string;
         };
-        ThirdPartyRecordImportRequest: {
-            /** Format: binary */
-            file: string;
-            reason: string;
-        };
-        ThirdPartyRecordImportResult: {
-            user_id: number;
-            commit: boolean;
-            /** @enum {string} */
-            container: "single" | "zip";
-            archive_entry_count: number;
-            total: number;
-            valid: number;
-            would_insert: number;
-            inserted: number;
-            skipped_duplicates: number;
-            rejected: number;
-            batch_id: string | null;
-            batch_audit_recorded: boolean | null;
-            items: components["schemas"]["ThirdPartyRecordImportItem"][];
-        };
-        ThirdPartyRecordImportItem: {
-            index: number;
-            /** @enum {string} */
-            status: "would_insert" | "inserted" | "skipped_duplicate" | "rejected";
-            reason?: string;
-            error?: string;
-            existing_record_id?: string;
-            record_id?: string;
-            mode_key?: string;
-            mode_bucket?: string;
-            client_record_id?: string | null;
-            replay_fingerprint?: string;
-            score?: number;
-            best_tile?: number;
-            steps?: number;
-            duration_ms?: number;
-            /** Format: date-time */
-            ended_at?: string;
-            source_platform_id?: string | null;
-            source_platform_name?: string | null;
-            source_adapter_version?: string | null;
-            source_filename?: string | null;
-        };
         User: {
             id?: number;
             user_id?: number;
@@ -3042,8 +2930,6 @@ export interface components {
             /** Format: email */
             email?: string;
             password: string;
-            /** @enum {string} */
-            client?: "web";
             captcha?: string;
         } & {
             [key: string]: unknown;
@@ -3141,10 +3027,6 @@ export interface components {
             max_tile?: number;
             replay?: string;
             replay_url?: string;
-            source_platform_id?: string | null;
-            source_platform_name?: string | null;
-            source_adapter_version?: string | null;
-            source_filename?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -3179,6 +3061,8 @@ export interface components {
         RankedSessionStartRequest: {
             /** @enum {integer} */
             attempt_schema_version?: 1;
+            /** @enum {integer} */
+            spawn_sequence_version?: 1 | 2;
             mode_key: string;
             mode?: string;
             mode_bucket?: string;
@@ -3212,6 +3096,8 @@ export interface components {
             status?: "created" | "started" | "consumed" | "abandoned" | "expired";
             /** @enum {string} */
             record_era?: "beta" | "official_v1";
+            /** @enum {integer} */
+            spawn_sequence_version?: 1 | 2;
             /** Format: date-time */
             issued_at?: string;
         } & {
@@ -3411,8 +3297,6 @@ export interface components {
                 "application/json": components["schemas"]["ApiEnvelope"] & {
                     token?: string;
                     user?: components["schemas"]["User"];
-                    /** @description One-time achievement unlocks to show after this authentication response. */
-                    achievements?: components["schemas"]["UserAchievement"][];
                 };
             };
         };
@@ -3436,17 +3320,6 @@ export interface components {
             content: {
                 "application/json": components["schemas"]["ApiEnvelope"] & {
                     data?: components["schemas"]["Achievement"];
-                };
-            };
-        };
-        /** @description Third-party record import preview or commit result. */
-        ThirdPartyRecordImportResponse: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiEnvelope"] & {
-                    data?: components["schemas"]["ThirdPartyRecordImportResult"];
                 };
             };
         };

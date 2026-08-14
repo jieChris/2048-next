@@ -305,6 +305,7 @@ function finalizeActuatePersistenceFallback(manager) {
     (typeof isTerminalSessionForPersistence === "function" && isTerminalSessionForPersistence(manager))
   );
   if (shouldFinalizeAsTerminated) {
+    manager.clearSavedGameState(manager.modeKey);
     manager.tryAutoSubmitOnGameOver();
     return;
   }
@@ -429,6 +430,7 @@ function refreshActuateTimerAndIps(manager) {
 function actuate(manager) {
   if (!manager) return;
   if (manager.rankedSetupBlockedUntilSessionReady) return;
+  if (manager.rankCheckpointApplying === true || manager.rankCheckpointRestorePending === true) return;
   syncBestScoreBeforeActuate(manager);
   manager.actuator.actuate(manager.grid, createActuatorPayloadState(manager));
   updateActuateStatsAndPanel(manager);

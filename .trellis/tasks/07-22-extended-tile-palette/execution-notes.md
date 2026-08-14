@@ -3,6 +3,9 @@
 ## Route Deviation
 
 - 仓库缺少 `.trellis/scripts/get_context.py`，采用现有任务目录格式手工记录，并直接读取 `.trellis/spec/index.md` 后继续。
+- 仓库同时缺少 `.trellis/spec/guides/index.md`，按 `.trellis/spec/index.md` 指向的 Smoke 与视觉规范完成保守复核。
+- 新控件会改变已登记的 8 张 `modal-palette-swatch-*` 弹层基线；根目录浏览器约束禁止启动独立 Playwright 浏览器，而内置浏览器无法按现有 Playwright fixture 确定性更新 PNG，因此未运行或覆盖视觉基线，改用同尺寸内置浏览器结构、溢出和交互核验，并保留基线更新为后续 CI/允许环境工作。
+- 内置浏览器中的本地游戏设置弹窗可切换夜间开关外观，但未触发既有夜间运行时；夜间视觉核验改为在同一内置浏览器调用项目公开的 `CoreNightModeRuntime.setNightBackgroundEnabled`，核验后已恢复日间状态。
 - 初版将高阶方块显示为二进制 `K/M` 简写，容易与十进制数量混淆；按用户反馈改为显示完整的 2 的幂整数。
 - 后续按用户反馈将原有 `1K～64K` 也统一改为 `1024～65536` 完整整数。
 - 预览棋盘原先使用独立尺寸、字体和固定棕色背景；改为复用实际棋盘的 `.game-container`、`.tile`、`.tile-inner` 主题规则。
@@ -40,3 +43,47 @@
 - 将 `#palette-note` 移入颜色编辑标题行：桌面端位于“背景颜色”右侧，窄屏不足时自然换行；保留原状态更新与 `aria-live`。
 - 雾青灰主题下的“跟随主题”改为完整映射“冷青·跃阶”，同步背景、文字、边框和发光四个维度；其他主题的跟随逻辑保持不变。
 - 色板 Smoke 增至 10 项并全部通过，新增断言验证雾青灰“跟随主题”与“冷青·跃阶”四个颜色维度完全一致；`npm run build` 与 `git diff --check` 通过。
+- 边框预设首项新增白底红斜线“取消边框颜色”；`transparent` 仅在边框维度合法，贯通本地存储、刷新、导出、背景色后续更新和动态 CSS，普通颜色路径保持不变。
+- `npx vitest run tests/unit/theme-manager-palette-border.spec.ts tests/unit/bootstrap-theme-settings.spec.ts tests/unit/palette-touch-entry-style.spec.ts`：12 项通过；`npm run build` 与 `git diff --check` 通过。
+- 内置浏览器验证 `palette.html#appearance-settings`：日间及夜间、`1280×720` 与 `390×844` 下取消色块均为白底红斜线，首项顺序与中文可访问名称正确，并提供对应英文文案；取消后边框为 `none / 0px`，重新选择颜色恢复 `solid / 1px`，刷新后取消状态保留。
+- 上述四种视觉场景中弹层均位于 viewport 内，页面 `scrollWidth` 与 viewport 宽度一致，控制台无错误；测试后已恢复 viewport 与日间模式并关闭测试标签。
+- 页面默认场景不展开颜色弹层，因此默认页面基线像素无变化；弹层已有独立登记场景，无需增加 manifest 场景，受影响 PNG 的未更新原因见 Route Deviation。
+- 色板页样式缓存版本更新为 `20260810-border-none-v18`，避免部署后旧 CSS 掩盖取消图标。
+- 调色器补充严格 6 位 HEX、按能力显示的 EyeDropper 和原生系统色板入口；三者复用既有 `applySelectedColor`，保留同级规则同步、持久化和预览刷新，内置色板使用原生禁用状态。
+- 色板页样式缓存版本更新为 `20260810-native-color-v21`，确保新控件与窄屏修复即时生效。
+- EyeDropper 返回前若色板、维度、方块或弹层状态已改变，则通过当前处理器身份丢弃陈旧结果；旧请求的 `finally` 不再覆盖新色板的禁用状态。
+- `node --check js/palette_page.js js/theme_manager.js` 与 Smoke 文件 TypeScript 转译检查：通过。
+- `npx vitest run tests/unit/theme-manager-palette-border.spec.ts tests/unit/bootstrap-theme-settings.spec.ts tests/unit/palette-touch-entry-style.spec.ts tests/unit/palette-entry-bootstrap.spec.ts`：4 个文件、13 项通过。
+- `npm run build` 与 `git diff --check`：通过。
+- Codex 内置浏览器验证 HEX 非法值拒绝写入、合法值持久化、原生色板保存、EyeDropper 能力降级、中英文可访问名称与只读禁用状态；日间/夜间下 `320×568`、`390×844`、`768×1024`、`1280×720` 无横向溢出，弹层完整位于视口内。
+- Codex 内置浏览器额外复现“自定义色板启动延迟取色 → 切换内置色板 → 返回颜色”：旧色板未被改写，内置色板按钮仍禁用，控制台无错误；验证后已恢复原色板、关闭测试标签并停止本地服务。
+- 受浏览器硬性约束，本地未启动 Playwright 执行新增 Smoke；用例已完成 TypeScript 转译检查，并由上述内置浏览器场景覆盖相同产品路径。
+- 发光未生效的根因是经典、雾青灰等主题先生成 `box-shadow:none !important`，而色板逐级阴影没有同级优先级；动态色板阴影现改为最终权威，低性能大棋盘的主动禁用规则继续保留。
+- 赝元主题的后置内阴影同步让位于色板发光；马年主题保留原投影并叠加同一强度光晕。低性能选择器提升到足以覆盖逐级及马年阴影的优先级，避免 8×8 以上重新承担光晕开销。
+- 新增色板级 `glowIntensity: 0～100`，旧数据缺失时回退 `50`；`0` 关闭外发光，`50` 等价于原设计强度，`100` 约为两倍，颜色仍沿用既有逐方块数组，不增加重复的逐方块强度模型。
+- 编辑色块改为“方块背景 + 实际光晕”，预览棋盘当前编辑方块提高层级；强度贯通复制、本地存储、刷新、导入导出与实际棋盘，内置色板控件保持禁用。
+- `node --check js/theme_manager.js js/palette_page.js`、Smoke TypeScript 转译、`git diff --check`：通过。
+- `npx vitest run tests/unit/theme-manager-palette-border.spec.ts tests/unit/bootstrap-theme-settings.spec.ts tests/unit/palette-touch-entry-style.spec.ts tests/unit/palette-entry-bootstrap.spec.ts`：4 个文件、14 项通过；`npm run build`：通过。
+- Codex 内置浏览器实测强度 `0/50/100` 的 2 方块计算阴影分别为 `none`、`20px 3px / 0.34`、`40px 6px / 0.68`；刷新后仍为 `100`，内置色板滑块禁用。
+- 练习板实际 2 方块计算阴影为青色 `40px 6px / 0.68`，2048 方块使用自己的发光色；色板页和练习板均无控制台错误或警告。
+- 真实浏览器补充验证赝元主题显示青色 `40px 6px / 0.68` 光晕；马年主题在 `0` 时仅保留原投影、`100` 时叠加同一青色光晕；8×8 实际游戏页带 `board-low-perf` 且方块 `box-shadow/background-image` 均为 `none`。
+- `320×568` 下页面 `scrollWidth` 与 viewport 均为 `320px`，强度滑块可用宽度 `121.5px`；完成后保留“发光效果演示”色板和可见预览页供人工确认。
+- 发光预设首项复用白底红斜线“取消发光颜色”；`transparent` 现同时作为边框和发光的逐级关闭状态，修改背景不会意外恢复，复制、刷新、导入导出及马年主题均沿用同一判断。
+- Codex 内置浏览器验证 2 方块取消后阴影为 `none`，4 方块仍保持 `40px 6px / 0.68` 光晕；刷新后取消项仍选中、强度仍为 `100`，选择普通预设可恢复发光，再次选择空项可关闭，控制台无错误。
+- 在现有整体强度上新增共享的 `glowMultipliers[26]`：旧数据缺项默认 `100%`，单块范围 `0～200%`，实际强度统一按 `min(100, 整体 × 单块 / 100)` 计算。整体 `0` 不覆盖单块值，单块 `0` 仅关闭当前等级，透明发光优先关闭但保留倍率。
+- 普通主题与马年主题改为复用同一逐级实际强度计算；夜幕星云移除后置写死的外发光阴影，让用户发光颜色、整体强度和单块倍率成为最终权威，低性能棋盘的绝对关闭规则保持不变。
+- 调色弹层增加“当前方块发光倍率”原生滑杆，并显示“相对倍率 · 实际强度”；整体为 `0` 时保留可编辑状态并提示暂时关闭，发光颜色为 `transparent` 时禁用滑杆并提示先设置颜色。整体与单块滑杆均补充动态可访问名称和值说明。
+- `npx vitest run tests/unit/theme-manager-palette-border.spec.ts tests/unit/bootstrap-theme-settings.spec.ts tests/unit/palette-touch-entry-style.spec.ts tests/unit/palette-entry-bootstrap.spec.ts`：4 个文件、15 项通过；Smoke TypeScript 转译、`node --check` 与 `git diff --check` 通过。
+- `npm run build`：通过，生产包成功生成并预压缩。
+- Codex 内置浏览器桌面端实测整体 `50%`、2 方块倍率 `200%` 时实际强度为 `100%`，2 方块为 `40px 6px / 0.68`，未单独调整的 4 方块保持 `20px 3px / 0.34`；刷新后 `50 / 200 / 实际 100` 完整保留。
+- 内置浏览器实测整体改为 `0` 后 2/4 方块均关闭且 2 方块倍率仍为 `200%`；4 方块倍率改为 `0` 时仅 4 关闭、2 保持发光；取消 2 方块发光颜色后滑杆保留 `200%` 但禁用，4 方块不受影响。
+- 内置浏览器 `320×568` 下弹层完整位于 viewport 内，单块滑杆可用宽度 `129px`，页面无横向溢出；恢复默认 viewport 后，练习板实际方块显示与设置页相同的 2/4 差异强度，两页控制台均无错误或警告。
+- 复核发现直接覆盖 `.tile-inner` 阴影会破坏磨砂玻璃、新拟态等主题原投影；普通主题的用户光晕迁移到独立 `::before` 层，马年继续在主体上组合原投影与光晕。机械装甲及包豪斯异形方块的 `clip-path` 会裁剪子层阴影，仅对这些方块在未裁剪的 `.tile` 包装层补充同强度 `drop-shadow`，低性能规则同步关闭该滤镜。
+- 两个强度写入 API 在浏览器存储失败时返回 `false` 且不应用未持久化主题；页面收到失败后立即重新读取真实配置，回滚整体与单块滑杆并显示存储空间提示，避免界面与本地数据不一致。
+- 发光回归单测改为读取真实 `::before` 阴影，避免主体阴影为 `none` 时的假阳性，并覆盖主题原投影、马年组合阴影、机械/包豪斯裁剪补偿、整体封顶、逐块关闭、透明关闭和存储失败。
+- Codex 内置浏览器复核磨砂玻璃、新拟态、机械装甲、包豪斯、马年与夜幕星云：主题原投影保留，异形方块光晕可见；`320×568` 下弹层边界为 `16～314px / 203～562px`，页面宽度等于 viewport，两个强度控件无横向溢出。练习板实际 2/4 方块分别保持 `40px 6px / 0.68` 与 `20px 3px / 0.34`，页面无错误日志。
+- 修复发光弹层被预览棋盘方块覆盖：根因为预览 `.tile-inner` 使用 `z-index: 10`，弹层原先仅为 `z-index: 8`；弹层提升至 `z-index: 100`，未改动棋盘自身层级。
+- 移除整体与单块发光滑杆的成功提示，并让空状态提示不参与标题行布局；错误提示仍保留，整体强度组在无错误提示时靠右对齐。
+- 新增 `tests/unit/palette-glow-controls-style.spec.ts`，覆盖空提示布局、成功提示不写入和弹层层级；3 项通过。
+- Codex 内置浏览器复核发光弹层桌面 `1044×837` 与窄屏 `320×568`：弹层在棋盘上方，桌面整体控件右边界对齐，窄屏弹层边界 `16～314px / 197～562px`，页面 `scrollWidth=320`，两个强度控件无横向溢出；调整整体/单块强度后状态提示为空且无控制台错误。
+- 相关 Vitest 5 个文件、18 项通过；`node --check js/palette_page.js`、`npm run build` 与 `git diff --check` 通过。样式缓存版本更新为 `20260811-glow-controls-v24`。
