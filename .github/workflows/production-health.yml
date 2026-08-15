@@ -18,5 +18,8 @@ jobs:
           set -euo pipefail
           curl --fail --silent --show-error --retry 3 --max-time 20 https://2048next.cn/robots.txt >/dev/null
           curl --fail --silent --show-error --retry 3 --max-time 20 https://2048.xn--fiqs8s/ >/dev/null
+          curl --fail --silent --show-error --retry 3 --max-time 20 https://2048next.cn/health >/dev/null
+          admin_status="$(curl --silent --show-error --retry 3 --max-time 20 --output /dev/null --write-out '%{http_code}' --header 'Cookie:' "https://2048next.cn/admin.html?health_probe=${GITHUB_RUN_ID}")"
+          test "${admin_status}" = "404"
           health="$(curl --fail --silent --show-error --retry 3 --max-time 20 https://2048next.cn/api/health)"
           node -e 'const h=JSON.parse(process.argv[1]); if(h.success!==true||h.database!=="ok") process.exit(1)' "$health"
