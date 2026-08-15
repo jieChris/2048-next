@@ -1,6 +1,11 @@
 import { achievementIconMarkupFor } from "../services/achievement-icons";
 import { highestAchievementPerFamily } from "../services/achievement-families";
-import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
+import {
+  createBrowserStorageAccess,
+  readStorageValue,
+  removeStorageValue,
+  writeStorageValue
+} from "../storage/browser-storage";
 
 interface AchievementToastWindowLike {
   AchievementUnlockToastRuntime?: AchievementUnlockToastRuntime;
@@ -25,6 +30,8 @@ export interface AchievementUnlockToastRuntime {
 const TOAST_GAP_MS = 3800;
 const UI_LANGUAGE_KEY = "ui_language_v1";
 const EASTER_EGG_DISCOVERY_ACHIEVEMENT_ID = "easter_egg_breakout_discovered";
+const BETA_PIONEER_ACHIEVEMENT_ID = "beta_pioneer";
+const PENDING_LOGIN_ACHIEVEMENTS_KEY = "2048_pending_login_achievements_v1";
 
 let queue: Record<string, unknown>[] = [];
 let showing = false;
@@ -135,7 +142,35 @@ function toastTitle(achievement: Record<string, unknown>, lang: "zh" | "en"): st
   if (isEasterEgg(achievement) || isHiddenAchievement(achievement)) return lang === "en" ? "Secret Found" : "隐藏成就";
   if (isMilestone(achievement)) return lang === "en" ? "Milestone Progress" : "里程碑进度";
   if (isSpeedrun(achievement)) return lang === "en" ? "Achievement Unlocked" : "成就达成";
+  if (achievementId(achievement) === BETA_PIONEER_ACHIEVEMENT_ID) return lang === "en" ? "Achievement Unlocked" : "成就达成";
   return lang === "en" ? "Reward Claimed" : "奖励领取";
+}
+
+export function persistPendingAchievementUnlocks(items: unknown, storageLike?: Storage | null): void {
+  const raw = Array.isArray(items) ? items : [items];
+  const pending = raw.filter((item) => !!unwrapAchievement(item)).slice(-10);
+  const storage = storageLike === undefined
+    ? resolveStorage(typeof window === "undefined" ? null : window as AchievementToastWindowLike)
+    : storageLike;
+  if (pending.length <= 0) {
+    removeStorageValue(storage, PENDING_LOGIN_ACHIEVEMENTS_KEY);
+    return;
+  }
+  writeStorageValue(storage, PENDING_LOGIN_ACHIEVEMENTS_KEY, JSON.stringify(pending));
+}
+
+function consumePendingAchievementUnlocks(
+  runtime: AchievementUnlockToastRuntime,
+  windowLike: AchievementToastWindowLike | null
+): void {
+  const storage = resolveStorage(windowLike);
+  const serialized = readStorageValue(storage, PENDING_LOGIN_ACHIEVEMENTS_KEY);
+  if (!serialized) return;
+  removeStorageValue(storage, PENDING_LOGIN_ACHIEVEMENTS_KEY);
+  try {
+    const pending = JSON.parse(serialized);
+    if (Array.isArray(pending)) runtime.showAchievementUnlockToasts(pending);
+  } catch (_err) {}
 }
 
 function renderIcon(achievement: Record<string, unknown>, lang: "zh" | "en"): string {
@@ -276,5 +311,6 @@ export function installAchievementUnlockToastRuntime(options: {
       if (!showing) showNext(windowLike, documentLike);
     }
   };
-  return windowLike.AchievementUnlockToastRuntime || null;
+  consumePendingAchievementUnlocks(windowLike.AchievementUnlockToastRuntime, windowLike);
+  return windowLike.AchievementUnlockToastRuntime;
 }

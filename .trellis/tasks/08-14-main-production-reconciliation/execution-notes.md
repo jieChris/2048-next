@@ -15,6 +15,26 @@
 - 已在隔离分支 `reconcile/main-production-20260814` 创建 history-only merge `04eefc28`，父提交分别为生产基线 `796e4d9b` 和旧 `main` `3087dc37`。
 - 已验证该 merge 的文件树与生产基线完全一致（`git diff --quiet 796e4d9b 04eefc28` 返回 0），未把旧 `main` 的文件覆盖到生产树。
 
+## 事故恢复（2026-08-15）
+
+- PR #224 已以 `830f2469` 合入 `main`，Actions run `31866665064` 部署成功；站点 upstream 恢复为 `2048-game-api:3001`，部署容器强制加入 `edge-migrate-net`，并保留 `client_max_body_size 10m`。
+- 部署探针已覆盖站点 `/health` 和匿名 Admin 门禁；内置浏览器确认匿名访问 Admin 返回项目 404，不再出现 500/503。后端代码和数据库均未修改。
+- PR #223 删除的 9 个业务分支已按原提交恢复；独立 Android 分支继续保留，错误整合分支 `reconcile/main-production-20260814` 未恢复。
+
+## 主线重建（2026-08-15）
+
+- 在隔离分支 `repair/main-after-pr223-20260815` 以 `91618b2a` 反向撤销 PR #223，先恢复 PR 前主线文件树。
+- 按原提交恢复色板发光、排行榜 hook 初始化和八方向练习板 Z 键修复。
+- 恢复回放计时完整性及其后续修正：删除重复恢复回退、约束 checkpoint pending 范围、修复新局出数序列版本推进并同步相关合同测试。
+- `c63c1c74`、`aa0d937d`、`9f837020`、`b73cab95` 未重复挑选：当前主线分别已有更完整的存储边界、CSS/通用测试、恢复等待和 sudo 部署实现。
+- 回放计时冲突采用语义并集：只有同步 `rankCheckpointReplayExecuting` 动作可以穿过恢复门禁，同时保留 restart 后恢复态、回放前缀、失败回滚、持续时间校验和禁止中间提交的回归测试。
+
+## 主线重建验证
+
+- 仅运行本次恢复提交直接覆盖的 20 个单元测试文件：331 项全部通过。
+- `git diff --check` 通过。
+- 本地未启动独立 Playwright；页面 Smoke 交由 PR CI，部署后只使用 Codex 内置浏览器验收生产链路。
+
 ## 分支处置清单
 
 - PR 已合并、可在生产代码进入 `main` 后删除：`agent/sustainable-undo-spawn-20260810`、`release/pending-web-updates-20260803`、`codex/baidu-site-verification-20260803`、`codex/search-discovery-seo-20260803`。

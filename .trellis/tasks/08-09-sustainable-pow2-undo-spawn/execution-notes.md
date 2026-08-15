@@ -2,6 +2,8 @@
 
 ## Route Deviation
 
+- API 仓库快进到目标 SHA 后，`ops` 用户又因无法读取 root-only 的 `deploy/.env.self-hosted` 而未能重建容器，线上容器仍保持旧版本。未改权限，改由非交互 sudo 执行带精确 `APP_VERSION` 的原 Compose 重建命令，随后健康检查确认目标 SHA 已上线。
+- 生产 API 首次部署以 `ops` 用户执行 `git fetch` 时，因服务器仓库 `.git` 归属 `root:root` 而被拒绝；容器未重建，线上版本未变化。采取保守路径：不改目录权限，核对仓库状态、属主与非交互 sudo 后，仅以 sudo 部署已合并且精确校验过的 API SHA。
 - 原计划同时修改 Android 核心；勘察后发现 `2048-next-android/design-suite/docs/APP_MIGRATION_PLAYBOOK.zh-CN.md` 明确禁止直接修改 `shared-source.json` 管理的 `src/core/rules.ts`，要求先停下等待用户对共享源同步作单独裁决。采取保守路径：本轮先完成 Web 与服务端权威校验，Android 保持不动。
 - 当前 Web 仓库没有 Trellis `get_context.py` 辅助脚本；改为直接读取任务文档及 `.trellis/spec/` 中的跨仓库与 API 边界规范，再运行仓库自身检查。
 

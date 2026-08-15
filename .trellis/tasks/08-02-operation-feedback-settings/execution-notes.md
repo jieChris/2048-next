@@ -2,8 +2,8 @@
 
 ## Route Deviation
 
-- 2026-08-11：首次手动部署 run `31410044148` 在 `Verify release` 的 service-boundary audit 阶段发现操作反馈模块仍直接访问 `localStorage`，阻断了发布。保守复用既有 `bootstrap/storage` 安全读写边界，并仅补充删除辅助函数与对应单测；未绕过门禁或修改审计规则。
-- 2026-08-11：修复存储边界后的部署 run `31410575070` 继续被两个既有过期单测阻断：主页面 CSS 缓存键和本地成就样式导入 query 未随已合入版本同步。仅更新单测到当前页面缓存键并移除本地 `@import` query，保留现有资源加载契约；未放宽发布门禁。
+- 2026-08-03：HTTPS 推送在 HTTP/2、HTTP/1.1 及固定 Content-Length 上传下均于 sideband 返回阶段断连，远端分支未创建；对象审计确认实际 pack 约 22.2 MiB、最大 blob 约 332 KiB，不属于 GitHub 容量限制。保守改用已验证为同一 `jieChris` 账号的一次性 SSH URL 推送，并在完成后核对远端分支 SHA；不修改仓库 remote、不拆分提交、不删除视觉基线。
+- 2026-08-03：多个诊断 Agent 曾同时运行 Playwright Runner，并共享默认 `test-results` 目录，导致一个业务断言已通过的结构化回放用例在关闭页面时因 trace 文件竞争报 `ENOENT`。保守停止其他 Runner，改用单 worker、隔离端口独占重跑完整 Pages Smoke；未放宽断言、增加重试或修改产品行为。
 - 2026-08-03：本地页面最初只有 Vite，排位 4×4 因 API 不可用而保持空棋盘。短暂启动仓库现有线上 API 代理并仅执行健康检查后，发现其不符合“本地测试不向线上提交”的项目约束，立即停止且未用页面请求线上会话；保守切换为 `/tmp` 隔离 PostgreSQL、本地迁移和仅进程内随机密钥的 `dev:local`。内置浏览器确认本地页面已生成 2 枚起始棋子，未修改线上数据。
 - 2026-08-03：发布时当前工作分支与远端 `main` 已明显分叉，直接推送会覆盖或回退已经上线的改动。用户明确选择发布工作区全部待提交内容后，保守改为先生成完整快照提交，再仅将该快照提交移植到最新 `origin/main`，通过发布门禁后由 PR 合入 `main` 触发既有原子部署；不以旧分支直接覆盖生产。
 - 2026-08-02：标准 Trellis 前置脚本 `.trellis/scripts/get_context.py` 与共享指南索引不存在。保守回退为读取根规范、冒烟规范和实际设置模块；仅实施操作反馈设置调试页，不改游戏逻辑、视频或 CapCut 内容。
@@ -13,6 +13,12 @@
 
 ## Validation
 
+- 设置弹窗规范化改为保留现有胜利、BGM、夜间模式核心节点，只增量补入操作反馈行和完整设置入口，避免 `innerHTML` 重建销毁既有事件监听；节点 identity 回归与 BGM／夜间模式目标 Smoke 均通过。
+- 排位相关 Smoke 统一复用 `waitForRankedMoveReady()`，在直接移动前同时等待 `rankedSetupBlockedUntilSessionReady`、`rankCheckpointRestorePending`、`rankCheckpointApplying` 与 `needsRankedCheckpointRestore` 清零；覆盖存档恢复、回放和无撤回防篡改场景，不使用固定延时。
+- 独占运行 `PW_WEB_PORT=4195 npm run test:smoke:pages`，最终 232/232 通过；此前 trace 产物竞争未再出现。
+- `npm run test:visual -- --reporter=dot` 首次为 407/408：唯一差异是 320×568 夜间设置弹窗的旧基线仍显示夜间模式关闭，而 fixture、DOM 和夜间运行时均明确为开启；连续 3 次定向复现后仅更新该 PNG 并同步 manifest 理由，普通比较最终 408/408 通过。
+- 发布工作树将操作反馈设置与草稿页的直接 `localStorage` 访问统一迁移到既有 `src/storage/browser-storage.ts` 边界；`npm run audit:service-boundary` 报告 459 个文件、0 个违规，相关 53 项定向单测通过。
+- 发布门禁暴露排位盘面恢复期间过早调用 `move()` 的 Smoke 竞态；测试改为等待真实恢复标记清零，不增加固定延时或重试。最终 `npm run verify:release` 通过：1933/1933 单测、41/41 关键 Smoke、全部架构审计、构建与发布就绪检查均通过。
 - `npx tsc --noEmit`、目标 Vitest（14 项）和 `git diff --check` 通过。
 - `npm run build` 通过。
 - 使用内置浏览器确认桌面设置入口、完整静态 4×4 参考页与窄屏隐藏；未启动或占用 Chrome。

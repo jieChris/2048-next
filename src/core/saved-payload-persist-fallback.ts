@@ -8,7 +8,7 @@ export interface SavedPayloadPersistFallbackInput {
 
 export interface SavedPayloadPersistFallbackOperations {
   persistPayload: (manager: unknown, key: string, payload: unknown) => boolean;
-  clearSavedState: (manager: unknown, modeKey: unknown) => void;
+  removePayload: (manager: unknown, key: string) => void;
 }
 
 export interface SavedPayloadPersistFallbackResult {
@@ -32,30 +32,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function resolveModeKey(manager: unknown): unknown {
-  return isRecord(manager) ? manager.modeKey : undefined;
-}
-
 export function persistSavedPayloadWithLiteFallback(
   input: SavedPayloadPersistFallbackInput,
   operations: SavedPayloadPersistFallbackOperations
 ): SavedPayloadPersistFallbackResult {
   const hasFullPayload = isRecord(input.fullPayload);
-  let persisted = false;
-  let persistedFull = false;
   if (hasFullPayload) {
-    persistedFull = operations.persistPayload(input.manager, input.key, input.fullPayload);
-    persisted = persistedFull || operations.persistPayload(input.manager, input.key, input.litePayload);
+    const persistedFull = operations.persistPayload(input.manager, input.key, input.fullPayload);
+    if (persistedFull) {
+      operations.removePayload(input.manager, input.liteKey);
+      return { persisted: true, persistedFull: true };
+    }
   }
-  let litePersisted = operations.persistPayload(input.manager, input.liteKey, input.litePayload);
-  if (!(persisted || litePersisted)) {
-    operations.clearSavedState(input.manager, resolveModeKey(input.manager));
-    if (hasFullPayload) persisted = operations.persistPayload(input.manager, input.key, input.litePayload);
-    litePersisted = operations.persistPayload(input.manager, input.liteKey, input.litePayload);
-  }
+
+  const litePersisted = operations.persistPayload(input.manager, input.liteKey, input.litePayload);
   return {
-    persisted: !!(persisted || litePersisted),
-    persistedFull: !!persistedFull
+    persisted: !!litePersisted,
+    persistedFull: false
   };
 }
 

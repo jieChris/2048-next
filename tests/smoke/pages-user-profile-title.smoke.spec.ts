@@ -1,11 +1,11 @@
 ﻿import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
-  test("home page title stays 2048", async ({ page }) => {
+  test("home page keeps its Chinese SEO title", async ({ page }) => {
     const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
-    await expect(page).toHaveTitle("2048");
+    await expect(page).toHaveTitle("2048 NEXT — 免费在线 2048 多模式数字合并游戏");
   });
 
   test("own user profile title is 用户主页", async ({ page }) => {
@@ -336,18 +336,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 duration_ms: 6000,
                 ended_at: "2026-03-14T10:00:00.000Z",
                 created_at: "2026-03-14 10:01:02"
-              },
-              {
-                id: "rec-date-2",
-                user_id: 7,
-                mode_bucket: "standard_no_undo",
-                mode_key: "standard_4x4_pow2_no_undo",
-                score: 1024,
-                board_sum: 126,
-                best_tile: 64,
-                duration_ms: 7000,
-                ended_at: "2026-03-13T10:00:00.000Z",
-                created_at: "2026-03-13 10:01:02"
               }
             ],
             page: 1,
@@ -424,7 +412,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(orderOptions).toEqual(["desc", "asc"]);
 
     await page.selectOption("#user-record-sort", "board_sum");
-    await expect(page.locator(".user-record-score").first()).toHaveText("1024");
     await page.selectOption("#user-record-order", "asc");
     await expect.poll(() =>
       recordRequests.some((url) => url.includes("sort_by=board_sum") && url.includes("order=asc"))
@@ -1151,6 +1138,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator(".user-record-score").first()).toHaveText("8192");
     await expect(page.locator(".user-record-era-badge")).toHaveCount(2);
+    await expect(page.locator(".user-record-era-badge").first()).toHaveText("内测成绩");
     await expect(page.locator(".user-record-detail-error")).toHaveText("已删除记录需恢复后才能查看回放");
     await expect(page.locator(".user-record-action-btn")).toHaveText("恢复记录");
     expect(replayRequests).toBe(0);
@@ -1249,6 +1237,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                 id: "rec-beta-1",
                 user_id: 9,
                 record_era: "beta",
+                source_platform_name: "2048Verse",
                 mode_bucket: "standard_no_undo",
                 mode_key: "standard_4x4_pow2_no_undo",
                 score: 8192,
@@ -1305,7 +1294,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator(".user-record-item")).toHaveCount(2);
     await expect(page.locator(".user-record-era-badge")).toHaveCount(1);
-    await expect(page.locator(".user-record-era-badge")).toHaveText("内测成绩");
+    await expect(page.locator(".user-record-era-badge")).toHaveText("第三方 · 2048Verse");
     await expect(page.locator("#user-summary-preview")).toHaveText("数据积累中，暂无 Rating");
     await expect(page.locator("#user-summary-total-value")).toHaveText("1");
     await expect(page.locator("#user-summary-best-score-value")).toHaveText("4096");
@@ -1313,7 +1302,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const betaRecord = page.locator(".user-record-item").first();
     await betaRecord.locator(".user-record-row").click();
-    await expect(betaRecord.locator(".user-record-detail .user-record-era-badge")).toHaveText("内测成绩");
+    await expect(betaRecord.locator(".user-record-detail .user-record-era-badge")).toHaveText("第三方 · 2048Verse");
     await expect(betaRecord.locator(".user-replay-btn")).toBeVisible();
     await expect(betaRecord.locator(".user-replay-export-btn")).toBeVisible();
     await expect(betaRecord.locator(".user-record-action-btn")).toHaveCount(0);

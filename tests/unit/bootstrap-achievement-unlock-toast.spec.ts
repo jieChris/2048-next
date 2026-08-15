@@ -1,7 +1,10 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 
-import { installAchievementUnlockToastRuntime } from "../../src/bootstrap/achievement-unlock-toast";
+import {
+  installAchievementUnlockToastRuntime,
+  persistPendingAchievementUnlocks
+} from "../../src/bootstrap/achievement-unlock-toast";
 
 describe("achievement unlock toast runtime", () => {
   it("labels hidden manual-grant achievements as hidden achievements", () => {
@@ -47,6 +50,7 @@ describe("achievement unlock toast runtime", () => {
       "<!doctype html><html lang=\"zh-CN\"><body><div class=\"game-container\"></div></body></html>",
       { url: "https://2048next.test/2048.html" }
     );
+    const timers = vi.fn(() => 1);
     const runtime = installAchievementUnlockToastRuntime({
       documentLike: dom.window.document as never,
       windowLike: {
@@ -55,7 +59,7 @@ describe("achievement unlock toast runtime", () => {
           handler();
           return 1;
         },
-        setTimeout: vi.fn(() => 1),
+        setTimeout: timers,
         clearTimeout: vi.fn()
       } as never
     });
@@ -68,5 +72,39 @@ describe("achievement unlock toast runtime", () => {
 
     expect(dom.window.document.body.innerHTML).toContain("第 100 次 2048");
     expect(dom.window.document.body.innerHTML).not.toContain("第 10 次 2048");
+    (timers.mock.calls.at(-1)?.[0] as (() => void) | undefined)?.();
+  });
+
+  it("consumes a pending beta pioneer login unlock as an achievement toast", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html lang=\"zh-CN\"><body><div class=\"game-container\"></div></body></html>",
+      { url: "https://2048next.test/2048.html" }
+    );
+    persistPendingAchievementUnlocks([{
+      achievement: {
+        id: "beta_pioneer",
+        name: "内测先锋",
+        description: "感谢你参与内测。",
+        series_id: "community-beta",
+        rules: []
+      }
+    }], dom.window.localStorage);
+
+    installAchievementUnlockToastRuntime({
+      documentLike: dom.window.document as never,
+      windowLike: {
+        localStorage: dom.window.localStorage,
+        requestAnimationFrame(handler: () => void) {
+          handler();
+          return 1;
+        },
+        setTimeout: vi.fn(() => 1),
+        clearTimeout: vi.fn()
+      } as never
+    });
+
+    expect(dom.window.document.body.innerHTML).toContain("成就达成");
+    expect(dom.window.document.body.innerHTML).toContain("内测先锋");
+    expect(dom.window.localStorage.getItem("2048_pending_login_achievements_v1")).toBeNull();
   });
 });

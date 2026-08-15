@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
-import { waitForWindowCondition } from "./support/runtime-ready";
+import { waitForRankedMoveReady } from "./support/runtime-ready";
 
 test.describe("Play Anti-Cheat Smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe("Play Anti-Cheat Smoke", () => {
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForWindowCondition(page, () => Boolean((window as any).game_manager), 12_000);
+    await waitForRankedMoveReady(page);
 
     const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;

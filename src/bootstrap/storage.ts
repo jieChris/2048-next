@@ -5,7 +5,6 @@ interface WindowLike {
 interface StorageLike {
   getItem?(key: string): string | null;
   setItem?(key: string, value: string): void;
-  removeItem?(key: string): void;
 }
 
 export interface ResolveStorageByNameOptions {
@@ -20,11 +19,6 @@ export interface SafeSetStorageItemOptions {
 }
 
 export interface SafeReadStorageItemOptions {
-  storageLike?: StorageLike | null | undefined;
-  key?: string | null | undefined;
-}
-
-export interface SafeRemoveStorageItemOptions {
   storageLike?: StorageLike | null | undefined;
   key?: string | null | undefined;
 }
@@ -68,18 +62,5 @@ export function safeReadStorageItem(options: SafeReadStorageItemOptions): string
     return storage.getItem(key);
   } catch (_err) {
     return null;
-  }
-}
-
-export function safeRemoveStorageItem(options: SafeRemoveStorageItemOptions): boolean {
-  const opts = options || {};
-  const storage = opts.storageLike || null;
-  const key = typeof opts.key === "string" ? opts.key : "";
-  if (!storage || !key || typeof storage.removeItem !== "function") return false;
-  try {
-    storage.removeItem(key);
-    return true;
-  } catch (_err) {
-    return false;
   }
 }

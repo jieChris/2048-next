@@ -10,6 +10,7 @@ type MoveAttempt = {
 };
 
 type MoveInputRuntime = {
+  addRandomTile: (manager: Record<string, unknown>) => void;
   executeImmediateMoveInput: (
     manager: Record<string, unknown>,
     attempt: MoveAttempt,
@@ -41,6 +42,17 @@ function loadMoveInputRuntime(options: {
     String,
     Array,
     Object,
+    Tile: class Tile {
+      x: number;
+      y: number;
+      value: number;
+
+      constructor(position: { x: number; y: number }, value: number) {
+        this.x = position.x;
+        this.y = position.y;
+        this.value = value;
+      }
+    },
     setTimeout: (callback: () => void) => {
       delayedCallbacks.push(callback);
       return delayedCallbacks.length;
@@ -290,6 +302,58 @@ describe("core game manager move input runtime", () => {
     const undo = loadMoveInputRuntime({ undoResult: { handled: true, valid: true } });
     expect(undo.runtime.move(manager, -1)).toBe(true);
     expect(undo.executeUndoMove).toHaveBeenCalledWith(manager, -1, expect.any(Object));
+  });
+
+  it("allows internal checkpoint moves while still dropping user input", () => {
+    const { runtime, context, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
+    context.buildMovePlan = vi.fn(() => ({ vector: { x: 0, y: -1 } }));
+    context.buildTraversals = vi.fn(() => ({ x: [], y: [] }));
+    context.resetGridMergeStateBeforeMove = vi.fn();
+    context.processMoveTraversals = vi.fn(() => true);
+    context.finalizeSuccessfulMove = vi.fn();
+    context.resolveLockedDirection = vi.fn(() => null);
+    const userMove = vi.fn(() => true);
+    const manager = {
+      disableSessionSync: true,
+      rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: true,
+      rankedSetupBlockedUntilSessionReady: false,
+      noXSelectionPending: false,
+      pendingMoveInput: null,
+      move: userMove,
+      isDirectionAllowed: vi.fn(() => true)
+    };
+
+    expect(runtime.move(manager, 0)).toBe(true);
+    runtime.handleMoveInput(manager, createAttempt("blocked-user-input"));
+
+    expect(userMove).not.toHaveBeenCalled();
+    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
+  });
+
+  it("consumes and records the checkpoint spawn while rebuilding a live game", () => {
+    const { runtime, context } = loadMoveInputRuntime();
+    const insertTile = vi.fn();
+    context.recordSpawnValue = vi.fn();
+    const manager = {
+      replayMode: false,
+      rankCheckpointApplying: true,
+      rankCheckpointReplayExecuting: true,
+      rankPolicy: "ranked",
+      forcedSpawn: { x: 2, y: 3, value: 4 },
+      lastSpawn: null as { x: number; y: number; value: number } | null,
+      grid: {
+        cellAvailable: vi.fn(() => true),
+        insertTile
+      },
+      isBlockedCell: vi.fn(() => false)
+    };
+
+    runtime.addRandomTile(manager);
+
+    expect(insertTile).toHaveBeenCalledWith(expect.objectContaining({ x: 2, y: 3, value: 4 }));
+    expect(manager.lastSpawn).toEqual({ x: 2, y: 3, value: 4 });
+    expect(manager.forcedSpawn).toBeNull();
   });
 
   it("allows only the synchronous checkpoint replay action through the restore guard", () => {

@@ -1,7 +1,7 @@
 import { createAdminApi, adminQuery, type AdminApiResponse, type AdminRecord } from "../services/admin";
 import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
 
-type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "governance" | "audit" | "tools";
+type ViewName = "dashboard" | "users" | "records" | "imports" | "external-import" | "achievements" | "rescue" | "governance" | "audit" | "tools";
 type Language = "zh" | "en";
 
 const ADMIN_DENIED_REDIRECT = "/404.html";
@@ -15,6 +15,8 @@ const copy: Record<Language, Record<string, string>> = {
     dashboard: "仪表盘",
     users: "用户中心",
     records: "游戏记录",
+    imports: "成绩补录",
+    externalImport: "第三方记录导入",
     achievements: "成就管理",
     rescue: "恢复单",
     governance: "管理员与权限",
@@ -95,6 +97,43 @@ const copy: Record<Language, Record<string, string>> = {
     reasonRequired: "请填写操作原因",
     importRecord: "补录对局",
     importTitle: "为用户补录正式对局",
+    importWorkspaceHint: "为未正常上传的完整终局回放补录正式成绩。",
+    importReplayOnly: "只接受可验证的完整终局回放，不允许手工填写或覆盖成绩。",
+    importStepTarget: "指定目标用户",
+    importStepTargetHint: "填写用户 ID；从用户详情进入时会自动带入。",
+    importStepPreview: "上传并预校验",
+    importStepPreviewHint: "提交回放与必填原因，由服务端计算成绩并检查重复。",
+    importStepConfirm: "核对并确认写入",
+    importStepConfirmHint: "确认后写入 official_v1，参与排行榜重算与成就评估。",
+    externalImportHint: "批量导入已适配平台的完整回放，仅进入玩家历史，不参与排行榜、Rating 或正式成绩统计。",
+    externalImportNonCompetitive: "第三方记录只保存在玩家历史中，不计入排行榜、Rating、正式统计或正式成绩成就。",
+    externalImportFile: "回放文件或 ZIP",
+    externalImportFileHint: "支持 2048Verse、新 VRS、Next 原生 RPL1，以及包含这些文件的 ZIP。",
+    externalImportReasonHint: "请填写 1 至 500 字的导入原因，正式导入会写入审计日志。",
+    externalPreview: "预览导入",
+    externalCommit: "确认导入",
+    externalPreviewResult: "导入预览",
+    externalCommitResult: "导入结果",
+    externalConfirmHint: "提交时服务端会重新解析、验证并去重；只有本次仍有效且未重复的记录会写入。",
+    externalInputRequired: "请选择目标用户和文件，并填写导入原因",
+    externalPreviewStale: "目标用户或文件已变化，请重新预览",
+    externalPreviewEmpty: "选择文件后先执行预览，服务端会自动识别平台并逐项校验。",
+    externalImported: "第三方记录导入完成：写入 {inserted} 条，跳过重复 {duplicates} 条，拒绝 {rejected} 条。",
+    externalAuditWarning: "记录已导入，但批次汇总审计写入失败；逐条审计仍保留，请联系维护人员检查。",
+    totalFiles: "记录总数",
+    validFiles: "验证有效",
+    wouldInsert: "可导入",
+    inserted: "已导入",
+    duplicateFiles: "重复跳过",
+    rejectedFiles: "拒绝",
+    fileName: "文件",
+    platform: "平台",
+    result: "结果",
+    would_insert: "可导入",
+    skipped_duplicate: "重复跳过",
+    thirdPartyPlatform: "第三方 · {platform}",
+    unknownPlatform: "未识别",
+    prefilledUser: "已预填用户 #{id}",
     targetUserId: "目标用户 ID",
     replayFile: "回放文件",
     replayText: "或粘贴回放字符串",
@@ -194,6 +233,8 @@ const copy: Record<Language, Record<string, string>> = {
     dashboard: "Dashboard",
     users: "Users",
     records: "Game Records",
+    imports: "Record Import",
+    externalImport: "Third-party Import",
     achievements: "Achievements",
     rescue: "Rescue Offers",
     governance: "Admins & Access",
@@ -274,6 +315,43 @@ const copy: Record<Language, Record<string, string>> = {
     reasonRequired: "A reason is required",
     importRecord: "Import Record",
     importTitle: "Import an Official Game Record",
+    importWorkspaceHint: "Restore an official result from a complete terminal replay that failed to upload.",
+    importReplayOnly: "Only verifiable complete terminal replays are accepted. Scores cannot be entered or overridden manually.",
+    importStepTarget: "Choose the user",
+    importStepTargetHint: "Enter a user ID. Links from a user profile carry it automatically.",
+    importStepPreview: "Upload and dry-run",
+    importStepPreviewHint: "Submit the replay and required reason so the server can calculate and deduplicate it.",
+    importStepConfirm: "Review and confirm",
+    importStepConfirmHint: "Confirmation writes official_v1, rebuilds rankings, and evaluates achievements.",
+    externalImportHint: "Import complete replays from supported platforms into player history without affecting rankings, Rating, or official statistics.",
+    externalImportNonCompetitive: "Third-party records stay in player history and never affect rankings, Rating, official statistics, or official-result achievements.",
+    externalImportFile: "Replay File or ZIP",
+    externalImportFileHint: "Supports 2048Verse, new VRS, native Next RPL1, and ZIP archives containing those files.",
+    externalImportReasonHint: "Enter a 1–500 character reason. Committed imports are written to the audit log.",
+    externalPreview: "Preview Import",
+    externalCommit: "Confirm Import",
+    externalPreviewResult: "Import Preview",
+    externalCommitResult: "Import Result",
+    externalConfirmHint: "The server parses, verifies, and deduplicates the upload again. Only records that remain valid and unique are written.",
+    externalInputRequired: "Choose a target user and file, then enter an import reason",
+    externalPreviewStale: "The target user or file changed. Preview the upload again.",
+    externalPreviewEmpty: "Select a file and preview it. The server identifies each platform and validates every entry.",
+    externalImported: "Third-party import complete: {inserted} inserted, {duplicates} duplicates skipped, {rejected} rejected.",
+    externalAuditWarning: "Records were imported, but the batch audit summary failed. Per-record audits remain; contact an operator.",
+    totalFiles: "Records",
+    validFiles: "Valid",
+    wouldInsert: "Would Insert",
+    inserted: "Inserted",
+    duplicateFiles: "Duplicates",
+    rejectedFiles: "Rejected",
+    fileName: "File",
+    platform: "Platform",
+    result: "Result",
+    would_insert: "Would Insert",
+    skipped_duplicate: "Duplicate",
+    thirdPartyPlatform: "Third-party · {platform}",
+    unknownPlatform: "Unrecognized",
+    prefilledUser: "User #{id} prefilled",
     targetUserId: "Target User ID",
     replayFile: "Replay File",
     replayText: "Or paste replay string",
@@ -371,7 +449,7 @@ const copy: Record<Language, Record<string, string>> = {
 
 const navigation: Array<{ group: string; items: Array<{ view: ViewName; label: string; icon: string }> }> = [
   { group: "overview", items: [{ view: "dashboard", label: "dashboard", icon: "▦" }] },
-  { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }] },
+  { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }, { view: "imports", label: "imports", icon: "↥" }, { view: "external-import", label: "externalImport", icon: "⇪" }] },
   { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }] },
   { group: "governanceGroup", items: [{ view: "governance", label: "governance", icon: "♜" }, { view: "audit", label: "audit", icon: "≡" }] },
   { group: "system", items: [{ view: "tools", label: "tools", icon: "⌘" }] }
@@ -466,6 +544,12 @@ function roleLabel(value: unknown): string {
 
 function badge(label: string, tone = "secondary"): string {
   return `<span class="badge bg-${tone}-lt text-${tone}">${escapeHtml(label)}</span>`;
+}
+
+function recordSource(item: AdminRecord): string {
+  const platform = text(item.source_platform_name).trim();
+  if (platform) return badge(t("thirdPartyPlatform", { platform }), "azure");
+  return item.source === "admin" ? badge(t("adminImport"), "orange") : escapeHtml(item.source || "—");
 }
 
 function pageHeader(title: string, subtitle = "", actions = ""): string {
@@ -674,11 +758,12 @@ async function renderUserDetail(userId: string): Promise<void> {
   }
   const isSelf = number(user.id) === number(adminIdentity.user_id);
   const protectedUser = number(user.id) === 0 || text(user.role) === "super_admin";
-  byId("admin-content").innerHTML = pageHeader(text(user.nickname || user.display_name || user.email), `${text(user.email)} · #${text(user.id)}`, `<button class="btn" data-edit-profile>${escapeHtml(t("editProfile"))}</button><button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button><div class="dropdown"><button class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" ${isSelf || number(user.id) === 0 ? "disabled" : ""}>${escapeHtml(t("actions"))}</button><div class="dropdown-menu dropdown-menu-end"><button class="dropdown-item" data-status ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeStatus"))}</button><button class="dropdown-item" data-role ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeRole"))}</button><button class="dropdown-item" data-revoke-sessions>${escapeHtml(t("revokeSessions"))}</button><button class="dropdown-item" data-password-reset>${escapeHtml(t("passwordReset"))}</button></div></div>`) +
+  byId("admin-content").innerHTML = pageHeader(text(user.nickname || user.display_name || user.email), `${text(user.email)} · #${text(user.id)}`, `<button class="btn" data-edit-profile>${escapeHtml(t("editProfile"))}</button><button class="btn" data-external-import>${escapeHtml(t("externalImport"))}</button><button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button><div class="dropdown"><button class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" ${isSelf || number(user.id) === 0 ? "disabled" : ""}>${escapeHtml(t("actions"))}</button><div class="dropdown-menu dropdown-menu-end"><button class="dropdown-item" data-status ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeStatus"))}</button><button class="dropdown-item" data-role ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeRole"))}</button><button class="dropdown-item" data-revoke-sessions>${escapeHtml(t("revokeSessions"))}</button><button class="dropdown-item" data-password-reset>${escapeHtml(t("passwordReset"))}</button></div></div>`) +
     `<section class="card admin-user-hero"><div class="card-body"><span class="avatar avatar-xl">${escapeHtml(text(user.nickname || user.email).slice(0, 1).toUpperCase())}</span><div><h2>${escapeHtml(user.nickname || user.display_name || user.email)}</h2><p>${escapeHtml(user.email)} · #${escapeHtml(user.id)}</p><div class="d-flex gap-2">${badge(roleLabel(user.role), user.role === "super_admin" ? "purple" : "azure")}${badge(user.is_active === false ? t("inactive") : t("active"), user.is_active === false ? "red" : "green")}</div></div></div></section>` +
     `<div class="admin-tabs" role="tablist">${[["overview", t("overview")], ["records", t("records")], ["achievements", `${t("achievements")} / ${t("rescue")}`], ["activity", t("activity")]].map(([key, label]) => `<button class="${section === key ? "is-active" : ""}" data-section="${key}">${escapeHtml(label)}</button>`).join("")}</div><div class="admin-section-body">${sectionBody}</div>`;
   byId("admin-content").querySelectorAll<HTMLElement>("[data-section]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: userId, section: node.dataset.section })));
   byId("admin-content").querySelector("[data-edit-profile]")?.addEventListener("click", () => editProfile(user));
+  byId("admin-content").querySelector("[data-external-import]")?.addEventListener("click", () => navigate("external-import", { user_id: userId }));
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(userId));
   byId("admin-content").querySelector("[data-status]")?.addEventListener("click", () => changeUserStatus(user));
   byId("admin-content").querySelector("[data-role]")?.addEventListener("click", () => changeUserRole(user));
@@ -718,7 +803,7 @@ function sendPasswordReset(user: AdminRecord): void {
 }
 
 function recordsTable(list: AdminRecord[]): string {
-  return table([t("recordId"), t("user"), t("mode"), t("score"), t("bestTile"), t("duration"), t("source"), t("status"), t("endedAt"), t("actions")], list.map((item) => `<tr><td><code>${escapeHtml(item.id)}</code>${item.is_leaderboard_best ? `<small>${escapeHtml(t("leaderboardBest"))}</small>` : ""}</td><td><button class="admin-link" data-record-user="${escapeHtml(item.user_id)}">${escapeHtml(item.user_name || `#${item.user_id}`)}</button><small>${escapeHtml(item.email)}</small></td><td><code>${escapeHtml(item.mode_key)}</code></td><td>${number(item.score).toLocaleString()}</td><td>${number(item.best_tile).toLocaleString()}</td><td>${escapeHtml(formatDuration(item.duration_ms))}</td><td>${item.source === "admin" ? badge(t("adminImport"), "orange") : escapeHtml(item.source)}</td><td>${badge(statusLabel(item.status), item.status === "hidden" ? "red" : "green")}</td><td>${escapeHtml(formatDate(item.ended_at))}</td><td><div class="btn-list flex-nowrap"><button class="btn btn-sm" data-record-details="${escapeHtml(item.id)}">${escapeHtml(t("details"))}</button>${item.status === "hidden" ? `<button class="btn btn-sm btn-success" data-record-restore="${escapeHtml(item.id)}">${escapeHtml(t("restoreRecord"))}</button>` : `<button class="btn btn-sm btn-outline-danger" data-record-hide="${escapeHtml(item.id)}">${escapeHtml(t("hideRecord"))}</button>`}<a class="btn btn-sm" href="/api/records/${encodeURIComponent(text(item.id))}/replay" target="_blank" rel="noopener">${escapeHtml(t("replay"))}</a></div><template data-record-json="${escapeHtml(item.id)}">${escapeHtml(prettyJson(item))}</template></td></tr>`).join(""));
+  return table([t("recordId"), t("user"), t("mode"), t("score"), t("bestTile"), t("duration"), t("source"), t("status"), t("endedAt"), t("actions")], list.map((item) => `<tr><td><code>${escapeHtml(item.id)}</code>${item.is_leaderboard_best ? `<small>${escapeHtml(t("leaderboardBest"))}</small>` : ""}</td><td><button class="admin-link" data-record-user="${escapeHtml(item.user_id)}">${escapeHtml(item.user_name || `#${item.user_id}`)}</button><small>${escapeHtml(item.email)}</small></td><td><code>${escapeHtml(item.mode_key)}</code></td><td>${number(item.score).toLocaleString()}</td><td>${number(item.best_tile).toLocaleString()}</td><td>${escapeHtml(formatDuration(item.duration_ms))}</td><td>${recordSource(item)}</td><td>${badge(statusLabel(item.status), item.status === "hidden" ? "red" : "green")}</td><td>${escapeHtml(formatDate(item.ended_at))}</td><td><div class="btn-list flex-nowrap"><button class="btn btn-sm" data-record-details="${escapeHtml(item.id)}">${escapeHtml(t("details"))}</button>${item.status === "hidden" ? `<button class="btn btn-sm btn-success" data-record-restore="${escapeHtml(item.id)}">${escapeHtml(t("restoreRecord"))}</button>` : `<button class="btn btn-sm btn-outline-danger" data-record-hide="${escapeHtml(item.id)}">${escapeHtml(t("hideRecord"))}</button>`}<a class="btn btn-sm" href="/api/records/${encodeURIComponent(text(item.id))}/replay" target="_blank" rel="noopener">${escapeHtml(t("replay"))}</a></div><template data-record-json="${escapeHtml(item.id)}">${escapeHtml(prettyJson(item))}</template></td></tr>`).join(""));
 }
 
 async function renderRecords(): Promise<void> {
@@ -731,6 +816,134 @@ async function renderRecords(): Promise<void> {
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(params.user_id));
   bindRecordActions();
   bindPagination();
+}
+
+function renderImports(): void {
+  const userId = currentUrl().searchParams.get("user_id") || "";
+  const steps: Array<[string, string]> = [
+    ["importStepTarget", "importStepTargetHint"],
+    ["importStepPreview", "importStepPreviewHint"],
+    ["importStepConfirm", "importStepConfirmHint"]
+  ];
+  byId("admin-content").innerHTML = pageHeader(t("imports"), t("importWorkspaceHint"), `<button class="btn" data-external-import>${escapeHtml(t("externalImport"))}</button><button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) +
+    `<section class="card admin-card"><div class="card-body"><div class="alert alert-info d-flex align-items-center justify-content-between gap-3 flex-wrap"><span>${escapeHtml(t("importReplayOnly"))}</span>${userId ? badge(t("prefilledUser", { id: userId }), "orange") : ""}</div><div class="row g-3">${steps.map(([title, hint], index) => `<div class="col-md-4"><div class="card card-sm h-100"><div class="card-body"><span class="badge bg-orange-lt text-orange mb-3">0${index + 1}</span><h2 class="h3">${escapeHtml(t(title))}</h2><p class="text-secondary mb-0">${escapeHtml(t(hint))}</p></div></div></div>`).join("")}</div></div></section>`;
+  byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(userId));
+  byId("admin-content").querySelector("[data-external-import]")?.addEventListener("click", () => navigate("external-import", { user_id: userId }));
+}
+
+function externalImportResult(data: AdminRecord, committed: boolean): string {
+  const items = rows(data.items);
+  const counts: Array<[string, unknown]> = [
+    ["totalFiles", data.total],
+    ["validFiles", data.valid],
+    [committed ? "inserted" : "wouldInsert", committed ? data.inserted : data.would_insert],
+    ["duplicateFiles", data.skipped_duplicates],
+    ["rejectedFiles", data.rejected]
+  ];
+  const body = items.map((item) => {
+    const platform = text(item.source_platform_name).trim();
+    const status = text(item.status).trim();
+    const tone = status === "rejected" ? "red" : status === "skipped_duplicate" ? "yellow" : "green";
+    const detail = item.error || item.reason || item.record_id || item.existing_record_id || "—";
+    return `<tr><td>${escapeHtml(number(item.index) + 1)}</td><td><strong>${escapeHtml(item.source_filename || "—")}</strong></td><td>${platform ? badge(t("thirdPartyPlatform", { platform }), "azure") : escapeHtml(t("unknownPlatform"))}</td><td><code>${escapeHtml(item.mode_key || "—")}</code></td><td>${number(item.score).toLocaleString()}</td><td>${badge(statusLabel(status), tone)}</td><td><code>${escapeHtml(detail)}</code></td></tr>`;
+  }).join("");
+  const auditWarning = committed && data.batch_audit_recorded === false ? `<div class="alert alert-danger">${escapeHtml(t("externalAuditWarning"))}</div>` : "";
+  return `<section class="card admin-card"><div class="card-header"><h2 class="card-title">${escapeHtml(t(committed ? "externalCommitResult" : "externalPreviewResult"))}</h2></div><div class="card-body">${auditWarning}<div class="admin-stat-list mb-3">${counts.map(([label, value]) => `<div><span>${escapeHtml(t(label))}</span><strong>${number(value).toLocaleString()}</strong></div>`).join("")}</div>${table(["#", t("fileName"), t("platform"), t("mode"), t("score"), t("status"), t("result")], body)}</div></section>`;
+}
+
+function renderExternalImport(): void {
+  const prefilledUserId = currentUrl().searchParams.get("user_id") || "";
+  byId("admin-content").innerHTML = pageHeader(t("externalImport"), t("externalImportHint")) +
+    `<section class="card admin-card"><div class="card-body"><div class="alert alert-warning">${escapeHtml(t("externalImportNonCompetitive"))}</div><form data-external-import-form><div class="row g-3"><div class="col-md-4"><label class="form-label" for="external-import-user">${escapeHtml(t("targetUserId"))}</label><input id="external-import-user" class="form-control" name="user_id" type="number" min="1" value="${escapeHtml(prefilledUserId)}" required></div><div class="col-md-8"><label class="form-label" for="external-import-file">${escapeHtml(t("externalImportFile"))}</label><input id="external-import-file" class="form-control" name="file" type="file" accept=".zip,.txt,.vrs,.rpl,.json,application/zip,text/plain,application/json" required><small class="form-hint">${escapeHtml(t("externalImportFileHint"))}</small></div><div class="col-12"><label class="form-label" for="external-import-reason">${escapeHtml(t("reason"))}</label><textarea id="external-import-reason" class="form-control" name="reason" rows="3" minlength="1" maxlength="500" required></textarea><small class="form-hint">${escapeHtml(t("externalImportReasonHint"))}</small></div></div><div class="mt-3 d-flex flex-wrap gap-2"><button class="btn btn-primary" type="submit" data-external-preview>${escapeHtml(t("externalPreview"))}</button><button class="btn" type="button" data-external-commit disabled>${escapeHtml(t("externalCommit"))}</button></div></form></div></section><div data-external-result aria-live="polite">${emptyState(t("externalPreviewEmpty"))}</div>`;
+
+  const root = byId("admin-content");
+  const form = root.querySelector<HTMLFormElement>("[data-external-import-form]");
+  const userInput = root.querySelector<HTMLInputElement>("#external-import-user");
+  const fileInput = root.querySelector<HTMLInputElement>("#external-import-file");
+  const reasonInput = root.querySelector<HTMLTextAreaElement>("#external-import-reason");
+  const previewButton = root.querySelector<HTMLButtonElement>("[data-external-preview]");
+  const commitButton = root.querySelector<HTMLButtonElement>("[data-external-commit]");
+  const resultHost = root.querySelector<HTMLElement>("[data-external-result]");
+  if (!form || !userInput || !fileInput || !reasonInput || !previewButton || !commitButton || !resultHost) return;
+
+  let previewFile: File | null = null;
+  let previewUserId = "";
+  let previewData: AdminRecord | null = null;
+  let requestVersion = 0;
+
+  const clearPreview = (): void => {
+    requestVersion += 1;
+    previewFile = null;
+    previewUserId = "";
+    previewData = null;
+    previewButton.disabled = false;
+    commitButton.disabled = true;
+    resultHost.innerHTML = emptyState(t("externalPreviewEmpty"));
+  };
+  const payloadFor = (file: File): FormData => {
+    const body = new FormData();
+    body.append("file", file, file.name);
+    body.append("reason", reasonInput.value.trim());
+    return body;
+  };
+
+  userInput.addEventListener("input", clearPreview);
+  fileInput.addEventListener("change", clearPreview);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = fileInput.files?.[0];
+    const userId = userInput.value.trim();
+    if (!form.reportValidity() || !file || !userId || !reasonInput.value.trim()) {
+      toast(t("externalInputRequired"), "error");
+      return;
+    }
+    const version = ++requestVersion;
+    previewButton.disabled = true;
+    commitButton.disabled = true;
+    resultHost.innerHTML = `<div class="p-4 text-center text-secondary"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${escapeHtml(t("loading"))}</div>`;
+    try {
+      const response = await request<AdminRecord>(`/admin/users/${encodeURIComponent(userId)}/third-party-record-import/preview`, { method: "POST", body: payloadFor(file) });
+      if (version !== requestVersion) return;
+      previewFile = file;
+      previewUserId = userId;
+      previewData = record(response.data);
+      resultHost.innerHTML = externalImportResult(previewData, false);
+      commitButton.disabled = number(previewData.would_insert) <= 0;
+    } catch (error) {
+      if (version === requestVersion) {
+        resultHost.innerHTML = emptyState(t("externalPreviewEmpty"));
+        toast(error instanceof Error ? error.message : String(error), "error");
+      }
+    } finally {
+      if (version === requestVersion) previewButton.disabled = false;
+    }
+  });
+
+  commitButton.addEventListener("click", () => {
+    const file = fileInput.files?.[0];
+    const userId = userInput.value.trim();
+    if (!form.reportValidity() || !file || !previewFile || file !== previewFile || userId !== previewUserId || !previewData) {
+      clearPreview();
+      toast(t("externalPreviewStale"), "error");
+      return;
+    }
+    const snapshot = previewData;
+    openDialog({
+      title: t("externalCommit"),
+      body: `<div class="alert alert-warning">${escapeHtml(t("externalConfirmHint"))}</div><dl class="admin-definition"><dt>${escapeHtml(t("targetUserId"))}</dt><dd><code>#${escapeHtml(userId)}</code></dd><dt>${escapeHtml(t("fileName"))}</dt><dd><code>${escapeHtml(file.name)}</code></dd><dt>${escapeHtml(t("wouldInsert"))}</dt><dd><code>${number(snapshot.would_insert).toLocaleString()}</code></dd><dt>${escapeHtml(t("rejectedFiles"))}</dt><dd><code>${number(snapshot.rejected).toLocaleString()}</code></dd></dl>`,
+      confirmLabel: t("externalCommit"),
+      onConfirm: async () => {
+        const response = await request<AdminRecord>(`/admin/users/${encodeURIComponent(userId)}/third-party-record-import/commit`, { method: "POST", body: payloadFor(file) });
+        const result = record(response.data);
+        previewFile = null;
+        previewUserId = "";
+        previewData = null;
+        commitButton.disabled = true;
+        resultHost.innerHTML = externalImportResult(result, true);
+        toast(result.batch_audit_recorded === false ? t("externalAuditWarning") : t("externalImported", { inserted: number(result.inserted), duplicates: number(result.skipped_duplicates), rejected: number(result.rejected) }), result.batch_audit_recorded === false ? "error" : "ok");
+      }
+    });
+  });
 }
 
 function bindRecordActions(): void {
@@ -752,7 +965,7 @@ function setRecordVisibility(recordId: string, hidden: boolean): void {
 function openImportDialog(fixedUserId = ""): void {
   openDialog({
     title: t("importTitle"),
-    body: `<div class="alert alert-info">${escapeHtml(t("officialImportHint"))}</div>${fixedUserId ? `<input id="dialog-import-user" type="hidden" value="${escapeHtml(fixedUserId)}">` : `<div class="mb-3"><label class="form-label">${escapeHtml(t("targetUserId"))}</label><input id="dialog-import-user" class="form-control" type="number" min="1"></div>`}<div class="mb-3"><label class="form-label">${escapeHtml(t("replayFile"))}</label><input id="dialog-import-file" class="form-control" type="file" accept=".txt,.rpl,text/plain"></div><div class="mb-3"><label class="form-label">${escapeHtml(t("replayText"))}</label><textarea id="dialog-import-replay" class="form-control admin-replay-input" rows="5"></textarea></div><div class="row g-3"><div class="col-md-6"><label class="form-label">${escapeHtml(t("modeOptional"))}</label><input id="dialog-import-mode" class="form-control"></div><div class="col-md-6"><label class="form-label">${escapeHtml(t("clientRecordId"))}</label><input id="dialog-import-client" class="form-control"></div></div><div class="mt-3"><label class="form-label">${escapeHtml(t("reason"))}</label><textarea id="dialog-import-reason" class="form-control" rows="3" required></textarea></div>`,
+    body: `<div class="alert alert-info">${escapeHtml(t("officialImportHint"))}</div>${fixedUserId ? `<input id="dialog-import-user" type="hidden" value="${escapeHtml(fixedUserId)}">` : `<div class="mb-3"><label class="form-label" for="dialog-import-user">${escapeHtml(t("targetUserId"))}</label><input id="dialog-import-user" class="form-control" type="number" min="1"></div>`}<div class="mb-3"><label class="form-label" for="dialog-import-file">${escapeHtml(t("replayFile"))}</label><input id="dialog-import-file" class="form-control" type="file" accept=".txt,.rpl,text/plain"></div><div class="mb-3"><label class="form-label" for="dialog-import-replay">${escapeHtml(t("replayText"))}</label><textarea id="dialog-import-replay" class="form-control admin-replay-input" rows="5"></textarea></div><div class="row g-3"><div class="col-md-6"><label class="form-label" for="dialog-import-mode">${escapeHtml(t("modeOptional"))}</label><input id="dialog-import-mode" class="form-control"></div><div class="col-md-6"><label class="form-label" for="dialog-import-client">${escapeHtml(t("clientRecordId"))}</label><input id="dialog-import-client" class="form-control"></div></div><div class="mt-3"><label class="form-label" for="dialog-import-reason">${escapeHtml(t("reason"))}</label><textarea id="dialog-import-reason" class="form-control" rows="3" required></textarea></div>`,
     confirmLabel: t("preview"),
     onConfirm: async () => {
       const userId = dialogValue("dialog-import-user");
@@ -905,6 +1118,8 @@ async function renderCurrentView(): Promise<void> {
       case "dashboard": await renderDashboard(); break;
       case "users": await renderUsers(); break;
       case "records": await renderRecords(); break;
+      case "imports": renderImports(); break;
+      case "external-import": renderExternalImport(); break;
       case "achievements": await renderAchievements(); break;
       case "rescue": await renderRescue(); break;
       case "governance": await renderGovernance(); break;

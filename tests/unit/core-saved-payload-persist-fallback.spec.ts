@@ -8,9 +8,9 @@ import {
 } from "../../src/core/saved-payload-persist-fallback";
 
 describe("core saved payload persist fallback", () => {
-  it("persists full first and always mirrors the lite payload", () => {
+  it("keeps only the full payload after a successful full write", () => {
     const persistPayload = vi.fn(() => true);
-    const clearSavedState = vi.fn();
+    const removePayload = vi.fn();
     const manager = { modeKey: "practice" };
     const fullPayload = { kind: "full" };
     const litePayload = { kind: "lite" };
@@ -18,39 +18,73 @@ describe("core saved payload persist fallback", () => {
     expect(
       persistSavedPayloadWithLiteFallback(
         { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
-        { persistPayload, clearSavedState }
+        { persistPayload, removePayload }
       )
     ).toEqual({ persisted: true, persistedFull: true });
 
-    expect(persistPayload).toHaveBeenNthCalledWith(1, manager, "full-key", fullPayload);
-    expect(persistPayload).toHaveBeenNthCalledWith(2, manager, "lite-key", litePayload);
-    expect(clearSavedState).not.toHaveBeenCalled();
+    expect(persistPayload).toHaveBeenCalledOnce();
+    expect(persistPayload).toHaveBeenCalledWith(manager, "full-key", fullPayload);
+    expect(removePayload).toHaveBeenCalledWith(manager, "lite-key");
   });
 
-  it("falls back to lite payload writes after full and lite writes fail", () => {
-    const persistPayload = vi.fn((_manager, key: string) => {
-      if (key === "full-key") return false;
-      return persistPayload.mock.calls.length >= 4;
-    });
-    const clearSavedState = vi.fn();
+  it("writes only the lite key when the full write fails", () => {
+    const persistPayload = vi.fn((_manager, key: string) => key === "lite-key");
+    const removePayload = vi.fn();
+    const manager = { modeKey: "standard" };
+    const fullPayload = { kind: "full" };
+    const litePayload = { kind: "lite" };
+
+    expect(
+      persistSavedPayloadWithLiteFallback(
+        { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
+        { persistPayload, removePayload }
+      )
+    ).toEqual({ persisted: true, persistedFull: false });
+
+    expect(persistPayload.mock.calls).toEqual([
+      [manager, "full-key", fullPayload],
+      [manager, "lite-key", litePayload]
+    ]);
+    expect(removePayload).not.toHaveBeenCalled();
+  });
+
+  it("preserves the existing full payload when all new writes fail", () => {
+    const persistPayload = vi.fn(() => false);
+    const removePayload = vi.fn();
+    const manager = { modeKey: "standard" };
+    const fullPayload = { kind: "full" };
+    const litePayload = { kind: "lite" };
+
+    expect(
+      persistSavedPayloadWithLiteFallback(
+        { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
+        { persistPayload, removePayload }
+      )
+    ).toEqual({ persisted: false, persistedFull: false });
+
+    expect(persistPayload.mock.calls).toEqual([
+      [manager, "full-key", fullPayload],
+      [manager, "lite-key", litePayload]
+    ]);
+    expect(removePayload).not.toHaveBeenCalled();
+  });
+
+  it("updates the lite payload when a throttled save has no full payload", () => {
+    const persistPayload = vi.fn(() => true);
+    const removePayload = vi.fn();
     const manager = { modeKey: "standard" };
     const litePayload = { kind: "lite" };
 
     expect(
       persistSavedPayloadWithLiteFallback(
-        { manager, key: "full-key", liteKey: "lite-key", fullPayload: { kind: "full" }, litePayload },
-        { persistPayload, clearSavedState }
+        { manager, key: "full-key", liteKey: "lite-key", litePayload },
+        { persistPayload, removePayload }
       )
     ).toEqual({ persisted: true, persistedFull: false });
 
-    expect(clearSavedState).toHaveBeenCalledWith(manager, "standard");
-    expect(persistPayload.mock.calls.map((call) => call[1])).toEqual([
-      "full-key",
-      "full-key",
-      "lite-key",
-      "full-key",
-      "lite-key"
-    ]);
+    expect(persistPayload).toHaveBeenCalledOnce();
+    expect(persistPayload).toHaveBeenCalledWith(manager, "lite-key", litePayload);
+    expect(removePayload).not.toHaveBeenCalled();
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {

@@ -25,16 +25,15 @@
     },
     {
       "baselineId": "all-pages-and-overlays",
-      "revision": 1,
-      "pageCount": 33,
+      "revision": 2,
+      "pageCount": 32,
       "overlayCount": 18,
-      "snapshotCount": 408,
+      "snapshotCount": 400,
       "pages": [
         "game",
         "not-found",
         "practice-board",
         "account",
-        "achievement-toast-reference",
         "admin",
         "api-docs",
         "beta-access",
@@ -96,8 +95,8 @@
         "light",
         "night"
       ],
-      "updatedAt": "2026-08-02",
-      "reason": "按维护要求建立全项目页面与弹窗基线；同时修复 API 文档代理冲突及窄屏页面横向溢出，并固定页面状态、API、时间、Web Crypto 随机源、锚点滚动、iframe 主题和弹窗打开能力。",
+      "updatedAt": "2026-08-03",
+      "reason": "发布复核移除依赖本机排除文件、无法在 CI 重现且与真实成就条幅弹窗重复的参考页场景；同步批准界面语言迁入完整设置页后，游戏设置弹窗新增完整设置入口，并补齐 320×568 夜间场景中已启用夜间开关的最终状态，共 7 张稳定差异。",
       "baselineEnvironment": "Playwright Chromium on macOS; scale=css",
       "status": "approved"
     }

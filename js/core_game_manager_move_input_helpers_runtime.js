@@ -1373,6 +1373,9 @@ function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
   var forcedTile = new Tile(forcedSpawn, forcedSpawn.value);
   manager.grid.insertTile(forcedTile);
   recordSpawnValue(manager, forcedSpawn.value);
+  if (manager.rankCheckpointApplying === true) {
+    manager.lastSpawn = { x: forcedSpawn.x, y: forcedSpawn.y, value: forcedSpawn.value };
+  }
   manager.forcedSpawn = null;
   return true;
 }

@@ -213,6 +213,7 @@
       deletedHint: "已删除，保留 3 天可恢复",
       restoreReplayHint: "已删除记录需恢复后才能查看回放",
       betaRecord: "内测成绩",
+      thirdPartyRecord: "第三方",
       ratingInsufficient: "数据积累中，暂无 Rating",
       colMode: "模式",
       colScore: "分数",
@@ -310,6 +311,7 @@
       deletedHint: "Deleted (recoverable within 3 days)",
       restoreReplayHint: "Restore this deleted record to view its replay.",
       betaRecord: "Beta result",
+      thirdPartyRecord: "Third-party",
       ratingInsufficient: "Collecting data — no rating yet.",
       colMode: "Mode",
       colScore: "Score",
@@ -394,12 +396,22 @@
     return resolveRecordEra(record, null) === "official_v1";
   }
 
+  function resolveSourcePlatformName(primary, fallback) {
+    return toText(primary && primary.source_platform_name).trim() || toText(fallback && fallback.source_platform_name).trim();
+  }
+
   function createRecordEraBadge(record, fallback) {
-    if (!isBetaRecord(record, fallback)) return null;
+    var platformName = resolveSourcePlatformName(record, fallback);
+    if (!platformName && !isBetaRecord(record, fallback)) return null;
     var badge = global.document.createElement("span");
     badge.className = "user-record-era-badge";
-    badge.setAttribute("data-record-era", "beta");
-    badge.textContent = t("betaRecord");
+    if (isBetaRecord(record, fallback)) badge.setAttribute("data-record-era", "beta");
+    if (platformName) {
+      badge.setAttribute("data-source-platform", platformName);
+      badge.textContent = t("thirdPartyRecord") + " · " + platformName;
+    } else {
+      badge.textContent = t("betaRecord");
+    }
     return badge;
   }
 
@@ -1510,6 +1522,7 @@
       return {
         score: Math.floor(Number(normalized.score) || 0),
         record_era: resolveRecordEra(source, fallback),
+        source_platform_name: resolveSourcePlatformName(source, fallback),
         mode_bucket: toText(source.mode_bucket || (fallback && fallback.mode_bucket) || normalized.mode).trim(),
         mode_key: toText(source.mode_key || (fallback && fallback.mode_key) || normalized.mode_key).trim(),
         board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallback && fallback.board_width)),
@@ -1535,6 +1548,7 @@
     return {
       score: Math.floor(Number(source.score != null ? source.score : fallbackRecord && fallbackRecord.score) || 0),
       record_era: resolveRecordEra(source, fallbackRecord),
+      source_platform_name: resolveSourcePlatformName(source, fallbackRecord),
       mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket)).trim(),
       mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key)).trim(),
       board_width: parsePositiveInt(source.board_width || (fallbackRecord && fallbackRecord.board_width)),
@@ -2068,23 +2082,14 @@
 
   function sortRecords(records, sortBy, order) {
     var list = Array.isArray(records) ? records.slice() : [];
-    var by = sortBy === "score" || sortBy === "board_sum" ? sortBy : "time";
+    var by = sortBy === "score" ? "score" : "time";
     var dir = order === "asc" ? 1 : -1;
 
     list.sort(function (a, b) {
       var scoreA = Math.floor(Number(a && a.score) || 0);
       var scoreB = Math.floor(Number(b && b.score) || 0);
-      var boardSumA = Math.floor(Number(a && a.board_sum) || 0);
-      var boardSumB = Math.floor(Number(b && b.board_sum) || 0);
       var timeA = parseDateTs(resolveRecordDateValue(a));
       var timeB = parseDateTs(resolveRecordDateValue(b));
-
-      if (by === "board_sum") {
-        if (boardSumA !== boardSumB) return dir * (boardSumA - boardSumB);
-        if (scoreA !== scoreB) return scoreB - scoreA;
-        if (timeA !== timeB) return timeB - timeA;
-        return toText(a && a.mode_bucket).localeCompare(toText(b && b.mode_bucket));
-      }
 
       if (by === "score") {
         if (scoreA !== scoreB) return dir * (scoreA - scoreB);
@@ -2114,7 +2119,7 @@
     var modeFilter = getModeFilterValue();
     activeModeFilter = modeFilter;
     activeRecordVisibility = getRecordVisibilityValue();
-    renderRecords(sortRecords(cachedRecords, getSortByValue(), getOrderValue()));
+    renderRecords(Array.isArray(cachedRecords) ? cachedRecords : []);
   }
 
   function findCachedRecordIndex(recordId) {
@@ -2176,6 +2181,7 @@
         id: toText(item.id || (normalized && normalized.id)).trim(),
         user_id: parsePositiveInt(item.user_id),
         record_era: normalizeRecordEra(item.record_era),
+        source_platform_name: toText(item.source_platform_name).trim(),
         mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
         mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
         board_width: parsePositiveInt(item.board_width || (normalized && normalized.board_width)),

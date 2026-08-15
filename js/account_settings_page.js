@@ -287,6 +287,11 @@
       safeRemoveStorage(STORAGE_USER_ID_KEY);
     }
     setStoredNickname(payload && payload.nickname);
+    var achievements = payload && Array.isArray(payload.achievements) ? payload.achievements : [];
+    var runtime = global.AchievementUnlockToastRuntime;
+    if (achievements.length > 0 && runtime && typeof runtime.showAchievementUnlockToasts === "function") {
+      runtime.showAchievementUnlockToasts(achievements);
+    }
   }
 
   function clearAuth() {
@@ -470,7 +475,7 @@
   async function login(payload) {
     var requestOptions = {
       method: "POST",
-      body: payload,
+      body: Object.assign({}, payload, { client: "web" }),
       timeoutMs: AUTH_API_TIMEOUT_MS
     };
     var result = await apiRequest("/login", requestOptions);

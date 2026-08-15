@@ -39,9 +39,12 @@
   function safeSetStorage(key, value) {
     try {
       var storage = resolveLocalStorage();
-      if (!storage) return;
+      if (!storage) return false;
       storage.setItem(key, value);
-    } catch (_err) {}
+      return true;
+    } catch (_err) {
+      return false;
+    }
   }
 
   function safeRemoveStorage(key) {
