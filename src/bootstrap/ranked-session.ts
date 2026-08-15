@@ -9,7 +9,6 @@ const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
 const ATTEMPT_OUTBOX_STORAGE_KEY = "ranked_session_attempt_outbox:v1";
 const ATTEMPT_SCHEMA_VERSION = 1;
-const SPAWN_SEQUENCE_VERSION = 2;
 const SAVED_GAME_STATE_STORAGE_KEY_PREFIX = "savedGameStateByMode:v1:";
 const SAVED_GAME_STATE_LITE_STORAGE_KEY_PREFIX = "savedGameStateLiteByMode:v1:";
 const DEFAULT_REMOTE_API_BASE_URL = "https://2048next.cn/api";
@@ -60,7 +59,6 @@ export interface RankedSessionRecord {
   record_era?: "beta" | "official_v1" | null | undefined;
   owner_user_id?: string | null | undefined;
   client_received_at_ms?: number | null | undefined;
-  spawn_sequence_version: 1 | 2;
 }
 
 export interface RankedChallengeContext {
@@ -68,7 +66,6 @@ export interface RankedChallengeContext {
   mode_key: string;
   seed: number;
   ranked_session_token: string;
-  spawn_sequence_version: 1 | 2;
 }
 
 export interface RankedSessionAttemptDraft {
@@ -288,7 +285,6 @@ function normalizeRankedSessionRecord(
   const seed = Math.floor(Number(parsed.seed));
   const issuedAt = Math.floor(Number(parsed.issued_at));
   const exp = Math.floor(Number(parsed.exp));
-  const spawnSequenceVersion = Number(parsed.spawn_sequence_version) === 2 ? 2 : 1;
   if (!modeKey || modeKey !== expectedModeKey) return null;
   if (!challengeId || !rankedSessionToken) return null;
   if (!Number.isInteger(seed) || seed < 0) return null;
@@ -302,7 +298,6 @@ function normalizeRankedSessionRecord(
     ranked_session_token: rankedSessionToken,
     issued_at: issuedAt,
     exp,
-    spawn_sequence_version: spawnSequenceVersion,
     status:
       parsed.status === "created" ||
       parsed.status === "started" ||
@@ -457,8 +452,7 @@ function buildChallengeContext(record: RankedSessionRecord | null): RankedChalle
     id: record.challenge_id,
     mode_key: record.mode_key,
     seed: record.seed,
-    ranked_session_token: record.ranked_session_token,
-    spawn_sequence_version: record.spawn_sequence_version
+    ranked_session_token: record.ranked_session_token
   };
 }
 
@@ -586,18 +580,13 @@ export function createRankedSessionRuntime(
       { allowExpired: true }
     );
 
-  const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null => {
-    const storageKey = resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey);
-    const record = readRankedSessionRecord(
+  const readPrefetchedSession = (modeKey: string): RankedSessionRecord | null =>
+    readRankedSessionRecord(
       storageLike,
-      storageKey,
+      resolveModeStorageKey(PREFETCH_SESSION_STORAGE_KEY_PREFIX, modeKey),
       modeKey,
       ownerUserIdResolver()
     );
-    if (!record || record.spawn_sequence_version === SPAWN_SEQUENCE_VERSION) return record;
-    removeStorageKey(storageLike, storageKey);
-    return null;
-  };
 
   const writeActiveSession = (modeKey: string, record: RankedSessionRecord): boolean =>
     writeRankedSessionRecord(
@@ -663,8 +652,7 @@ export function createRankedSessionRuntime(
               },
               body: JSON.stringify({
                 mode_key: modeKey,
-                attempt_schema_version: ATTEMPT_SCHEMA_VERSION,
-                spawn_sequence_version: SPAWN_SEQUENCE_VERSION
+                attempt_schema_version: ATTEMPT_SCHEMA_VERSION
               })
             });
             const payload = (await response.json().catch(() => null)) as {
@@ -690,10 +678,7 @@ export function createRankedSessionRuntime(
               return null;
             }
             const session = normalizeRankedSessionRecord(payload.data || null, modeKey);
-            if (!session || session.spawn_sequence_version !== SPAWN_SEQUENCE_VERSION) {
-              lastFailureReason = "spawn_sequence_version_mismatch";
-              return null;
-            }
+            if (!session) lastFailureReason = "invalid_response";
             return session
               ? {
                   ...session,

@@ -15,7 +15,6 @@ export interface RankedSessionSetupContext {
   mode_key: string;
   seed: number;
   ranked_session_token: string;
-  spawn_sequence_version: 1 | 2;
 }
 
 export interface RankedSessionSetupContextRuntime {
@@ -58,8 +57,7 @@ export function resolveSetupRankedSessionContext(
     id: challengeId,
     mode_key: contextModeKey || modeKey,
     seed,
-    ranked_session_token: rankedSessionToken,
-    spawn_sequence_version: Number(context.spawn_sequence_version) === 2 ? 2 : 1
+    ranked_session_token: rankedSessionToken
   };
 }
 

@@ -4,8 +4,8 @@ import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const PRELOAD_SOURCE = readFileSync(resolve(__dirname, "../../public/js/beta_access_preload.js"), "utf8");
-const GATE_TEST_START_MS = 1785388500000;
-const GATE_TEST_END_MS = 1785389100000;
+const GATE_TEST_START_MS = 1785392820000;
+const GATE_TEST_END_MS = 1785394020000;
 const GATE_RELEASE_AT_MS = 1785513600000;
 
 interface PreloadWindowLike {

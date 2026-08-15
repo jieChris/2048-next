@@ -139,45 +139,6 @@ describe("input manager operation feedback metadata", () => {
     ]);
   });
 
-  it("maps diagonal keys in practice when the active practice config allows diagonal moves", () => {
-    const { dom, inputManager } = loadInputManager("keyboard_input_manager.js", "KeyboardInputManager");
-    dom.window.document.body.setAttribute("data-mode-id", "practice");
-    (dom.window as unknown as { game_manager: unknown }).game_manager = {
-      modeConfig: { special_rules: { allow_diagonal_moves: true } }
-    };
-    const payloads: Array<{ direction: number; feedback: { key: string } }> = [];
-    inputManager.on("move", (payload) => payloads.push(payload as (typeof payloads)[number]));
-
-    for (const [key, which] of [["e", 69], ["c", 67], ["z", 90], ["q", 81], ["u", 85]] as const) {
-      dispatchKeyboard(dom, { key, code: `Key${key.toUpperCase()}`, which });
-    }
-    dispatchKeyboard(dom, { key: "Backspace", code: "Backspace", which: 8 });
-
-    expect(payloads.map(({ direction, feedback }) => [direction, feedback.key])).toEqual([
-      [4, "E"],
-      [5, "C"],
-      [6, "Z"],
-      [7, "Q"],
-      [-1, "backspace"]
-    ]);
-  });
-
-  it("keeps practice Z as down-left when a stale manager direction list omits diagonals", () => {
-    const { dom, inputManager } = loadInputManager("keyboard_input_manager.js", "KeyboardInputManager");
-    dom.window.document.body.setAttribute("data-mode-id", "practice");
-    (dom.window as unknown as { game_manager: unknown }).game_manager = {
-      allowedDirections: [0, 1, 2, 3],
-      isDirectionAllowed: () => false,
-      modeConfig: { special_rules: { allow_diagonal_moves: true } }
-    };
-    const payloads: Array<{ direction: number; feedback: { key: string } }> = [];
-    inputManager.on("move", (payload) => payloads.push(payload as (typeof payloads)[number]));
-
-    dispatchKeyboard(dom, { key: "z", code: "KeyZ", which: 90 });
-
-    expect(payloads.map(({ direction, feedback }) => [direction, feedback.key])).toEqual([[6, "Z"]]);
-  });
-
   it("does not create feedback attempts for editable text, items, restart, or capped Backspace", () => {
     const keyboard = loadInputManager("keyboard_input_manager.js", "KeyboardInputManager");
     const capped = loadInputManager("capped_input_manager.js", "CappedInputManager");

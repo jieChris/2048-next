@@ -10,7 +10,6 @@ export interface SessionReplaySnapshotManagerLike {
   specialRules?: unknown;
   challengeId?: unknown;
   initialSeed?: unknown;
-  spawnSequenceVersion?: unknown;
   sessionReplayV3?: unknown;
   sessionReplayV1?: unknown;
   clonePlain?: (value: unknown) => unknown;
@@ -108,7 +107,6 @@ export function initializeSetupSessionReplaySnapshot(
     special_rules_snapshot: clonePlainWithManager(manager, manager.specialRules || {}),
     challenge_id: manager.challengeId,
     seed: manager.initialSeed,
-    spawn_sequence_version: manager.spawnSequenceVersion === 2 ? 2 : 1,
     actions: []
   };
   manager.sessionReplayV1 = {
@@ -122,11 +120,8 @@ export function initializeSetupSessionReplaySnapshot(
     owner_nickname: ownerNickname,
     challenge_id: manager.challengeId || null,
     seed: manager.initialSeed,
-    spawn_sequence_version: manager.spawnSequenceVersion === 2 ? 2 : 1,
     init_tiles: [],
     records: [],
-    action_count: 0,
-    recorded_elapsed_ms: 0,
     last_event_at_ms: Date.now(),
     supported: true
   };

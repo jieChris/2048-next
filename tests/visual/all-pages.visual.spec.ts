@@ -23,7 +23,6 @@ const PAGES: VisualPage[] = [
   { key: "not-found", path: "/404.html", ready: "main" },
   { key: "practice-board", path: "/Practice_board.html?visual_preview=1", ready: "body[data-page='practice']" },
   { key: "account", path: "/account.html", ready: "body[data-page='account-hub']" },
-  { key: "achievement-toast-reference", path: "/achievement-toast-reference.html", ready: ".toast-reference-page" },
   { key: "admin", path: "/admin.html?view=dashboard", ready: "body[data-admin-access='granted']" },
   { key: "api-docs", path: "/api-docs.html", ready: "body[data-page='api-docs']" },
   { key: "beta-access", path: "/beta-access.html", ready: "#beta-notice-section" },

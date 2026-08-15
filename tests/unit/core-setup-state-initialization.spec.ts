@@ -156,7 +156,6 @@ describe("core setup state initialization runtime", () => {
     ]);
     expect(manager.challengeId).toBe("rch_daily");
     expect(manager.rankedSessionToken).toBe("token");
-    expect(manager.spawnSequenceVersion).toBe(1);
     expect(operations.resolveSetupChallengeId).toHaveBeenCalledWith(
       manager,
       setupOptions,
@@ -168,28 +167,6 @@ describe("core setup state initialization runtime", () => {
       setupOptions
     );
     expect(operations.finalizeSetupUiAndStatsState).toHaveBeenCalledWith(manager, "timer", true);
-  });
-
-  it("uses v2 only for a fresh game without a legacy replay or session context", () => {
-    const freshOperations = createOperations();
-    freshOperations.initializeSetupSeedAndReplayState.mockReturnValue({
-      hasInputSeed: false,
-      rankedSessionContext: null
-    });
-    const freshManager: Record<string, unknown> = {};
-
-    runSetupStateInitialization(freshManager, undefined, {}, freshOperations);
-    expect(freshManager.spawnSequenceVersion).toBe(2);
-
-    const replayOperations = createOperations();
-    replayOperations.initializeSetupSeedAndReplayState.mockReturnValue({
-      hasInputSeed: true,
-      rankedSessionContext: null
-    });
-    const replayManager: Record<string, unknown> = {};
-
-    runSetupStateInitialization(replayManager, 12345, {}, replayOperations);
-    expect(replayManager.spawnSequenceVersion).toBe(1);
   });
 
   it("normalizes non-object setup options to an empty object", () => {

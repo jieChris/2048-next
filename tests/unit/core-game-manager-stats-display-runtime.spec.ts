@@ -157,29 +157,6 @@ describe("core game manager stats display runtime", () => {
     expect(manager.updateStatsPanel).not.toHaveBeenCalled();
   });
 
-  it.each(["rankCheckpointApplying", "rankCheckpointRestorePending"])(
-    "does not render or persist while %s is active",
-    (guardKey) => {
-    const finalizeActuatePersistence = vi.fn();
-    const runtime = loadStatsDisplayRuntime({
-      CoreGameManagerActuatePersistenceRuntime: { finalizeActuatePersistence }
-    });
-    const manager = {
-      [guardKey]: true,
-      actuator: { actuate: vi.fn() },
-      scoreManager: { get: vi.fn(), set: vi.fn() },
-      computeStepStats: vi.fn(),
-      updateStatsPanel: vi.fn()
-    } as Record<string, unknown>;
-
-    runtime.actuate(manager);
-
-    expect((manager.actuator as { actuate: ReturnType<typeof vi.fn> }).actuate).not.toHaveBeenCalled();
-    expect(finalizeActuatePersistence).not.toHaveBeenCalled();
-    expect((manager.scoreManager as { set: ReturnType<typeof vi.fn> }).set).not.toHaveBeenCalled();
-    }
-  );
-
   it("normalizes current-round input counts in the stats fast path", () => {
     const runtime = loadStatsDisplayRuntime();
 

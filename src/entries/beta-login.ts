@@ -9,6 +9,7 @@ import {
   fetchBetaAccessStatus,
   shouldBypassBetaGateForLocalDevelopment
 } from "../bootstrap/access-gate";
+import { persistPendingAchievementUnlocks } from "../bootstrap/achievement-unlock-toast";
 
 const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
 const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
@@ -199,6 +200,7 @@ function persistAuth(payload: JsonRecord): void {
   writeStorageValue(window.localStorage, AUTH_TOKEN_KEY, token);
   if (userId) writeStorageValue(window.localStorage, AUTH_USER_ID_KEY, userId);
   if (nickname) writeStorageValue(window.localStorage, AUTH_NICKNAME_KEY, nickname);
+  persistPendingAchievementUnlocks(payload.achievements, window.localStorage);
 }
 
 function authError(payload: JsonRecord, fallback: string): string {
@@ -236,7 +238,7 @@ async function submitLogin(): Promise<void> {
   try {
     const payload = await api().request("/login", {
       method: "POST",
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, client: "web" })
     });
     if (payload.success === false || !toText(payload.token).trim()) {
       setTip(t("loginFailed") + authError(payload, t("loginFallback")), "err");

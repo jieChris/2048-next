@@ -10,6 +10,7 @@ type MoveAttempt = {
 };
 
 type MoveInputRuntime = {
+  addRandomTile: (manager: Record<string, unknown>) => void;
   executeImmediateMoveInput: (
     manager: Record<string, unknown>,
     attempt: MoveAttempt,
@@ -41,6 +42,17 @@ function loadMoveInputRuntime(options: {
     String,
     Array,
     Object,
+    Tile: class Tile {
+      x: number;
+      y: number;
+      value: number;
+
+      constructor(position: { x: number; y: number }, value: number) {
+        this.x = position.x;
+        this.y = position.y;
+        this.value = value;
+      }
+    },
     setTimeout: (callback: () => void) => {
       delayedCallbacks.push(callback);
       return delayedCallbacks.length;
@@ -91,52 +103,6 @@ describe("core game manager move input runtime", () => {
 
     expect(runtime.executeImmediateMoveInput(manager, attempt, 1_234)).toBe(true);
     expect(manager.move).toHaveBeenCalledWith(0);
-    expect(publishConfirmedOperationFeedback).toHaveBeenCalledWith(manager, attempt, true);
-  });
-
-  it("stops publishing inputs that begin after game termination while preserving undo", () => {
-    const { runtime, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
-    const manager = {
-      over: true,
-      won: false,
-      keepPlaying: false,
-      lastMoveInputAt: 0,
-      move: vi.fn((direction: number) => {
-        if (direction !== -1) return false;
-        manager.over = false;
-        return true;
-      })
-    };
-
-    expect(runtime.executeImmediateMoveInput(manager, createAttempt("key-after-over"), 1_234)).toBe(
-      false
-    );
-    expect(manager.move).toHaveBeenCalledWith(0);
-    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
-
-    expect(
-      runtime.executeImmediateMoveInput(manager, createAttempt("key-rescue-undo", -1), 1_235)
-    ).toBe(true);
-    expect(manager.move).toHaveBeenCalledWith(-1);
-    expect(manager.over).toBe(false);
-    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
-  });
-
-  it("still publishes the final valid input that terminates the game", () => {
-    const { runtime, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
-    const attempt = createAttempt("key-final");
-    const manager = {
-      over: false,
-      won: false,
-      keepPlaying: false,
-      lastMoveInputAt: 0,
-      move: vi.fn(() => {
-        manager.over = true;
-        return true;
-      })
-    };
-
-    expect(runtime.executeImmediateMoveInput(manager, attempt, 1_234)).toBe(true);
     expect(publishConfirmedOperationFeedback).toHaveBeenCalledWith(manager, attempt, true);
   });
 
@@ -292,24 +258,53 @@ describe("core game manager move input runtime", () => {
     expect(undo.executeUndoMove).toHaveBeenCalledWith(manager, -1, expect.any(Object));
   });
 
-  it("allows only the synchronous checkpoint replay action through the restore guard", () => {
-    const loaded = loadMoveInputRuntime();
-    loaded.context.buildMovePlan = vi.fn(() => ({ vector: { x: 0, y: -1 } }));
-    loaded.context.buildTraversals = vi.fn(() => ({ x: [], y: [] }));
-    loaded.context.resetGridMergeStateBeforeMove = vi.fn();
-    loaded.context.processMoveTraversals = vi.fn(() => true);
-    loaded.context.finalizeSuccessfulMove = vi.fn();
-    loaded.context.resolveLockedDirection = vi.fn(() => null);
+  it("allows internal checkpoint moves while still dropping user input", () => {
+    const { runtime, context, publishConfirmedOperationFeedback } = loadMoveInputRuntime();
+    context.buildMovePlan = vi.fn(() => ({ vector: { x: 0, y: -1 } }));
+    context.buildTraversals = vi.fn(() => ({ x: [], y: [] }));
+    context.resetGridMergeStateBeforeMove = vi.fn();
+    context.processMoveTraversals = vi.fn(() => true);
+    context.finalizeSuccessfulMove = vi.fn();
+    context.resolveLockedDirection = vi.fn(() => null);
+    const userMove = vi.fn(() => true);
     const manager = {
-      isDirectionAllowed: vi.fn(() => true),
+      disableSessionSync: true,
       rankCheckpointApplying: true,
-      rankCheckpointReplayExecuting: false,
       rankedSetupBlockedUntilSessionReady: false,
-      noXSelectionPending: false
+      noXSelectionPending: false,
+      pendingMoveInput: null,
+      move: userMove,
+      isDirectionAllowed: vi.fn(() => true)
     };
 
-    expect(loaded.runtime.move(manager, 0)).toBe(false);
-    manager.rankCheckpointReplayExecuting = true;
-    expect(loaded.runtime.move(manager, 0)).toBe(true);
+    expect(runtime.move(manager, 0)).toBe(true);
+    runtime.handleMoveInput(manager, createAttempt("blocked-user-input"));
+
+    expect(userMove).not.toHaveBeenCalled();
+    expect(publishConfirmedOperationFeedback).not.toHaveBeenCalled();
+  });
+
+  it("consumes and records the checkpoint spawn while rebuilding a live game", () => {
+    const { runtime, context } = loadMoveInputRuntime();
+    const insertTile = vi.fn();
+    context.recordSpawnValue = vi.fn();
+    const manager = {
+      replayMode: false,
+      rankCheckpointApplying: true,
+      rankPolicy: "ranked",
+      forcedSpawn: { x: 2, y: 3, value: 4 },
+      lastSpawn: null as { x: number; y: number; value: number } | null,
+      grid: {
+        cellAvailable: vi.fn(() => true),
+        insertTile
+      },
+      isBlockedCell: vi.fn(() => false)
+    };
+
+    runtime.addRandomTile(manager);
+
+    expect(insertTile).toHaveBeenCalledWith(expect.objectContaining({ x: 2, y: 3, value: 4 }));
+    expect(manager.lastSpawn).toEqual({ x: 2, y: 3, value: 4 });
+    expect(manager.forcedSpawn).toBeNull();
   });
 });

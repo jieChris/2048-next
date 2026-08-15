@@ -417,10 +417,7 @@ describe("core game settings storage", () => {
       lock_consumed_at_move_count: 7,
       locked_direction_turn: 5,
       locked_direction: 2,
-      challenge_id: "challenge-demo",
-      ranked_session_token: "ranked-token",
-      spawn_sequence_version: 2,
-      session_replay_v1: { records: [{ kind: "move" }] }
+      challenge_id: "challenge-demo"
     };
     const result = buildLiteSavedGameStatePayload({
       payload,
@@ -453,12 +450,6 @@ describe("core game settings storage", () => {
     expect(result?.capped64_unlocked).toBeNull();
     expect(result?.practice_restart_mode_config).toEqual(payload.practice_restart_mode_config);
     expect(result?.practice_restart_mode_config).not.toBe(payload.practice_restart_mode_config);
-    expect(result).toMatchObject({
-      ranked_session_token: "ranked-token",
-      spawn_sequence_version: 2,
-      session_replay_v1: payload.session_replay_v1
-    });
-    expect(result?.session_replay_v1).not.toBe(payload.session_replay_v1);
   });
 
   it("falls back to context values when lite payload fields are missing", () => {

@@ -92,7 +92,6 @@ describe("core session replay snapshot runtime", () => {
       special_rules_snapshot: { blocked_cells: [0, 1] },
       challenge_id: "rch_daily",
       seed: 987654321,
-      spawn_sequence_version: 1,
       actions: []
     });
     expect(manager.sessionReplayV1).toEqual({
@@ -106,11 +105,8 @@ describe("core session replay snapshot runtime", () => {
       owner_nickname: "测试Player超长",
       challenge_id: "rch_daily",
       seed: 987654321,
-      spawn_sequence_version: 1,
       init_tiles: [],
       records: [],
-      action_count: 0,
-      recorded_elapsed_ms: 0,
       last_event_at_ms: 1_700_000_000_222,
       supported: true
     });

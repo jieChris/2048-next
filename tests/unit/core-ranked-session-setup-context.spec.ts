@@ -43,8 +43,7 @@ describe("core ranked session setup context runtime", () => {
       id: "challenge-1",
       mode_key: MODE_KEY,
       seed: 12345,
-      ranked_session_token: "token-1",
-      spawn_sequence_version: 1
+      ranked_session_token: "token-1"
     });
   });
 

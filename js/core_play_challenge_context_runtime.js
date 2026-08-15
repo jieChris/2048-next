@@ -22,7 +22,6 @@
     if (rankedSessionToken) {
       out.ranked_session_token = rankedSessionToken;
     }
-    out.spawn_sequence_version = Number(existingContext.spawn_sequence_version) === 2 ? 2 : 1;
     return out;
   }
 

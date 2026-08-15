@@ -18,6 +18,7 @@ Frontend code may:
 - Store short-lived browser state needed for UX, such as local history, current auth token, pending form state, and local retry queues.
 - Call `2048-game-api` through `/api/*` or a configured API base.
 - Attach `Authorization: Bearer <token>` when a route requires authentication.
+- Administrator API requests may rely on the backend-issued HttpOnly `/api/admin` session cookie when browser storage has no token; the frontend must still send the request instead of rejecting it locally.
 
 Frontend code must not:
 
@@ -70,6 +71,11 @@ Use these checks after boundary-sensitive changes:
 
 - Terminal `/records` payloads must be persisted to `online_pending_record_submit_signature_v1` before the code checks whether an auth token is currently present. A ranked-session 401 can clear auth immediately before game-over submit hooks run; the terminal payload must survive that ordering.
 - Terminal payload persistence must finish synchronously before the first async retry/upload boundary. Once that durable copy exists, retire the matching active ranked session while preserving any distinct prefetched session, so refresh cannot reuse the completed seed/token.
+- Terminal local history must finish its durable async write before the record pending payload is created or any recovery source is cleared. A failed local-history write leaves the current saved game, checkpoint, and session retryable.
+- A pending-record storage write must return a real success result. Clear the matching saved game, checkpoint, and active session only after that result is successful; async completion must re-check the terminal game identity so it cannot clear a newer game of the same mode.
+- Unknown, malformed, future-version, or unreadable record-pending primary/queue values must not be deleted or overwritten by startup retry or a newer terminal capture. A full queue must fail closed and preserve the current recovery sources.
+- Explicit restart must wait until terminal local history and the matching pending record are durably captured. A failed capture blocks restart; an already durable capture keeps the existing synchronous confirmation timing. Replay/checkpoint internal restarts are excluded from this user-action gate.
+- IndexedDB history migration may remove the legacy `localStorage` value only when the transaction committed and the current raw value still exactly matches the migrated snapshot. A concurrent compatibility write must keep the changed fallback value.
 - A pre-auth pending write is only a durability step. It must not be counted as a network upload attempt for retry/backoff purposes when the same call will immediately submit the payload.
 - On authenticated upload success, the matching pending key may be cleared.
 - On permanent non-auth validation errors, the matching pending key may be cleared only when the backend has definitively rejected the payload.
@@ -96,6 +102,9 @@ Use these checks after boundary-sensitive changes:
 - Unit test: simulate `/records` returning 401 and assert pending record payload remains while auth token is removed.
 - Unit test: remove auth before game-over submit runs and assert a terminal pending record is written without calling `/records`.
 - Unit test: hold `/records` upload open and assert the pending payload is already stored, the completed active ranked session is gone, and the prefetched next session remains.
+- Unit test: reject the async local-history write and assert no record pending payload or recovery cleanup occurs; resolve a later retry and assert submission can continue.
+- Unit test: change the manager to a newer game while the terminal local-history write is pending and assert the old result can upload without clearing the newer game.
+- Unit test: change the legacy history mirror during a pending migration, abort the follow-up IndexedDB write, and assert the concurrent record remains in the fallback mirror.
 - Unit coverage for score and stone-2k uploads should follow the same assertion pattern when those paths change.
 - Smoke test: persisted pending record is replayed after auth/session recovery.
 - Smoke test: transient `/records` failures retry after the expected first backoff interval; pre-auth pending durability writes must not advance `retryCount` for the first network attempt.
@@ -130,30 +139,6 @@ if (!getAuthToken()) return;
 // The immediate upload below now treats the durability write as a previous attempt.
 writePendingRecordSubmitSignature(signature, pendingState, payload);
 ```
-
-## Scenario: Replay Timing Integrity Across Active-Game Restore
-
-### Scope
-
-This contract applies whenever an ongoing game that may produce leaderboard metrics is restored from a local save, compact checkpoint, cloud checkpoint, or rescue payload.
-
-### Contracts
-
-- Restoring a V1 replay must preserve its root and all existing records as an exact prefix, including initial tiles, start time, directions, spawns, `deltaMs`, undo records, checkpoints, and extensions.
-- Replaying historical actions to reconstruct the board is an internal restore operation. It must not enter live input capture, achievements, terminal submission, checkpoint saving, dialogs, or other user-action side effects.
-- The page timer, replay cumulative `deltaMs`, submitted duration, and target-tile times must use one elapsed-time source. At a real action boundary, replay cumulative time must equal the page timer elapsed time for that boundary.
-- The first effective move establishes the timer origin and records `deltaMs = 0`. Ineffective inputs neither start the timer nor create replay records.
-- After restore, let `Ecp` be the sum of timed records already in the checkpoint and `Tnext` the existing timer runtime's elapsed value at the next real action. The next record must use `max(0, Tnext - Ecp)`.
-- A timed restore that cannot preserve the V1 prefix or reconcile timer state must fail closed while retaining the original checkpoint. Formats without per-action time must not be rewritten into leaderboard speed evidence.
-- Server-side speed integrity is target-specific. A confirmed timing fault for one target must not hide the record, its normal score, its replay, or unrelated target metrics. Missing fields on historical records do not by themselves mean the records are untrusted.
-
-### Required Tests
-
-- Unit: serialize immediately before and after restore and compare the V1 lineage as `identical`.
-- Unit: restore, advance the timer, make one real move, and assert the old records are unchanged and the new `deltaMs` bridges the same timer timeline.
-- Unit: assert internal restore actions cause no submit, achievement, checkpoint-save, or terminal side effects.
-- Integration: verify public speed leaderboard, personal best, and speed achievements apply the same target-specific exclusion rule while the normal score leaderboard remains unchanged.
-- Built-in browser smoke: refresh an ongoing game, continue it, finish it, and compare the visible timer with server-derived target times.
 
 #### Correct
 

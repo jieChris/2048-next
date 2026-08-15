@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCappedRepeatLegendRuntime } from "../../src/core/capped-repeat-legend";
 import { createSavedManagerReplayStateRuntime } from "../../src/core/saved-manager-replay-state";
 import { createSavedManagerTimerStateRuntime } from "../../src/core/saved-manager-timer-state";
+import { createSavedPayloadPersistFallbackRuntime } from "../../src/core/saved-payload-persist-fallback";
 import { createSavedPayloadRichnessRuntime } from "../../src/core/saved-payload-richness";
 
 function createElement(options?: {
@@ -235,9 +236,105 @@ describe("core game manager saved state runtime", () => {
       { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
       expect.objectContaining({
         persistPayload: expect.any(Function),
-        clearSavedState: expect.any(Function)
+        removePayload: expect.any(Function)
       })
     );
+  });
+
+  it("removes the stale lite key after the legacy full-payload fallback succeeds", () => {
+    const stored = new Map<string, string>([["lite-key", JSON.stringify({ saved_at: 0, lite: true })]]);
+    const removeItem = vi.fn((key: string) => stored.delete(key));
+    const setItem = vi.fn((key: string, value: string) => stored.set(key, value));
+    const storage = { setItem, removeItem };
+    const runtime = loadSavedStateRuntime([32768], {
+      callCoreStorageRuntime() {
+        return undefined;
+      },
+      getSavedGameStateStorages() {
+        return [storage];
+      }
+    });
+    const manager = {
+      modeKey: "practice",
+      resolveNormalizedCoreValueOrFallback(
+        value: unknown,
+        _normalizer: (candidate: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      },
+      resolveCoreBooleanCallOrFallback(value: unknown, fallback: () => boolean) {
+        return typeof value === "boolean" ? value : fallback();
+      }
+    };
+
+    expect(
+      runtime.persistSavedPayloadWithLiteFallback(
+        manager,
+        "full-key",
+        "lite-key",
+        { saved_at: 1 },
+        { saved_at: 1, lite: true }
+      )
+    ).toEqual({ persisted: true, persistedFull: true });
+
+    expect(setItem).toHaveBeenCalledOnce();
+    expect(removeItem).toHaveBeenCalledWith("lite-key");
+    expect(stored.has("full-key")).toBe(true);
+    expect(stored.has("lite-key")).toBe(false);
+  });
+
+  it("keeps a current durable lite payload when only session storage accepts the full payload", () => {
+    const local = new Map<string, string>([["lite-key", JSON.stringify({ saved_at: 0, lite: true })]]);
+    const session = new Map<string, string>();
+    const localStorage = {
+      setItem: vi.fn((key: string, value: string) => {
+        if (key === "full-key") throw new Error("quota");
+        local.set(key, value);
+      }),
+      removeItem: vi.fn((key: string) => local.delete(key))
+    };
+    const sessionStorage = {
+      setItem: vi.fn((key: string, value: string) => session.set(key, value)),
+      removeItem: vi.fn((key: string) => session.delete(key))
+    };
+    const runtime = loadSavedStateRuntime([32768], {
+      CoreSavedPayloadPersistFallbackRuntime: createSavedPayloadPersistFallbackRuntime(),
+      callCoreStorageRuntime() {
+        return undefined;
+      },
+      getSavedGameStateStorages() {
+        return [localStorage, sessionStorage];
+      }
+    });
+    const manager = {
+      modeKey: "standard",
+      resolveNormalizedCoreValueOrFallback(
+        value: unknown,
+        _normalizer: (candidate: unknown) => unknown,
+        fallback: () => unknown
+      ) {
+        return typeof value === "undefined" ? fallback() : value;
+      },
+      resolveCoreBooleanCallOrFallback(value: unknown, fallback: () => boolean) {
+        return typeof value === "boolean" ? value : fallback();
+      }
+    };
+    const fullPayload = { saved_at: 2, replay_string: "large" };
+    const litePayload = { saved_at: 2, lite: true };
+
+    expect(
+      runtime.persistSavedPayloadWithLiteFallback(
+        manager,
+        "full-key",
+        "lite-key",
+        fullPayload,
+        litePayload
+      )
+    ).toEqual({ persisted: true, persistedFull: false });
+
+    expect(session.get("full-key")).toBe(JSON.stringify(fullPayload));
+    expect(local.get("lite-key")).toBe(JSON.stringify(litePayload));
   });
 
   it("delegates saved payload replay string resolution to the TypeScript runtime", () => {
@@ -343,6 +440,7 @@ describe("core game manager saved state runtime", () => {
       manager,
       saved,
       expect.objectContaining({
+        normalizeSavedReplayV1Session: expect.any(Function),
         shouldRestoreSavedStateUndoHistory: expect.any(Function)
       })
     );

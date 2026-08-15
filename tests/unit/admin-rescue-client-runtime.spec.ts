@@ -454,16 +454,14 @@ describe("admin rescue client runtime", () => {
       expect.objectContaining({
         challenge_id: "rescue-new-challenge",
         seed: 123456,
-        ranked_session_token: rankedSessionToken,
-        spawn_sequence_version: 1
+        ranked_session_token: rankedSessionToken
       })
     );
     expect(context.GAME_CHALLENGE_CONTEXT).toEqual({
       id: "rescue-new-challenge",
       mode_key: "standard_4x4_pow2_no_undo",
       seed: 123456,
-      ranked_session_token: rankedSessionToken,
-      spawn_sequence_version: 1
+      ranked_session_token: rankedSessionToken
     });
     const activeSession = JSON.parse(
       String(context.localStorage.getItem("ranked_session_active:v1:standard_4x4_pow2_no_undo") || "{}")
@@ -474,7 +472,6 @@ describe("admin rescue client runtime", () => {
       challenge_id: "rescue-new-challenge",
       seed: 123456,
       ranked_session_token: rankedSessionToken,
-      spawn_sequence_version: 1,
       issued_at: nowSec,
       exp: nowSec + 3600,
       owner_user_id: "7",

@@ -50,11 +50,43 @@
     }
   }
 
+  function readLocalStorageItemOrThrow(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.getItem !== "function") {
+      var unavailableError = new Error("local_storage_unavailable");
+      unavailableError.name = "StorageUnavailableError";
+      throw unavailableError;
+    }
+    return storage.getItem(key);
+  }
+
   function writeLocalStorageItem(key, value) {
     var storage = resolveLocalStorage();
     if (!storage || typeof storage.setItem !== "function") return false;
     try {
       storage.setItem(key, value);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function writeLocalStorageItemOrThrow(key, value) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.setItem !== "function") {
+      var unavailableError = new Error("local_storage_unavailable");
+      unavailableError.name = "StorageUnavailableError";
+      throw unavailableError;
+    }
+    storage.setItem(key, value);
+    return true;
+  }
+
+  function removeLocalStorageItem(key) {
+    var storage = resolveLocalStorage();
+    if (!storage || typeof storage.removeItem !== "function") return false;
+    try {
+      storage.removeItem(key);
       return true;
     } catch (_err) {
       return false;
@@ -120,8 +152,44 @@
     }
   }
 
+  function readFallbackMigrationPayload(raw) {
+    var parsed = null;
+    try {
+      parsed = JSON.parse(raw == null ? "[]" : raw);
+    } catch (_err) {
+      return { records: [], can_delete: false };
+    }
+    if (!Array.isArray(parsed)) {
+      return { records: [], can_delete: false };
+    }
+
+    var records = [];
+    var canDelete = true;
+    for (var i = 0; i < parsed.length; i += 1) {
+      var item = parsed[i];
+      if (!isPlainObject(item) || typeof item.id !== "string" || !item.id.trim()) {
+        canDelete = false;
+        continue;
+      }
+      records.push(item);
+    }
+    return { records: records, can_delete: canDelete };
+  }
+
+  function readFallbackRecordsForWrite() {
+    var payload = readFallbackMigrationPayload(readLocalStorageItemOrThrow(STORAGE_KEY));
+    if (payload.can_delete) return payload.records;
+    var error = new Error("local_history_fallback_invalid");
+    error.name = "InvalidFallbackError";
+    throw error;
+  }
+
   function writeAllFallback(records) {
-    writeLocalStorageItem(STORAGE_KEY, JSON.stringify(records));
+    return writeLocalStorageItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function writeAllFallbackOrThrow(records) {
+    return writeLocalStorageItemOrThrow(STORAGE_KEY, JSON.stringify(records));
   }
 
   function nowIso() {
@@ -247,12 +315,6 @@
   function sortDesc(records) {
     records.sort(compareDatesDesc);
     return records;
-  }
-
-  function compareBoardSumScoreDesc(a, b) {
-    if ((b.board_sum || 0) !== (a.board_sum || 0)) return (b.board_sum || 0) - (a.board_sum || 0);
-    if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
-    return compareDatesDesc(a, b);
   }
 
   function normalizeHistoryBoardMatrix(value) {
@@ -464,8 +526,8 @@
     return idbReadyPromise;
   }
 
-  function mirrorSaveFallback(record) {
-    var list = readAllFallback();
+  function buildFallbackWithRecord(record) {
+    var list = readFallbackRecordsForWrite();
     var next = [record];
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i];
@@ -473,24 +535,46 @@
       next.push(item);
       if (next.length >= MAX_RECORDS) break;
     }
-    writeAllFallback(next);
+    return next;
   }
 
-  function mirrorDeleteFallback(id) {
-    var list = readAllFallback();
+  function mirrorSaveFallback(record) {
+    return writeAllFallback(buildFallbackWithRecord(record));
+  }
+
+  function mirrorSaveFallbackOrThrow(record) {
+    return writeAllFallbackOrThrow(buildFallbackWithRecord(record));
+  }
+
+  function removeCommittedFallbackRecord(record) {
+    var fallbackRaw = readLocalStorageItem(STORAGE_KEY);
+    var list = safeParse(fallbackRaw || "[]", null);
+    if (!Array.isArray(list)) return false;
+    var committedText = "";
+    try {
+      committedText = JSON.stringify(record);
+    } catch (_err) {
+      return false;
+    }
+
     var next = [];
+    var removed = false;
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i];
-      if (!item || item.id === id) continue;
+      if (!removed && item && item.id === record.id) {
+        try {
+          if (JSON.stringify(item) === committedText) {
+            removed = true;
+            continue;
+          }
+        } catch (_err) {}
+      }
       next.push(item);
     }
-    writeAllFallback(next);
-  }
-
-  function mirrorReplaceFallback(records) {
-    var next = Array.isArray(records) ? records.slice(0, MAX_RECORDS) : [];
-    sortDesc(next);
-    writeAllFallback(next);
+    if (!removed) return false;
+    if (readLocalStorageItem(STORAGE_KEY) !== fallbackRaw) return false;
+    if (!next.length) return removeLocalStorageItem(STORAGE_KEY);
+    return writeAllFallback(next);
   }
 
   function ensureMigrated() {
@@ -500,11 +584,16 @@
       var db = await getDatabase();
       if (!db) return 0;
       if (!resolveLocalStorage()) return 0;
-      if (readLocalStorageItem(MIGRATION_FLAG)) return 0;
-
-      var legacyRecords = readAllFallback();
+      var migrationFlag = readLocalStorageItem(MIGRATION_FLAG);
+      var legacyRaw = readLocalStorageItem(STORAGE_KEY);
+      if (migrationFlag && legacyRaw === null) return 0;
+      var migrationPayload = readFallbackMigrationPayload(legacyRaw);
+      var legacyRecords = migrationPayload.records;
       if (!legacyRecords.length) {
-        writeLocalStorageItem(MIGRATION_FLAG, "1");
+        if (migrationPayload.can_delete) {
+          if (legacyRaw !== null) removeLocalStorageItem(STORAGE_KEY);
+          writeLocalStorageItem(MIGRATION_FLAG, "1");
+        }
         return 0;
       }
 
@@ -516,7 +605,10 @@
         store.put(normalizeRecord(item));
       }
       await txDonePromise(tx);
-      writeLocalStorageItem(MIGRATION_FLAG, "1");
+      if (migrationPayload.can_delete && readLocalStorageItem(STORAGE_KEY) === legacyRaw) {
+        removeLocalStorageItem(STORAGE_KEY);
+        writeLocalStorageItem(MIGRATION_FLAG, "1");
+      }
       return legacyRecords.length;
     })().catch(function () {
       forceLocalFallback = true;
@@ -565,21 +657,16 @@
       : 50;
 
     var fallbackList = readAllFallback();
-    var normalizedFallbackList = [];
     var filteredFallback = [];
-    var needsBackfill = false;
     for (var f = 0; f < fallbackList.length; f += 1) {
       var rawRow = fallbackList[f];
       var row = normalizeRecord(rawRow);
       if (!row) continue;
-      normalizedFallbackList.push(row);
-      if (!rawRow || rawRow.board_sum !== row.board_sum) needsBackfill = true;
       if (modeKey && row.mode_key !== modeKey) continue;
       if (!matchesOwner(row, ownerKey)) continue;
       if (!matchesKeyword(row, keyword)) continue;
       filteredFallback.push(row);
     }
-    if (needsBackfill) writeAllFallback(normalizedFallbackList);
 
     if (sortBy === "score_desc") {
       filteredFallback.sort(function (a, b) {
@@ -587,7 +674,10 @@
         return compareDatesDesc(a, b);
       });
     } else if (sortBy === "board_sum_desc") {
-      filteredFallback.sort(compareBoardSumScoreDesc);
+      filteredFallback.sort(function (a, b) {
+        if ((b.board_sum || 0) !== (a.board_sum || 0)) return (b.board_sum || 0) - (a.board_sum || 0);
+        return compareDatesDesc(a, b);
+      });
     } else if (sortBy === "ended_asc") {
       filteredFallback.sort(function (a, b) {
         return -compareDatesDesc(a, b);
@@ -610,24 +700,23 @@
     var skipMirror = skipFallbackMirror === true;
 
     var db = await getDatabase();
-    if (!db) {
-      if (!skipMirror) {
-        var fallbackList = readAllFallback();
-        fallbackList.unshift(item);
-        if (fallbackList.length > MAX_RECORDS) {
-          fallbackList = fallbackList.slice(0, MAX_RECORDS);
+    if (db) {
+      await ensureMigrated();
+      if (!forceLocalFallback) {
+        try {
+          var tx = db.transaction(STORE_NAME, "readwrite");
+          tx.objectStore(STORE_NAME).put(item);
+          await txDonePromise(tx);
+          return item;
+        } catch (idbError) {
+          forceLocalFallback = true;
+          if (skipMirror) throw idbError;
         }
-        writeAllFallback(fallbackList);
       }
-      return item;
     }
 
-    await ensureMigrated();
-    var tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(item);
-    await txDonePromise(tx);
     if (!skipMirror) {
-      mirrorSaveFallback(item);
+      mirrorSaveFallbackOrThrow(item);
     }
     return item;
   }
@@ -671,7 +760,7 @@
         }
         next.push(item);
       }
-      if (removed) writeAllFallback(next);
+      if (removed) writeAllFallbackOrThrow(next);
       return removed;
     }
 
@@ -685,9 +774,6 @@
     }
     store.delete(key);
     await txDonePromise(tx);
-    if (!skipMirror) {
-      mirrorDeleteFallback(key);
-    }
     return true;
   }
 
@@ -696,7 +782,7 @@
     var db = await getDatabase();
     if (!db) {
       if (!skipMirror) {
-        writeAllFallback([]);
+        writeAllFallbackOrThrow([]);
       }
       return;
     }
@@ -705,9 +791,6 @@
     var tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).clear();
     await txDonePromise(tx);
-    if (!skipMirror) {
-      writeAllFallback([]);
-    }
   }
 
   async function listRecords(options) {
@@ -740,17 +823,12 @@
 
       var total = 0;
       var items = [];
-      var filteredItems = [];
       var start = (page - 1) * pageSize;
       var endExclusive = start + pageSize;
 
       request.onsuccess = function () {
         var cursor = request.result;
         if (!cursor) {
-          if (sortBy === "board_sum_desc") {
-            filteredItems.sort(compareBoardSumScoreDesc);
-            items = filteredItems.slice(start, endExclusive);
-          }
           resolve({
             total: total,
             page: page,
@@ -762,9 +840,7 @@
 
         var item = normalizeRecord(cursor.value);
         if ((!modeKey || item.mode_key === modeKey) && matchesOwner(item, ownerKey) && matchesKeyword(item, keyword)) {
-          if (sortBy === "board_sum_desc") {
-            filteredItems.push(item);
-          } else if (total >= start && total < endExclusive) {
+          if (total >= start && total < endExclusive) {
             items.push(item);
           }
           total += 1;
@@ -880,7 +956,7 @@
 
     var db = await getDatabase();
     if (!db) {
-      var before = merge ? readAllFallback() : [];
+      var before = merge ? readFallbackRecordsForWrite() : [];
       var map = {};
       for (var b = 0; b < before.length; b += 1) {
         var oldItem = before[b];
@@ -906,7 +982,7 @@
         nextFallback = nextFallback.slice(0, MAX_RECORDS);
       }
       if (!skipMirror) {
-        writeAllFallback(nextFallback);
+        writeAllFallbackOrThrow(nextFallback);
       }
       return {
         imported: imported,
@@ -942,10 +1018,6 @@
         txPut.objectStore(STORE_NAME).put(keep);
         await txDonePromise(txPut);
       }
-    }
-
-    if (!skipMirror) {
-      mirrorReplaceFallback(capped);
     }
 
     return {
@@ -992,11 +1064,22 @@
 
   function saveRecordCompat(record) {
     var item = normalizeRecord(record);
-    mirrorSaveFallback(item);
+    var savedToFallback = false;
+    try {
+      savedToFallback = mirrorSaveFallback(item);
+    } catch (_err) {
+      return null;
+    }
     enqueueAsyncSyncTask(function () {
-      return saveRecord(item, true);
+      return getDatabase().then(function (db) {
+        if (!db) return null;
+        return saveRecord(item, true).then(function (saved) {
+          if (!forceLocalFallback) removeCommittedFallbackRecord(item);
+          return saved;
+        });
+      });
     });
-    return item;
+    return savedToFallback ? item : null;
   }
 
   function getByIdCompat(id) {
@@ -1025,18 +1108,22 @@
       }
       next.push(item);
     }
-    if (removed) writeAllFallback(next);
+    if (!removed) return false;
+    var savedToFallback = writeAllFallback(next);
+    if (!savedToFallback) return false;
     enqueueAsyncSyncTask(function () {
       return deleteById(key, true);
     });
-    return removed;
+    return true;
   }
 
   function clearAllCompat() {
-    writeAllFallback([]);
+    var savedToFallback = writeAllFallback([]);
+    if (!savedToFallback) return false;
     enqueueAsyncSyncTask(function () {
       return clearAll(true);
     });
+    return true;
   }
 
   function listRecordsCompat(options) {
@@ -1086,7 +1173,7 @@
 
     var imported = 0;
     var replaced = 0;
-    var base = merge ? readAllFallback() : [];
+    var base = merge ? readFallbackRecordsForWrite() : [];
     var map = {};
     for (var b = 0; b < base.length; b += 1) {
       var oldItem = base[b];
@@ -1105,7 +1192,7 @@
     }
     sortDesc(next);
     if (next.length > MAX_RECORDS) next = next.slice(0, MAX_RECORDS);
-    writeAllFallback(next);
+    writeAllFallbackOrThrow(next);
     enqueueAsyncSyncTask(function () {
       return importRecords(text, options, true);
     });

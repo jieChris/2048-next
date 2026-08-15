@@ -48,8 +48,7 @@ describe("bootstrap play challenge context", () => {
       id: "rch_1",
       mode_key: "standard_4x4_pow2_no_undo",
       seed: 123,
-      ranked_session_token: "rs1.token",
-      spawn_sequence_version: 1
+      ranked_session_token: "rs1.token"
     });
   });
 
@@ -65,8 +64,7 @@ describe("bootstrap play challenge context", () => {
       })
     ).toEqual({
       id: "daily-2",
-      mode_key: "classic_4x4_pow2_undo",
-      spawn_sequence_version: 1
+      mode_key: "classic_4x4_pow2_undo"
     });
   });
 });

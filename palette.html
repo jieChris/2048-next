@@ -11,7 +11,7 @@
   <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260803-operation-feedback-live-lock-v3" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260811-glow-controls-v24" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260802-settings-sidebar-v17" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -154,11 +154,6 @@
         <section class="color-panel">
           <div class="color-panel-head">
             <span id="palette-editor-panel-head">背景颜色</span>
-            <label id="palette-glow-intensity-row" class="glow-intensity-control" hidden>
-              <span id="palette-glow-intensity-label">发光强度</span>
-              <input id="palette-glow-intensity" type="range" min="0" max="100" step="1" value="50">
-              <output id="palette-glow-intensity-value" for="palette-glow-intensity">50%</output>
-            </label>
             <p id="palette-note" class="palette-note" aria-live="polite"></p>
           </div>
           <div class="editor-workspace">
@@ -170,12 +165,6 @@
                 <span id="palette-swatch-tile" class="swatch-tile-chip"></span>
                 <span id="palette-swatch-value" class="swatch-tile-value">2</span>
               </div>
-              <label id="palette-tile-glow-intensity-row" class="tile-glow-intensity-control" hidden>
-                <span id="palette-tile-glow-intensity-label">当前方块发光倍率</span>
-                <input id="palette-tile-glow-intensity" type="range" min="0" max="200" step="1" value="100">
-                <output id="palette-tile-glow-intensity-value" for="palette-tile-glow-intensity">100% · 实际 50%</output>
-              </label>
-              <p id="palette-tile-glow-intensity-hint" class="tile-glow-intensity-hint" hidden></p>
               <div class="editor-palette-main">
                 <div class="editor-picker-left">
                   <div id="palette-picker-sv" class="picker-sv">
@@ -197,17 +186,6 @@
                     <label>
                       <input id="palette-picker-b" type="number" min="0" max="255" step="1" value="46">
                       <span>B</span>
-                    </label>
-                  </div>
-                  <label class="picker-hex-row" for="palette-picker-hex">
-                    <span>HEX</span>
-                    <input id="palette-picker-hex" type="text" maxlength="7" pattern="#?[0-9A-Fa-f]{6}" placeholder="#RRGGBB" autocomplete="off" spellcheck="false" aria-describedby="palette-note">
-                  </label>
-                  <div class="picker-native-row">
-                    <button id="palette-picker-eyedropper" class="picker-color-action" type="button" hidden>取色</button>
-                    <label class="picker-color-action picker-native-action">
-                      <span id="palette-picker-native-label">系统色板</span>
-                      <input id="palette-picker-native" type="color" value="#edc22e">
                     </label>
                   </div>
                 </div>

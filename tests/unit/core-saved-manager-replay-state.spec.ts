@@ -121,30 +121,6 @@ describe("core saved manager replay state", () => {
     expect(manager.spawnFours).toBe(0);
   });
 
-  it("derives the restored replay elapsed total for older saved sessions", () => {
-    const manager = createManager();
-
-    applySavedManagerReplayState(manager, {
-      move_history: [1],
-      replay_compact_log: "",
-      session_replay_v1: {
-        v: 1,
-        board_width: 4,
-        board_height: 4,
-        init_tiles: [],
-        records: [
-          { kind: "move", dir: 1, deltaMs: 700 },
-          { kind: "ext", extType: 8 },
-          { kind: "undon", undoCount: 2, deltaMs: 300 }
-        ]
-      },
-      session_replay_v3: null
-    });
-
-    expect((manager.sessionReplayV1 as Record<string, unknown>).recorded_elapsed_ms).toBe(1_000);
-    expect((manager.sessionReplayV1 as Record<string, unknown>).action_count).toBe(2);
-  });
-
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSavedManagerReplayStateRuntime();
     expect(runtime.applySavedManagerReplayState).toBe(applySavedManagerReplayState);

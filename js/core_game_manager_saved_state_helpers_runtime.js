@@ -480,6 +480,13 @@ function resetSavedGameStatePersistenceThrottleAfterClear(manager) {
   manager.lastSavedStateSyncPublishedAt = 0;
   manager.lastReplayStringSavedAt = 0;
 }
+function removeSavedKeysFromStorages(manager, keys) {
+  if (!manager) return;
+  var stores = getSavedGameStateStorages(manager);
+  var removeCoreCallResult = callCoreStorageRuntime(manager, "removeKeysFromStorages", { storages: stores, keys: keys }, false);
+  if (manager.resolveCoreBooleanCallOrFallback(removeCoreCallResult, function () { return false; })) return;
+  removeSavedKeysFromStoragesFallback(stores, keys);
+}
 function clearSavedGameState(manager, modeKey) {
   if (!manager) return;
   writeWindowNameSavedPayload(manager, modeKey, null);
@@ -489,10 +496,7 @@ function clearSavedGameState(manager, modeKey) {
     resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_KEY_PREFIX, modeKey),
     resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_LITE_KEY_PREFIX, modeKey)
   ];
-  var stores = getSavedGameStateStorages(manager);
-  var removeCoreCallResult = callCoreStorageRuntime(manager, "removeKeysFromStorages", { storages: stores, keys: keys }, false);
-  if (manager.resolveCoreBooleanCallOrFallback(removeCoreCallResult, function () { return false; })) return;
-  removeSavedKeysFromStoragesFallback(stores, keys);
+  removeSavedKeysFromStorages(manager, keys);
 }
 function normalizeSavedDynamicTimerRowInfo(rowState) {
   var source = normalizeSavedStateRecordObject(rowState, {});
@@ -731,7 +735,6 @@ function applySavedManagerBaseStateFallback(manager, saved) {
   assignManagerClientRecordId(manager, typeof saved.client_record_id === "string" ? saved.client_record_id : "");
   manager.challengeId = typeof saved.challenge_id === "string" && saved.challenge_id ? saved.challenge_id : null;
   if (typeof saved.ranked_session_token === "string") manager.rankedSessionToken = saved.ranked_session_token;
-  manager.spawnSequenceVersion = Number(saved.spawn_sequence_version) === 2 ? 2 : 1;
   manager.hasGameStarted = !!saved.has_game_started;
   manager.sessionSubmitDone = false;
 }
@@ -754,6 +757,18 @@ function cloneSavedReplaySessionState(manager, session, fallbackValue) {
     return fallbackValue;
   }
 }
+function normalizeSavedReplayV1Session(manager, session) {
+  var cloned = cloneSavedReplaySessionState(manager, session, null);
+  if (!isNonArrayObject(cloned)) return null;
+  if (!Array.isArray(cloned.init_tiles) || !Array.isArray(cloned.records)) return null;
+  if (!Number.isInteger(cloned.board_width) || !Number.isInteger(cloned.board_height)) return null;
+  var lastEventAtMs = Number(cloned.last_event_at_ms);
+  cloned.last_event_at_ms = Number.isFinite(lastEventAtMs) && lastEventAtMs >= 0
+    ? Math.floor(lastEventAtMs)
+    : Date.now();
+  cloned.supported = cloned.supported !== false;
+  return cloned;
+}
 function resolveCoreSavedManagerReplayStateRuntime() {
   if (typeof CoreSavedManagerReplayStateRuntime !== "undefined" && CoreSavedManagerReplayStateRuntime) {
     return CoreSavedManagerReplayStateRuntime;
@@ -767,6 +782,7 @@ function applySavedManagerReplayState(manager, saved) {
   var runtime = resolveCoreSavedManagerReplayStateRuntime();
   if (runtime && typeof runtime.applySavedManagerReplayState === "function") {
     runtime.applySavedManagerReplayState(manager, saved, {
+      normalizeSavedReplayV1Session: normalizeSavedReplayV1Session,
       shouldRestoreSavedStateUndoHistory: shouldRestoreSavedStateUndoHistory
     });
   }
@@ -1131,8 +1147,7 @@ function buildSavedGameStateProgressPayload(manager) {
     combo_streak: Number.isInteger(manager.comboStreak) ? manager.comboStreak : 0,
     successful_move_count: Number.isInteger(manager.successfulMoveCount) ? manager.successfulMoveCount : 0,
     undo_used: Number.isInteger(manager.undoUsed) ? manager.undoUsed : 0, challenge_id: manager.challengeId || null,
-    ranked_session_token: manager.rankedSessionToken || null,
-    spawn_sequence_version: manager.spawnSequenceVersion === 2 ? 2 : 1
+    ranked_session_token: manager.rankedSessionToken || null
   };
 }
 
@@ -1205,13 +1220,13 @@ function serializeSavedPayloadForStorage(persistPayload) {
   }
   return typeof serialized === "string" ? serialized : null;
 }
-function writeSerializedPayloadToStores(stores, persistKey, serialized) {
+function writeSerializedPayloadToStores(stores, persistKey, serialized, requirePrimary) {
   if (!Array.isArray(stores) || stores.length === 0) return false;
   if (typeof serialized !== "string") return false;
   for (var i = 0; i < stores.length; i++) {
     try {
       stores[i].setItem(persistKey, serialized);
-      return true;
+      return requirePrimary !== true || i === 0;
     } catch (_errStore) {}
   }
   return false;
@@ -1220,6 +1235,7 @@ function persistSavedPayloadToStoragesFallback(stores, persistKey, persistPayloa
   var serialized = serializeSavedPayloadForStorage(persistPayload);
   return writeSerializedPayloadToStores(stores, persistKey, serialized);
 }
+function persistSavedFullPayloadToStorages(manager, persistKey, persistPayload) { return writeSerializedPayloadToStores(getSavedGameStateStorages(manager), persistKey, serializeSavedPayloadForStorage(persistPayload), true); }
 function buildLiteSavedGameStateMetaPayload(manager, payload) {
   return {
     v: GameManager.SAVED_GAME_STATE_VERSION, saved_at: Number(payload.saved_at) || Date.now(), terminated: false,
@@ -1234,8 +1250,7 @@ function buildLiteSavedGameStateProgressPayload(payload) {
     undo_used: Number.isInteger(payload.undo_used) ? payload.undo_used : 0,
     lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count) ? payload.lock_consumed_at_move_count : -1,
     locked_direction_turn: Number.isInteger(payload.locked_direction_turn) ? payload.locked_direction_turn : null, locked_direction: Number.isInteger(payload.locked_direction) ? payload.locked_direction : null,
-    challenge_id: payload.challenge_id || null, ranked_session_token: payload.ranked_session_token || null,
-    spawn_sequence_version: Number(payload.spawn_sequence_version) === 2 ? 2 : 1
+    challenge_id: payload.challenge_id || null, ranked_session_token: payload.ranked_session_token || null
   };
 }
 function buildLiteSavedGameStateBoardSnapshotPayload(manager, payload) {
@@ -1407,26 +1422,21 @@ function persistSavedPayloadWithLiteFallbackByRuntime(manager, key, liteKey, ful
   var runtime = typeof CoreSavedPayloadPersistFallbackRuntime !== "undefined" && CoreSavedPayloadPersistFallbackRuntime ? CoreSavedPayloadPersistFallbackRuntime : (typeof window !== "undefined" && window ? window.CoreSavedPayloadPersistFallbackRuntime : null);
   if (!(runtime && typeof runtime.persistSavedPayloadWithLiteFallback === "function")) return null;
   return runtime.persistSavedPayloadWithLiteFallback({ manager: manager, key: key, liteKey: liteKey, fullPayload: fullPayload, litePayload: litePayload }, {
-    persistPayload: function (currentManager, persistKey, persistPayload) { return persistSavedPayloadToStorages(currentManager, persistKey, persistPayload); },
-    clearSavedState: function (currentManager, modeKey) { clearSavedGameState(currentManager, modeKey); }
+    persistPayload: function (currentManager, persistKey, persistPayload) { return persistKey === key ? persistSavedFullPayloadToStorages(currentManager, persistKey, persistPayload) : persistSavedPayloadToStorages(currentManager, persistKey, persistPayload); },
+    removePayload: function (currentManager, persistKey) { removeSavedKeysFromStorages(currentManager, [persistKey]); }
   });
 }
 function persistSavedPayloadWithLiteFallbackFallback(manager, key, liteKey, fullPayload, litePayload) {
   var hasFullPayload = !!normalizeSavedStateRecordObject(fullPayload, null);
-  var persisted = false;
-  var persistedFull = false;
   if (hasFullPayload) {
-    persistedFull = persistSavedPayloadToStorages(manager, key, fullPayload);
-    persisted = persistedFull;
-    if (!persisted) persisted = persistSavedPayloadToStorages(manager, key, litePayload);
+    var persistedFull = persistSavedFullPayloadToStorages(manager, key, fullPayload);
+    if (persistedFull) {
+      removeSavedKeysFromStorages(manager, [liteKey]);
+      return { persisted: true, persistedFull: true };
+    }
   }
   var litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
-  if (!(persisted || litePersisted)) {
-    clearSavedGameState(manager, manager.modeKey);
-    if (hasFullPayload) persisted = persistSavedPayloadToStorages(manager, key, litePayload);
-    litePersisted = persistSavedPayloadToStorages(manager, liteKey, litePayload);
-  }
-  return { persisted: !!(persisted || litePersisted), persistedFull: !!persistedFull };
+  return { persisted: !!litePersisted, persistedFull: false };
 }
 function persistSavedPayloadWithLiteFallback(manager, key, liteKey, fullPayload, litePayload) {
   var result = persistSavedPayloadWithLiteFallbackByRuntime(manager, key, liteKey, fullPayload, litePayload);

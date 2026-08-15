@@ -729,10 +729,7 @@ function appendCompactUndo(manager) {
   }
 }
 
-function resolveSessionReplayV1UndoDeltaMs(manager, session, nowMs) {
-  if (typeof resolveSessionReplayV1ActionDeltaMs === "function") {
-    return resolveSessionReplayV1ActionDeltaMs(manager, session, nowMs);
-  }
+function resolveSessionReplayV1UndoDeltaMs(session, nowMs) {
   var lastAt = Number(session && session.last_event_at_ms);
   if (!Number.isFinite(lastAt) || lastAt < 0) lastAt = nowMs;
   var delta = Math.floor(nowMs - lastAt);
@@ -755,12 +752,10 @@ function recordSessionReplayV1Undo(manager, undoCount) {
   if (!Number.isInteger(count) || count <= 0) count = 1;
   var nowMs = Date.now();
   if (count === 1) {
-    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1UndoDeltaMs(manager, session, nowMs) });
-    session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
+    session.records.push({ kind: "undo1", deltaMs: resolveSessionReplayV1UndoDeltaMs(session, nowMs) });
     return;
   }
-  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1UndoDeltaMs(manager, session, nowMs) });
-  session.action_count = Math.max(0, Math.floor(Number(session.action_count) || 0)) + 1;
+  session.records.push({ kind: "undon", undoCount: count, deltaMs: resolveSessionReplayV1UndoDeltaMs(session, nowMs) });
 }
 
 function applyPostUndoRecordArtifacts(manager, postUndoRecord, direction) {
