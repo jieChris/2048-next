@@ -1,7 +1,7 @@
 # 2048-next Nginx reverse proxy config for the self-hosted static container.
 
 upstream game_data_api {
-    server 127.0.0.1:3010;
+    server 2048-game-api:3001;
     keepalive 32;
 }
 
@@ -36,6 +36,8 @@ server {
 
     root /usr/share/nginx/html;
     index index.html;
+    # The API accepts third-party import files up to 8 MiB; leave room for multipart metadata.
+    client_max_body_size 10m;
 
     access_log /var/log/nginx/2048-next.access.log;
     error_log /var/log/nginx/2048-next.error.log warn;

@@ -60,6 +60,12 @@ await page.waitForFunction(
 - 所有影响被测控制流的 API 必须路由模拟；无关后台请求可禁用，但不能禁用被测行为本身。
 - 模拟需要登录的 API 时必须校验 `Authorization`，或在缺失凭证时返回 401；无条件返回 200 会掩盖前端漏传 Token。
 
+## 生产部署必须验证完整依赖链
+
+- 静态页面返回 200 不能证明站点健康；当 Nginx 同时承担 API 代理或 `auth_request` 门禁时，部署必须从站点容器入口验证至少一个 API 健康路径及权限门禁的预期状态。
+- Nginx 配置检查容器必须加入与正式站点相同的 Docker 网络；依赖的 API 网络不存在或匿名 Admin 门禁返回 5xx 时，部署必须失败并恢复上一版本。
+- 定时生产探针必须覆盖用户实际经过的站点 `/health`，并断言匿名 Admin 页面返回产品约定的 404，不能只检查绕过站点代理的 `/api/health`。
+
 ```ts
 // 错误：刷新时 pagehide 冲刷和启动重试可能同时发生
 expect(recordBodies).toHaveLength(1);
