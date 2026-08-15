@@ -29,7 +29,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       ranked_session_token: "next-ranked-token",
       issued_at: nowSec,
       exp: nowSec + 3600,
-      owner_user_id: "42"
+      owner_user_id: "42",
+      spawn_sequence_version: 2
     };
     let prefetchCounter = 0;
     const recordPayloads: Array<Record<string, unknown>> = [];
