@@ -611,12 +611,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("border presets start with an accessible remove option and persist it", async ({ page }) => {
     await page.addInitScript(() => {
-      if (window.sessionStorage.getItem("palette_border_remove_test_ready") === "1") return;
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
       window.localStorage.setItem("ui_language_v1", "zh");
       window.localStorage.removeItem("tile_palette_profiles_v1");
-      window.sessionStorage.setItem("palette_border_remove_test_ready", "1");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     await openAppearanceWorkspace(page);
@@ -651,12 +649,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("glow intensity visibly controls preview shadows and persists", async ({ page }) => {
     await page.addInitScript(() => {
-      if (window.sessionStorage.getItem("palette_glow_intensity_test_ready") === "1") return;
       window.localStorage.setItem("theme_profile_v1", "classic");
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
       window.localStorage.setItem("ui_language_v1", "zh");
       window.localStorage.removeItem("tile_palette_profiles_v1");
-      window.sessionStorage.setItem("palette_glow_intensity_test_ready", "1");
     });
     await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     await openAppearanceWorkspace(page);
@@ -697,7 +693,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const manager = (window as any).ThemeManager;
       const id = manager.getActiveTilePaletteId();
       manager.updateTilePaletteColor(id, "pow2", "border", 0, "transparent");
-      manager.updateTilePaletteColor(id, "pow2", "border", 1, "transparent");
       manager.updateTilePaletteColor(id, "pow2", "glow", 0, "#010203");
     });
     await slider.fill("0");

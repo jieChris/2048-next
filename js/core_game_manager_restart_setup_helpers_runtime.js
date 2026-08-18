@@ -308,7 +308,6 @@ function restartWithBoard(manager, board, modeConfig, options) {
   }
   manager.initialBoardMatrix = getFinalBoardMatrix(manager);
   manager.replayStartBoardMatrix = cloneBoardMatrix(manager.initialBoardMatrix);
-  syncSetupSessionReplayV1InitTiles(manager);
   if (shouldPersistPracticeRestartBase(manager, normalizedOptions)) {
     applyPracticeRestartBaseFromCurrentBoard(manager, modeConfig);
   }

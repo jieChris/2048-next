@@ -221,30 +221,6 @@ function buildSettingsPageEntryHtml(lang: "zh" | "en"): string {
   );
 }
 
-function buildOperationFeedbackRowHtml(lang: "zh" | "en"): string {
-  const isEn = lang === "en";
-  return (
-    `<div id="operation-feedback-settings-row" class="settings-row settings-toggle-row operation-feedback-settings-row">` +
-    `<div class="settings-toggle-main">` +
-    `<div class="settings-toggle-copy">` +
-    `<label for="operation-feedback-toggle" class="settings-toggle-title">${
-      isEn ? "Operation Feedback" : "操作反馈"
-    }</label>` +
-    `<div class="settings-toggle-desc">${
-      isEn ? "Show recent input and valid / invalid feedback in this game" : "显示本局最近操作及有效／无效反馈"
-    }</div>` +
-    `</div>` +
-    `<label class="settings-switch" for="operation-feedback-toggle" aria-label="${
-      isEn ? "Operation Feedback" : "操作反馈"
-    }">` +
-    `<input id="operation-feedback-toggle" type="checkbox">` +
-    `<span class="settings-switch-slider"></span>` +
-    `</label>` +
-    `</div>` +
-    `</div>`
-  );
-}
-
 function buildCanonicalSettingsModalInnerHtml(options: {
   lang: "zh" | "en";
   hasInlineStats: boolean;
@@ -285,7 +261,26 @@ function buildCanonicalSettingsModalInnerHtml(options: {
     })
   ];
 
-  rows.push(buildOperationFeedbackRowHtml(lang));
+  rows.push(
+    `<div id="operation-feedback-settings-row" class="settings-row settings-toggle-row operation-feedback-settings-row">` +
+      `<div class="settings-toggle-main">` +
+      `<div class="settings-toggle-copy">` +
+      `<label for="operation-feedback-toggle" class="settings-toggle-title">${
+        isEn ? "Operation Feedback" : "操作反馈"
+      }</label>` +
+      `<div class="settings-toggle-desc">${
+        isEn ? "Show recent input and valid / invalid feedback in this game" : "显示本局最近操作及有效／无效反馈"
+      }</div>` +
+      `</div>` +
+      `<label class="settings-switch" for="operation-feedback-toggle" aria-label="${
+        isEn ? "Operation Feedback" : "操作反馈"
+      }">` +
+      `<input id="operation-feedback-toggle" type="checkbox">` +
+      `<span class="settings-switch-slider"></span>` +
+      `</label>` +
+      `</div>` +
+      `</div>`
+  );
 
   if (options.hasInlineStats) {
     rows.push(
@@ -392,7 +387,8 @@ export function normalizeSettingsModalContent(input: {
   const hasCanonicalBase =
     !!getElementById(documentLike, "win-prompt-toggle") &&
     !!getElementById(documentLike, "bgm-toggle") &&
-    !!getElementById(documentLike, "night-bg-toggle");
+    !!getElementById(documentLike, "night-bg-toggle") &&
+    !!getElementById(documentLike, "operation-feedback-toggle");
 
   if (!hasCanonicalBase) {
     toRecord(content).innerHTML = buildCanonicalSettingsModalInnerHtml({
@@ -402,18 +398,11 @@ export function normalizeSettingsModalContent(input: {
     for (const row of existingRows) {
       appendChild(content, row);
     }
-  } else {
+  } else if (!getElementById(documentLike, "settings-page-entry-row")) {
     const insertAdjacentHtml = asFunction<(position: string, html: string) => unknown>(
       toRecord(content).insertAdjacentHTML
     );
-    if (!getElementById(documentLike, "operation-feedback-toggle") && insertAdjacentHtml) {
-      (insertAdjacentHtml as unknown as Function).call(
-        content,
-        "beforeend",
-        buildOperationFeedbackRowHtml(readUiLanguage(source.windowLike))
-      );
-    }
-    if (!getElementById(documentLike, "settings-page-entry-row") && insertAdjacentHtml) {
+    if (insertAdjacentHtml) {
       (insertAdjacentHtml as unknown as Function).call(
         content,
         "beforeend",

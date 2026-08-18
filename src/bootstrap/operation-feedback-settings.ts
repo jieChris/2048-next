@@ -3,11 +3,7 @@ import {
   OPERATION_FEEDBACK_RESULT_EVENT,
   type ConfirmedOperationFeedbackResult
 } from "../core/game-manager-input-events";
-import {
-  createBrowserStorageAccess,
-  readStorageValue,
-  writeStorageValue
-} from "../storage/browser-storage";
+import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from "./storage";
 
 export type OperationFeedbackPlacement = "timer" | "edge" | "custom";
 
@@ -58,8 +54,11 @@ let backspaceMaskSequence = 0;
 function readPreferences(windowLike: Window | null): OperationFeedbackPreferences {
   if (!windowLike) return { ...DEFAULT_PREFERENCES };
   try {
-    const storageLike = createBrowserStorageAccess({ windowLike }).local();
-    const parsed = JSON.parse(readStorageValue(storageLike, STORAGE_KEY) || "{}") as Partial<OperationFeedbackPreferences>;
+    const storageLike = resolveStorageByName({
+      windowLike: windowLike as unknown as Record<string, unknown>,
+      storageName: "localStorage"
+    });
+    const parsed = JSON.parse(safeReadStorageItem({ storageLike, key: STORAGE_KEY }) || "{}") as Partial<OperationFeedbackPreferences>;
     return {
       enabled: parsed.enabled === true,
       placement: ["timer", "edge", "custom"].includes(String(parsed.placement))
@@ -75,8 +74,15 @@ function readPreferences(windowLike: Window | null): OperationFeedbackPreference
 }
 
 function savePreferences(windowLike: Window | null, preferences: OperationFeedbackPreferences): void {
-  const storageLike = createBrowserStorageAccess({ windowLike }).local();
-  writeStorageValue(storageLike, STORAGE_KEY, JSON.stringify(preferences));
+  const storageLike = resolveStorageByName({
+    windowLike: windowLike as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  safeSetStorageItem({
+    storageLike,
+    key: STORAGE_KEY,
+    value: JSON.stringify(preferences)
+  });
 }
 
 function isDesktop(windowLike: Window | null): boolean {
@@ -452,7 +458,7 @@ export function initOperationFeedbackSettingsUI(input: {
   const documentLike = input.documentLike && typeof (input.documentLike as Document).getElementById === "function"
     ? (input.documentLike as Document)
     : null;
-  const windowLike = input.windowLike && typeof (input.windowLike as Window).addEventListener === "function"
+  const windowLike = input.windowLike && typeof (input.windowLike as Window).localStorage !== "undefined"
     ? (input.windowLike as Window)
     : null;
   if (!documentLike || !isDesktop(windowLike)) return { hasToggle: false, didBind: false };

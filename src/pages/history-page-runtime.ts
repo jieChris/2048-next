@@ -201,6 +201,10 @@ function setStatus(documentLike: Document, text: string, isError: boolean): void
   (node as HTMLElement).style.color = isError ? "#ff7f7f" : "";
 }
 
+function isPromiseLike(value: unknown): value is Promise<unknown> {
+  return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as any).then === "function";
+}
+
 async function confirmWithGameDialog(
   windowLike: Window,
   message: string,
@@ -217,10 +221,10 @@ async function callStore(store: Record<string, unknown> | null, methodName: stri
   if (!store) {
     throw new Error("local_history_store_missing");
   }
-  const preferredAsyncName = methodName + "Async";
-  let method = store[preferredAsyncName];
+  let method = store[methodName];
   if (typeof method !== "function") {
-    method = store[methodName];
+    const preferredAsyncName = methodName + "Async";
+    method = store[preferredAsyncName];
   }
   if (typeof method !== "function") {
     throw new Error("local_history_method_missing:" + methodName);
@@ -421,20 +425,30 @@ function renderList(
 
     const exportBtn = node.querySelector(".history-export-btn") as HTMLButtonElement | null;
     if (exportBtn) {
-      exportBtn.addEventListener("click", async () => {
+      exportBtn.addEventListener("click", () => {
         try {
           const store = historyStore as any;
-          const payload = await callStore(historyStore, "exportRecords", [item.id]);
-          const safeMode = toText(item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
-          const filenamePrefix = "history_" + safeMode + "_" + item.id;
-          store.download(filenamePrefix + ".json", toText(payload));
-          const replayCode = controller.resolveReplayCode(item.replay_string);
-          if (replayCode.trim()) {
-            store.download(filenamePrefix + ".txt", replayCode, "text/plain;charset=utf-8");
-            setStatus(documentLike, copy.exportOneSuccess, false);
+          const result = store.exportRecords([item.id]);
+          const onPayload = (payload: unknown) => {
+            const safeMode = toText(item.mode_key || "mode").replace(/[^a-zA-Z0-9_-]/g, "_");
+            const filenamePrefix = "history_" + safeMode + "_" + item.id;
+            const payloadText = toText(payload);
+            store.download(filenamePrefix + ".json", payloadText);
+            const replayCode = controller.resolveReplayCode(item.replay_string);
+            if (replayCode.trim()) {
+              store.download(filenamePrefix + ".txt", replayCode, "text/plain;charset=utf-8");
+              setStatus(documentLike, copy.exportOneSuccess, false);
+              return;
+            }
+            setStatus(documentLike, copy.exportJsonOnly, true);
+          };
+          if (isPromiseLike(result)) {
+            result.then(onPayload).catch(() => {
+              setStatus(documentLike, copy.exportFailed, true);
+            });
             return;
           }
-          setStatus(documentLike, copy.exportJsonOnly, true);
+          onPayload(result);
         } catch (_err) {
           setStatus(documentLike, copy.exportFailed, true);
         }
@@ -737,13 +751,22 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
 
     const exportAllBtn = documentLike.getElementById("history-export-all-btn") as HTMLButtonElement | null;
     if (exportAllBtn) {
-      exportAllBtn.addEventListener("click", async () => {
+      exportAllBtn.addEventListener("click", () => {
         try {
           const store = historyStore as any;
-          const payload = await callStore(historyStore, "exportRecords");
-          const dateTag = new Date().toISOString().slice(0, 10);
-          store.download("2048_local_history_" + dateTag + ".json", toText(payload));
-          setStatus(documentLike, getHistoryCopy(resolveLang()).exportAllSuccess, false);
+          const result = store.exportRecords();
+          const handlePayload = (payload: unknown) => {
+            const dateTag = new Date().toISOString().slice(0, 10);
+            store.download("2048_local_history_" + dateTag + ".json", toText(payload));
+            setStatus(documentLike, getHistoryCopy(resolveLang()).exportAllSuccess, false);
+          };
+          if (isPromiseLike(result)) {
+            result.then(handlePayload).catch(() => {
+              setStatus(documentLike, getHistoryCopy(resolveLang()).exportFailed, true);
+            });
+            return;
+          }
+          handlePayload(result);
         } catch (_err) {
           setStatus(documentLike, getHistoryCopy(resolveLang()).exportFailed, true);
         }

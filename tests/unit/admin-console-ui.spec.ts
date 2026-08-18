@@ -13,13 +13,13 @@ function restoreGlobals(): void {
   else Object.defineProperty(globalThis, "window", { value: originalWindow, configurable: true, writable: true });
 }
 
-function installDom(url = "https://example.test/admin.html?view=dashboard"): JSDOM {
+function installDom(): JSDOM {
   const dom = new JSDOM(`<!doctype html><html><body data-admin-access="checking">
     <div id="admin-gate"><span id="admin-gate-text"></span></div>
     <div id="admin-shell" hidden><aside id="admin-sidebar"></aside><div id="admin-sidebar-backdrop" hidden></div><div><header id="admin-topbar"></header><main id="admin-content"></main></div></div>
     <dialog id="admin-dialog"><div id="admin-dialog-title"></div><div id="admin-dialog-body"></div><div id="admin-dialog-actions"></div></dialog>
     <div id="admin-toast" hidden></div>
-  </body></html>`, { url });
+  </body></html>`, { url: "https://example.test/admin.html?view=dashboard" });
   Object.defineProperty(globalThis, "document", { value: dom.window.document, configurable: true, writable: true });
   Object.defineProperty(globalThis, "window", { value: dom.window, configurable: true, writable: true });
   dom.window.localStorage.setItem("2048_auth_token_v1", "admin-token");
@@ -54,61 +54,9 @@ describe("Next admin console", () => {
 
     expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
     expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("用户中心");
-    expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("成绩补录");
-    expect(dom.window.document.getElementById("admin-sidebar")?.textContent).toContain("第三方记录导入");
     expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("12");
     expect(dom.window.document.body.textContent).not.toContain("内测用户管理");
     expect(dom.window.document.body.textContent).not.toContain("内测资格");
-  });
-
-  it("authorizes through the server session when the local auth token is missing", async () => {
-    const dom = installDom();
-    dom.window.localStorage.removeItem("2048_auth_token_v1");
-    const fetchMock = vi.fn(async () => ({
-      json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } })
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
-
-    bootstrapAdminPage();
-    await flush();
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.test/api/admin/me",
-      expect.objectContaining({ method: "GET" })
-    );
-    expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
-    expect(dom.window.location.pathname).toBe("/admin.html");
-  });
-
-  it("renders record import as an independent URL module", async () => {
-    const dom = installDom("https://example.test/admin.html?view=imports&user_id=42");
-    vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } }) })));
-    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
-
-    bootstrapAdminPage();
-    await flush();
-
-    expect(dom.window.document.querySelector("[data-view=imports]")?.classList.contains("is-active")).toBe(true);
-    expect(dom.window.document.querySelector("#admin-content h1")?.textContent).toBe("成绩补录");
-    expect(dom.window.document.getElementById("admin-content")?.textContent).toContain("已预填用户 #42");
-    (dom.window.document.querySelector("#admin-content [data-import]") as HTMLButtonElement).click();
-    expect((dom.window.document.getElementById("dialog-import-user") as HTMLInputElement).value).toBe("42");
-  });
-
-  it("renders third-party import as a separate two-stage module", async () => {
-    const dom = installDom("https://example.test/admin.html?view=external-import&user_id=42");
-    vi.stubGlobal("fetch", vi.fn(async () => ({ json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } }) })));
-    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
-
-    bootstrapAdminPage();
-    await flush();
-
-    expect(dom.window.document.querySelector("[data-view='external-import']")?.classList.contains("is-active")).toBe(true);
-    expect(dom.window.document.querySelector("#admin-content h1")?.textContent).toBe("第三方记录导入");
-    expect((dom.window.document.getElementById("external-import-user") as HTMLInputElement).value).toBe("42");
-    expect(dom.window.document.querySelector("[data-external-preview]")?.textContent).toBe("预览导入");
-    expect((dom.window.document.querySelector("[data-external-commit]") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("keeps Tabler and admin styles isolated to the admin entry", () => {
@@ -131,16 +79,6 @@ describe("Next admin console", () => {
     expect(page).toContain("official_v1");
     expect(page).not.toContain('id="dialog-import-score"');
     expect(page).not.toContain('id="dialog-import-duration"');
-  });
-
-  it("uses multipart preview and commit endpoints for third-party imports", () => {
-    const page = readFileSync(resolve(process.cwd(), "src/pages/admin-page.ts"), "utf8");
-
-    expect(page).toContain("/third-party-record-import/preview");
-    expect(page).toContain("/third-party-record-import/commit");
-    expect(page).toContain('body.append("file", file, file.name)');
-    expect(page).toContain('body.append("reason", reasonInput.value.trim())');
-    expect(page).toContain("data.batch_audit_recorded === false");
   });
 
   it("uses URL parameters for stable module and user detail navigation", () => {

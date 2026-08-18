@@ -19,8 +19,8 @@
 
 ## 全量矩阵
 
-- 当前批准范围为 33 个页面状态和 18 个弹窗／覆盖层，共 408 张 PNG。
-- `tests/visual/account-settings.visual.spec.ts` 维护账号设置游客页 8 个场景；`tests/visual/all-pages.visual.spec.ts` 维护其余 400 个场景。
+- 当前批准范围为 34 个页面状态和 18 个弹窗／覆盖层，共 416 张 PNG。
+- `tests/visual/account-settings.visual.spec.ts` 维护账号设置游客页 8 个场景；`tests/visual/all-pages.visual.spec.ts` 维护其余 408 个场景。
 - 新增入口、弹窗或可见覆盖层时，必须同步更新测试登记、基线 PNG、manifest 数量与 Trellis 执行记录。
 - 全量更新只用于首次建基线或用户明确批准的大范围视觉变化；日常页面改动仍优先运行受影响场景，最后以普通比较确认未误改其他基线。
 

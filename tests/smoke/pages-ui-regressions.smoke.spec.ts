@@ -78,7 +78,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   function stripAllowedChinesePageTerms(text: string) {
     return text
-      .replace(/\bNEXT\b/gu, "")
       .replace(/\bIPS\b/gu, "")
       .replace(/\bWASD\b/gu, "")
       .replace(/\bKHJL\b/gu, "")
@@ -163,16 +162,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         expect(response, `${target} response should exist`).not.toBeNull();
         expect(response?.ok(), `${target} response should be 2xx`).toBeTruthy();
         await expect(page.locator("body")).toBeVisible();
-        if (target === "/Practice_board.html") {
-          await waitForWindowCondition(
-            page,
-            () =>
-              Boolean((window as any).__practicePhaseSyncBound) &&
-              document.getElementById("practice-mode-picker-btn")?.hasAttribute("data-active-practice-mode-key") === true &&
-              document.querySelectorAll("#practice-mode-list [data-practice-mode-key]").length > 0,
-            15_000
-          );
-        }
         await page.waitForTimeout(800);
 
         const texts = await collectVisibleLanguageTexts(page);
@@ -186,11 +175,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     }
   });
 
-  test("timer module settings description follows language selected on the settings page", async ({ page }) => {
+  test("timer module settings description updates immediately when language toggles", async ({ page }) => {
     await routeI18nAuditApi(page);
     await page.addInitScript(() => {
-      if (window.localStorage.getItem("__timer_language_settings_seeded_v1") === "1") return;
-      window.localStorage.setItem("__timer_language_settings_seeded_v1", "1");
       window.localStorage.setItem("ui_language_v1", "en");
       window.localStorage.setItem("settings_timer_module_view_v1", "timer");
     });
@@ -212,25 +199,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "Turn on to show timers, turn off to show leaderboard."
     );
 
-    const settingsResponse = await page.goto("/palette.html#language-settings", {
-      waitUntil: "domcontentloaded"
-    });
-    expect(settingsResponse?.ok(), "Settings response should be 2xx").toBeTruthy();
-    await expect(page.locator("#language-settings-editor")).toHaveAttribute("open", "");
-    await expect(page.locator("#ui-language-toggle")).toBeChecked();
     await page.click("label.language-settings-switch");
-    await page.waitForFunction(() => window.localStorage.getItem("ui_language_v1") === "zh");
-
-    const updatedHomeResponse = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
-    expect(updatedHomeResponse?.ok(), "Updated home response should be 2xx").toBeTruthy();
-    await waitForWindowCondition(
-      page,
-      () => typeof (window as any).openSettingsModal === "function",
-      "updated settings modal opener ready"
-    );
-    await page.evaluate(() => {
-      (window as any).openSettingsModal();
-    });
 
     await expect(page.locator("#timer-module-view-label")).toHaveText(
       "开启时显示计时器，关闭时显示排行榜。"

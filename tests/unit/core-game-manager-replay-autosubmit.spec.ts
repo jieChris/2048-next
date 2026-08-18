@@ -34,50 +34,7 @@ function loadReplayHelpersRuntime() {
   };
   vm.runInNewContext(script, context);
   return context as typeof context & {
-    tryAutoSubmitOnGameOver: (
-      manager: Record<string, unknown>
-    ) => boolean | Promise<boolean> | undefined;
-  };
-}
-
-function createTerminalManager(overrides: Record<string, unknown> = {}) {
-  return {
-    sessionSubmitDone: false,
-    replayMode: false,
-    over: true,
-    won: false,
-    keepPlaying: false,
-    mode: "standard_4x4_pow2_no_undo",
-    modeKey: "standard_4x4_pow2_no_undo",
-    width: 4,
-    height: 4,
-    ruleset: "pow2",
-    rankedBucket: "standard_no_undo",
-    modeFamily: "standard",
-    rankPolicy: "unranked",
-    modeConfig: { undo_enabled: false },
-    specialRules: {},
-    initialSeed: 123,
-    score: 4096,
-    rescueReplayString: "REPLAY_v1RPL_B64_rescue",
-    grid: {
-      cells: [[{ value: 4096 }]],
-      cellContent({ x, y }: { x: number; y: number }) {
-        return x === 0 && y === 0 ? { value: 4096 } : null;
-      },
-      eachCell(callback: (x: number, y: number, tile: { value: number }) => void) {
-        callback(0, 0, { value: 4096 });
-      }
-    },
-    getDurationMs: vi.fn(() => 1200),
-    clonePlain: vi.fn((value: unknown) => JSON.parse(JSON.stringify(value))),
-    getWindowLike: vi.fn(() => ({})),
-    resolveNormalizedCoreValueOrFallback: vi.fn(
-      (_coreValue: unknown, _normalize: unknown, fallback: () => unknown) => fallback()
-    ),
-    resolveWindowNamespaceMethod: vi.fn(() => null),
-    writeLocalStorageJsonPayload: vi.fn(),
-    ...overrides
+    tryAutoSubmitOnGameOver: (manager: Record<string, unknown>) => void;
   };
 }
 
@@ -86,7 +43,40 @@ describe("core game manager replay auto submit", () => {
     const runtime = loadReplayHelpersRuntime();
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
-    const manager = createTerminalManager({
+    const manager = {
+      sessionSubmitDone: false,
+      replayMode: false,
+      over: true,
+      won: false,
+      keepPlaying: false,
+      mode: "standard_4x4_pow2_no_undo",
+      modeKey: "standard_4x4_pow2_no_undo",
+      width: 4,
+      height: 4,
+      ruleset: "pow2",
+      rankedBucket: "standard_no_undo",
+      modeFamily: "standard",
+      rankPolicy: "unranked",
+      modeConfig: { undo_enabled: false },
+      specialRules: {},
+      initialSeed: 123,
+      score: 4096,
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
+      grid: {
+        cells: [[{ value: 4096 }]],
+        cellContent({ x, y }: { x: number; y: number }) {
+          return x === 0 && y === 0 ? { value: 4096 } : null;
+        },
+        eachCell(callback: (x: number, y: number, tile: { value: number }) => void) {
+          callback(0, 0, { value: 4096 });
+        }
+      },
+      getDurationMs: vi.fn(() => 1200),
+      clonePlain: vi.fn((value: unknown) => JSON.parse(JSON.stringify(value))),
+      getWindowLike: vi.fn(() => ({})),
+      resolveNormalizedCoreValueOrFallback: vi.fn(
+        (_coreValue: unknown, _normalize: unknown, fallback: () => unknown) => fallback()
+      ),
       resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
         if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
         return {
@@ -100,7 +90,7 @@ describe("core game manager replay auto submit", () => {
       writeLocalStorageJsonPayload: vi.fn((_key: string, payload: Record<string, unknown>) => {
         resultWrites.push(payload);
       })
-    });
+    };
 
     expect(() => runtime.tryAutoSubmitOnGameOver(manager)).not.toThrow();
     expect(savedRecords).toHaveLength(1);
@@ -111,76 +101,5 @@ describe("core game manager replay auto submit", () => {
       replay_string: "REPLAY_v1RPL_B64_rescue"
     });
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });
-  });
-
-  it("cleans up and retries when async completion rejects an invalid saved record", async () => {
-    const runtime = loadReplayHelpersRuntime();
-    const saveRecordAsync = vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "local-retry-record" });
-    const manager = createTerminalManager({
-      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
-        return { scope: {}, method: saveRecordAsync };
-      })
-    });
-
-    await expect(runtime.tryAutoSubmitOnGameOver(manager)).resolves.toBe(false);
-    expect(manager.localHistorySaveInFlight).toBeUndefined();
-    expect(manager.sessionSubmitDone).toBe(false);
-
-    await expect(runtime.tryAutoSubmitOnGameOver(manager)).resolves.toBe(true);
-    expect(saveRecordAsync).toHaveBeenCalledTimes(2);
-    expect(manager.localHistorySaveInFlight).toBeUndefined();
-    expect(manager.sessionSubmitDone).toBe(true);
-  });
-
-  it("keeps the rescue identity when the live replay codec recovers before async save completion", async () => {
-    const runtime = loadReplayHelpersRuntime();
-    let liveReplayAvailable = false;
-    let resolveSave!: (record: Record<string, unknown>) => void;
-    const savePromise = new Promise<Record<string, unknown>>((resolve) => {
-      resolveSave = resolve;
-    });
-    const savedRecords: Record<string, unknown>[] = [];
-    const manager = createTerminalManager({
-      clientRecordId: "",
-      sessionReplayV1: {
-        supported: true,
-        board_width: 4,
-        board_height: 4,
-        init_tiles: [],
-        records: []
-      },
-      getWindowLike: vi.fn(() => ({
-        CoreReplayCodecRuntime: {
-          encodeReplayV1Rpl() {
-            if (!liveReplayAvailable) throw new Error("live_replay_unavailable");
-            return new Uint8Array([1, 2, 3]);
-          }
-        },
-        btoa: vi.fn(() => "live-replay")
-      })),
-      resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordAsync") return null;
-        return {
-          scope: {},
-          method(record: Record<string, unknown>) {
-            savedRecords.push(record);
-            return savePromise;
-          }
-        };
-      })
-    });
-
-    const saveAttempt = runtime.tryAutoSubmitOnGameOver(manager) as Promise<boolean>;
-    expect(savedRecords[0]?.replay_string).toBe("REPLAY_v1RPL_B64_rescue");
-
-    liveReplayAvailable = true;
-    resolveSave({ id: "local-rescue-async" });
-
-    await expect(saveAttempt).resolves.toBe(true);
-    expect(manager.sessionSubmitDone).toBe(true);
   });
 });

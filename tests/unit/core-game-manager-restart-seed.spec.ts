@@ -164,9 +164,6 @@ function loadRestartSeedRuntime(options?: {
     Date: { now: dateNow },
     performance: { now: performanceNow },
     isNonArrayObject: (value: unknown) => !!value && typeof value === "object" && !Array.isArray(value),
-    cloneBoardMatrix: (board: unknown) => Array.isArray(board)
-      ? board.map((row) => Array.isArray(row) ? row.slice() : row)
-      : board,
     resolveManagerDocumentLike: options?.resolveManagerDocumentLike,
     setBoardFromMatrix: options?.setBoardFromMatrix,
     getFinalBoardMatrix: options?.getFinalBoardMatrix,
@@ -481,42 +478,6 @@ describe("core game manager restart seed runtime", () => {
     expect(setBoardFromMatrix).not.toHaveBeenCalled();
     expect(getFinalBoardMatrix).not.toHaveBeenCalled();
     expect(manager.actuate).not.toHaveBeenCalled();
-  });
-
-  it("resyncs replay init tiles after replacing the setup board", () => {
-    const board = [[2, 0], [0, 4]];
-    const { runtime } = loadRestartSeedRuntime({
-      setBoardFromMatrix: vi.fn(),
-      getFinalBoardMatrix: vi.fn(() => board)
-    });
-    const manager = {
-      actuator: { continue: vi.fn() },
-      rankedSetupBlockedUntilSessionReady: false,
-      setup: vi.fn(function (this: Record<string, unknown>) {
-        this.sessionReplayV1 = {
-          supported: false,
-          init_tiles: [],
-          records: []
-        };
-      }),
-      actuate: vi.fn(),
-      modeKey: "standard_2x2_pow2_no_undo",
-      ruleset: "pow2",
-      width: 2,
-      height: 2,
-      challengeId: "checkpoint-board",
-      initialSeed: 101
-    } as Record<string, unknown>;
-
-    runtime.restartWithBoard(manager, board, null);
-
-    expect(manager.sessionReplayV1).toMatchObject({
-      supported: true,
-      init_tiles: [
-        { cellIndex: 0, valueBit: 0 },
-        { cellIndex: 3, valueBit: 1 }
-      ]
-    });
   });
 
   it("does not repeat fallback fresh seeds without Math.random", () => {

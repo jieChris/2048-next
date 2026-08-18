@@ -95,9 +95,7 @@ test("classic workshop preview shows one untransformed candidate safely", async 
   }).toPass({ timeout: 5000 });
   expect(await candidateFrame.locator(".settings-modal-content").evaluate((node) => getComputedStyle(node).borderRadius))
     .toBe("8px");
-  await candidateFrame.locator("body").evaluate(() => {
-    (window as any).closeSettingsModal();
-  });
+  await candidateFrame.locator("#settings-modal").click({ position: { x: 5, y: 5 } });
   await expect(candidateFrame.locator("#settings-modal")).toBeHidden();
 
   await page.locator('[data-preview-page-key="account"]').click();
@@ -243,7 +241,7 @@ test("approved workshop theme applies to production pages without changing mode 
   await page.goto("/2048.html?visual_preview=1", { waitUntil: "domcontentloaded" });
   await expect(page.locator('link[href^="style/main.css"]')).toHaveAttribute(
     "href",
-    /^style\/main\.css\?v=.+$/u
+    "style/main.css?v=20260721-leaderboard-rank-colors-v1"
   );
   const productionPalette = await page.locator("body").evaluate(() => ({
     page: getComputedStyle(document.body).backgroundColor,

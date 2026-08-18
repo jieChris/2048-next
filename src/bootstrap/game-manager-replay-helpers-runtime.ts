@@ -24,7 +24,6 @@ const REPLAY_V1_EXT_CUSTOM_SECONDARY_TIMERS = 5;
 const REPLAY_V1_EXT_OWNER_USER_ID = 6;
 const REPLAY_V1_EXT_OWNER_NICKNAME = 7;
 const REPLAY_V1_EXT_EXACT_SPAWN = 8;
-const REPLAY_STATE_HISTORY_WINDOW = 512;
 const REPLAY_V1_EXT_SPAWN_SEQUENCE_VERSION = 9;
 const LEGACY_VRS_NEW_CHARSET =
   "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" +
@@ -49,8 +48,7 @@ const REPLAY_SEEK_CHECKPOINT_INTERVAL = 32;
 
 type BoardMatrix = number[][];
 type ReplaySpawn = { x: number; y: number; value: number };
-type ReplaySeekState = Record<string, unknown>;
-type ReplayCheckpoint = { index: number; board?: BoardMatrix; score?: number; state?: ReplaySeekState };
+type ReplayCheckpoint = { index: number; board: BoardMatrix; score?: number };
 type GridLike = { insertTile?: (tile: unknown) => unknown };
 
 let v9VerseRepairRuntime: { map: Record<string, string>; maxKeyLength: number } | null = null;
@@ -543,10 +541,10 @@ function applyStructuredReplaySession(
   if (envelope.kind === "v3-json") {
     const seed = Number(envelope.seed);
     if (Number.isFinite(seed)) {
-      const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown, options?: unknown) => unknown>(
+      const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown) => unknown>(
         manager.restartWithSeed
       );
-      if (restartWithSeed) restartWithSeed.call(manager, seed, replayModeConfig, { asReplay: true });
+      if (restartWithSeed) restartWithSeed.call(manager, seed, replayModeConfig);
     }
     applied = true;
   }
@@ -582,7 +580,7 @@ function applyStructuredReplaySession(
   manager.replaySeekCheckpointHistory = Array.isArray(envelope.replaySeekCheckpoints)
     ? envelope.replaySeekCheckpoints
     : [];
-  initializeReplaySeekStateCache(manager);
+  manager.replayStateHistory = [];
   return true;
 }
 
@@ -1438,141 +1436,6 @@ export function setReplaySpeed(manager: ManagerLike, multiplier: unknown): numbe
   return normalized;
 }
 
-function isReplayUndoAction(action: unknown): boolean {
-  return action === -1 || (Array.isArray(action) && String(action[0] || "") === "u");
-}
-
-function canCacheReplaySeekState(manager: ManagerLike): boolean {
-  if (typeof manager.replaySeekStateCacheEnabled === "boolean") {
-    return manager.replaySeekStateCacheEnabled;
-  }
-  const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
-  const enabled = !moves.some(isReplayUndoAction);
-  manager.replaySeekStateCacheEnabled = enabled;
-  return enabled;
-}
-
-function resolveReplaySeekSnapshotOperations(manager: ManagerLike): {
-  create: (manager: ManagerLike, options: Record<string, unknown>) => unknown;
-  applyTiles: (manager: ManagerLike, state: ReplaySeekState) => unknown;
-  applyState: (manager: ManagerLike, state: ReplaySeekState) => unknown;
-} | null {
-  const windowLike = getWindowLikeForManager(manager);
-  const create = asFunction<(manager: ManagerLike, options: Record<string, unknown>) => unknown>(
-    windowLike.createCurrentUndoStackEntrySnapshot
-  );
-  const applyTiles = asFunction<(manager: ManagerLike, state: ReplaySeekState) => unknown>(
-    windowLike.applyUndoRestoredTiles
-  );
-  const applyState = asFunction<(manager: ManagerLike, state: ReplaySeekState) => unknown>(
-    windowLike.applyUndoRestoreState
-  );
-  return create && applyTiles && applyState ? { create, applyTiles, applyState } : null;
-}
-
-function createReplaySeekState(manager: ManagerLike): ReplaySeekState | null {
-  if (!canCacheReplaySeekState(manager)) return null;
-  const operations = resolveReplaySeekSnapshotOperations(manager);
-  if (!operations) return null;
-  const source = operations.create(manager, {});
-  if (!isRecord(source) || !Array.isArray(source.tiles)) return null;
-  const state = toRecord(cloneJsonSafe(source) || source);
-  state.over = !!manager.over;
-  state.won = !!manager.won;
-  state.keepPlaying = !!manager.keepPlaying;
-  state.replaySpawnValueCounts = cloneJsonSafe(manager.spawnValueCounts);
-  state.replaySpawnTwos = manager.spawnTwos;
-  state.replaySpawnFours = manager.spawnFours;
-  return state;
-}
-
-function restoreReplaySeekState(manager: ManagerLike, replayIndex: number, source: ReplaySeekState): boolean {
-  const operations = resolveReplaySeekSnapshotOperations(manager);
-  if (!operations) return false;
-  const state = toRecord(cloneJsonSafe(source) || source);
-  const actuator = toRecord(manager.actuator);
-  const cancelPendingActuation = asFunction<() => unknown>(actuator.cancelPendingActuation);
-  if (cancelPendingActuation) cancelPendingActuation.call(actuator);
-  operations.applyTiles(manager, state);
-  operations.applyState(manager, state);
-  if (isRecord(state.replaySpawnValueCounts)) {
-    manager.spawnValueCounts = cloneJsonSafe(state.replaySpawnValueCounts) || {};
-  }
-  if (Number.isFinite(state.replaySpawnTwos)) manager.spawnTwos = Number(state.replaySpawnTwos);
-  if (Number.isFinite(state.replaySpawnFours)) manager.spawnFours = Number(state.replaySpawnFours);
-  manager.replayMode = true;
-  manager.replayIndex = replayIndex;
-  const clearTransient = asFunction<() => unknown>(manager.clearTransientTileVisualState);
-  if (clearTransient) clearTransient.call(manager);
-  const invalidateLayout = asFunction<() => unknown>(actuator.invalidateLayoutCache);
-  if (invalidateLayout) invalidateLayout.call(actuator);
-  const actuate = asFunction<() => unknown>(manager.actuate);
-  if (actuate) actuate.call(manager);
-  return true;
-}
-
-function clearReplayStateHistory(manager: ManagerLike): void {
-  manager.replayStateHistory = [];
-  manager.replayStateHistoryPruneCursor = 0;
-}
-
-function getReplayStateHistory(manager: ManagerLike, replayIndex: number): ReplaySeekState | null {
-  const history = Array.isArray(manager.replayStateHistory) ? manager.replayStateHistory : [];
-  const state = history[replayIndex];
-  return isRecord(state) ? state : null;
-}
-
-function resolveReplaySeekCheckpointInterval(manager: ManagerLike): number {
-  const length = Array.isArray(manager.replayMoves) ? manager.replayMoves.length : 0;
-  if (length >= 50000) return 128;
-  if (length >= 10000) return 64;
-  return REPLAY_SEEK_CHECKPOINT_INTERVAL;
-}
-
-function storeGeneratedReplayCheckpoint(
-  manager: ManagerLike,
-  replayIndex: number,
-  state: ReplaySeekState
-): void {
-  const moves = Array.isArray(manager.replayMoves) ? manager.replayMoves : [];
-  const interval = resolveReplaySeekCheckpointInterval(manager);
-  if (replayIndex !== 0 && replayIndex !== moves.length && replayIndex % interval !== 0) return;
-  const checkpoints = Array.isArray(manager.replaySeekCheckpointHistory)
-    ? manager.replaySeekCheckpointHistory
-    : [];
-  const existingIndex = checkpoints.findIndex((item) => Number(toRecord(item).index) === replayIndex);
-  const current = existingIndex >= 0 ? toRecord(checkpoints[existingIndex]) : {};
-  const next: ReplayCheckpoint = { ...current, index: replayIndex, state };
-  if (Number.isFinite(state.score)) next.score = Number(state.score);
-  if (existingIndex >= 0) checkpoints[existingIndex] = next;
-  else checkpoints.push(next);
-  manager.replaySeekCheckpointHistory = checkpoints;
-}
-
-function storeReplayStateHistory(manager: ManagerLike, replayIndex: number): void {
-  const state = createReplaySeekState(manager);
-  if (!state) return;
-  const history = Array.isArray(manager.replayStateHistory) ? manager.replayStateHistory : [];
-  history[replayIndex] = state;
-  const pruneBefore = replayIndex - REPLAY_STATE_HISTORY_WINDOW;
-  let cursor = Number.isInteger(manager.replayStateHistoryPruneCursor)
-    ? Number(manager.replayStateHistoryPruneCursor)
-    : 0;
-  while (cursor < pruneBefore) {
-    history[cursor] = undefined;
-    cursor += 1;
-  }
-  manager.replayStateHistory = history;
-  manager.replayStateHistoryPruneCursor = cursor;
-  storeGeneratedReplayCheckpoint(manager, replayIndex, state);
-}
-
-function initializeReplaySeekStateCache(manager: ManagerLike): void {
-  manager.replaySeekStateCacheEnabled = undefined;
-  clearReplayStateHistory(manager);
-  if (canCacheReplaySeekState(manager)) storeReplayStateHistory(manager, 0);
-}
-
 function findReplayCheckpoint(manager: ManagerLike, target: number): ReplayCheckpoint | null {
   const checkpoints = Array.isArray(manager.replaySeekCheckpointHistory)
     ? manager.replaySeekCheckpointHistory
@@ -1582,14 +1445,13 @@ function findReplayCheckpoint(manager: ManagerLike, target: number): ReplayCheck
     const checkpoint = toRecord(item);
     const index = Math.floor(Number(checkpoint.index));
     if (!Number.isInteger(index) || index > target) continue;
-    if (!Array.isArray(checkpoint.board) && !isRecord(checkpoint.state)) continue;
+    if (!Array.isArray(checkpoint.board)) continue;
     if (!best || index > best.index) {
       const score = Number(checkpoint.score);
       best = {
         index,
-        board: Array.isArray(checkpoint.board) ? (checkpoint.board as BoardMatrix) : undefined,
-        score: Number.isFinite(score) && score >= 0 ? score : undefined,
-        state: isRecord(checkpoint.state) ? checkpoint.state : undefined
+        board: checkpoint.board as BoardMatrix,
+        score: Number.isFinite(score) && score >= 0 ? score : undefined
       };
     }
   }
@@ -1616,23 +1478,16 @@ function restartReplayAtBoard(manager: ManagerLike, board: BoardMatrix, replayIn
 function restartReplayForSeek(manager: ManagerLike, target: number): number {
   const checkpoint = findReplayCheckpoint(manager, target);
   if (checkpoint) {
-    if (checkpoint.state && restoreReplaySeekState(manager, checkpoint.index, checkpoint.state)) {
-      return checkpoint.index;
-    }
-    if (checkpoint.board) {
-      restartReplayAtBoard(manager, checkpoint.board, checkpoint.index, checkpoint.score);
-      return checkpoint.index;
-    }
+    restartReplayAtBoard(manager, checkpoint.board, checkpoint.index, checkpoint.score);
+    return checkpoint.index;
   }
   if (Array.isArray(manager.replayStartBoardMatrix)) {
     restartReplayAtBoard(manager, manager.replayStartBoardMatrix as BoardMatrix, 0);
     return 0;
   }
-  const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown, options?: unknown) => unknown>(
-    manager.restartWithSeed
-  );
+  const restartWithSeed = asFunction<(seed: unknown, modeConfig: unknown) => unknown>(manager.restartWithSeed);
   if (restartWithSeed && typeof manager.initialSeed !== "undefined") {
-    restartWithSeed.call(manager, manager.initialSeed, manager.modeConfig || null, { asReplay: true });
+    restartWithSeed.call(manager, manager.initialSeed, manager.modeConfig || null);
   }
   manager.replayMode = true;
   manager.replayIndex = 0;
@@ -1674,7 +1529,6 @@ function executeReplayActionAt(manager: ManagerLike, index: number): void {
   }
   dispatchReplayAction(manager, action);
   manager.replayIndex = index + 1;
-  storeReplayStateHistory(manager, index + 1);
 }
 
 function queueNativeReplayTick(manager: ManagerLike): void {
@@ -1721,26 +1575,10 @@ export function seekReplay(manager: ManagerLike, targetIndex: unknown): number {
   const target = Math.max(0, Math.min(moves.length, Math.floor(Number(targetIndex) || 0)));
   const current = Math.max(0, Math.min(moves.length, Math.floor(Number(manager.replayIndex) || 0)));
   if (target === current) return target;
-  if (target < current && canCacheReplaySeekState(manager)) {
-    const state = getReplayStateHistory(manager, target);
-    let restored = false;
-    if (state) {
-      withSingleFinalActuate(manager, () => {
-        restored = restoreReplaySeekState(manager, target, state);
-      });
-    }
-    if (restored) {
-      manager.replayPaused = true;
-      manager.replayRunning = false;
-      manager.isPaused = true;
-      return target;
-    }
-    clearReplayStateHistory(manager);
-  }
   withSingleFinalActuate(manager, () => {
     let start = current;
     const checkpoint = findReplayCheckpoint(manager, target);
-    if (target < current || (target - current > 1 && checkpoint && checkpoint.index > current)) {
+    if (target < current || (checkpoint && checkpoint.index > current)) {
       start = restartReplayForSeek(manager, target);
     }
     for (let index = start; index < target; index += 1) executeReplayActionAt(manager, index);
@@ -1774,10 +1612,6 @@ export function applyReplayImportActions(manager: ManagerLike, payload: unknown)
   manager.replaySpawns = spawns;
   manager.replayIndex = 0;
   manager.replayMode = true;
-  manager.replaySeekCheckpointHistory = Array.isArray(source.replaySeekCheckpoints)
-    ? source.replaySeekCheckpoints.slice()
-    : [];
-  initializeReplaySeekStateCache(manager);
   return moves.length > 0 || spawns.length > 0;
 }
 
@@ -1816,12 +1650,9 @@ function resolveLocalHistorySave(manager: ManagerLike): { scope: unknown; method
   const resolver = asFunction<(namespace: string, methodName: string) => unknown>(
     manager.resolveWindowNamespaceMethod
   );
-  const resolveMethod = (methodName: string) => {
-    const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", methodName) : null);
-    const method = asFunction<(record: unknown) => unknown>(resolved.method);
-    return method ? { scope: resolved.scope || null, method } : null;
-  };
-  return resolveMethod("saveRecordAsync") || resolveMethod("saveRecord");
+  const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", "saveRecord") : null);
+  const method = asFunction<(record: unknown) => unknown>(resolved.method);
+  return method ? { scope: resolved.scope || null, method } : null;
 }
 
 function writeAutoSubmitResultRecord(manager: ManagerLike, payload: unknown): void {
@@ -1840,34 +1671,7 @@ function writeAutoSubmitSkippedResult(manager: ManagerLike, reason: string): voi
   });
 }
 
-function buildTerminalLocalHistoryIdentity(manager: ManagerLike, replayString: string): string {
-  const clientRecordId = String(manager.clientRecordId || "").trim();
-  if (clientRecordId) return `client:${clientRecordId}`;
-  return [manager.modeKey || manager.mode || "", manager.initialSeed || "", replayString].join("|");
-}
-
-function isSameTerminalLocalHistoryIdentity(manager: ManagerLike, identity: string): boolean {
-  if (!isTerminalSessionForPersistence(manager)) return false;
-  if (identity.startsWith("client:")) {
-    return `client:${String(manager.clientRecordId || "").trim()}` === identity;
-  }
-  const rescueReplayString = String(manager.rescueReplayString || "").trim();
-  if (
-    rescueReplayString &&
-    buildTerminalLocalHistoryIdentity(manager, rescueReplayString) === identity
-  ) {
-    return true;
-  }
-  try {
-    return buildTerminalLocalHistoryIdentity(manager, serializeReplay(manager)) === identity;
-  } catch (_error) {
-    return false;
-  }
-}
-
-export function tryAutoSubmitOnGameOver(
-  manager: ManagerLike
-): boolean | Promise<boolean> | undefined {
+export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
   if (!manager || manager.sessionSubmitDone) return;
   if (manager.replayMode) {
     writeAutoSubmitSkippedResult(manager, "replay_mode");
@@ -1891,12 +1695,6 @@ export function tryAutoSubmitOnGameOver(
     replay: serializeReplayV3(manager),
     replay_string: replayString
   };
-  const identity = buildTerminalLocalHistoryIdentity(manager, replayString);
-  const inFlight = toRecord(manager.localHistorySaveInFlight);
-  const inFlightPromise = inFlight.promise;
-  if (inFlight.identity === identity && typeof toRecord(inFlightPromise).then === "function") {
-    return Promise.resolve(inFlightPromise).then((result) => result === true);
-  }
   const saveRecord = resolveLocalHistorySave(manager);
   if (!saveRecord) {
     writeAutoSubmitResultRecord(manager, {
@@ -1904,48 +1702,18 @@ export function tryAutoSubmitOnGameOver(
       ok: false,
       reason: "local_history_store_missing"
     });
-    return false;
+    return;
   }
-  const complete = (savedLike: unknown): boolean => {
-    if (!isRecord(savedLike)) throw new Error("local_save_failed");
-    if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = true;
-    const saved = toRecord(savedLike);
-    writeAutoSubmitResultRecord(manager, {
-      at: endedAt,
-      ok: true,
-      local_saved: true,
-      record_id: saved.id || null,
-      mode_key: record.mode_key,
-      score: record.score
-    });
-    return true;
-  };
-  const fail = (error: unknown): boolean => {
-    if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = false;
-    writeAutoSubmitResultRecord(manager, {
-      at: endedAt,
-      ok: false,
-      mode_key: record.mode_key,
-      score: record.score,
-      error: String(toRecord(error).message || "local_save_failed")
-    });
-    return false;
-  };
-  try {
-    const saveResult = saveRecord.method.call(saveRecord.scope, record);
-    if (!saveResult || typeof toRecord(saveResult).then !== "function") return complete(saveResult);
-    const state = { identity, promise: Promise.resolve(false) };
-    state.promise = Promise.resolve(saveResult)
-      .then(complete)
-      .catch(fail)
-      .finally(() => {
-        if (manager.localHistorySaveInFlight === state) delete manager.localHistorySaveInFlight;
-      });
-    manager.localHistorySaveInFlight = state;
-    return state.promise;
-  } catch (error) {
-    return fail(error);
-  }
+  const saved = toRecord(saveRecord.method.call(saveRecord.scope, record));
+  manager.sessionSubmitDone = true;
+  writeAutoSubmitResultRecord(manager, {
+    at: endedAt,
+    ok: true,
+    local_saved: true,
+    record_id: saved.id || null,
+    mode_key: record.mode_key,
+    score: record.score
+  });
 }
 
 export interface GameManagerReplayHelpersRuntime {

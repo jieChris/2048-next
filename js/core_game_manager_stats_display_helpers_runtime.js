@@ -305,6 +305,7 @@ function finalizeActuatePersistenceFallback(manager) {
     (typeof isTerminalSessionForPersistence === "function" && isTerminalSessionForPersistence(manager))
   );
   if (shouldFinalizeAsTerminated) {
+    manager.clearSavedGameState(manager.modeKey);
     manager.tryAutoSubmitOnGameOver();
     return;
   }

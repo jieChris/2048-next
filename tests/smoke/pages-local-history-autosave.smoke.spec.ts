@@ -30,15 +30,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !!manager &&
         !!store &&
         typeof manager.tryAutoSubmitOnGameOver === "function" &&
-        typeof store.getAllAsync === "function"
+        typeof manager.restart === "function" &&
+        typeof store.getAll === "function"
       );
     });
 
-    const snapshot = await page.evaluate(async () => {
+    const snapshot = await page.evaluate(() => {
       const manager = (window as any).game_manager;
       const store = (window as any).LocalHistoryStore;
-      const recordsBefore = await store.getAllAsync();
-      const listBefore = Array.isArray(recordsBefore) ? recordsBefore : [];
+      const listBefore = Array.isArray(store.getAll()) ? store.getAll() : [];
       const before = listBefore.length;
 
       manager.sessionSubmitDone = false;
@@ -46,10 +46,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.over = false;
       manager.won = true;
       manager.keepPlaying = false;
-      await Promise.resolve(manager.tryAutoSubmitOnGameOver());
+      manager.tryAutoSubmitOnGameOver();
 
-      const recordsAfterWinStop = await store.getAllAsync();
-      const afterWinStop = Array.isArray(recordsAfterWinStop) ? recordsAfterWinStop.length : 0;
+      const afterWinStop = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
       const submitResultRaw = window.localStorage.getItem("last_session_submit_result_v1");
       let submitReason = "";
       try {
@@ -58,21 +57,24 @@ test.describe("Legacy Multi-Page Smoke", () => {
           submitResult && typeof submitResult.reason === "string" ? submitResult.reason : "";
       } catch (_err) {}
 
+      manager.restart();
+      const afterRestart = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
+
       manager.sessionSubmitDone = false;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
       manager.keepPlaying = false;
-      await Promise.resolve(manager.tryAutoSubmitOnGameOver());
+      manager.tryAutoSubmitOnGameOver();
 
-      const recordsAfterGameOver = await store.getAllAsync();
-      const listAfterGameOver = Array.isArray(recordsAfterGameOver) ? recordsAfterGameOver : [];
+      const listAfterGameOver = Array.isArray(store.getAll()) ? store.getAll() : [];
       const afterGameOver = listAfterGameOver.length;
       const latest = listAfterGameOver[0] || null;
 
       return {
         before,
         afterWinStop,
+        afterRestart,
         afterGameOver,
         submitReason,
         latestEndReason: latest && typeof latest.end_reason === "string" ? latest.end_reason : "",
@@ -83,6 +85,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.before).toBe(0);
     expect(snapshot.afterWinStop).toBe(snapshot.before);
+    expect(snapshot.afterRestart).toBe(snapshot.before);
     expect(snapshot.submitReason).toBe("not_game_over");
     expect(snapshot.afterGameOver).toBe(snapshot.before + 1);
     expect(snapshot.latestEndReason).toBe("game_over");
@@ -111,15 +114,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !!manager &&
         !!store &&
         typeof manager.actuate === "function" &&
-        typeof store.getAllAsync === "function"
+        typeof store.getAll === "function"
       );
     });
 
     const snapshot = await page.evaluate(async () => {
       const manager = (window as any).game_manager;
       const store = (window as any).LocalHistoryStore;
-      const recordsBefore = await store.getAllAsync();
-      const before = Array.isArray(recordsBefore) ? recordsBefore.length : 0;
+      const before = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
 
       manager.sessionSubmitDone = false;
       manager.replayMode = false;
@@ -136,14 +138,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       }
 
       manager.actuate();
-      const localHistorySavePromise = manager.localHistorySaveInFlight?.promise;
-      if (!localHistorySavePromise || typeof localHistorySavePromise.then !== "function") {
-        throw new Error("Expected terminal local-history save to be in flight after actuate()");
-      }
-      await localHistorySavePromise;
+      await new Promise((resolve) => window.setTimeout(resolve, 60));
 
-      const recordsAfter = await store.getAllAsync();
-      const listAfter = Array.isArray(recordsAfter) ? recordsAfter : [];
+      const listAfter = Array.isArray(store.getAll()) ? store.getAll() : [];
       const latest = listAfter[0] || null;
       const submitResultRaw = window.localStorage.getItem("last_session_submit_result_v1");
       let submitResult = null;

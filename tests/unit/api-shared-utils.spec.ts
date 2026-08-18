@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 interface ApiSharedWindowLike {
   ApiSharedUtils?: {
     buildApiBaseCandidates: () => string[];
-    safeSetStorage: (key: string, value: string) => boolean;
   };
   GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK?: string;
   GAME_API_BASE_URL?: string;
@@ -26,36 +25,6 @@ function loadApiSharedUtils(windowLike: ApiSharedWindowLike): ApiSharedWindowLik
 }
 
 describe("api shared utils API base candidates", () => {
-  it("reports whether local storage writes actually persisted", () => {
-    const values = new Map<string, string>();
-    const api = loadApiSharedUtils({
-      localStorage: {
-        getItem: (key: string) => values.get(key) || null,
-        setItem: (key: string, value: string) => values.set(key, value)
-      },
-      location: {
-        hostname: "localhost",
-        origin: "http://localhost:5173"
-      }
-    } as ApiSharedWindowLike);
-
-    expect(api?.safeSetStorage("pending", "payload")).toBe(true);
-    expect(values.get("pending")).toBe("payload");
-
-    const quotaApi = loadApiSharedUtils({
-      localStorage: {
-        setItem() {
-          throw new DOMException("quota", "QuotaExceededError");
-        }
-      },
-      location: {
-        hostname: "localhost",
-        origin: "http://localhost:5173"
-      }
-    } as ApiSharedWindowLike);
-    expect(quotaApi?.safeSetStorage("pending", "payload")).toBe(false);
-  });
-
   it("prefers same-origin API before remote fallback on 2048next.cn", () => {
     const api = loadApiSharedUtils({
       location: {

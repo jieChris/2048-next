@@ -29,7 +29,7 @@ describe("core game manager actuate persistence", () => {
     expect(manager.tryAutoSubmitOnGameOver).not.toHaveBeenCalled();
   });
 
-  it("keeps the recovery state while terminal persistence is still in flight", () => {
+  it("clears saved state and submits terminal non-practice games", () => {
     const manager = {
       modeKey: "ranked",
       over: false,
@@ -45,7 +45,7 @@ describe("core game manager actuate persistence", () => {
     finalizeActuatePersistence(manager, operations);
 
     expect(operations.publishSavedStateSyncSnapshot).toHaveBeenCalledWith(manager);
-    expect(manager.clearSavedGameState).not.toHaveBeenCalled();
+    expect(manager.clearSavedGameState).toHaveBeenCalledWith("ranked");
     expect(manager.tryAutoSubmitOnGameOver).toHaveBeenCalledTimes(1);
     expect(operations.saveGameState).not.toHaveBeenCalled();
   });

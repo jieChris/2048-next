@@ -10,6 +10,7 @@ import {
 
 const MODE_KEY = "standard_4x4_pow2_no_undo";
 const MIRROR_KEY = `ranked_checkpoint_local_mirror:v1:${MODE_KEY}`;
+const SAVED_STATE_KEY = `savedGameStateByMode:v1:${MODE_KEY}`;
 
 function createStorage(initial: Record<string, string> = {}) {
   const values = new Map(Object.entries(initial));
@@ -81,6 +82,42 @@ describe("core ranked checkpoint local mirror setup runtime", () => {
     });
     const manager = createManager(storage);
 
+    expect(readRankedCheckpointLocalMirrorSavedStateForSetup(manager)).toBeNull();
+  });
+
+  it("rejects an older mirror when the same ranked session has a newer ordinary saved state", () => {
+    const storage = createStorage({
+      "2048_auth_userId_v1": "user-1",
+      [MIRROR_KEY]: JSON.stringify({
+        mode_key: MODE_KEY,
+        ranked_session_token: "session-1",
+        challenge_id: "challenge-1",
+        initial_seed: 42,
+        saved_at: 100,
+        owner_user_id: "user-1",
+        ui_state: {
+          saved_state: {
+            mode_key: MODE_KEY,
+            ranked_session_token: "session-1",
+            challenge_id: "challenge-1",
+            initial_seed: 42,
+            saved_at: 100,
+            score: 128
+          }
+        }
+      }),
+      [SAVED_STATE_KEY]: JSON.stringify({
+        mode_key: MODE_KEY,
+        ranked_session_token: "session-1",
+        challenge_id: "challenge-1",
+        initial_seed: 42,
+        saved_at: 200,
+        score: 256
+      })
+    });
+    const manager = createManager(storage);
+
+    expect(hasRankedCheckpointLocalMirrorForSetup(manager)).toBe(false);
     expect(readRankedCheckpointLocalMirrorSavedStateForSetup(manager)).toBeNull();
   });
 });
