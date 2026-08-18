@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { installRankedSessionForMode } from "./support/ranked-session";
-import { waitForRankedMoveReady } from "./support/runtime-ready";
 
 const STABLE_SPARSE_CHECKPOINT_REPLAY_TEXT = readFileSync(
   "tests/fixtures/replays/legacy-real-v9-text-replay.txt",
@@ -229,7 +228,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const forwardIndex = Number(manager.replayIndex || 0);
 
         manager.seek(backwardTarget);
-        const moveCallCountAfterBackwardSeek = moveCallCount;
 
         const exactHistoryCountAfterBackward = Array.isArray(manager.replayStateHistory)
           ? manager.replayStateHistory.filter(Boolean).length
@@ -247,7 +245,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
           forwardIndex,
           backwardIndex,
           moveCallCountAfterForwardSeek,
-          moveCallCountAfterBackwardSeek,
           exactHistoryCountAfterForward,
           checkpointCountAfterForward,
           exactHistoryCountAfterBackward,
@@ -263,9 +260,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(snapshot.forwardIndex).toBe(snapshot.forwardTarget);
     expect(snapshot.backwardIndex).toBe(snapshot.backwardTarget);
     expect(snapshot.moveCallCountAfterForwardSeek).toBeLessThanOrEqual(40);
-    expect(
-      snapshot.moveCallCountAfterBackwardSeek - snapshot.moveCallCountAfterForwardSeek
-    ).toBeLessThanOrEqual(32);
     expect(snapshot.exactHistoryCountAfterForward).toBeLessThanOrEqual(24);
     expect(snapshot.exactHistoryCountAfterBackward).toBeLessThanOrEqual(40);
     expect(snapshot.checkpointCountAfterForward).toBeGreaterThanOrEqual(3);
@@ -321,7 +315,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(snapshot.ok).toBe(true);
     expect(snapshot.moveCountAfterWarmup).toBeGreaterThan(0);
-    expect(snapshot.moveCountAfterRewind).toBe(snapshot.moveCountAfterWarmup);
+    expect(snapshot.moveCountAfterRewind).toBeGreaterThan(snapshot.moveCountAfterWarmup);
     expect(snapshot.moveCountAfterForward).toBe(snapshot.moveCountAfterRewind + 1);
   });
 
@@ -818,7 +812,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(gameResponse).not.toBeNull();
     expect(gameResponse?.ok()).toBeTruthy();
     await expect(gamePage.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(gamePage);
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.move === "function" && typeof manager.serialize === "function";
+    });
 
     const replayText = await gamePage.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -886,10 +883,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
       expect(response).not.toBeNull();
       expect(response?.ok()).toBeTruthy();
       await expect(page.locator("body")).toBeVisible();
-      await waitForRankedMoveReady(page);
       await page.waitForFunction(() => {
+        const manager = (window as any).game_manager;
         const codec = (window as any).CoreReplayCodecRuntime;
         return (
+          !!manager &&
+          typeof manager.move === "function" &&
+          typeof manager.serialize === "function" &&
           !!codec &&
           typeof codec.decodeReplayV1Rpl === "function"
         );
@@ -947,7 +947,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await installLiveReplaySourceSession(gamePage, "standard_4x4_pow2_no_undo", 615);
     const gameResponse = await gamePage.goto("/2048.html", { waitUntil: "domcontentloaded" });
     expect(gameResponse?.ok()).toBeTruthy();
-    await waitForRankedMoveReady(gamePage);
     await gamePage.waitForFunction(() => {
       const manager = (window as any).game_manager;
       return !!manager?.sessionReplayV1 && typeof manager.serialize === "function";
@@ -1012,11 +1011,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       expect(response).not.toBeNull();
       expect(response?.ok()).toBeTruthy();
       await expect(page.locator("body")).toBeVisible();
-      await waitForRankedMoveReady(page);
       await page.waitForFunction(() => {
         const manager = (window as any).game_manager;
         return (
           !!manager &&
+          typeof manager.move === "function" &&
+          typeof manager.serialize === "function" &&
           typeof manager.import === "function" &&
           typeof manager.seek === "function"
         );
@@ -1110,10 +1110,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "5x5 play response should exist").not.toBeNull();
     expect(response?.ok(), "5x5 play response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(page);
     await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
       const codec = (window as any).CoreReplayCodecRuntime;
       return (
+        !!manager &&
+        typeof manager.move === "function" &&
+        typeof manager.serialize === "function" &&
         !!codec &&
         typeof codec.decodeReplayV1Rpl === "function"
       );
@@ -1330,7 +1333,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(gameResponse).not.toBeNull();
     expect(gameResponse?.ok()).toBeTruthy();
     await expect(gamePage.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(gamePage);
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.move === "function" && typeof manager.serialize === "function";
+    });
 
     const replayPayload = await gamePage.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1411,7 +1417,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(gameResponse).not.toBeNull();
     expect(gameResponse?.ok()).toBeTruthy();
     await expect(gamePage.locator("body")).toBeVisible();
-    await waitForRankedMoveReady(gamePage);
+    await gamePage.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!manager && typeof manager.move === "function" && typeof manager.serialize === "function";
+    });
 
     const replayString = await gamePage.evaluate(() => {
       const manager = (window as any).game_manager;

@@ -18,7 +18,6 @@ Frontend code may:
 - Store short-lived browser state needed for UX, such as local history, current auth token, pending form state, and local retry queues.
 - Call `2048-game-api` through `/api/*` or a configured API base.
 - Attach `Authorization: Bearer <token>` when a route requires authentication.
-- Administrator API requests may rely on the backend-issued HttpOnly `/api/admin` session cookie when browser storage has no token; the frontend must still send the request instead of rejecting it locally.
 
 Frontend code must not:
 
@@ -71,11 +70,6 @@ Use these checks after boundary-sensitive changes:
 
 - Terminal `/records` payloads must be persisted to `online_pending_record_submit_signature_v1` before the code checks whether an auth token is currently present. A ranked-session 401 can clear auth immediately before game-over submit hooks run; the terminal payload must survive that ordering.
 - Terminal payload persistence must finish synchronously before the first async retry/upload boundary. Once that durable copy exists, retire the matching active ranked session while preserving any distinct prefetched session, so refresh cannot reuse the completed seed/token.
-- Terminal local history must finish its durable async write before the record pending payload is created or any recovery source is cleared. A failed local-history write leaves the current saved game, checkpoint, and session retryable.
-- A pending-record storage write must return a real success result. Clear the matching saved game, checkpoint, and active session only after that result is successful; async completion must re-check the terminal game identity so it cannot clear a newer game of the same mode.
-- Unknown, malformed, future-version, or unreadable record-pending primary/queue values must not be deleted or overwritten by startup retry or a newer terminal capture. A full queue must fail closed and preserve the current recovery sources.
-- Explicit restart must wait until terminal local history and the matching pending record are durably captured. A failed capture blocks restart; an already durable capture keeps the existing synchronous confirmation timing. Replay/checkpoint internal restarts are excluded from this user-action gate.
-- IndexedDB history migration may remove the legacy `localStorage` value only when the transaction committed and the current raw value still exactly matches the migrated snapshot. A concurrent compatibility write must keep the changed fallback value.
 - A pre-auth pending write is only a durability step. It must not be counted as a network upload attempt for retry/backoff purposes when the same call will immediately submit the payload.
 - On authenticated upload success, the matching pending key may be cleared.
 - On permanent non-auth validation errors, the matching pending key may be cleared only when the backend has definitively rejected the payload.
@@ -102,9 +96,6 @@ Use these checks after boundary-sensitive changes:
 - Unit test: simulate `/records` returning 401 and assert pending record payload remains while auth token is removed.
 - Unit test: remove auth before game-over submit runs and assert a terminal pending record is written without calling `/records`.
 - Unit test: hold `/records` upload open and assert the pending payload is already stored, the completed active ranked session is gone, and the prefetched next session remains.
-- Unit test: reject the async local-history write and assert no record pending payload or recovery cleanup occurs; resolve a later retry and assert submission can continue.
-- Unit test: change the manager to a newer game while the terminal local-history write is pending and assert the old result can upload without clearing the newer game.
-- Unit test: change the legacy history mirror during a pending migration, abort the follow-up IndexedDB write, and assert the concurrent record remains in the fallback mirror.
 - Unit coverage for score and stone-2k uploads should follow the same assertion pattern when those paths change.
 - Smoke test: persisted pending record is replayed after auth/session recovery.
 - Smoke test: transient `/records` failures retry after the expected first backoff interval; pre-auth pending durability writes must not advance `retryCount` for the first network attempt.

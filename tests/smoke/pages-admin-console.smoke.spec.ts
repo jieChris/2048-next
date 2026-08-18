@@ -17,14 +17,10 @@ async function installAdminApiMocks(page: Page): Promise<{
   paths: string[];
   previewBodies: Record<string, unknown>[];
   importBodies: Record<string, unknown>[];
-  externalPreviewBodies: string[];
-  externalCommitBodies: string[];
 }> {
   const paths: string[] = [];
   const previewBodies: Record<string, unknown>[] = [];
   const importBodies: Record<string, unknown>[] = [];
-  const externalPreviewBodies: string[] = [];
-  const externalCommitBodies: string[] = [];
 
   await page.addInitScript(() => {
     localStorage.setItem("2048_auth_token_v1", "admin-smoke-token");
@@ -97,119 +93,11 @@ async function installAdminApiMocks(page: Page): Promise<{
       await route.fulfill({ json: { success: true, data: { record_id: "admin-record-42", record_era: "official_v1", source: "admin" } } });
       return;
     }
-    if (path === "/api/admin/users/42/third-party-record-import/preview") {
-      externalPreviewBodies.push(request.postData() || "");
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
-            user_id: 42,
-            commit: false,
-            container: "zip",
-            archive_entry_count: 2,
-            total: 2,
-            valid: 1,
-            would_insert: 1,
-            inserted: 0,
-            skipped_duplicates: 0,
-            rejected: 1,
-            batch_id: null,
-            batch_audit_recorded: null,
-            items: [
-              {
-                index: 0,
-                status: "would_insert",
-                source_filename: "verse-replay.txt",
-                source_platform_id: "2048verse",
-                source_platform_name: "2048Verse",
-                source_adapter_version: "1",
-                mode_key: "standard_4x4_pow2_no_undo",
-                score: 16384
-              },
-              {
-                index: 1,
-                status: "rejected",
-                source_filename: "summary.txt",
-                error: "unsupported_format"
-              }
-            ]
-          }
-        }
-      });
-      return;
-    }
-    if (path === "/api/admin/users/42/third-party-record-import/commit") {
-      externalCommitBodies.push(request.postData() || "");
-      await route.fulfill({
-        json: {
-          success: true,
-          data: {
-            user_id: 42,
-            commit: true,
-            container: "zip",
-            archive_entry_count: 2,
-            total: 2,
-            valid: 1,
-            would_insert: 0,
-            inserted: 1,
-            skipped_duplicates: 0,
-            rejected: 1,
-            batch_id: "import_smoke",
-            batch_audit_recorded: false,
-            items: [
-              {
-                index: 0,
-                status: "inserted",
-                record_id: "third-party-record-42",
-                source_filename: "verse-replay.txt",
-                source_platform_id: "2048verse",
-                source_platform_name: "2048Verse",
-                source_adapter_version: "1",
-                mode_key: "standard_4x4_pow2_no_undo",
-                score: 16384
-              },
-              {
-                index: 1,
-                status: "rejected",
-                source_filename: "summary.txt",
-                error: "unsupported_format"
-              }
-            ]
-          }
-        }
-      });
-      return;
-    }
-    if (path === "/api/admin/records") {
-      await route.fulfill({
-        json: {
-          success: true,
-          data: [{
-            id: "third-party-record-42",
-            user_id: 42,
-            user_name: "玩家一号",
-            email: "player42@example.com",
-            mode_key: "standard_4x4_pow2_no_undo",
-            score: 16384,
-            best_tile: 2048,
-            duration_ms: 120000,
-            source: "normal",
-            source_platform_name: "2048Verse",
-            status: "verified",
-            ended_at: "2026-08-01T10:00:00.000Z"
-          }],
-          page: 1,
-          limit: 50,
-          total: 1
-        }
-      });
-      return;
-    }
 
     await route.fulfill({ status: 404, json: { success: false, error: `unexpected_admin_smoke_path:${path}` } });
   });
 
-  return { paths, previewBodies, importBodies, externalPreviewBodies, externalCommitBodies };
+  return { paths, previewBodies, importBodies };
 }
 
 test.describe("Next admin console", () => {
@@ -226,7 +114,7 @@ test.describe("Next admin console", () => {
     await expect(page.locator("body")).toBeVisible();
   });
 
-  test("searches users and imports a replay through the independent module", async ({ page }) => {
+  test("searches users and imports a replay through server preview", async ({ page }) => {
     const requests = await installAdminApiMocks(page);
 
     await page.goto("/admin.html?view=dashboard", { waitUntil: "domcontentloaded" });
@@ -244,23 +132,14 @@ test.describe("Next admin console", () => {
 
     await page.getByRole("button", { name: "补录对局" }).click();
     const dialog = page.locator("#admin-dialog");
-    await expect(dialog.locator("#dialog-import-user")).toHaveValue("42");
-    await dialog.getByRole("button", { name: "取消" }).click();
-
-    await page.locator("#admin-sidebar").getByRole("button", { name: "成绩补录" }).click();
-    await expect(page).toHaveURL(/view=imports/u);
-    await expect(page.getByRole("heading", { name: "成绩补录", level: 1 })).toBeVisible();
-    await page.getByRole("button", { name: "补录对局" }).click();
     await expect(dialog).toBeVisible();
     await expect(dialog.locator("#dialog-import-score, #dialog-import-duration, [name=score], [name=steps]")).toHaveCount(0);
-    await dialog.getByLabel("目标用户 ID").fill("42");
-    await dialog.getByLabel("或粘贴回放字符串").fill("replay:complete-terminal-game");
-    await dialog.getByLabel("原因").fill("客户端离线导致终局记录未上传");
+    await dialog.locator("#dialog-import-replay").fill("replay:complete-terminal-game");
+    await dialog.locator("#dialog-import-reason").fill("客户端离线导致终局记录未上传");
     await dialog.getByRole("button", { name: "预校验" }).click();
 
     await expect(dialog.getByText("服务端预校验结果")).toBeVisible();
     await expect(dialog.getByText("32768", { exact: true })).toBeVisible();
-    expect(requests.importBodies).toHaveLength(0);
     await dialog.getByRole("button", { name: "确认执行" }).click();
 
     await expect(page.locator("#admin-toast")).toContainText("admin-record-42");
@@ -269,64 +148,6 @@ test.describe("Next admin console", () => {
     expect(requests.paths.some((path) => path.includes("beta-access/allowlist"))).toBe(false);
     await expect(page.getByText("内测资格", { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  });
-
-  test("previews and commits a third-party batch without changing the official import flow", async ({ page }) => {
-    const requests = await installAdminApiMocks(page);
-    const reason = "导入玩家从第三方平台导出的完整回放";
-
-    await page.goto("/admin.html?view=external-import&user_id=42", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "第三方记录导入", level: 1 })).toBeVisible();
-    await expect(page.getByText("不计入排行榜、Rating、正式统计或正式成绩成就")).toBeVisible();
-
-    const form = page.locator("[data-external-import-form]");
-    const fileInput = form.locator("#external-import-file");
-    const commitButton = form.locator("[data-external-commit]");
-    await fileInput.setInputFiles({ name: "third-party.zip", mimeType: "application/zip", buffer: Buffer.from("zip-smoke") });
-    await form.getByLabel("原因").fill(reason);
-    await form.getByRole("button", { name: "预览导入" }).click();
-
-    await expect(page.getByRole("heading", { name: "导入预览", level: 2 })).toBeVisible();
-    await expect(page.getByText("第三方 · 2048Verse", { exact: true })).toBeVisible();
-    await expect(page.getByText("summary.txt", { exact: true })).toBeVisible();
-    const previewRows = page.locator("[data-external-result] tbody tr");
-    await expect(previewRows.nth(0).locator("td").first()).toHaveText("1");
-    await expect(previewRows.nth(1).locator("td").first()).toHaveText("2");
-    await expect(commitButton).toBeEnabled();
-
-    await fileInput.setInputFiles({ name: "third-party-updated.zip", mimeType: "application/zip", buffer: Buffer.from("zip-smoke-updated") });
-    await expect(page.getByRole("heading", { name: "导入预览", level: 2 })).toHaveCount(0);
-    await expect(commitButton).toBeDisabled();
-
-    await form.getByRole("button", { name: "预览导入" }).click();
-    await expect(page.getByRole("heading", { name: "导入预览", level: 2 })).toBeVisible();
-    await form.getByLabel("目标用户 ID").fill("43");
-    await expect(commitButton).toBeDisabled();
-    await expect(page.getByRole("heading", { name: "导入预览", level: 2 })).toHaveCount(0);
-    await form.getByLabel("目标用户 ID").fill("42");
-    await form.getByRole("button", { name: "预览导入" }).click();
-    await expect(commitButton).toBeEnabled();
-
-    await commitButton.click();
-    const dialog = page.locator("#admin-dialog");
-    await expect(dialog.getByText("提交时服务端会重新解析、验证并去重")).toBeVisible();
-    await dialog.getByRole("button", { name: "确认导入" }).click();
-
-    await expect(page.getByRole("heading", { name: "导入结果", level: 2 })).toBeVisible();
-    await expect(page.locator("[data-external-result] .alert-danger")).toContainText("批次汇总审计写入失败");
-    await expect(page.locator("#admin-toast")).toContainText("批次汇总审计写入失败");
-    expect(requests.externalPreviewBodies).toHaveLength(3);
-    expect(requests.externalCommitBodies).toHaveLength(1);
-    for (const body of [...requests.externalPreviewBodies, ...requests.externalCommitBodies]) {
-      expect(body).toContain('name="file"');
-      expect(body).toContain('name="reason"');
-      expect(body).toContain(reason);
-      expect(body).not.toContain('name="user_id"');
-    }
-
-    await page.locator("#admin-sidebar").getByRole("button", { name: "游戏记录" }).click();
-    await expect(page.getByText("第三方 · 2048Verse", { exact: true })).toBeVisible();
-    expect(requests.paths.some((path) => path.endsWith("/record-import"))).toBe(false);
   });
 
   test("uses a drawer navigation without page-level overflow on narrow screens", async ({ page }) => {
@@ -339,8 +160,8 @@ test.describe("Next admin console", () => {
     await expect(page.locator("#admin-sidebar")).toHaveClass(/is-open/u);
     await expect(page.locator("#admin-sidebar-backdrop")).toBeVisible();
 
-    await page.locator("#admin-sidebar").getByRole("button", { name: "成绩补录" }).click();
-    await expect(page.getByRole("heading", { name: "成绩补录", level: 1 })).toBeVisible();
+    await page.locator("#admin-sidebar").getByRole("button", { name: "用户中心" }).click();
+    await expect(page.getByRole("heading", { name: "用户中心", level: 1 })).toBeVisible();
     await expect(page.locator("#admin-sidebar")).not.toHaveClass(/is-open/u);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });

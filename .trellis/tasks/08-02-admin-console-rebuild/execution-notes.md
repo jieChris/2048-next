@@ -6,15 +6,12 @@
 - 2026-08-02：开始实施前确认两个目标仓库均缺少 Trellis `./.trellis/scripts/get_context.py`，且不存在 `.trellis/spec/guides/index.md`。采用最保守回退：手工枚举并完整读取 `2048-next` 与 `2048-game-api` 的 spec 索引及全部相关规范；不触碰 `2048-ranked`。
 - 2026-08-02：实施计划原拟把后台控制器继续拆成多个业务模块。浏览器联调时确认 URL 路由、对话框和跨模块刷新共享同一小型状态，继续拆分会在本批次扩大状态同步与回归面。采用保守回退：保留单一 `admin-page.ts` 控制器，仅抽离 Admin API 边界并删除旧实现；功能合同、测试和页面结构不缩水。后续当该控制器再次出现独立维护需求时再按业务边界拆分。
 - 2026-08-02：发布前发现后端本地 `main` 与远端 `main` 已分叉，Next 当前功能分支也落后于远端 `main`，且两个原工作区均混有其他未提交任务。采用最保守回退：保留原工作区与无关改动不动，只提交本任务文件，再从最新 `origin/main` 创建干净发布工作区并移植本任务提交；后端先部署并通过健康检查，随后再发布 Next/Nginx，避免门禁先上线导致管理员临时全部返回 404。
-- 2026-08-02：生产后端 Compose 使用固定镜像标签 `2048-game-api:local`，首次构建后执行普通 `up -d --no-build` 未检测到镜像内容变化，运行容器仍保持旧版本。采用最保守回退：不触碰 PostgreSQL，只对 API 服务补执行 `--force-recreate`；容器恢复 healthy 后，内外网健康检查均确认版本已切换到 `0eabc95`。
-- 2026-08-02：Next 发布 PR 继承了远端 `main` 已存在的 Pages Smoke 红灯：色板用例硬编码旧 CSS 缓存版本，而页面入口已更新版本号；该失败与 Admin 产品代码无关，但会阻断发布。采用最保守回退：删除不属于产品合同的精确查询串断言，保留同一用例内完整的最终样式与交互断言，并把“不得硬编码资源缓存版本”沉淀到 Smoke 规范。
-- 2026-08-02：Next 首次生产发布后，未登录 `/admin.html` 返回 500 而非 404；主站和 API 健康，定位为站点 Nginx 容器把鉴权子请求发往自身的 `127.0.0.1:3010`，无法连接实际位于共享 Docker 网络的 API 容器。采用最保守回退：仅把上游改为现有容器 DNS `2048-game-api:3001`，并让配置校验与站点运行都显式加入 `edge-migrate-net`；不改后端、不触碰数据库，补回归断言后重新发布并复验门禁。
 - 2026-08-03：生产验收确认 Cloudflare 既有缓存规则覆盖源站 `private, no-store`，导致 `/admin.html` 的匿名 404 被缓存；同时 Cloudflare API 连接器与本机 Wrangler 均缺少规则写入/清缓存权限。经用户明确授权后采用最保守回退：不修改或重新部署 Next、Nginx、API、数据库，只通过已登录的 Cloudflare 控制台为精确路径追加一条末位 Bypass 规则。配置页随后加载异常，但规则生效后所有目标请求均为 `DYNAMIC` 且无 `Age`；依据 Cloudflare 官方机制，Bypass 不执行缓存查找，旧对象不会再被服务，因此不再为纯缓存卫生扩大权限或使用 Global API Key，保留旧对象自然淘汰。
 
 ## Delivery Summary
 
 - `2048-next/admin.html` 已成为 Tabler 驱动的完整后台入口；固定侧栏、全局搜索、深链接和窄屏抽屉可用。
-- 用户、记录、成绩补录、成就、恢复单、管理员权限、管理审计、运行事件和只读数据工具已统一进入该入口。
+- 用户、记录、成就、恢复单、管理员权限、管理审计、运行事件和只读数据工具已统一进入该入口。
 - 对局补录只接受单条完整终局回放，原因必填；服务端预校验后写入 `source=admin`、`record_era=official_v1`，并刷新排行榜、评估成就、记录审计。
 - 用户最近活跃/排序、恢复单状态/时间、管理审计和运行事件时间范围筛选已补齐。
 - 内测资格管理入口和 Admin allowlist 路由已移除，历史表与历史数据未删除。
@@ -33,9 +30,4 @@
 - 页面门禁增量验证：`2048-next` 全量 Unit 299 个文件、1874 项通过；Admin/账号设置/用户页 Smoke 20 项通过；生产构建、OpenAPI 同步、服务边界、旧运行时边界、资源预算与 `git diff --check` 通过。
 - 页面门禁增量验证：`2048-game-api` 全量 Node 23 个文件、177 项通过，TypeScript 与 `git diff --check` 通过；覆盖 Cookie 签发/清除、`board_admin` 拒绝和停用配置管理员拒绝。
 - 本机未安装 Nginx 或容器运行时，未单独执行 `nginx -t`；仓库部署流程会在切换版本前使用 `nginx:1.27-alpine nginx -t` 校验本次配置。
-## 成绩补录独立模块增量
-
-- 2026-08-02：在“用户与游戏”导航组新增稳定深链接 `admin.html?view=imports`，页面展示补录安全边界与“指定用户 → 服务端预校验 → 确认正式写入”三步流程。
-- 继续复用现有补录对话框和 Admin API，不新增补录历史接口、不复制回放校验逻辑；支持可选 `user_id` 参数预填目标用户。
-- 验证：全量 Unit 299 个文件、1879 项通过；Admin Smoke 使用隔离 `PW_WEB_PORT` 后 3 项通过；完整 `npm run verify:release`、TypeScript、生产构建、OpenAPI 同步、服务边界、旧运行时边界、资源预算与 `git diff --check` 通过。
 - Cloudflare 生产缓存修复：末位规则 `http.request.uri.path eq "/admin.html"` + Bypass 已部署；裸路径及 10 个后台视图各匿名重复 3 次均为 `404 / DYNAMIC / private, no-store / 无 Age`，`/api/admin/me` 为 `401 / DYNAMIC`；管理员会话刷新 `external-import` 为 `200 / DYNAMIC / private, no-store`，其后匿名请求同一 URL 仍为 `404 / DYNAMIC`。

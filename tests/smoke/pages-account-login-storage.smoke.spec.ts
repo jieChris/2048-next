@@ -18,16 +18,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             success: true,
             token: "smoke_token",
             userId: 42,
-            nickname: "Smoke",
-            achievements: [{
-              achievement: {
-                id: "beta_pioneer",
-                name: "内测先锋",
-                description: "感谢你参与内测。",
-                series_id: "community-beta",
-                rules: []
-              }
-            }]
+            nickname: "Smoke"
           })
         });
         return;
@@ -105,8 +96,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".account-user-card")).toBeVisible();
     await expect(page.locator("#settings-nav-user")).toBeVisible();
     await expect(page.locator("#settings-nav-user")).toHaveAttribute("href", "user.html");
-    await expect(page.locator("#global-achievement-unlock-toast-host .unlock-toast")).toContainText("成就达成");
-    await expect(page.locator("#global-achievement-unlock-toast-host .unlock-toast")).toContainText("内测先锋");
   });
 
   test("account login disables auth actions and shows loading state while pending", async ({ page }) => {

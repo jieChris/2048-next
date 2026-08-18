@@ -221,7 +221,7 @@ function buildSettingsPageEntryHtml(lang: "zh" | "en"): string {
   );
 }
 
-function buildOperationFeedbackRowHtml(lang: "zh" | "en"): string {
+function buildOperationFeedbackSettingsRowHtml(lang: "zh" | "en"): string {
   const isEn = lang === "en";
   return (
     `<div id="operation-feedback-settings-row" class="settings-row settings-toggle-row operation-feedback-settings-row">` +
@@ -285,7 +285,7 @@ function buildCanonicalSettingsModalInnerHtml(options: {
     })
   ];
 
-  rows.push(buildOperationFeedbackRowHtml(lang));
+  rows.push(buildOperationFeedbackSettingsRowHtml(lang));
 
   if (options.hasInlineStats) {
     rows.push(
@@ -406,19 +406,18 @@ export function normalizeSettingsModalContent(input: {
     const insertAdjacentHtml = asFunction<(position: string, html: string) => unknown>(
       toRecord(content).insertAdjacentHTML
     );
-    if (!getElementById(documentLike, "operation-feedback-toggle") && insertAdjacentHtml) {
-      (insertAdjacentHtml as unknown as Function).call(
-        content,
-        "beforeend",
-        buildOperationFeedbackRowHtml(readUiLanguage(source.windowLike))
-      );
-    }
-    if (!getElementById(documentLike, "settings-page-entry-row") && insertAdjacentHtml) {
-      (insertAdjacentHtml as unknown as Function).call(
-        content,
-        "beforeend",
-        buildSettingsPageEntryHtml(readUiLanguage(source.windowLike))
-      );
+    if (insertAdjacentHtml) {
+      const lang = readUiLanguage(source.windowLike);
+      if (!getElementById(documentLike, "operation-feedback-toggle")) {
+        (insertAdjacentHtml as unknown as Function).call(
+          content,
+          "beforeend",
+          buildOperationFeedbackSettingsRowHtml(lang)
+        );
+      }
+      if (!getElementById(documentLike, "settings-page-entry-row")) {
+        (insertAdjacentHtml as unknown as Function).call(content, "beforeend", buildSettingsPageEntryHtml(lang));
+      }
     }
   }
 

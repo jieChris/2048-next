@@ -565,7 +565,7 @@ function applyReplaySeekRestartPlan(manager, restartPlan) {
     restartWithBoard(manager, manager.replayStartBoardMatrix, manager.modeConfig, { asReplay: true });
   }
   if (restartPlan.shouldRestartWithSeed) {
-    restartWithSeed(manager, manager.initialSeed, manager.modeConfig, { asReplay: true });
+    restartWithSeed(manager, manager.initialSeed, manager.modeConfig);
   }
   if (restartPlan.shouldApplyReplayIndex) {
     setRuntimeReplayIndexForReplay(manager, restartPlan.replayIndex);
@@ -1772,8 +1772,7 @@ function writeAutoSubmitErrorResult(manager, endedAt, payload, error) {
 
 function resolveLocalHistorySaveRecord(manager) {
   if (!manager) return null;
-  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecordAsync") ||
-    manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
 }
 
 function writeLocalHistoryStoreMissingResult(manager) {
@@ -1797,78 +1796,38 @@ function isPromiseLike(value) {
   return !!value && typeof value.then === "function";
 }
 
-function buildTerminalLocalHistoryIdentity(manager, replayString) {
-  var clientRecordId = String(manager.clientRecordId || "").trim();
-  if (clientRecordId) return "client:" + clientRecordId;
-  return [manager.modeKey || manager.mode || "", manager.initialSeed || "", replayString].join("|");
-}
-
-function isSameTerminalLocalHistoryIdentity(manager, identity) {
-  if (!isTerminalSessionForPersistence(manager)) return false;
-  if (identity.indexOf("client:") === 0) {
-    return "client:" + String(manager.clientRecordId || "").trim() === identity;
-  }
-  var rescueReplayString = String(manager.rescueReplayString || "").trim();
-  if (rescueReplayString && buildTerminalLocalHistoryIdentity(manager, rescueReplayString) === identity) {
-    return true;
-  }
-  try {
-    return buildTerminalLocalHistoryIdentity(manager, serializeReplay(manager)) === identity;
-  } catch (_err) {
-    return false;
-  }
-}
-
-function completeAutoSubmitWithLocalHistory(manager, executionContext, identity, savedRecord) {
-  if (!savedRecord || typeof savedRecord !== "object") throw new Error("local_save_failed");
-  if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = true;
-  writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
-  return true;
-}
-
-function failAutoSubmitWithLocalHistory(manager, executionContext, identity, error) {
-  if (isSameTerminalLocalHistoryIdentity(manager, identity)) manager.sessionSubmitDone = false;
-  writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
-  return false;
-}
-
-function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext, identity) {
-  var complete = function (savedRecord) { return completeAutoSubmitWithLocalHistory(manager, executionContext, identity, savedRecord); };
-  var fail = function (error) { return failAutoSubmitWithLocalHistory(manager, executionContext, identity, error); };
+function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext) {
   try {
     var saveResult = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
-    if (!isPromiseLike(saveResult)) return complete(saveResult);
-    var state = { identity: identity, promise: null };
-    state.promise = Promise.resolve(saveResult).then(complete).catch(fail).finally(function () {
-      if (manager.localHistorySaveInFlight === state) delete manager.localHistorySaveInFlight;
-    });
-    manager.localHistorySaveInFlight = state;
-    return state.promise;
+    if (isPromiseLike(saveResult)) {
+      saveResult.then(function (savedRecord) {
+        writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
+      }).catch(function (error) {
+        writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
+      });
+      return;
+    }
+    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, saveResult);
   } catch (error) {
-    return fail(error);
+    writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
   }
-}
-
-function shouldSkipAutoSubmitOnGameOver(manager) {
-  var skippedReason = resolveAutoSubmitSkippedReason(manager);
-  if (!skippedReason) return false;
-  writeAutoSubmitSkippedResult(manager, skippedReason);
-  return true;
 }
 
 function tryAutoSubmitOnGameOver(manager) {
   if (!manager || manager.sessionSubmitDone) return;
-  if (shouldSkipAutoSubmitOnGameOver(manager)) return;
-  var executionContext = createAutoSubmitExecutionContext(manager);
-  var identity = buildTerminalLocalHistoryIdentity(manager, executionContext.payload.replay_string);
-  var inFlight = manager.localHistorySaveInFlight;
-  if (inFlight && inFlight.identity === identity && isPromiseLike(inFlight.promise)) return inFlight.promise;
+  var skippedReason = resolveAutoSubmitSkippedReason(manager);
+  if (skippedReason) {
+    writeAutoSubmitSkippedResult(manager, skippedReason);
+    return;
+  }
   var localHistorySaveRecord = resolveLocalHistorySaveRecord(manager);
   if (!localHistorySaveRecord) {
     writeLocalHistoryStoreMissingResult(manager);
-    return false;
+    return;
   }
-  return executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext, identity);
+  manager.sessionSubmitDone = true;
+  var executionContext = createAutoSubmitExecutionContext(manager);
+  executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext);
 }
 
 function isSessionTerminated(manager) {
@@ -4046,7 +4005,7 @@ function applyV3StructuredReplayEnvelope(manager, envelope, replayModeConfig) {
   if (!Number.isFinite(envelope && envelope.seed)) {
     throw "Missing v3 replay seed";
   }
-  restartWithSeed(manager, envelope.seed, replayModeConfig, { asReplay: true });
+  restartWithSeed(manager, envelope.seed, replayModeConfig);
   if (
     typeof envelope.customSecondaryTimerRuleText === "string" &&
     typeof applyCustomSecondaryTimerRuleText === "function"

@@ -41,12 +41,16 @@
 
   function writeLocalStorageItem(key, value) {
     var storageLike = resolveLocalStorageLike();
-    if (!storageLike) return;
+    if (!storageLike) return false;
     try {
       if (typeof storageLike.setItem === "function") {
         storageLike.setItem(key, value);
+        return true;
       }
-    } catch (_err) {}
+    } catch (_err) {
+      return false;
+    }
+    return false;
   }
 
   function removeLocalStorageItem(key) {
@@ -126,12 +130,14 @@
       removeLocalStorageItem(storageKey);
       return false;
     }
+    var serialized;
     try {
-      writeLocalStorageItem(storageKey, JSON.stringify(payload));
-      return true;
-    } catch (_err) {
+      serialized = JSON.stringify(payload);
+    } catch (_errSerialize) {
       return false;
     }
+    if (!writeLocalStorageItem(storageKey, serialized)) return false;
+    return readLocalStorageItem(storageKey) === serialized;
   }
 
   function flushCurrentManagerMirror() {

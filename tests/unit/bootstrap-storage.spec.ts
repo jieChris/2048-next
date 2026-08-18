@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveStorageByName,
   safeReadStorageItem,
+  safeRemoveStorageItem,
   safeSetStorageItem
 } from "../../src/bootstrap/storage";
 
@@ -75,5 +76,22 @@ describe("bootstrap storage", () => {
     ).toBe("v");
     expect(safeReadStorageItem({ storageLike: null, key: "k" })).toBeNull();
     expect(safeReadStorageItem({ storageLike: {}, key: "k" })).toBeNull();
+  });
+
+  it("removes storage values safely", () => {
+    const removed: string[] = [];
+    expect(
+      safeRemoveStorageItem({
+        storageLike: {
+          removeItem(key: string) {
+            removed.push(key);
+          }
+        },
+        key: "k"
+      })
+    ).toBe(true);
+    expect(removed).toEqual(["k"]);
+    expect(safeRemoveStorageItem({ storageLike: null, key: "k" })).toBe(false);
+    expect(safeRemoveStorageItem({ storageLike: {}, key: "k" })).toBe(false);
   });
 });

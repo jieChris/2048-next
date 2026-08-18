@@ -258,7 +258,11 @@ export async function listRecords(options?: {
   if (sortBy === "score_desc") {
     filtered.sort((a, b) => (b.score || 0) - (a.score || 0) || compareDates(b.ended_at, a.ended_at));
   } else if (sortBy === "board_sum_desc") {
-    filtered.sort((a, b) => (b.board_sum || 0) - (a.board_sum || 0) || compareDates(b.ended_at, a.ended_at));
+    filtered.sort((a, b) =>
+      (b.board_sum || 0) - (a.board_sum || 0) ||
+      (b.score || 0) - (a.score || 0) ||
+      compareDates(b.ended_at, a.ended_at)
+    );
   } else if (sortBy === "ended_asc") {
     filtered.sort((a, b) => compareDates(a.ended_at, b.ended_at));
   } else {
