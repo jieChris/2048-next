@@ -1161,7 +1161,10 @@ function clearTransientTileVisualState(manager) {
 function recordPracticeCustomTileActionIfNeeded(manager, x, y, value) {
   if (!manager.replayMode && manager.sessionReplayV3 && manager.modeKey === "practice") {
     manager.sessionReplayV3.actions.push(["p", x, y, value]);
-    appendCompactPracticeAction(manager, x, y, value);
+    if (Number(manager.width) === 4 && Number(manager.height) === 4 &&
+        !(typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode())) {
+      appendCompactPracticeAction(manager, x, y, value);
+    }
   }
 }
 
@@ -3411,6 +3414,7 @@ function isReplayV4PracticeAction(action) {
   if (!Number.isInteger(x) || x < 0 || x > 3) return false;
   if (!Number.isInteger(y) || y < 0 || y > 3) return false;
   if (!Number.isInteger(value) || value < 0) return false;
+  if (value === 1) return true;
   if (value === 0) return true;
   var lg = Math.log(value) / Math.log(2);
   return Math.floor(lg) === lg;
@@ -3442,6 +3446,22 @@ function shouldSerializeReplayAsV4(manager) {
   if (manager.width !== 4 || manager.height !== 4 || manager.isFibonacciMode()) return false;
   if (!GameManager.REPLAY_V4_MODE_KEY_TO_CODE || !GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey]) return false;
   if (hasReplayV3IncompatibleActionsForV4(manager)) return false;
+  return true;
+}
+
+function isReplayV4BoardEncodable(board) {
+  if (!Array.isArray(board) || board.length !== 4) return false;
+  for (var y = 0; y < 4; y++) {
+    var row = board[y];
+    if (!Array.isArray(row) || row.length !== 4) return false;
+    for (var x = 0; x < 4; x++) {
+      var value = Number(row[x]);
+      if (!Number.isInteger(value) || value < 0) return false;
+      if (value === 0) continue;
+      var lg = Math.log(value) / Math.log(2);
+      if (Math.floor(lg) !== lg || lg < 0 || lg >= GameManager.REPLAY128_TOTAL) return false;
+    }
+  }
   return true;
 }
 
@@ -3643,6 +3663,7 @@ function serializeReplayAsV3OrV4(manager) {
   var modeCode = GameManager.REPLAY_V4_MODE_KEY_TO_CODE[manager.modeKey];
   if (!modeCode) return JSON.stringify(serializeReplayV3(manager));
   var initialBoard = manager.initialBoardMatrix || getFinalBoardMatrix(manager);
+  if (!isReplayV4BoardEncodable(initialBoard)) return JSON.stringify(serializeReplayV3(manager));
   var encodedBoard = encodeBoardV4(manager, initialBoard);
   return GameManager.REPLAY_V4_PREFIX + modeCode + encodedBoard + (manager.replayCompactLog || "");
 }
@@ -3861,22 +3882,29 @@ function resolveReplayV4PracticeActionResult(manager, actionsEncoded, escapedInd
   );
 }
 
+function resolveReplayV4PracticeMarkerActionResult(manager, actionsEncoded, escapedIndex) {
+  var payloadIndex = escapedIndex + 1;
+  if (payloadIndex >= actionsEncoded.length) throw "Invalid v4C practice marker action";
+  var cell = decodeReplay128(manager, actionsEncoded.charAt(payloadIndex));
+  if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
+  return createReplayV4EscapedActionResult(
+    ["p", (cell >> 2) & 3, cell & 3, 1],
+    null,
+    payloadIndex + 1
+  );
+}
+
 function decodeReplayV4EscapedAction(manager, actionsEncoded, escapedIndex) {
   if (escapedIndex >= actionsEncoded.length) throw "Invalid v4C escape";
   var subtype = decodeReplay128(manager, actionsEncoded.charAt(escapedIndex));
   if (subtype === 0) {
-    var move127 = resolveReplayV4EscapedMove127Result();
-    move127.nextIndex = escapedIndex + 1;
-    return move127;
+    var move127 = resolveReplayV4EscapedMove127Result(); move127.nextIndex = escapedIndex + 1; return move127;
   }
   if (subtype === 1) {
-    var undoAction = resolveReplayV4EscapedUndoResult();
-    undoAction.nextIndex = escapedIndex + 1;
-    return undoAction;
+    var undoAction = resolveReplayV4EscapedUndoResult(); undoAction.nextIndex = escapedIndex + 1; return undoAction;
   }
-  if (subtype === 2) {
-    return resolveReplayV4PracticeActionResult(manager, actionsEncoded, escapedIndex);
-  }
+  if (subtype === 2) return resolveReplayV4PracticeActionResult(manager, actionsEncoded, escapedIndex);
+  if (subtype === 3) return resolveReplayV4PracticeMarkerActionResult(manager, actionsEncoded, escapedIndex);
   throw "Unknown v4C escape subtype";
 }
 
@@ -4566,6 +4594,12 @@ function resolveCompactPracticeActionExponent(value) {
 function appendCompactPracticeActionFallback(manager, x, y, value) {
   validateCompactPracticeActionBoardSize(manager);
   validateCompactPracticeActionCoords(x, y);
+  if (value === 1) {
+    var markerCell = (x << 2) | y;
+    manager.replayCompactLog += encodeReplay128(manager, 127) + encodeReplay128(manager, 3);
+    manager.replayCompactLog += encodeReplay128(manager, markerCell);
+    return;
+  }
   var exp = resolveCompactPracticeActionExponent(value);
   var cell = (x << 2) | y;
   manager.replayCompactLog += encodeReplay128(manager, 127) + encodeReplay128(manager, 2);

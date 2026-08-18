@@ -255,6 +255,7 @@ export function getMergedValue(
   if (!Number.isInteger(a) || !Number.isInteger(b) || a <= 0 || b <= 0) return null;
 
   if (ruleset !== "fibonacci") {
+    if (a === 1 || b === 1) return null;
     if (a !== b) return null;
     const pow2Merged = a * 2;
     if (pow2Merged > maxTile) return null;

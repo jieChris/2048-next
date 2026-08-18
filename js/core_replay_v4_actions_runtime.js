@@ -82,6 +82,15 @@
         var value = exp === 0 ? 0 : Math.pow(2, exp);
         replayMoves.push(["p", px, py, value]);
         replaySpawns.push(null);
+      } else if (subtype === 3) {
+        if (i >= actionsEncoded.length) throw "Invalid v4C practice marker action";
+        var markerCell = decodeReplay128(actionsEncoded.charAt(i));
+        i += 1;
+        if (markerCell < 0 || markerCell > 15) throw "Invalid v4C practice cell";
+        var markerX = (markerCell >> 2) & 3;
+        var markerY = markerCell & 3;
+        replayMoves.push(["p", markerX, markerY, 1]);
+        replaySpawns.push(null);
       } else {
         throw "Unknown v4C escape subtype";
       }

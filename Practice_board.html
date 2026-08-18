@@ -119,6 +119,7 @@
           position: relative !important;
           width: 55px !important;
           height: 55px !important;
+          box-sizing: border-box;
           border-radius: 3px;
           cursor: pointer;
           transition: transform 0.1s;
@@ -156,7 +157,8 @@
       .selection-tile.selected {
           transform: scale(1.15);
           box-shadow: 0 0 5px 2px rgba(255, 255, 0, 0.8); /* Highlight glow */
-          z-index: 10;
+          /* The visual scale may overlap adjacent rows; keep the selected tile on top. */
+          z-index: 100;
           border: 2px solid #8f7a66; /* Border */
       }
       

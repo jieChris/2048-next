@@ -55,6 +55,8 @@ export interface RestartGameRuntimeInstallOptions {
   windowLike?: RestartGameWindowLike | null;
 }
 
+const RESTART_PROMPT_STORAGE_KEY = "settings_restart_prompt_enabled_v1";
+
 function getPracticeModeConfig(manager: RestartGameManagerLike): unknown {
   return manager.practiceRestartModeConfig || manager.modeConfig;
 }
@@ -152,13 +154,25 @@ export function resolveRestartConfirmLanguage(manager: RestartGameManagerLike | 
   return "zh";
 }
 
+function shouldConfirmRestart(manager: RestartGameManagerLike): boolean {
+  try {
+    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    const getItem = windowLike?.localStorage?.getItem;
+    return typeof getItem !== "function" || getItem.call(windowLike?.localStorage, RESTART_PROMPT_STORAGE_KEY) !== "0";
+  } catch (_error) {
+    return true;
+  }
+}
+
 export function restartGame(
   manager: RestartGameManagerLike | null | undefined,
   operations: RestartGameOperations = {}
 ): void {
   if (!manager) return;
-  const message = operations.resolveRestartConfirmMessage?.(manager) || "";
-  if (operations.confirmRestart?.(message) !== true) return;
+  if (shouldConfirmRestart(manager)) {
+    const message = operations.resolveRestartConfirmMessage?.(manager) || "";
+    if (operations.confirmRestart?.(message) !== true) return;
+  }
   performRestartAfterConfirm(manager, operations);
 }
 
@@ -167,11 +181,13 @@ export async function restartGameAsync(
   operations: RestartGameOperations = {}
 ): Promise<void> {
   if (!manager) return;
-  const message = operations.resolveRestartConfirmMessage?.(manager) || "";
-  const confirmed = operations.confirmRestartAsync
-    ? await operations.confirmRestartAsync(message)
-    : operations.confirmRestart?.(message) === true;
-  if (confirmed !== true) return;
+  if (shouldConfirmRestart(manager)) {
+    const message = operations.resolveRestartConfirmMessage?.(manager) || "";
+    const confirmed = operations.confirmRestartAsync
+      ? await operations.confirmRestartAsync(message)
+      : operations.confirmRestart?.(message) === true;
+    if (confirmed !== true) return;
+  }
   performRestartAfterConfirm(manager, operations);
 }
 

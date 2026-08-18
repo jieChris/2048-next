@@ -1273,7 +1273,15 @@ document.addEventListener("DOMContentLoaded", function () {
     lastPracticePlacementMaxTile = maxTile;
     currentSelectionRuleset = ruleset;
     var values = filterPracticePlacementValues(getSelectionValuesForRuleset(ruleset, maxTile), maxTile);
-    zeroCycleValues = values.slice();
+    var practiceRuntime = getPracticeModeRuntime();
+    if (practiceRuntime && typeof practiceRuntime.buildPracticePlacementCycleValues === "function") {
+      zeroCycleValues = practiceRuntime.buildPracticePlacementCycleValues(ruleset, values);
+    } else {
+      zeroCycleValues = values.slice();
+      if (ruleset !== "fibonacci" && zeroCycleValues.indexOf(1) === -1) {
+        zeroCycleValues.splice(zeroCycleValues.indexOf(0) + 1, 0, 1);
+      }
+    }
     var defaultValue = resolvePracticeDefaultSelectionValue(ruleset, values);
     zeroCyclePhaseByCell = {};
     renderSelectionGrid(values, defaultValue);

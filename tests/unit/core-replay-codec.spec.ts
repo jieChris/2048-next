@@ -90,6 +90,22 @@ describe("core replay codec", () => {
     expect(decodeReplay128(log.charAt(3))).toBe(3);
   });
 
+  it("encodes the unmergeable practice marker with its dedicated subtype", () => {
+    const log = appendCompactPracticeAction({
+      log: "",
+      width: 4,
+      height: 4,
+      x: 2,
+      y: 1,
+      value: 1
+    });
+
+    expect(log.length).toBe(3);
+    expect(decodeReplay128(log.charAt(0))).toBe(127);
+    expect(decodeReplay128(log.charAt(1))).toBe(3);
+    expect(decodeReplay128(log.charAt(2))).toBe((2 << 2) | 1);
+  });
+
   it("rejects invalid compact practice payload", () => {
     expect(() =>
       appendCompactPracticeAction({

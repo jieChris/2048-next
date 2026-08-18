@@ -761,6 +761,11 @@ export function appendCompactPracticeAction(input: {
 
   const value = Number(source.value);
   if (!Number.isInteger(value) || value < 0) throw "Invalid practice value";
+  const baseLog = typeof source.log === "string" ? source.log : "";
+  const cell = (x << 2) | y;
+  if (value === 1) {
+    return baseLog + encodeReplay128(127) + encodeReplay128(3) + encodeReplay128(cell);
+  }
   let exp = 0;
   if (value > 0) {
     const lg = Math.log(value) / Math.log(2);
@@ -769,8 +774,6 @@ export function appendCompactPracticeAction(input: {
   }
   if (exp < 0 || exp > 127) throw "Practice value exponent too large";
 
-  const baseLog = typeof source.log === "string" ? source.log : "";
-  const cell = (x << 2) | y;
   return (
     baseLog +
     encodeReplay128(127) +

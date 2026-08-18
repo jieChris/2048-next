@@ -17,6 +17,7 @@
 
   var WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
   var LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+  var RESTART_PROMPT_STORAGE_KEY = "settings_restart_prompt_enabled_v1";
   var UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 
   function resolvePositiveNumber(value, fallback) {
@@ -112,6 +113,29 @@
     return didWrite;
   }
 
+  function readRestartPromptEnabled(windowLike) {
+    var storage = toRecord(windowLike).localStorage;
+    var getItem = asFunction(toRecord(storage).getItem);
+    if (!getItem) return true;
+    try {
+      return getItem.call(storage, RESTART_PROMPT_STORAGE_KEY) !== "0";
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function writeRestartPromptEnabled(windowLike, enabled) {
+    var storage = toRecord(windowLike).localStorage;
+    var setItem = asFunction(toRecord(storage).setItem);
+    if (!setItem) return false;
+    try {
+      setItem.call(storage, RESTART_PROMPT_STORAGE_KEY, enabled ? "1" : "0");
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function readUiLanguage(windowLike) {
     var storage = toRecord(windowLike).localStorage;
     var getItem = asFunction(toRecord(storage).getItem);
@@ -196,6 +220,15 @@
     );
   }
 
+  function buildRestartPromptSettingsRowHtml(lang) {
+    var isEn = lang === "en";
+    return buildSettingsToggleRowHtml({
+      inputId: "restart-prompt-toggle",
+      title: isEn ? "Restart Confirmation" : "重开提示",
+      desc: isEn ? "Ask before starting a new game" : "重开游戏前显示确认提示"
+    });
+  }
+
   function buildCanonicalSettingsModalInnerHtml(options) {
     var lang = options.lang === "en" ? "en" : "zh";
     var isEn = lang === "en";
@@ -207,6 +240,7 @@
         desc: isEn ? "Show a win prompt after reaching 2048" : "合成 2048 后弹出胜利提示",
         noteId: "win-prompt-note"
       }),
+      buildRestartPromptSettingsRowHtml(lang),
       buildSettingsToggleRowHtml({
         rowId: "bgm-settings-row",
         inputId: "bgm-toggle",
@@ -251,6 +285,7 @@
 
   var CANONICAL_SETTINGS_ROW_IDS = [
     "win-prompt-toggle",
+    "restart-prompt-toggle",
     "bgm-settings-row",
     "night-bg-settings-row",
     "pku2048-inline-stats-toggle",
@@ -345,6 +380,15 @@
       });
       for (var j = 0; j < existingRows.length; j++) {
         appendChild(content, existingRows[j]);
+      }
+    } else if (!getElementById(documentLike, "restart-prompt-toggle")) {
+      var insertAdjacentHtml = asFunction(toRecord(content).insertAdjacentHTML);
+      if (insertAdjacentHtml) {
+        insertAdjacentHtml.call(
+          content,
+          "beforeend",
+          buildRestartPromptSettingsRowHtml(readUiLanguage(source.windowLike))
+        );
       }
     }
 
@@ -468,6 +512,18 @@
 
       sync();
       bindListener(windowLike, "uilanguagechange", sync);
+
+      var restartToggle = getElementById(source.documentLike, "restart-prompt-toggle");
+      var restartToggleRecord = toRecord(restartToggle);
+      if (restartToggle) {
+        if (!restartToggleRecord.__restartPromptBound) {
+          restartToggleRecord.__restartPromptBound = true;
+          bindListener(restartToggle, "change", function () {
+            writeRestartPromptEnabled(windowLike, !!toRecord(restartToggle).checked);
+          });
+        }
+        restartToggleRecord.checked = readRestartPromptEnabled(windowLike);
+      }
 
       return {
         hasToggle: true,

@@ -27,6 +27,15 @@ describe("core replay v4 actions: decodeReplayV4Actions", () => {
     expect(result.replaySpawns).toEqual([null, null]);
   });
 
+  it("decodes the dedicated unmergeable practice marker action", () => {
+    const practiceMarker = encodeReplay128(127) + encodeReplay128(3) + encodeReplay128(9);
+
+    expect(decodeReplayV4Actions(practiceMarker)).toEqual({
+      replayMoves: [["p", 2, 1, 1]],
+      replaySpawns: [null]
+    });
+  });
+
   it("throws on malformed escapes", () => {
     expect(() => decodeReplayV4Actions(encodeReplay128(127))).toThrow();
     expect(() => decodeReplayV4Actions(encodeReplay128(127) + encodeReplay128(9))).toThrow();

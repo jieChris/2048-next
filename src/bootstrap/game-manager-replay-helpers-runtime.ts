@@ -1367,6 +1367,26 @@ export function exportReplayAsV9VerseBlob(manager: ManagerLike): unknown {
   return BlobLike ? new BlobLike([replay], { type: "text/plain" }) : replay;
 }
 
+function recordPracticeCustomTileActionIfNeeded(
+  manager: ManagerLike,
+  x: number,
+  y: number,
+  value: number
+): void {
+  if (manager.replayMode || manager.modeKey !== "practice") return;
+  const actions = toRecord(manager.sessionReplayV3).actions;
+  if (!Array.isArray(actions)) return;
+  actions.push(["p", x, y, value]);
+  const isFibonacciMode = asFunction<() => unknown>(manager.isFibonacciMode);
+  if (
+    Number(manager.width) === 4 &&
+    Number(manager.height) === 4 &&
+    !(isFibonacciMode && isFibonacciMode.call(manager))
+  ) {
+    appendCompactPracticeAction(manager, x, y, value);
+  }
+}
+
 export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, value: unknown): boolean {
   const grid = toRecord(manager.grid);
   const position = { x: Number(x), y: Number(y) };
@@ -1398,6 +1418,7 @@ export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, v
   const existing = cellContent ? cellContent.call(grid, position) : null;
   if (existing && removeTile) removeTile.call(grid, existing);
   if (numericValue === 0) {
+    recordPracticeCustomTileActionIfNeeded(manager, position.x, position.y, numericValue);
     syncPracticeRestartBoardSnapshot(manager);
     clearTransientTileVisualState(manager);
     const actuate = asFunction<() => unknown>(manager.actuate);
@@ -1405,6 +1426,7 @@ export function insertCustomTile(manager: ManagerLike, x: unknown, y: unknown, v
     return true;
   }
   insertTile.call(grid, new TileCtor(position, numericValue));
+  recordPracticeCustomTileActionIfNeeded(manager, position.x, position.y, numericValue);
   syncPracticeRestartBoardSnapshot(manager);
   clearTransientTileVisualState(manager);
   const actuate = asFunction<() => unknown>(manager.actuate);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPracticeModeConfigFromSelection,
   buildPracticeModeConfig,
+  buildPracticePlacementCycleValues,
   createPracticeModeRuntime,
   installPracticeModeRuntime,
   isPracticeBoardSizeAllowed,
@@ -21,6 +22,7 @@ describe("bootstrap practice mode", () => {
     expect(runtime.isPracticeBoardSizeAllowed).toBe(isPracticeBoardSizeAllowed);
     expect(runtime.buildPracticeModeConfig).toBe(buildPracticeModeConfig);
     expect(runtime.buildPracticeModeConfigFromSelection).toBe(buildPracticeModeConfigFromSelection);
+    expect(runtime.buildPracticePlacementCycleValues).toBe(buildPracticePlacementCycleValues);
   });
 
   it("installs the runtime on a supplied window-like object", () => {
@@ -60,6 +62,14 @@ describe("bootstrap practice mode", () => {
     expect(parsePracticeModeKey("?practice_mode_key=practice")).toBe("");
     expect(parsePracticeModeKey("?practice_mode_key=%20%20")).toBe("");
     expect(parsePracticeModeKey("")).toBe("");
+  });
+
+  it("keeps the unmergeable practice marker out of the picker while adding it to the pow2 cycle", () => {
+    const visibleValues = [0, 2, 4, 8];
+
+    expect(buildPracticePlacementCycleValues("pow2", visibleValues)).toEqual([0, 1, 2, 4, 8]);
+    expect(buildPracticePlacementCycleValues("fibonacci", [0, 1, 2, 3])).toEqual([0, 1, 2, 3]);
+    expect(visibleValues).toEqual([0, 2, 4, 8]);
   });
 
   it("allows practice board sizes below 6x6 and rejects 6x6 or larger", () => {

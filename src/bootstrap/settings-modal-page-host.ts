@@ -14,6 +14,7 @@ function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T 
 
 const WIN_PROMPT_STORAGE_KEY = "settings_win_prompt_enabled_v1";
 const LEGACY_WIN_PROMPT_STORAGE_KEYS = ["settings_win_prompt_enabled", "win_prompt_enabled"];
+const RESTART_PROMPT_STORAGE_KEY = "settings_restart_prompt_enabled_v1";
 const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 
 
@@ -114,6 +115,29 @@ function writeWinPromptEnabled(windowLike: unknown, enabled: boolean): boolean {
   return didWrite;
 }
 
+function readRestartPromptEnabled(windowLike: unknown): boolean {
+  const storage = toRecord(windowLike).localStorage;
+  const getItem = asFunction<(key: string) => string | null>(toRecord(storage).getItem);
+  if (!getItem) return true;
+  try {
+    return getItem.call(storage, RESTART_PROMPT_STORAGE_KEY) !== "0";
+  } catch (_err) {
+    return true;
+  }
+}
+
+function writeRestartPromptEnabled(windowLike: unknown, enabled: boolean): boolean {
+  const storage = toRecord(windowLike).localStorage;
+  const setItem = asFunction<(key: string, value: string) => unknown>(toRecord(storage).setItem);
+  if (!setItem) return false;
+  try {
+    setItem.call(storage, RESTART_PROMPT_STORAGE_KEY, enabled ? "1" : "0");
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
 function resolveWinPromptNoteTextLegacy(enabled: boolean): string {
   return enabled
     ? "合成 2048 时会弹出胜利提示，可选择继续游戏。"
@@ -207,6 +231,15 @@ function buildSettingsToggleRowHtml(options: {
   );
 }
 
+function buildRestartPromptSettingsRowHtml(lang: "zh" | "en"): string {
+  const isEn = lang === "en";
+  return buildSettingsToggleRowHtml({
+    inputId: "restart-prompt-toggle",
+    title: isEn ? "Restart Confirmation" : "重开提示",
+    desc: isEn ? "Ask before starting a new game" : "重开游戏前显示确认提示"
+  });
+}
+
 function buildSettingsPageEntryHtml(lang: "zh" | "en"): string {
   const isEn = lang === "en";
   return (
@@ -259,6 +292,7 @@ function buildCanonicalSettingsModalInnerHtml(options: {
       desc: isEn ? "Show a win prompt after reaching 2048" : "合成 2048 后弹出胜利提示",
       noteId: "win-prompt-note"
     }),
+    buildRestartPromptSettingsRowHtml(lang),
     buildSettingsToggleRowHtml({
       rowId: "bgm-settings-row",
       inputId: "bgm-toggle",
@@ -316,6 +350,7 @@ function getSettingsRowId(row: unknown): string {
 
 const CANONICAL_SETTINGS_ROW_IDS = [
   "win-prompt-toggle",
+  "restart-prompt-toggle",
   "bgm-settings-row",
   "night-bg-settings-row",
   "operation-feedback-settings-row",
@@ -408,6 +443,13 @@ export function normalizeSettingsModalContent(input: {
     );
     if (insertAdjacentHtml) {
       const lang = readUiLanguage(source.windowLike);
+      if (!getElementById(documentLike, "restart-prompt-toggle")) {
+        (insertAdjacentHtml as unknown as Function).call(
+          content,
+          "beforeend",
+          buildRestartPromptSettingsRowHtml(lang)
+        );
+      }
       if (!getElementById(documentLike, "operation-feedback-toggle")) {
         (insertAdjacentHtml as unknown as Function).call(
           content,
@@ -526,6 +568,18 @@ export function createSettingsModalInitResolvers(input: {
 
     sync();
     bindListener(windowLike, "uilanguagechange", sync);
+
+    const restartToggle = getElementById(source.documentLike, "restart-prompt-toggle");
+    const restartToggleRecord = toRecord(restartToggle);
+    if (restartToggle) {
+      if (!restartToggleRecord.__restartPromptBound) {
+        restartToggleRecord.__restartPromptBound = true;
+        bindListener(restartToggle, "change", function () {
+          writeRestartPromptEnabled(windowLike, !!toRecord(restartToggle).checked);
+        });
+      }
+      restartToggleRecord.checked = readRestartPromptEnabled(windowLike);
+    }
 
     return {
       hasToggle: true,

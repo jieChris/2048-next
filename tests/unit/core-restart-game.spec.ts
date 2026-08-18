@@ -129,8 +129,43 @@ describe("core restart game runtime", () => {
     expect(manager.setup).not.toHaveBeenCalled();
   });
 
-  it("clears transient state and starts a fresh normal game", () => {
-    const manager = createManager();
+  it("skips sync and async confirmation when the restart prompt is disabled", async () => {
+    const disabledPreference = () => ({
+      localStorage: {
+        getItem: () => "0"
+      }
+    });
+    const syncManager = createManager({ getWindowLike: disabledPreference });
+    const syncOperations = {
+      confirmRestart: vi.fn(() => true),
+      resolveRestartConfirmMessage: vi.fn(() => "Start a new game?")
+    };
+
+    restartGame(syncManager, syncOperations);
+
+    expect(syncOperations.confirmRestart).not.toHaveBeenCalled();
+    expect(syncOperations.resolveRestartConfirmMessage).not.toHaveBeenCalled();
+    expect(syncManager.setup).toHaveBeenCalledWith(undefined, { disableStateRestore: true });
+
+    const asyncManager = createManager({ getWindowLike: disabledPreference });
+    const asyncOperations = {
+      confirmRestartAsync: vi.fn(async () => true),
+      resolveRestartConfirmMessage: vi.fn(() => "Start a new game?")
+    };
+
+    await restartGameAsync(asyncManager, asyncOperations);
+
+    expect(asyncOperations.confirmRestartAsync).not.toHaveBeenCalled();
+    expect(asyncOperations.resolveRestartConfirmMessage).not.toHaveBeenCalled();
+    expect(asyncManager.setup).toHaveBeenCalledWith(undefined, { disableStateRestore: true });
+  });
+
+  it("clears transient state and starts a fresh normal game when preference access fails", () => {
+    const manager = createManager({
+      getWindowLike: () => {
+        throw new Error("storage unavailable");
+      }
+    });
     const operations = {
       confirmRestart: vi.fn(() => true),
       resolveRestartConfirmMessage: vi.fn(() => "Start a new game?"),
@@ -255,7 +290,6 @@ describe("core restart game runtime", () => {
     expect(windowLike.CoreRestartGameRuntime?.resolveRestartConfirmLanguage).toBe(
       resolveRestartConfirmLanguage
     );
-
     const existing = {
       restartGame: vi.fn(),
       createFallbackFreshSetupSeed: vi.fn(),

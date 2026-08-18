@@ -96,6 +96,74 @@ test.describe("Practice Board Mode Picker", () => {
     expect(snapshot.search).toContain("practice_ruleset=fibonacci");
   });
 
+  test("selected practice tile scales above neighbors without changing row gaps", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", {
+      waitUntil: "domcontentloaded"
+    });
+    expect(response, "Practice board response should exist").not.toBeNull();
+    expect(response?.ok(), "Practice board response should be 2xx").toBeTruthy();
+    await expect(page.locator("body")).toBeVisible();
+    await waitForPracticeBoardReady(page);
+
+    const stacking = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll<HTMLElement>(".selection-tile")];
+      const rowTops = [...new Set(tiles.map((element) => element.offsetTop))].sort(
+        (left, right) => left - right
+      );
+      const rowGaps = rowTops.slice(1).map((rowTop, index) => {
+        const previous = tiles.find((element) => element.offsetTop === rowTops[index]);
+        return previous ? rowTop - previous.offsetTop - previous.offsetHeight : null;
+      });
+      const selected = document.querySelector<HTMLElement>(".selection-tile.selected");
+      const selectedInner = selected?.querySelector<HTMLElement>(".tile-inner");
+      return {
+        rowGaps,
+        selectedPosition: selected ? window.getComputedStyle(selected).position : "",
+        selectedTransform: selected ? window.getComputedStyle(selected).transform : "none",
+        selectedZIndex: selected ? Number(window.getComputedStyle(selected).zIndex) : 0,
+        selectedInnerZIndex: selectedInner
+          ? Number(window.getComputedStyle(selectedInner).zIndex)
+          : null,
+        selectedMargin: selected ? window.getComputedStyle(selected).margin : ""
+      };
+    });
+
+    expect(stacking.selectedPosition).toBe("relative");
+    expect(stacking.selectedTransform).not.toBe("none");
+    expect(stacking.selectedMargin).toBe("0px");
+    expect(stacking.selectedInnerZIndex).not.toBeNull();
+    expect(stacking.selectedZIndex).toBeGreaterThan(stacking.selectedInnerZIndex ?? 0);
+    expect(stacking.rowGaps.length).toBeGreaterThan(0);
+    for (const rowGap of stacking.rowGaps) {
+      expect(rowGap).not.toBeNull();
+      expect(rowGap as number).toBeGreaterThanOrEqual(3.25);
+      expect(rowGap as number).toBeLessThanOrEqual(4.75);
+    }
+
+    await page.locator('.selection-tile[data-value="64"]').click();
+    const lowerRowGaps = await page.evaluate(() => {
+      const tiles = [...document.querySelectorAll<HTMLElement>(".selection-tile")];
+      const rowTops = [...new Set(tiles.map((element) => element.offsetTop))].sort(
+        (left, right) => left - right
+      );
+      const rowGaps = rowTops.slice(1).map((rowTop, index) => {
+        const previous = tiles.find((element) => element.offsetTop === rowTops[index]);
+        return previous ? rowTop - previous.offsetTop - previous.offsetHeight : null;
+      });
+      return {
+        value: document.querySelector<HTMLElement>(".selection-tile.selected")?.getAttribute("data-value") || "",
+        rowGaps
+      };
+    });
+    expect(lowerRowGaps.value).toBe("64");
+    for (const rowGap of lowerRowGaps.rowGaps) {
+      expect(rowGap).not.toBeNull();
+      expect(rowGap as number).toBeGreaterThanOrEqual(3.25);
+      expect(rowGap as number).toBeLessThanOrEqual(4.75);
+    }
+  });
+
   test("practice board keeps the selected diagonal mode after reload", async ({ page }) => {
     const response = await page.goto("/Practice_board.html?practice_fresh=1", {
       waitUntil: "domcontentloaded"

@@ -348,6 +348,7 @@ function nextFibonacci(value) {
 function resolveMergedValue(a, b, mode) {
   const maxTile = resolveModeMaxTile(mode);
   if (mode.ruleset !== "fibonacci") {
+    if (a === 1 || b === 1) return null;
     if (a !== b) return null;
     const merged = a * 2;
     if (merged > maxTile) return null;

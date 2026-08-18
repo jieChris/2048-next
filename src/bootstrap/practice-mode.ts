@@ -39,6 +39,18 @@ export function parsePracticeModeKey(searchLike: SearchLike): string {
   return key && key !== "practice" ? key : "";
 }
 
+export function buildPracticePlacementCycleValues(
+  rulesetRaw: string | null | undefined,
+  visibleValues: readonly number[]
+): number[] {
+  const values = Array.isArray(visibleValues) ? Array.from(visibleValues) : [];
+  if (rulesetRaw === "fibonacci" || values.indexOf(0) === -1 || values.indexOf(1) !== -1) {
+    return values;
+  }
+  values.splice(values.indexOf(0) + 1, 0, 1);
+  return values;
+}
+
 function toPositiveInt(value: unknown, fallback: number): number {
   return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
 }
@@ -174,6 +186,7 @@ export function buildPracticeModeConfigFromSelection<T extends PracticeModeConfi
 export interface PracticeModeRuntime {
   parsePracticeRuleset: typeof parsePracticeRuleset;
   parsePracticeModeKey: typeof parsePracticeModeKey;
+  buildPracticePlacementCycleValues: typeof buildPracticePlacementCycleValues;
   isPracticeBoardSizeAllowed: typeof isPracticeBoardSizeAllowed;
   buildPracticeModeConfig: typeof buildPracticeModeConfig;
   buildPracticeModeConfigFromSelection: typeof buildPracticeModeConfigFromSelection;
@@ -191,6 +204,7 @@ export function createPracticeModeRuntime(): PracticeModeRuntime {
   return {
     parsePracticeRuleset,
     parsePracticeModeKey,
+    buildPracticePlacementCycleValues,
     isPracticeBoardSizeAllowed,
     buildPracticeModeConfig,
     buildPracticeModeConfigFromSelection

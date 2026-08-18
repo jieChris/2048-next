@@ -61,6 +61,15 @@ export function decodeReplayV4Actions(actionsEncoded: string): ReplayV4ActionsRe
       const value = exp === 0 ? 0 : Math.pow(2, exp);
       replayMoves.push(["p", px, py, value]);
       replaySpawns.push(null);
+    } else if (subtype === 3) {
+      if (i >= actionsEncoded.length) throw "Invalid v4C practice marker action";
+      const cell = decodeReplay128(actionsEncoded.charAt(i));
+      i += 1;
+      if (cell < 0 || cell > 15) throw "Invalid v4C practice cell";
+      const px = (cell >> 2) & 3;
+      const py = cell & 3;
+      replayMoves.push(["p", px, py, 1]);
+      replaySpawns.push(null);
     } else {
       throw "Unknown v4C escape subtype";
     }

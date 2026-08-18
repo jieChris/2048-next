@@ -141,6 +141,7 @@ describe("core rules: getMergedValue", () => {
   it("rejects invalid pow2 merges", () => {
     expect(getMergedValue(2, 4, "pow2", Infinity)).toBeNull();
     expect(getMergedValue(1024, 1024, "pow2", 1024)).toBeNull();
+    expect(getMergedValue(1, 1, "pow2", Infinity)).toBeNull();
   });
 
   it("merges fibonacci pairs", () => {

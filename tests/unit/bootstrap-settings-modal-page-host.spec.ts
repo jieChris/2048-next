@@ -51,6 +51,7 @@ describe("bootstrap settings modal page host", () => {
         })
     ).toEqual([
       "win-prompt-toggle",
+      "restart-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
       "operation-feedback-settings-row",
@@ -58,6 +59,7 @@ describe("bootstrap settings modal page host", () => {
       "settings-page-entry-row"
     ]);
     expect(dom.window.document.querySelectorAll("#win-prompt-toggle")).toHaveLength(1);
+    expect(dom.window.document.querySelectorAll("#restart-prompt-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#bgm-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelectorAll("#night-bg-toggle")).toHaveLength(1);
     expect(dom.window.document.querySelector("#toolkit-entry-row")).toBeNull();
@@ -103,6 +105,7 @@ describe("bootstrap settings modal page host", () => {
         .map((row) => row.id || row.querySelector("input")?.id || "")
     ).toEqual([
       "win-prompt-toggle",
+      "restart-prompt-toggle",
       "bgm-settings-row",
       "night-bg-settings-row",
       "operation-feedback-settings-row",
@@ -401,6 +404,50 @@ describe("bootstrap settings modal page host", () => {
     });
     expect(toggle.checked).toBe(false);
     expect(note.textContent).toContain("自动继续游戏");
+  });
+
+  it("defaults the restart prompt toggle on and persists changes", () => {
+    const handlers: Record<string, (() => void) | undefined> = {};
+    const winPromptToggle = {
+      checked: true,
+      __winPromptBound: false,
+      addEventListener() {}
+    };
+    const restartPromptToggle = {
+      checked: false,
+      __restartPromptBound: false,
+      addEventListener(eventName: string, handler: () => void) {
+        handlers[eventName] = handler;
+      }
+    };
+    const values = new Map<string, string>();
+    const localStorage = {
+      getItem: vi.fn((key: string) => values.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        values.set(key, value);
+      })
+    };
+    const resolvers = createSettingsModalInitResolvers({
+      documentLike: {
+        getElementById(id: string) {
+          if (id === "win-prompt-toggle") return winPromptToggle;
+          if (id === "restart-prompt-toggle") return restartPromptToggle;
+          return null;
+        }
+      },
+      windowLike: { localStorage }
+    });
+
+    resolvers.initWinPromptSettingsUI();
+    expect(restartPromptToggle.checked).toBe(true);
+
+    restartPromptToggle.checked = false;
+    handlers.change?.();
+    expect(localStorage.setItem).toHaveBeenCalledWith("settings_restart_prompt_enabled_v1", "0");
+
+    restartPromptToggle.checked = true;
+    resolvers.initWinPromptSettingsUI();
+    expect(restartPromptToggle.checked).toBe(false);
   });
 
   it("creates settings init resolvers with safe fallbacks when host apis are missing", () => {

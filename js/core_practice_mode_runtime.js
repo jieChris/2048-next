@@ -27,6 +27,15 @@
     return key && key !== "practice" ? key : "";
   }
 
+  function buildPracticePlacementCycleValues(rulesetRaw, visibleValues) {
+    var values = Array.isArray(visibleValues) ? visibleValues.slice() : [];
+    if (rulesetRaw === "fibonacci" || values.indexOf(0) === -1 || values.indexOf(1) !== -1) {
+      return values;
+    }
+    values.splice(values.indexOf(0) + 1, 0, 1);
+    return values;
+  }
+
   function toPositiveInt(value, fallback) {
     return Number.isInteger(value) && Number(value) > 0 ? Number(value) : fallback;
   }
@@ -111,6 +120,8 @@
   global.CorePracticeModeRuntime = global.CorePracticeModeRuntime || {};
   global.CorePracticeModeRuntime.parsePracticeRuleset = parsePracticeRuleset;
   global.CorePracticeModeRuntime.parsePracticeModeKey = parsePracticeModeKey;
+  global.CorePracticeModeRuntime.buildPracticePlacementCycleValues =
+    buildPracticePlacementCycleValues;
   global.CorePracticeModeRuntime.isPracticeBoardSizeAllowed =
     isPracticeBoardSizeAllowed;
   global.CorePracticeModeRuntime.buildPracticeModeConfig = buildPracticeModeConfig;

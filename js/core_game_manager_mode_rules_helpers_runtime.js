@@ -1043,6 +1043,7 @@ function normalizeMergedValueFromCore(coreValue) {
   return Number.isInteger(mergedValue) && mergedValue > 0 ? mergedValue : undefined;
 }
 function resolvePow2MergedValueFallback(currentManager, a, b) {
+  if (a === 1 || b === 1) return null;
   if (a !== b) return null;
   var mergedPow2 = a * 2;
   if (mergedPow2 > currentManager.maxTile) return null;

@@ -216,6 +216,7 @@
     var cap = Number.isFinite(maxTile) && maxTile > 0 ? Number(maxTile) : Infinity;
 
     if (normalizedRuleset !== "fibonacci") {
+      if (a === 1 || b === 1) return null;
       if (a !== b) return null;
       var pow2Merged = a * 2;
       if (pow2Merged > cap) return null;

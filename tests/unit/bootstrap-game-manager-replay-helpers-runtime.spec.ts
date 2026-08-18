@@ -13,6 +13,7 @@ import {
   tryAutoSubmitOnGameOver
 } from "../../src/bootstrap/game-manager-replay-helpers-runtime";
 import { decodeReplayV1Rpl, encodeReplayV1Rpl, encodeUleb128 } from "../../src/core/replay-codec";
+import { decodeReplayV4Actions } from "../../src/core/replay-v4-actions";
 
 function createGrid() {
   return {
@@ -843,6 +844,63 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       [0, 0]
     ]);
     expect(manager.replayStartBoardMatrix).toEqual(manager.practiceRestartBoardMatrix);
+  });
+
+  it("records live practice tile edits while keeping 5x5 and replay playback safe", () => {
+    class Tile {
+      constructor(
+        public position: { x: number; y: number },
+        public value: number
+      ) {}
+    }
+    const createManager = (width: number, height: number, replayMode = false, fibonacci = false) => {
+      const cells = Array.from({ length: height }, () => Array<InstanceType<typeof Tile> | null>(width).fill(null));
+      return {
+        width,
+        height,
+        modeKey: "practice",
+        replayMode,
+        isFibonacciMode: () => fibonacci,
+        replayCompactLog: "",
+        sessionReplayV3: { actions: [] as unknown[] },
+        grid: {
+          eachCell(callback: (x: number, y: number, tile: unknown) => void) {
+            cells.forEach((row, y) => row.forEach((tile, x) => callback(x, y, tile)));
+          },
+          cellContent({ x, y }: { x: number; y: number }) {
+            return cells[y]?.[x] || null;
+          },
+          insertTile(tile: InstanceType<typeof Tile>) {
+            cells[tile.position.y][tile.position.x] = tile;
+          },
+          removeTile(tile: InstanceType<typeof Tile>) {
+            cells[tile.position.y][tile.position.x] = null;
+          }
+        },
+        getWindowLike: () => ({ Tile }),
+        actuate: vi.fn()
+      };
+    };
+
+    const compactManager = createManager(4, 4);
+    expect(insertCustomTile(compactManager, 1, 2, 1)).toBe(true);
+    expect(compactManager.sessionReplayV3.actions).toEqual([["p", 1, 2, 1]]);
+    expect(decodeReplayV4Actions(compactManager.replayCompactLog).replayMoves).toEqual([["p", 1, 2, 1]]);
+
+    const largeManager = createManager(5, 5);
+    expect(insertCustomTile(largeManager, 4, 4, 1)).toBe(true);
+    expect(largeManager.sessionReplayV3.actions).toEqual([["p", 4, 4, 1]]);
+    expect(largeManager.replayCompactLog).toBe("");
+
+    const fibonacciManager = createManager(4, 4, false, true);
+    expect(insertCustomTile(fibonacciManager, 1, 2, 3)).toBe(true);
+    expect(fibonacciManager.sessionReplayV3.actions).toEqual([["p", 1, 2, 3]]);
+    expect(fibonacciManager.replayCompactLog).toBe("");
+
+    const replayManager = createManager(4, 4, true);
+    expect(insertCustomTile(replayManager, 1, 2, 1)).toBe(true);
+    expect(replayManager.sessionReplayV3.actions).toEqual([]);
+    expect(replayManager.replayCompactLog).toBe("");
   });
 
   it("rejects custom practice tiles above the active capped max tile", () => {
