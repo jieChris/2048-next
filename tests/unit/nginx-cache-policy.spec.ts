@@ -44,6 +44,9 @@ describe("self-hosted nginx cache policy", () => {
     expect(workflow).toContain("Checkout deployment config");
     expect(workflow).toContain("Upload Nginx config");
     expect(workflow).toContain("deploy/nginx/2048-next.nginx.conf.example");
+    expect(workflow).toContain(
+      'sudo -n docker run --rm \\\n              "${docker_network_args[@]}" \\\n              -v "${nginx_config_path}:/etc/nginx/conf.d/default.conf:ro"'
+    );
     expect(workflow).toContain('cp "${nginx_config_path}" "${deploy_root}/nginx.conf"');
     expect(workflow).toContain("npm run verify:release");
     expect(workflow).toContain("previous release restored");

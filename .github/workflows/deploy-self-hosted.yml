@@ -236,7 +236,12 @@ jobs:
             if [ -f "${deploy_root}/nginx.conf" ]; then
               sudo -n cp "${deploy_root}/nginx.conf" "${previous_nginx_config}"
             fi
+            docker_network_args=()
+            if sudo -n docker network inspect edge-migrate-net >/dev/null 2>&1; then
+              docker_network_args=(--network edge-migrate-net)
+            fi
             sudo -n docker run --rm \
+              "${docker_network_args[@]}" \
               -v "${nginx_config_path}:/etc/nginx/conf.d/default.conf:ro" \
               nginx:1.27-alpine nginx -t
 
@@ -245,11 +250,6 @@ jobs:
             sudo -n ln -sfn "${release_dir}" "${deploy_root}/current"
 
             start_site_container() {
-              docker_network_args=()
-              if sudo -n docker network inspect edge-migrate-net >/dev/null 2>&1; then
-                docker_network_args=(--network edge-migrate-net)
-              fi
-
               if sudo -n docker ps -a --format '{{.Names}}' | grep -qx 'site-2048-next'; then
                 sudo -n docker rm -f site-2048-next >/dev/null
               fi
