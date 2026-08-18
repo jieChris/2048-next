@@ -110,6 +110,15 @@ describe("module entry html pages", () => {
     expect(html).not.toContain('id="operation-feedback-toggle"');
   });
 
+  it("palette.html exposes the beginner guide settings entry", () => {
+    const html = readHtml("palette.html");
+
+    expect(html).toContain('href="#contextual-guide-settings" aria-controls="contextual-guide-settings"');
+    expect(html).toContain('class="replay-button palette-nav-btn palette-guide-entry"');
+    expect(html).toContain('id="contextual-guide-settings" class="palette-settings-section"');
+    expect(html).toContain('id="contextual-guide-catalog-row"');
+  });
+
   it("palette settings navigation keeps labels left aligned at every breakpoint", () => {
     const css = readHtml("style/palette_page.css");
     const categoryLinkRules = css.match(/\.settings-category-link \{[\s\S]*?\n  \}/g) || [];

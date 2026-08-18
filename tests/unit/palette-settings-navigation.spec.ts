@@ -7,10 +7,12 @@ const SETTINGS_HTML = `
     <a class="settings-category-link is-active" href="#timer-settings" aria-current="location">计时器</a>
     <a class="settings-category-link" href="#appearance-settings" aria-current="false">外观与配色</a>
     <a class="settings-category-link" href="#language-settings" aria-current="false">界面语言</a>
+    <a class="settings-category-link" href="#contextual-guide-settings" aria-current="false">新手指引</a>
   </nav>
   <section id="timer-settings"><details id="custom-secondary-timer-editor"></details></section>
   <section id="appearance-settings"><details id="appearance-settings-editor"></details></section>
   <section id="language-settings"><details id="language-settings-editor"></details></section>
+  <section id="contextual-guide-settings"></section>
 `;
 
 async function loadPalettePageModule(hash: string) {
@@ -92,6 +94,18 @@ describe("palette settings navigation", () => {
 
     expect((dom.window.document.getElementById("language-settings-editor") as HTMLDetailsElement).open).toBe(true);
     expect(dom.window.document.querySelector('a[href="#language-settings"]')?.classList.contains("is-active")).toBe(true);
+    dom.window.close();
+  });
+
+  it("opens the beginner guide module from its settings bookmark", async () => {
+    const { dom, module } = await loadPalettePageModule("#contextual-guide-settings");
+    const section = dom.window.document.getElementById("contextual-guide-settings") as HTMLElement;
+    section.scrollIntoView = () => undefined;
+
+    module.syncSettingsCategory();
+
+    expect(dom.window.document.querySelector('a[href="#contextual-guide-settings"]')?.classList.contains("is-active")).toBe(true);
+    expect(dom.window.document.querySelector('a[href="#contextual-guide-settings"]')?.getAttribute("aria-current")).toBe("location");
     dom.window.close();
   });
 });

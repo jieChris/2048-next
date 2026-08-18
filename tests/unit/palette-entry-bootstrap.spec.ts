@@ -13,6 +13,8 @@ describe("palette entry bootstrap", () => {
 
     expect(source).toContain('import { bootstrapDirectPage } from "../app/bootstrap-direct-page";');
     expect(source).toContain('import { bootstrapPalettePage } from "../pages/palette-page";');
+    expect(source).toContain('import { initContextualGuideCatalogUI } from "../features/contextual-guide/contextual-guide-catalog";');
     expect(source).toContain('await bootstrapDirectPage("palette", bootstrapPalettePage);');
+    expect(source).toContain("initContextualGuideCatalogUI();");
   });
 });

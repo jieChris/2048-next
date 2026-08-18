@@ -24,7 +24,12 @@ const CUSTOM_TIMER_PREVIEW_STYLE_SLOTS = [
   32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
 ];
 let customTimerFamily: CustomSecondaryTimerFamily = "pow2";
-const SETTINGS_SECTION_IDS = ["timer-settings", "appearance-settings", "language-settings"] as const;
+const SETTINGS_SECTION_IDS = [
+  "timer-settings",
+  "appearance-settings",
+  "language-settings",
+  "contextual-guide-settings",
+] as const;
 type SettingsSectionId = typeof SETTINGS_SECTION_IDS[number];
 const settingsSectionVisibility = new Map<SettingsSectionId, number>();
 
@@ -422,6 +427,7 @@ function applyThemePageCopy(): void {
   const pageTitle = document.querySelector(".palette-title");
   const pageSubtitle = document.querySelector(".palette-subtitle");
   const navLinks = document.querySelectorAll(".palette-nav .palette-nav-btn");
+  const guideEntry = document.querySelector<HTMLAnchorElement>(".palette-guide-entry");
   const appearanceDisclosureTitle = document.querySelector(".appearance-settings-disclosure-copy strong");
   const appearanceDisclosureDesc = document.querySelector(".appearance-settings-disclosure-copy small");
   const languageDisclosureTitle = document.querySelector(".language-settings-disclosure-copy strong");
@@ -458,6 +464,10 @@ function applyThemePageCopy(): void {
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
   if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
+  if (guideEntry) {
+    guideEntry.textContent = isEnglish ? "Beginner guides" : "新手指引";
+    guideEntry.setAttribute("aria-label", isEnglish ? "Open beginner guides" : "打开新手指引");
+  }
   if (appearanceDisclosureTitle) appearanceDisclosureTitle.textContent = copy.appearanceDisclosureTitle;
   if (appearanceDisclosureDesc) appearanceDisclosureDesc.textContent = copy.appearanceDisclosureDesc;
   if (languageDisclosureTitle) languageDisclosureTitle.textContent = copy.languageDisclosureTitle;

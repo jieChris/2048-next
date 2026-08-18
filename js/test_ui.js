@@ -1052,7 +1052,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function resolvePracticeDefaultSelectionValue(ruleset, values) {
-    var preferred = ruleset === "fibonacci" ? 1 : 2;
+    var preferred = 0;
     var list = Array.isArray(values) ? values : [];
     if (list.indexOf(preferred) !== -1) return preferred;
     for (var i = 0; i < list.length; i++) {
@@ -1168,7 +1168,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (locked) {
       setSelectedValue(null);
     } else if (selectedValue === null) {
-      setSelectedValue(currentSelectionRuleset === "fibonacci" ? 1 : 2);
+      setSelectedValue(0);
     } else {
       syncPracticeGestureEntryUi();
     }

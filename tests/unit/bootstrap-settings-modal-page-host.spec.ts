@@ -30,6 +30,7 @@ describe("bootstrap settings modal page host", () => {
             <label for="win-prompt-toggle" class="settings-toggle-title">胜利提示</label>
             <input id="win-prompt-toggle" type="checkbox">
           </div>
+          <div id="contextual-guide-catalog-row" class="settings-row contextual-guide-catalog-row"></div>
         </div>
       </div>
     `);
@@ -66,6 +67,7 @@ describe("bootstrap settings modal page host", () => {
     expect(dom.window.document.querySelector("#toolkit-account-link")).toBeNull();
     expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
     expect(dom.window.document.querySelector<HTMLAnchorElement>("#settings-page-entry-link")?.getAttribute("href")).toBe("palette.html");
+    expect(dom.window.document.querySelector("#contextual-guide-catalog-row")).toBeNull();
     expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
     expect(dom.window.document.querySelector("[data-operation-feedback-layout-open]")).toBeNull();
   });
@@ -114,6 +116,7 @@ describe("bootstrap settings modal page host", () => {
     ]);
     expect(dom.window.document.querySelector("#ui-language-settings-row")).toBeNull();
     expect(dom.window.document.querySelectorAll("#settings-page-entry-row")).toHaveLength(1);
+    expect(dom.window.document.querySelector("#contextual-guide-catalog-row")).toBeNull();
   });
 
   it("creates settings action resolvers with safe fallbacks", () => {

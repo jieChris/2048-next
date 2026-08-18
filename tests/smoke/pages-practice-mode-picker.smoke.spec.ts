@@ -83,7 +83,7 @@ test.describe("Practice Board Mode Picker", () => {
         height: 3,
         ruleset: "fibonacci",
         bodyRuleset: "fibonacci",
-        selectedTileValue: "1",
+        selectedTileValue: "0",
         modeBadgeText: "斐波那契 3×3",
         modeCurrentText: "当前模式：斐波那契 3×3",
         activeModeKey: "fib_3x3_no_undo"

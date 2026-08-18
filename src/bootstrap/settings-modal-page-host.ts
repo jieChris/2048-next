@@ -463,6 +463,8 @@ export function normalizeSettingsModalContent(input: {
     }
   }
 
+  removeNode(getElementById(documentLike, "contextual-guide-catalog-row"));
+
   reorderSettingsRows(content);
 
   return {
