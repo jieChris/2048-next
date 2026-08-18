@@ -1,7 +1,7 @@
 # 2048-next Nginx reverse proxy config for the self-hosted static container.
 
 upstream game_data_api {
-    server 127.0.0.1:3010;
+    server 2048-game-api:3001;
     keepalive 32;
 }
 
@@ -24,6 +24,20 @@ map $uri $cloudflare_cache_control {
     ~*\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff2?|ttf|otf)$ "public, max-age=31536000, immutable";
 }
 
+# Only the two canonical landing pages are search destinations. The remaining
+# pages are application state, account flows, tools, or parameterized games.
+map $uri $search_robots {
+    default "";
+    ~*^/(?:play|undo_2048|capped_2048|Practice_board|relay_5x5|account|account_settings|password|palette|history|register|user|replay)\.html$ "noindex, follow";
+}
+
+# The outer edge proxy rewrites X-Forwarded-Proto, while Cloudflare's original
+# visitor scheme remains available in CF-Visitor.
+map $http_cf_visitor $cloudflare_visitor_uses_http {
+    default 0;
+    ~*^\{\"scheme\":\"http\"\}$ 1;
+}
+
 # Breakout is intentionally embedded by the same-origin game page.
 map $uri $frame_options {
     default DENY;
@@ -39,6 +53,14 @@ server {
 
     access_log /var/log/nginx/2048-next.access.log;
     error_log /var/log/nginx/2048-next.error.log warn;
+
+    if ($cloudflare_visitor_uses_http) {
+        return 308 https://2048next.cn$request_uri;
+    }
+
+    if ($host = "www.2048next.cn") {
+        return 308 https://2048next.cn$request_uri;
+    }
 
     gzip on;
     gzip_static on;
@@ -62,6 +84,7 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header Cache-Control $browser_cache_control always;
     add_header Cloudflare-CDN-Cache-Control $cloudflare_cache_control always;
+    add_header X-Robots-Tag $search_robots always;
 
     error_page 404 /404.html;
 
@@ -148,7 +171,19 @@ server {
     }
 
     location = / {
-        try_files /2048.html =404;
+        return 308 https://2048next.cn/2048.html$is_args$args;
+    }
+
+    location = /index.html {
+        return 308 https://2048next.cn/2048.html$is_args$args;
+    }
+
+    location = /beta-login.html {
+        return 308 https://2048next.cn/2048.html;
+    }
+
+    location = /beta-access.html {
+        return 308 https://2048next.cn/2048.html;
     }
 
     location / {
