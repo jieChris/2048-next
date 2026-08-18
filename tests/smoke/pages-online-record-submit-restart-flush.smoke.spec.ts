@@ -19,7 +19,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       ranked_session_token: "old-ranked-token",
       issued_at: nowSec - 60,
       exp: nowSec + 3600,
-      owner_user_id: "42"
+      owner_user_id: "42",
+      spawn_sequence_version: 2
     };
     const nextSession = {
       mode_key: modeKey,
@@ -28,7 +29,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       ranked_session_token: "next-ranked-token",
       issued_at: nowSec,
       exp: nowSec + 3600,
-      owner_user_id: "42"
+      owner_user_id: "42",
+      spawn_sequence_version: 2
     };
     let prefetchCounter = 0;
     const recordPayloads: Array<Record<string, unknown>> = [];
@@ -59,12 +61,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     await page.route("**/api/ranked-session/start", async (route) => {
       prefetchCounter += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          data: {
+      const session = prefetchCounter === 1
+        ? nextSession
+        : {
             mode_key: modeKey,
             challenge_id: `ranked-prefetch-${prefetchCounter}`,
             seed: 700 + prefetchCounter,
@@ -72,7 +71,13 @@ test.describe("Legacy Multi-Page Smoke", () => {
             issued_at: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600,
             spawn_sequence_version: 2
-          }
+          };
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: session
         })
       });
     });
