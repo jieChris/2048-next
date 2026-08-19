@@ -23,6 +23,8 @@
   var RECORD_SUBMIT_PENDING_QUEUE_LIMIT = 20;
   var RECORD_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var RECORD_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
+  var RECORD_RESUMABLE_UPLOAD_THRESHOLD_BYTES = 1536 * 1024;
+  var RECORD_RESUMABLE_UPLOAD_CHUNK_BYTES = 512 * 1024;
   var STONE_2K_SUBMIT_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
   var STONE_2K_SUBMIT_PENDING_RETRY_BASE_MS = 2000;
   var STONE_2K_SUBMIT_PENDING_RETRY_MAX_MS = 15000;
@@ -197,6 +199,18 @@
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var sharedGetAuthToken = _u.getAuthToken || function () { return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim(); };
+  var sharedSetAuthSession = _u.setAuthSession || function (payload) {
+    safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
+  };
+  var sharedClearAuthSession = _u.clearAuthSession || function () {
+    safeRemoveStorage(STORAGE_TOKEN_KEY);
+    safeRemoveStorage(STORAGE_USER_ID_KEY);
+    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+  };
+  var sharedFetchWithAuth = _u.fetchWithAuth || function (url, requestInit) {
+    return callFetch(url, requestInit);
+  };
   var callFetch = _u.callFetch || function (url, requestInit) {
     if (!global || typeof global["fetch"] !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
@@ -233,6 +247,7 @@
   var lifecycleSubmitFlushBound = false;
   var rankedNavigationAttemptBound = false;
   var authBestScoreSyncBound = false;
+  var durableOutboxMigrationPromise = null;
   var schedulerTaskName = "online-leaderboard-main";
   var refreshScheduler = null;
   var rankedCheckpointSaveTimer = 0;
@@ -301,7 +316,7 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function getAuthToken() {
-    return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
+    return toText(sharedGetAuthToken()).trim();
   }
 
   function getRankedSessionRuntime() {
@@ -657,7 +672,7 @@ function shouldAutoLoadOnlineLeaderboard() {
         reason = "";
       }
     }
-    if (isUnauthorizedSubmitErrorText(reason)) {
+    if (isUnauthorizedSubmitError(reason)) {
       clearAuthSessionOnly();
     }
   }
@@ -1053,7 +1068,7 @@ function shouldAutoLoadOnlineLeaderboard() {
           : (payload.user_id != null ? payload.user_id : payload.id)
       )
     ).trim();
-    safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
+    sharedSetAuthSession(payload || {});
     if (userIdValue) {
       safeSetStorage(STORAGE_USER_ID_KEY, userIdValue);
     } else {
@@ -1066,19 +1081,11 @@ function shouldAutoLoadOnlineLeaderboard() {
   }
 
   function clearAuth() {
-    safeRemoveStorage(STORAGE_TOKEN_KEY);
-    safeRemoveStorage(STORAGE_USER_ID_KEY);
-    safeRemoveStorage(STORAGE_NICKNAME_KEY);
-    safeRemoveStorage(STORAGE_PENDING_SCORE_SUBMIT_KEY);
-    safeRemoveStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY);
-    safeRemoveStorage(STORAGE_PENDING_RECORD_QUEUE_KEY);
-    safeRemoveStorage(STORAGE_PENDING_STONE_2K_SUBMIT_KEY);
+    sharedClearAuthSession();
   }
 
   function clearAuthSessionOnly() {
-    safeRemoveStorage(STORAGE_TOKEN_KEY);
-    safeRemoveStorage(STORAGE_USER_ID_KEY);
-    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+    sharedClearAuthSession();
   }
 
   function clearPendingScoreSubmitState() {
@@ -1258,7 +1265,8 @@ function shouldAutoLoadOnlineLeaderboard() {
     runPromiseSafely(function () {
       return retryPendingRecordSubmit({
         keepalive: opts.keepalive === true,
-        forcePendingRetry: true
+        forcePendingRetry: true,
+        deliverySource: opts.deliverySource
       });
     });
   }
@@ -1448,6 +1456,242 @@ function shouldAutoLoadOnlineLeaderboard() {
     if (isTransientOnlineSubmitErrorText(errorTextLike)) return true;
     var status = Math.floor(Number(result && result.status) || 0);
     return status === 408 || status === 429 || status >= 500;
+  }
+
+  function getDurableRecordOutbox() {
+    var store = global && global.LocalHistoryStore;
+    if (!store || typeof store !== "object") return null;
+    if (
+      typeof store.prepareRecordSubmitAsync !== "function" ||
+      typeof store.listSyncCandidatesAsync !== "function" ||
+      typeof store.updateRecordAsync !== "function" ||
+      typeof store.getByIdAsync !== "function"
+    ) return null;
+    return store;
+  }
+
+  function buildRecordPayloadFromLocalHistory(record) {
+    var item = record && typeof record === "object" ? record : {};
+    return {
+      record_schema_version: Math.max(1, Math.floor(Number(item.record_schema_version) || RECORD_SCHEMA_VERSION)),
+      mode: toText(item.mode).trim() || toText(item.ranked_bucket).trim() || undefined,
+      mode_key: toText(item.mode_key).trim(),
+      mode_bucket: toText(item.mode_bucket || item.ranked_bucket).trim() || undefined,
+      ranked_session_token: toText(item.ranked_session_token).trim() || null,
+      challenge_id: toText(item.challenge_id).trim() || null,
+      initial_seed: Number.isFinite(Number(item.initial_seed)) ? Math.floor(Number(item.initial_seed)) : null,
+      seed: Number.isFinite(Number(item.seed)) ? Math.floor(Number(item.seed)) : null,
+      ranked_verification: item.ranked_verification && typeof item.ranked_verification === "object"
+        ? item.ranked_verification
+        : null,
+      score: Math.floor(Number(item.score) || 0),
+      best_tile: Math.floor(Number(item.best_tile) || 0),
+      duration_ms: Math.max(0, Math.floor(Number(item.duration_ms) || 0)),
+      ended_at: toText(item.ended_at).trim() || new Date().toISOString(),
+      end_reason: toText(item.end_reason).trim() || "game_over",
+      final_board: Array.isArray(item.final_board) ? item.final_board : [],
+      min_steps_2048: Number.isFinite(Number(item.min_steps_2048)) ? Math.floor(Number(item.min_steps_2048)) : null,
+      min_steps_4096: Number.isFinite(Number(item.min_steps_4096)) ? Math.floor(Number(item.min_steps_4096)) : null,
+      min_steps_8192: Number.isFinite(Number(item.min_steps_8192)) ? Math.floor(Number(item.min_steps_8192)) : null,
+      client_record_id: toText(item.client_record_id).trim() || null,
+      replay: item.replay && typeof item.replay === "object" ? item.replay : null,
+      replay_string: toText(item.replay_string)
+    };
+  }
+
+  function resolveRecordSubmitErrorCode(result, fallback) {
+    var data = result && typeof result === "object" ? result : {};
+    return toText(data.code || data.error || fallback).trim().toUpperCase().replace(/[\s-]+/g, "_");
+  }
+
+  function resolveRecordSubmitErrorMessage(result, fallback) {
+    var data = result && typeof result === "object" ? result : {};
+    return toText(data.detail || data.message || data.error || fallback).trim() || fallback;
+  }
+
+  function resolveRecordServerId(result) {
+    if (!result || typeof result !== "object") return null;
+    var data = result.data && typeof result.data === "object" ? result.data : null;
+    return toText(
+      result.id ||
+      result.record_id ||
+      result.server_record_id ||
+      (data && (data.id || data.record_id || data.server_record_id))
+    ).trim() || null;
+  }
+
+  function requireRecordSubmitServerId(result) {
+    if (!result || !result.success || resolveRecordServerId(result)) return result;
+    return Object.assign({}, result, {
+      success: false,
+      status: 409,
+      code: "SERVER_RECORD_ID_MISSING",
+      error: "Server did not confirm the stored record id"
+    });
+  }
+
+  function resolveDurableRetryIso(uploadAttempts) {
+    var retryCount = Math.max(0, Math.floor(Number(uploadAttempts) || 0) - 1);
+    var delay = RECORD_SUBMIT_PENDING_RETRY_BASE_MS * Math.pow(2, retryCount);
+    delay = Math.min(RECORD_SUBMIT_PENDING_RETRY_MAX_MS, Math.max(RECORD_SUBMIT_PENDING_RETRY_BASE_MS, delay));
+    return new Date(Date.now() + delay).toISOString();
+  }
+
+  function isDefinitelyInvalidRecordResult(result, code) {
+    var status = Math.floor(Number(result && result.status) || 0);
+    if (status < 400 || status >= 500) return false;
+    return (
+      code.indexOf("REPLAY_") === 0 ||
+      code === "MISSING_REPLAY" ||
+      code === "UNSUPPORTED_MODE" ||
+      code === "INVALID_RECORD"
+    );
+  }
+
+  async function updateDurableRecord(store, record, patch) {
+    return store.updateRecordAsync(record.id, patch);
+  }
+
+  async function persistRecordPayloadToDurableOutbox(manager, payload) {
+    var store = getDurableRecordOutbox();
+    if (!store) return null;
+    var recordId = toText(manager && manager.localHistoryRecordId).trim();
+    var record = await store.prepareRecordSubmitAsync(recordId || null, payload);
+    if (manager && record && record.id) manager.localHistoryRecordId = record.id;
+    return record;
+  }
+
+  async function uploadDurableRecord(store, record, options) {
+    var opts = options && typeof options === "object" ? options : {};
+    var currentUserId = toText(getUserId()).trim();
+    if (!getAuthToken()) {
+      return updateDurableRecord(store, record, {
+        sync_status: "waiting_auth",
+        next_retry_at: null,
+        last_error_code: "AUTH_REQUIRED",
+        last_error_message: "Login required before upload"
+      });
+    }
+    if (
+      toText(record.owner_type).trim() !== "user" ||
+      !toText(record.owner_user_id).trim() ||
+      toText(record.owner_user_id).trim() !== currentUserId
+    ) {
+      return updateDurableRecord(store, record, {
+        sync_status: "needs_action",
+        next_retry_at: null,
+        last_error_code: "OWNER_MISMATCH",
+        last_error_message: "Local record owner does not match the signed-in account"
+      });
+    }
+
+    var attempts = Math.max(0, Math.floor(Number(record.upload_attempts) || 0)) + 1;
+    var attemptedAt = new Date().toISOString();
+    var uploadingRecord = await updateDurableRecord(store, record, {
+      sync_status: "pending",
+      upload_attempts: attempts,
+      last_upload_attempt_at: attemptedAt,
+      next_retry_at: null,
+      last_error_code: null,
+      last_error_message: null
+    });
+    var payload = buildRecordPayloadFromLocalHistory(uploadingRecord);
+    var replayByteSize = Math.max(0, Math.floor(Number(uploadingRecord.replay_byte_size) || 0));
+    var useResumableUpload = !!toText(uploadingRecord.upload_task_id).trim() ||
+      replayByteSize > RECORD_RESUMABLE_UPLOAD_THRESHOLD_BYTES;
+    var result = useResumableUpload
+      ? await submitLargeRecord(store, uploadingRecord, payload, opts.deliverySource)
+      : await submitRecord(payload, INTERNAL_SUBMIT_TOKEN, {
+          keepalive: opts.keepalive === true,
+          record: uploadingRecord,
+          deliverySource: opts.deliverySource
+        });
+    if (
+      !useResumableUpload &&
+      result &&
+      (Number(result.status) === 413 || ["REPLAY_TOO_LARGE", "PAYLOAD_TOO_LARGE"].indexOf(
+        toText(result.code).trim().toUpperCase()
+      ) >= 0)
+    ) {
+      result = await submitLargeRecord(store, uploadingRecord, payload, opts.deliverySource);
+    }
+
+    result = requireRecordSubmitServerId(result);
+    var serverRecordId = resolveRecordServerId(result);
+    writeLastRecordSubmitResult(payload, result, !!(result && result.success && serverRecordId));
+    if (result && result.success && serverRecordId) {
+      notifyAchievementUnlocks(result);
+      var synced = await updateDurableRecord(store, uploadingRecord, {
+        sync_status: "synced",
+        server_record_id: serverRecordId,
+        next_retry_at: null,
+        last_error_code: null,
+        last_error_message: null
+      });
+      refreshLeaderboardsAfterRecordSubmit(payload.mode_key);
+      return { success: true, result: result, record: synced };
+    }
+
+    var errorText = resolveRecordSubmitErrorMessage(result, "record_submit_failed");
+    var code = resolveRecordSubmitErrorCode(result, "RECORD_SUBMIT_FAILED");
+    var nextStatus = "needs_action";
+    var nextRetryAt = null;
+    if (isUnauthorizedSubmitError(result || code)) {
+      nextStatus = "waiting_auth";
+      clearAuthSessionOnly();
+    } else if (isTransientSubmitResult(result, errorText)) {
+      nextStatus = "retry_wait";
+      nextRetryAt = resolveDurableRetryIso(attempts);
+    } else if (isDefinitelyInvalidRecordResult(result, code)) {
+      nextStatus = "invalid";
+    }
+    var failed = await updateDurableRecord(store, uploadingRecord, {
+      sync_status: nextStatus,
+      next_retry_at: nextRetryAt,
+      last_error_code: code,
+      last_error_message: errorText
+    });
+    return { success: false, result: result, record: failed };
+  }
+
+  async function migrateLegacyPendingRecordsToDurableOutbox() {
+    var store = getDurableRecordOutbox();
+    if (!store) return false;
+    if (durableOutboxMigrationPromise) return durableOutboxMigrationPromise;
+    durableOutboxMigrationPromise = (async function () {
+      var states = [];
+      var current = buildPendingSubmitState(
+        safeGetStorage(STORAGE_PENDING_RECORD_SUBMIT_KEY),
+        RECORD_SUBMIT_PENDING_TTL_MS,
+        normalizePendingRecordSubmitPayload
+      );
+      if (current && current.payload) states.push(current);
+      var queued = readPendingRecordSubmitQueue();
+      for (var i = 0; i < queued.length; i += 1) states.push(queued[i]);
+      for (var j = 0; j < states.length; j += 1) {
+        var state = states[j];
+        var ownerUserId = toText(state.ownerUserId).trim();
+        var legacyPayload = Object.assign({}, state.payload, {
+          owner_type: ownerUserId ? "user" : "guest",
+          owner_user_id: ownerUserId || null,
+          owner_key: ownerUserId ? "user:" + ownerUserId : "guest"
+        });
+        if (!toText(legacyPayload.client_record_id).trim()) {
+          legacyPayload.client_record_id = "legacy_pending_" +
+            buildReplaySubmitFingerprint(state.signature).replace(/[^a-z0-9]+/gi, "_");
+        }
+        await store.prepareRecordSubmitAsync(null, legacyPayload);
+      }
+      if (states.length) {
+        clearPendingRecordSubmitSignature();
+        clearPendingRecordSubmitQueue();
+      }
+      return true;
+    })().catch(function () {
+      durableOutboxMigrationPromise = null;
+      return false;
+    });
+    return durableOutboxMigrationPromise;
   }
 
   function getLanguage() {
@@ -2068,14 +2312,16 @@ function shouldAutoLoadOnlineLeaderboard() {
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
     var lastError = "Network error";
-    var timeoutMs = resolveApiTimeoutMs();
+    var requestedTimeoutMs = Math.floor(Number(opts.timeoutMs) || 0);
+    var timeoutMs = requestedTimeoutMs > 0 ? requestedTimeoutMs : resolveApiTimeoutMs();
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
       var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
       var requestInit = {
         method: method,
-        headers: headers
+        headers: headers,
+        credentials: "include"
       };
       if (opts.keepalive === true) {
         requestInit.keepalive = true;
@@ -2092,7 +2338,12 @@ function shouldAutoLoadOnlineLeaderboard() {
         if (token) requestInit.headers.Authorization = "Bearer " + token;
       }
 
-      if (opts.body !== undefined) {
+      if (opts.rawBody !== undefined) {
+        if (!requestInit.headers["Content-Type"] && !requestInit.headers["content-type"]) {
+          requestInit.headers["Content-Type"] = "application/octet-stream";
+        }
+        requestInit.body = opts.rawBody;
+      } else if (opts.body !== undefined) {
         requestInit.headers["Content-Type"] = "application/json";
         requestInit.body = JSON.stringify(opts.body);
       }
@@ -2104,7 +2355,7 @@ function shouldAutoLoadOnlineLeaderboard() {
             try { controller.abort(); } catch (_err) {}
           }, timeoutMs);
         }
-        var response = await callFetch(base + path, requestInit);
+        var response = await (opts.auth ? sharedFetchWithAuth(base + path, requestInit) : callFetch(base + path, requestInit));
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
@@ -2204,6 +2455,15 @@ function shouldAutoLoadOnlineLeaderboard() {
     });
   }
 
+  function recordDeliveryHeaders(payload, record, source) {
+    return {
+      "X-Client-Version": toText((record && record.client_version) || global.GAME_CLIENT_VERSION).trim() || "1.8",
+      "X-Record-Mode-Key": toText(payload && payload.mode_key).trim(),
+      "X-Client-Record-Id": toText(payload && payload.client_record_id).trim(),
+      "X-Record-Delivery-Source": source === "manual" ? "manual" : "automatic"
+    };
+  }
+
   function submitRecord(payload, submitToken, options) {
     if (!isInternalSubmitToken(submitToken)) {
       return Promise.resolve({ success: false, error: "client_submit_api_disabled" });
@@ -2212,8 +2472,116 @@ function shouldAutoLoadOnlineLeaderboard() {
     return apiRequest("/records", {
       method: "POST",
       auth: true,
+      headers: recordDeliveryHeaders(payload, opts.record, opts.deliverySource),
       body: payload,
       keepalive: opts.keepalive === true
+    });
+  }
+
+  async function sha256UploadBytes(bytes) {
+    var cryptoLike = global && global.crypto;
+    if (!cryptoLike || !cryptoLike.subtle || typeof cryptoLike.subtle.digest !== "function") return "";
+    var digest = await cryptoLike.subtle.digest("SHA-256", bytes);
+    return Array.prototype.map.call(new Uint8Array(digest), function (value) {
+      return value.toString(16).padStart(2, "0");
+    }).join("");
+  }
+
+  function recordUploadTaskFromResult(result) {
+    var data = result && result.data && typeof result.data === "object" ? result.data : result;
+    return data && typeof data === "object" ? data : null;
+  }
+
+  async function submitLargeRecord(store, record, payload, deliverySource) {
+    if (typeof global.TextEncoder !== "function") {
+      return { success: false, status: 409, code: "UPLOAD_CRYPTO_UNAVAILABLE", error: "Large replay upload is unavailable" };
+    }
+    var replayBytes = new global.TextEncoder().encode(toText(payload && payload.replay_string));
+    var replaySha256 = await sha256UploadBytes(replayBytes);
+    if (!replaySha256) {
+      return { success: false, status: 409, code: "UPLOAD_CRYPTO_UNAVAILABLE", error: "Large replay upload is unavailable" };
+    }
+    var storedSha256 = toText(record && record.replay_sha256).trim().toLowerCase();
+    if (storedSha256 && storedSha256 !== replaySha256) {
+      return { success: false, status: 409, code: "LOCAL_REPLAY_HASH_MISMATCH", error: "Local replay hash mismatch" };
+    }
+
+    var taskResult = null;
+    var taskId = toText(record && record.upload_task_id).trim();
+    if (taskId) {
+      taskResult = await apiRequest("/records/uploads/" + encodeURIComponent(taskId), { auth: true });
+      if (!(taskResult && taskResult.success)) {
+        var statusCode = Math.floor(Number(taskResult && taskResult.status) || 0);
+        if (statusCode !== 404 && statusCode !== 410) return taskResult;
+        taskId = "";
+      }
+    }
+    if (!taskId) {
+      taskResult = await apiRequest("/records/uploads", {
+        method: "POST",
+        auth: true,
+        headers: recordDeliveryHeaders(payload, record, deliverySource),
+        body: {
+          client_record_id: payload.client_record_id,
+          mode_key: payload.mode_key,
+          replay_sha256: replaySha256,
+          replay_byte_size: replayBytes.byteLength,
+          chunk_size: RECORD_RESUMABLE_UPLOAD_CHUNK_BYTES
+        }
+      });
+    }
+    if (!(taskResult && taskResult.success)) return taskResult;
+    var task = recordUploadTaskFromResult(taskResult);
+    if (toText(task && task.status).trim() === "completed" && toText(task && task.server_record_id).trim()) {
+      return { success: true, id: toText(task.server_record_id).trim(), duplicate: true, upload_task_id: toText(task.upload_task_id).trim() || null };
+    }
+    taskId = toText(task && task.upload_task_id).trim();
+    if (!taskId) return { success: false, status: 503, code: "UPLOAD_TASK_UNAVAILABLE", error: "Upload task unavailable" };
+    var chunkSize = Math.max(1, Math.floor(Number(task.chunk_size) || RECORD_RESUMABLE_UPLOAD_CHUNK_BYTES));
+    var chunkCount = Math.max(1, Math.floor(Number(task.chunk_count) || Math.ceil(replayBytes.byteLength / chunkSize)));
+    var received = {};
+    (Array.isArray(task.received_chunks) ? task.received_chunks : []).forEach(function (index) {
+      received[Math.floor(Number(index))] = true;
+    });
+    record = await updateDurableRecord(store, record, {
+      upload_task_id: taskId,
+      uploaded_chunk_count: Object.keys(received).length
+    });
+
+    for (var index = 0; index < chunkCount; index += 1) {
+      if (received[index]) continue;
+      var chunk = replayBytes.slice(index * chunkSize, Math.min(replayBytes.byteLength, (index + 1) * chunkSize));
+      var chunkSha256 = await sha256UploadBytes(chunk);
+      var chunkResult = await apiRequest(
+        "/records/uploads/" + encodeURIComponent(taskId) + "/chunks/" + index,
+        {
+          method: "PUT",
+          auth: true,
+          headers: Object.assign(recordDeliveryHeaders(payload, record, deliverySource), {
+            "Content-Type": "application/octet-stream",
+            "X-Chunk-Sha256": chunkSha256,
+            "X-Chunk-Byte-Size": String(chunk.byteLength)
+          }),
+          rawBody: chunk
+        }
+      );
+      if (!(chunkResult && chunkResult.success)) return chunkResult;
+      received[index] = true;
+      record = await updateDurableRecord(store, record, {
+        upload_task_id: taskId,
+        uploaded_chunk_count: Object.keys(received).length
+      });
+    }
+
+    var completionPayload = Object.assign({}, payload);
+    delete completionPayload.replay_string;
+    delete completionPayload.replay;
+    return apiRequest("/records/uploads/" + encodeURIComponent(taskId) + "/complete", {
+      method: "POST",
+      auth: true,
+      headers: recordDeliveryHeaders(payload, record, deliverySource),
+      body: completionPayload,
+      timeoutMs: 5 * 60 * 1000
     });
   }
 
@@ -3075,7 +3443,6 @@ function shouldAutoLoadOnlineLeaderboard() {
   function handleRankedSessionExpired(manager, modeLike) {
     var modeKey = toText(modeLike || (manager && (manager.modeKey || manager.mode))).trim() || getCurrentModeKey();
     clearRankedCheckpointSaveTimer();
-    clearPendingRecordSubmitSignature();
     if (modeKey) {
       clearRankedCheckpointLocalMirror(modeKey);
     }
@@ -3982,7 +4349,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "score_submit_failed");
-    if (isUnauthorizedSubmitErrorText(errorText)) {
+    if (isUnauthorizedSubmitError(result || errorText)) {
       clearAuthSessionOnly();
       return;
     }
@@ -4018,6 +4385,29 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var signature = buildRecordSubmitSignature(manager, payload);
+    var durableStore = getDurableRecordOutbox();
+    if (durableStore) {
+      var durableRecord;
+      try {
+        if (manager.sessionSubmitPromise && typeof manager.sessionSubmitPromise.then === "function") {
+          await manager.sessionSubmitPromise;
+        }
+        durableRecord = await persistRecordPayloadToDurableOutbox(manager, payload);
+      } catch (persistError) {
+        writeLastRecordSubmitResult(payload, {
+          code: "LOCAL_PERSIST_FAILED",
+          error: persistError && persistError.message ? persistError.message : "local_persist_failed"
+        }, false);
+        return { success: false, code: "LOCAL_PERSIST_FAILED" };
+      }
+      cleanupRankedStateAfterRecordSubmit(manager, payload);
+      if (opts.persistOnly === true) return { success: true, persisted: true, record: durableRecord };
+      return retryPendingRecordSubmit({
+        keepalive: opts.keepalive === true,
+        forcePendingRetry: true,
+        recordId: durableRecord && durableRecord.id ? durableRecord.id : null
+      });
+    }
     var lastSignature = toText(safeGetStorage(STORAGE_LAST_RECORD_SUBMIT_KEY));
     var pendingState = readPendingRecordSubmitState();
     var pendingSignature = pendingState ? pendingState.signature : "";
@@ -4038,10 +4428,24 @@ async function refreshLeaderboard(modeLike) {
     await retryPendingRecordSubmit(opts);
   }
 
-  function isUnauthorizedSubmitErrorText(errorTextLike) {
-    var text = toText(errorTextLike).trim().toLowerCase();
-    if (!text) return false;
-    return text.indexOf("unauthorized") >= 0 || text.indexOf("token") >= 0;
+  function isUnauthorizedSubmitError(errorLike) {
+    var code = "";
+    if (errorLike && typeof errorLike === "object") {
+      code = toText(errorLike.code || errorLike.error).trim().toUpperCase().replace(/[\s-]+/g, "_");
+    } else {
+      code = toText(errorLike).trim().toUpperCase().replace(/[\s-]+/g, "_");
+    }
+    return [
+      "ACCOUNT_DELETED",
+      "ACCOUNT_INACTIVE",
+      "ACCOUNT_PENDING_DELETION",
+      "INVALID_TOKEN",
+      "SESSION_REVOKED",
+      "TOKEN_EXPIRED",
+      "TOKEN_REDEEMED",
+      "TOKEN_REVOKED",
+      "UNAUTHORIZED"
+    ].indexOf(code) >= 0;
   }
 
   async function retryPendingScoreSubmit(options) {
@@ -4083,7 +4487,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "score_submit_failed");
-    if (isUnauthorizedSubmitErrorText(errorText)) {
+    if (isUnauthorizedSubmitError(result || errorText)) {
       clearAuthSessionOnly();
       return result;
     }
@@ -4093,7 +4497,57 @@ async function refreshLeaderboard(modeLike) {
     return result;
   }
 
+  async function retryDurablePendingRecordSubmit(options) {
+    var store = getDurableRecordOutbox();
+    if (!store || recordSubmitLock) return null;
+    await migrateLegacyPendingRecordsToDurableOutbox();
+    var opts = options && typeof options === "object" ? options : {};
+    var records = [];
+    var recordId = toText(opts.recordId).trim();
+    if (recordId) {
+      var selected = await store.getByIdAsync(recordId);
+      if (selected && selected.sync_status !== "synced") {
+        var selectedStatus = toText(selected.sync_status).trim();
+        var selectedRetryAt = Date.parse(toText(selected.next_retry_at)) || 0;
+        var selectedStatusAllowed = ["pending", "retry_wait", "waiting_auth"].indexOf(selectedStatus) >= 0 ||
+          (opts.includeNeedsAction === true && selectedStatus === "needs_action");
+        if (
+          selectedStatusAllowed &&
+          (opts.forcePendingRetry === true || !selectedRetryAt || selectedRetryAt <= Date.now())
+        ) records.push(selected);
+      }
+    } else {
+      records = await store.listSyncCandidatesAsync({
+        owner_user_id: toText(getUserId()).trim(),
+        statuses: opts.includeNeedsAction === true
+          ? ["pending", "retry_wait", "waiting_auth", "needs_action"]
+          : ["pending", "retry_wait", "waiting_auth"],
+        include_future_retries: opts.forcePendingRetry === true
+      });
+    }
+    if (!records.length) return null;
+    if (opts.all !== true) records = records.slice(0, 1);
+
+    recordSubmitLock = true;
+    var lastResult = null;
+    try {
+      for (var i = 0; i < records.length; i += 1) {
+        var outcome = await uploadDurableRecord(store, records[i], opts);
+        lastResult = outcome && outcome.result ? outcome.result : outcome;
+        if (!getAuthToken()) break;
+      }
+    } finally {
+      recordSubmitLock = false;
+    }
+    return lastResult;
+  }
+
   async function retryPendingRecordSubmit(options) {
+    if (getDurableRecordOutbox()) return retryDurablePendingRecordSubmit(options);
+    return retryLegacyPendingRecordSubmit(options);
+  }
+
+  async function retryLegacyPendingRecordSubmit(options) {
     if (recordSubmitLock) return null;
     if (!getAuthToken()) return null;
     var pendingState = readPendingRecordSubmitState();
@@ -4104,7 +4558,6 @@ async function refreshLeaderboard(modeLike) {
     }
     var currentUserId = toText(getUserId()).trim();
     if (pendingState.ownerUserId && currentUserId && pendingState.ownerUserId !== currentUserId) {
-      clearPendingRecordSubmitSignature();
       return null;
     }
     var opts = options && typeof options === "object" ? options : {};
@@ -4117,11 +4570,14 @@ async function refreshLeaderboard(modeLike) {
     try {
       writePendingRecordSubmitSignature(pendingState.signature, pendingState, pendingState.payload);
       result = await submitRecord(pendingState.payload, INTERNAL_SUBMIT_TOKEN, {
-        keepalive: opts.keepalive === true
+        keepalive: opts.keepalive === true,
+        deliverySource: opts.deliverySource
       });
     } finally {
       recordSubmitLock = false;
     }
+
+    result = requireRecordSubmitServerId(result);
 
     if (result && result.success) {
       notifyAchievementUnlocks(result);
@@ -4140,8 +4596,11 @@ async function refreshLeaderboard(modeLike) {
     if (isRankedSessionExpiredResult(result)) {
       return result;
     }
-    if (isUnauthorizedSubmitErrorText(errorText)) {
+    if (isUnauthorizedSubmitError(result || errorText)) {
       clearAuthSessionOnly();
+      return result;
+    }
+    if (resolveRecordSubmitErrorCode(result, "RECORD_SUBMIT_FAILED") === "SERVER_RECORD_ID_MISSING") {
       return result;
     }
     if (!isTransientSubmitResult(result, errorText)) {
@@ -4201,7 +4660,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
-    if (isUnauthorizedSubmitErrorText(errorText)) {
+    if (isUnauthorizedSubmitError(result || errorText)) {
       clearAuthSessionOnly();
       return result;
     }
@@ -4274,7 +4733,7 @@ async function refreshLeaderboard(modeLike) {
     }
 
     var errorText = toText(result && result.error ? result.error : "stone_2k_submit_failed");
-    if (isUnauthorizedSubmitErrorText(errorText)) {
+    if (isUnauthorizedSubmitError(result || errorText)) {
       clearAuthSessionOnly();
       return;
     }
@@ -4369,6 +4828,27 @@ async function refreshLeaderboard(modeLike) {
       }
       var result = original.apply(this, arguments);
       if (timing === "after") {
+        if (
+          methodName === "tryAutoSubmitOnGameOver" &&
+          getDurableRecordOutbox() &&
+          result &&
+          typeof result.then === "function"
+        ) {
+          return Promise.resolve(result).then(function (savedRecord) {
+            return maybeSubmitRecordOnGameOver({ manager: currentManager, persistOnly: true }).then(function () {
+              runPromiseSafely(function () {
+                return retryPendingRecordSubmit({ forcePendingRetry: true });
+              });
+              runPromiseSafely(function () {
+                return maybeSubmitScoreOnGameOver({ manager: currentManager });
+              });
+              runPromiseSafely(function () {
+                return maybeSubmitStone2kRun({ manager: currentManager });
+              });
+              return savedRecord;
+            });
+          });
+        }
         triggerImmediateOnlineSubmit();
         if (
           methodName === "move" &&
@@ -4641,7 +5121,7 @@ function init() {
     }
     if (!allowOnlineAutoload) return;
     runPromiseSafely(function () {
-      return retryPendingRecordSubmit({ forcePendingRetry: true });
+      return retryPendingRecordSubmit({ deliverySource: "automatic" });
     });
     runPromiseSafely(function () {
       return retryPendingScoreSubmit({ forcePendingRetry: true });
@@ -4672,7 +5152,27 @@ function init() {
     hasLocalRankedCheckpointMirror: hasRankedCheckpointLocalMirror,
     notifyGameManagerReady: notifyGameManagerReady,
     scheduleRankedCheckpointRestore: scheduleRankedCheckpointRestore,
-    persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide
+    persistRankedCheckpointOnPageHide: persistRankedCheckpointOnPageHide,
+    retryLocalHistoryRecord: function (recordId, options) {
+      var opts = options && typeof options === "object" ? options : {};
+      var automatic = opts.deliverySource === "automatic";
+      return retryPendingRecordSubmit({
+        recordId: recordId,
+        forcePendingRetry: !automatic,
+        includeNeedsAction: !automatic,
+        deliverySource: automatic ? "automatic" : "manual"
+      });
+    },
+    retryAllLocalHistoryRecords: function (options) {
+      var opts = options && typeof options === "object" ? options : {};
+      var automatic = opts.deliverySource === "automatic";
+      return retryPendingRecordSubmit({
+        forcePendingRetry: !automatic,
+        includeNeedsAction: !automatic,
+        all: true,
+        deliverySource: automatic ? "automatic" : "manual"
+      });
+    }
   };
 
   if (global.document.readyState === "loading") {

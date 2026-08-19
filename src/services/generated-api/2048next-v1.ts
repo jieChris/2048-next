@@ -182,7 +182,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Clear the browser page-access session cookie. */
+        /** Revoke the current browser device session and clear its cookies. */
         post: {
             parameters: {
                 query?: never;
@@ -193,6 +193,36 @@ export interface paths {
             requestBody?: never;
             responses: {
                 200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore a short-lived access token from the persistent HttpOnly device session. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["AuthResponse"];
+                401: components["responses"]["ApiEnvelopeResponse"];
+                503: components["responses"]["ApiEnvelopeResponse"];
             };
         };
         delete?: never;
@@ -728,7 +758,12 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "X-Client-Version"?: components["parameters"]["ClientVersionHeader"];
+                    "X-Record-Mode-Key"?: components["parameters"]["RecordModeKeyHeader"];
+                    "X-Client-Record-Id"?: components["parameters"]["ClientRecordIdHeader"];
+                    "X-Record-Delivery-Source"?: components["parameters"]["RecordDeliverySourceHeader"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -750,6 +785,174 @@ export interface paths {
                         };
                     };
                 };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or resume an idempotent chunk upload for a large replay. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "X-Client-Version"?: components["parameters"]["ClientVersionHeader"];
+                    "X-Record-Mode-Key"?: components["parameters"]["RecordModeKeyHeader"];
+                    "X-Client-Record-Id"?: components["parameters"]["ClientRecordIdHeader"];
+                    "X-Record-Delivery-Source"?: components["parameters"]["RecordDeliverySourceHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecordUploadCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Current upload task or an already completed matching record. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["RecordUploadTask"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/uploads/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read verified received chunks for an owned replay upload task. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    taskId: components["parameters"]["RecordUploadTaskIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current upload task. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["RecordUploadTask"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/uploads/{taskId}/chunks/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Store one idempotent replay chunk after byte length and SHA-256 verification. */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "X-Chunk-Sha256": string;
+                    "X-Chunk-Byte-Size": number;
+                    "X-Client-Version"?: components["parameters"]["ClientVersionHeader"];
+                    "X-Record-Mode-Key"?: components["parameters"]["RecordModeKeyHeader"];
+                    "X-Client-Record-Id"?: components["parameters"]["ClientRecordIdHeader"];
+                    "X-Record-Delivery-Source"?: components["parameters"]["RecordDeliverySourceHeader"];
+                };
+                path: {
+                    taskId: components["parameters"]["RecordUploadTaskIdPath"];
+                    index: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/uploads/{taskId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify all chunks and atomically create or return the completed game record. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "X-Client-Version"?: components["parameters"]["ClientVersionHeader"];
+                    "X-Record-Mode-Key"?: components["parameters"]["RecordModeKeyHeader"];
+                    "X-Client-Record-Id"?: components["parameters"]["ClientRecordIdHeader"];
+                    "X-Record-Delivery-Source"?: components["parameters"]["RecordDeliverySourceHeader"];
+                };
+                path: {
+                    taskId: components["parameters"]["RecordUploadTaskIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GameRecordSubmitRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
             };
         };
         delete?: never;
@@ -1637,6 +1840,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/record-delivery-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aggregate only record delivery requests and upload tasks observed by the server. */
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                    mode_key?: string;
+                    client_version?: string;
+                    code?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users": {
         parameters: {
             query?: never;
@@ -1697,6 +1934,71 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/device-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List safe metadata for a user's browser device sessions without credential hashes. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{id}/device-sessions/{sessionId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke one browser device session with an audited administrator reason. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["AdminUserIdPath"];
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1833,7 +2135,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
             responses: {
                 200: components["responses"]["ApiEnvelopeResponse"];
             };
@@ -1957,6 +2263,10 @@ export interface paths {
                     mode_key?: string;
                     status?: string;
                     record_id?: string;
+                    client_record_id?: string;
+                    replay_fingerprint?: string;
+                    upload_status?: "created" | "uploading" | "completed" | "failed" | "expired";
+                    last_error_code?: string;
                     from?: string;
                     to?: string;
                     page?: components["parameters"]["PageQuery"];
@@ -2190,6 +2500,34 @@ export interface paths {
                 200: components["responses"]["ApiEnvelopeResponse"];
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Generate the fixed read-only release and migration reconciliation snapshot. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2891,6 +3229,33 @@ export interface components {
             ended_at?: string;
             reason: string;
         };
+        RecordUploadCreateRequest: {
+            client_record_id: string;
+            mode_key: string;
+            replay_sha256: string;
+            replay_byte_size: number;
+            chunk_size: number;
+        };
+        RecordUploadTask: {
+            upload_task_id?: string | null;
+            client_record_id?: string;
+            mode_key?: string;
+            replay_sha256?: string;
+            replay_byte_size?: number;
+            chunk_size?: number;
+            chunk_count?: number;
+            received_chunks?: number[];
+            /** @enum {string} */
+            status?: "created" | "uploading" | "completed" | "failed" | "expired";
+            server_record_id?: string | null;
+            last_error_code?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: date-time */
+            expires_at?: string | null;
+        };
         User: {
             id?: number;
             user_id?: number;
@@ -3296,6 +3661,8 @@ export interface components {
             content: {
                 "application/json": components["schemas"]["ApiEnvelope"] & {
                     token?: string;
+                    expiresAt?: number;
+                    ttl?: number;
                     user?: components["schemas"]["User"];
                 };
             };
@@ -3329,6 +3696,11 @@ export interface components {
         AdminRecordIdPath: string;
         UserIdPath: number;
         RecordIdPath: string;
+        RecordUploadTaskIdPath: string;
+        ClientVersionHeader: string;
+        RecordModeKeyHeader: string;
+        ClientRecordIdHeader: string;
+        RecordDeliverySourceHeader: "automatic" | "manual";
         OfferIdPath: string;
         AchievementIdPath: string;
         RelayCaseIdPath: string;

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { webcrypto } from "node:crypto";
 import path from "node:path";
 import vm from "node:vm";
 
@@ -45,6 +46,7 @@ interface FetchCall {
   url: string;
   init: {
     body?: string;
+    headers?: Record<string, string>;
     keepalive?: boolean;
     method?: string;
   };
@@ -192,6 +194,7 @@ function loadOnlineLeaderboardRuntime(options: {
   resolveStructuredReplayModeConfig?: (...args: unknown[]) => Record<string, unknown> | null;
   buildSavedGameStatePayload?: (...args: unknown[]) => Record<string, unknown> | null;
   applySavedStateRestore?: (...args: unknown[]) => boolean;
+  localHistoryStore?: Record<string, unknown>;
 }) {
   const storage = options.storage || new MemoryStorage();
   storage.setItem(AUTH_TOKEN_STORAGE_KEY, "auth-token");
@@ -211,6 +214,8 @@ function loadOnlineLeaderboardRuntime(options: {
       pathname: "/2048.html"
     },
     URLSearchParams,
+    TextEncoder,
+    crypto: webcrypto,
     game_manager: options.manager,
     ApiSharedUtils: {
       toText(value: unknown) {
@@ -238,6 +243,7 @@ function loadOnlineLeaderboardRuntime(options: {
     clearTimeout,
     alert: vi.fn()
   };
+  if (options.localHistoryStore) windowLike.LocalHistoryStore = options.localHistoryStore;
 
   const scriptPath = path.resolve(process.cwd(), "js/online_leaderboard_runtime.js");
   const script = readFileSync(scriptPath, "utf8");
@@ -549,7 +555,7 @@ describe("online leaderboard terminal submission", () => {
     expect(updateBestScore).toHaveBeenCalledWith("4096");
   });
 
-  it("retries pending record submit immediately on startup even during retry backoff", async () => {
+  it("does not bypass pending-record retry backoff during automatic startup scans", async () => {
     const storage = new MemoryStorage();
     const now = Date.now();
     storage.setItem(
@@ -583,21 +589,10 @@ describe("online leaderboard terminal submission", () => {
 
     await flushRuntimePromises();
 
-    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
-    expect(storage.getItem(PENDING_RECORD_KEY)).toBeNull();
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(storage.getItem(PENDING_RECORD_KEY)).not.toBeNull();
     expect(storage.getItem(PENDING_SCORE_KEY)).toBeNull();
-    expect(recordPayload).toMatchObject({
-      mode_key: MODE_KEY,
-      score: 2048,
-      replay_string: "pending-replay-v1"
-    });
-    expect(
-      runtime.fetchCalls.some(
-        (call) =>
-          call.url.includes("/leaderboard?") &&
-          call.url.includes("mode_key=standard_4x4_pow2_no_undo")
-      )
-    ).toBe(true);
+    expect(recordPayload).toBeNull();
   });
 
   it("queues achievement unlock toasts returned by record submit", async () => {
@@ -609,6 +604,7 @@ describe("online leaderboard terminal submission", () => {
         if (url.endsWith("/records")) {
           return createJsonResponse({
             success: true,
+            data: { id: "record-achievement" },
             achievements: [{ achievement: { id: "tile_2048_count_1", name: "首次 2048" } }]
           });
         }
@@ -1541,6 +1537,425 @@ describe("online leaderboard terminal submission", () => {
     expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
   });
 
+  it("preserves the original owner and stable id when migrating a legacy pending record", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify({
+      signature: "legacy-signature-42",
+      ownerUserId: "42",
+      createdAt: 123,
+      lastAttemptAt: 0,
+      retryCount: 0,
+      payload: {
+        mode: "standard_no_undo",
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "legacy-replay"
+      }
+    }));
+    const prepareRecordSubmitAsync = vi.fn(async () => ({ id: "local-legacy" }));
+    const localHistoryStore = {
+      prepareRecordSubmitAsync,
+      listSyncCandidatesAsync: vi.fn(async () => []),
+      updateRecordAsync: vi.fn(),
+      getByIdAsync: vi.fn(async () => null)
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      localHistoryStore,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(): Promise<unknown>;
+    }).retryAllLocalHistoryRecords();
+
+    expect(prepareRecordSubmitAsync).toHaveBeenCalledWith(null, expect.objectContaining({
+      owner_type: "user",
+      owner_user_id: "42",
+      owner_key: "user:42",
+      client_record_id: expect.stringMatching(/^legacy_pending_/)
+    }));
+  });
+
+  it("keeps a durable record waiting for auth when the server returns an auth code", async () => {
+    const record = {
+      id: "local-1",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "standard_no_undo",
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1",
+      client_record_id: "client-local-1"
+    };
+    const patches: Array<Record<string, unknown>> = [];
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => record),
+      listSyncCandidatesAsync: vi.fn(async () => [record]),
+      getByIdAsync: vi.fn(async () => record),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        patches.push(patch);
+        return Object.assign({}, record, ...patches);
+      })
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: false, code: "TOKEN_EXPIRED" }, false, 401)
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord("local-1");
+
+    expect(patches.at(-1)).toMatchObject({
+      sync_status: "waiting_auth"
+    });
+  });
+
+  it("does not clear account auth for a ranked-session-specific 401", async () => {
+    const record = {
+      id: "local-ranked-session-invalid",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "standard_no_undo",
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1",
+      client_record_id: "client-ranked-session-invalid"
+    };
+    const patches: Array<Record<string, unknown>> = [];
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => record),
+      listSyncCandidatesAsync: vi.fn(async () => [record]),
+      getByIdAsync: vi.fn(async () => record),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        patches.push(patch);
+        return Object.assign({}, record, ...patches);
+      })
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: false, code: "RANKED_SESSION_INVALID" }, false, 401)
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord(record.id);
+
+    expect(patches.at(-1)).toMatchObject({
+      sync_status: "needs_action",
+      last_error_code: "RANKED_SESSION_INVALID"
+    });
+    expect(runtime.storage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe("auth-token");
+  });
+
+  it("keeps a successful response pending until the server confirms a record id", async () => {
+    let currentRecord: Record<string, unknown> = {
+      id: "local-missing-server-id",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "standard_no_undo",
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1",
+      client_record_id: "client-missing-server-id"
+    };
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => currentRecord),
+      listSyncCandidatesAsync: vi.fn(async () => [currentRecord]),
+      getByIdAsync: vi.fn(async () => currentRecord),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        currentRecord = Object.assign({}, currentRecord, patch);
+        return currentRecord;
+      })
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: true, skipped: true })
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord(String(currentRecord.id));
+
+    expect(currentRecord).toMatchObject({
+      sync_status: "needs_action",
+      last_error_code: "SERVER_RECORD_ID_MISSING"
+    });
+    expect(currentRecord.server_record_id).toBeUndefined();
+  });
+
+  it("keeps the legacy pending payload until the server confirms a record id", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify({
+      signature: "legacy-missing-server-id",
+      ownerUserId: "7",
+      createdAt: 123,
+      lastAttemptAt: 0,
+      retryCount: 0,
+      payload: {
+        mode: "standard_no_undo",
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "legacy-replay",
+        client_record_id: "legacy-client-record"
+      }
+    }));
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: true, skipped: true })
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(): Promise<unknown>;
+    }).retryAllLocalHistoryRecords();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).not.toBeNull();
+    expect(JSON.parse(storage.getItem(LAST_RECORD_RESULT_KEY) || "{}")).toMatchObject({
+      ok: false,
+      code: "SERVER_RECORD_ID_MISSING"
+    });
+  });
+
+  it("keeps a legacy pending record owned by a different account", async () => {
+    const storage = new MemoryStorage();
+    storage.setItem(PENDING_RECORD_KEY, JSON.stringify({
+      signature: "legacy-other-owner",
+      ownerUserId: "42",
+      createdAt: 123,
+      lastAttemptAt: 0,
+      retryCount: 0,
+      payload: {
+        mode: "standard_no_undo",
+        mode_key: MODE_KEY,
+        score: 4096,
+        replay_string: "legacy-other-owner-replay",
+        client_record_id: "legacy-other-owner-record"
+      }
+    }));
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      storage,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(): Promise<unknown>;
+    }).retryAllLocalHistoryRecords();
+
+    expect(storage.getItem(PENDING_RECORD_KEY)).not.toBeNull();
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+  });
+
+  it("waits for the terminal durable save before preparing the upload record", async () => {
+    const localSave = createDeferred<Record<string, unknown>>();
+    const record = {
+      id: "local-terminal-save",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "standard_no_undo",
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1",
+      client_record_id: "rec_client_1"
+    };
+    const manager = createTerminatedManager({
+      sessionSubmitPromise: localSave.promise,
+      localHistoryRecordId: null
+    });
+    const prepareRecordSubmitAsync = vi.fn(async () => record);
+    const localHistoryStore = {
+      prepareRecordSubmitAsync,
+      listSyncCandidatesAsync: vi.fn(async () => []),
+      getByIdAsync: vi.fn(async () => record),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => Object.assign({}, record, patch))
+    };
+    loadOnlineLeaderboardRuntime({
+      manager,
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: true, data: { id: "server-terminal-save" } })
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+    expect(prepareRecordSubmitAsync).not.toHaveBeenCalled();
+
+    manager.localHistoryRecordId = record.id;
+    localSave.resolve(record);
+    await flushRuntimePromises();
+
+    expect(prepareRecordSubmitAsync).toHaveBeenCalledWith(
+      record.id,
+      expect.objectContaining({ client_record_id: "rec_client_1" })
+    );
+  });
+
+  it("respects retry time and excludes needs-action records during automatic scans", async () => {
+    const listSyncCandidatesAsync = vi.fn(async () => []);
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(),
+      listSyncCandidatesAsync,
+      getByIdAsync: vi.fn(async () => null),
+      updateRecordAsync: vi.fn()
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async () => createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(options: { deliverySource: string }): Promise<unknown>;
+    }).retryAllLocalHistoryRecords({ deliverySource: "automatic" });
+
+    expect(listSyncCandidatesAsync).toHaveBeenCalledWith({
+      owner_user_id: "7",
+      statuses: ["pending", "retry_wait", "waiting_auth"],
+      include_future_retries: false
+    });
+  });
+
+  it("resumes a large local replay through chunk uploads without retrying the direct record body", async () => {
+    const replayString = "A".repeat(1536 * 1024 + 17);
+    let currentRecord: Record<string, unknown> = {
+      id: "local-large-5x5",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "pow2_5x5",
+      mode_key: "board_5x5_pow2_no_undo",
+      score: 4096,
+      replay_string: replayString,
+      replay_byte_size: replayString.length,
+      client_record_id: "client-large-5x5"
+    };
+    const patches: Array<Record<string, unknown>> = [];
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => currentRecord),
+      listSyncCandidatesAsync: vi.fn(async () => [currentRecord]),
+      getByIdAsync: vi.fn(async () => currentRecord),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        patches.push(patch);
+        currentRecord = Object.assign({}, currentRecord, patch);
+        return currentRecord;
+      })
+    };
+    const chunkIndexes: number[] = [];
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url, init) => {
+        if (url.endsWith("/records/uploads") && init.method === "POST") {
+          return createJsonResponse({
+            success: true,
+            data: {
+              upload_task_id: "upload-large-1",
+              status: "uploading",
+              chunk_size: 512 * 1024,
+              chunk_count: 4,
+              received_chunks: [0]
+            }
+          });
+        }
+        const chunkMatch = url.match(/\/records\/uploads\/upload-large-1\/chunks\/(\d+)$/);
+        if (chunkMatch) {
+          chunkIndexes.push(Number(chunkMatch[1]));
+          return createJsonResponse({ success: true, chunk_index: Number(chunkMatch[1]) });
+        }
+        if (url.endsWith("/records/uploads/upload-large-1/complete")) {
+          return createJsonResponse({ success: true, id: "server-large-1", upload_task_id: "upload-large-1" });
+        }
+        return createJsonResponse({ success: true, data: [] });
+      }
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord("local-large-5x5");
+
+    expect(chunkIndexes).toEqual([1, 2, 3]);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(false);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records/uploads/upload-large-1/complete"))).toBe(true);
+    expect(patches).toEqual(expect.arrayContaining([
+      expect.objectContaining({ upload_task_id: "upload-large-1", uploaded_chunk_count: 1 }),
+      expect.objectContaining({ upload_task_id: "upload-large-1", uploaded_chunk_count: 4 }),
+      expect.objectContaining({ sync_status: "synced", server_record_id: "server-large-1" })
+    ]));
+  });
+
+  it("accepts an already-synced large record without requiring an upload task id", async () => {
+    const replayString = "A".repeat(1536 * 1024 + 17);
+    let currentRecord: Record<string, unknown> = {
+      id: "local-large-existing",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "pow2_5x5",
+      mode_key: "board_5x5_pow2_no_undo",
+      replay_string: replayString,
+      replay_byte_size: replayString.length,
+      client_record_id: "client-large-existing",
+    };
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => currentRecord),
+      listSyncCandidatesAsync: vi.fn(async () => [currentRecord]),
+      getByIdAsync: vi.fn(async () => currentRecord),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        currentRecord = Object.assign({}, currentRecord, patch);
+        return currentRecord;
+      }),
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records/uploads")
+        ? createJsonResponse({
+            success: true,
+            data: { upload_task_id: null, status: "completed", server_record_id: "server-existing" },
+          })
+        : createJsonResponse({ success: true, data: [] }),
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord("local-large-existing");
+
+    expect(currentRecord).toMatchObject({ sync_status: "synced", server_record_id: "server-existing" });
+    expect(runtime.fetchCalls.find((call) => call.url.endsWith("/records/uploads"))?.init.headers).toMatchObject({
+      "X-Client-Version": "1.8",
+      "X-Record-Mode-Key": "board_5x5_pow2_no_undo",
+      "X-Client-Record-Id": "client-large-existing",
+      "X-Record-Delivery-Source": "manual",
+    });
+    expect(runtime.fetchCalls.some((call) => call.url.includes("/chunks/"))).toBe(false);
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/complete"))).toBe(false);
+  });
+
   it("stores the last record submit failure code for diagnostics", async () => {
     const storage = new MemoryStorage();
     const manager = createTerminatedManager();
@@ -1678,6 +2093,9 @@ describe("online leaderboard terminal submission", () => {
         return createJsonResponse({ success: true, data: [] });
       }
     });
+    await (retryRuntime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(): Promise<unknown>;
+    }).retryAllLocalHistoryRecords();
     await flushRuntimePromises();
     await flushRuntimePromises();
 

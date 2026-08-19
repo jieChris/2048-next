@@ -21,6 +21,14 @@ export interface HistoryRecordViewModel {
   owner_user_id: string;
   owner_nickname: string;
   owner_key: string;
+  client_record_id: string;
+  server_record_id: string;
+  sync_status: string;
+  upload_attempts: number;
+  next_retry_at: string;
+  last_upload_attempt_at: string;
+  last_error_code: string;
+  last_error_message: string;
   diagnostics_index_entries: HistoryDiagnosticsIndexEntry[];
 }
 
@@ -308,6 +316,14 @@ export function normalizeHistoryRecordForView(
     owner_user_id: toText((base as Record<string, unknown>).owner_user_id != null ? (base as Record<string, unknown>).owner_user_id : item.owner_user_id).trim(),
     owner_nickname: toText((base as Record<string, unknown>).owner_nickname != null ? (base as Record<string, unknown>).owner_nickname : item.owner_nickname).trim(),
     owner_key: toText((base as Record<string, unknown>).owner_key != null ? (base as Record<string, unknown>).owner_key : item.owner_key).trim(),
+    client_record_id: toText((base as Record<string, unknown>).client_record_id != null ? (base as Record<string, unknown>).client_record_id : item.client_record_id).trim(),
+    server_record_id: toText((base as Record<string, unknown>).server_record_id != null ? (base as Record<string, unknown>).server_record_id : item.server_record_id).trim(),
+    sync_status: toText((base as Record<string, unknown>).sync_status != null ? (base as Record<string, unknown>).sync_status : item.sync_status).trim(),
+    upload_attempts: Math.max(0, Math.floor(Number((base as Record<string, unknown>).upload_attempts != null ? (base as Record<string, unknown>).upload_attempts : item.upload_attempts) || 0)),
+    next_retry_at: toText((base as Record<string, unknown>).next_retry_at != null ? (base as Record<string, unknown>).next_retry_at : item.next_retry_at).trim(),
+    last_upload_attempt_at: toText((base as Record<string, unknown>).last_upload_attempt_at != null ? (base as Record<string, unknown>).last_upload_attempt_at : item.last_upload_attempt_at).trim(),
+    last_error_code: toText((base as Record<string, unknown>).last_error_code != null ? (base as Record<string, unknown>).last_error_code : item.last_error_code).trim(),
+    last_error_message: toText((base as Record<string, unknown>).last_error_message != null ? (base as Record<string, unknown>).last_error_message : item.last_error_message).trim(),
     diagnostics_index_entries: diagnosticsEntries
   };
 }

@@ -237,6 +237,29 @@ describe("core replay codec", () => {
     });
   });
 
+  it("encodes a replay across bounded output blocks", () => {
+    const records = Array.from({ length: 20_000 }, (_unused, index) => ({
+      kind: "move" as const,
+      dir: index % 4,
+      spawnIndex: 20,
+      spawnValueBit: index % 2,
+      deltaMs: 16
+    }));
+
+    const decoded = decodeReplayV1Rpl(encodeReplayV1Rpl({
+      width: 5,
+      height: 5,
+      initTiles: [
+        { cellIndex: 0, valueBit: 0 },
+        { cellIndex: 24, valueBit: 1 }
+      ],
+      records
+    }));
+
+    expect(decoded.records).toHaveLength(records.length);
+    expect(decoded.records.at(-1)).toMatchObject(records.at(-1) || {});
+  });
+
   it("rejects replay v1 payload when crc mismatch", () => {
     const encoded = encodeReplayV1Rpl({
       width: 4,

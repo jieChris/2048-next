@@ -1,15 +1,13 @@
-import { readStorageValue } from "../storage/browser-storage";
+import { getAuthToken } from "./auth-session";
+import {
+  buildApiBaseCandidates,
+  normalizeApiBase,
+  type LocationLike,
+} from "./api-base";
+
+export { buildApiBaseCandidates, type BuildApiBaseCandidatesOptions, type LocationLike } from "./api-base";
 
 export type JsonRecord = Record<string, unknown>;
-
-export interface LocationLike {
-  origin?: string;
-}
-
-export interface BuildApiBaseCandidatesOptions {
-  locationLike?: LocationLike | null | undefined;
-  remoteApiBase?: string;
-}
 
 export type FetchLike = (
   input: string,
@@ -42,12 +40,7 @@ export interface RequestLogoutOptions {
   fetchLike?: FetchLike;
 }
 
-const DEFAULT_REMOTE_API_BASE = "https://2048next.cn/api";
 export const AUTH_TOKEN_KEY = "2048_auth_token_v1";
-
-function normalizeBase(value: string): string {
-  return value.replace(/\/+$/u, "");
-}
 
 function toText(value: unknown): string {
   return value == null ? "" : String(value);
@@ -73,17 +66,8 @@ function canTryNextApiBase(options: RequestInit, headers: Headers): boolean {
   return requestMethod(options) === "GET" && !headers.has("Authorization");
 }
 
-export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = {}): string[] {
-  const remoteApiBase = normalizeBase(options.remoteApiBase || DEFAULT_REMOTE_API_BASE);
-  const origin = toText(
-    options.locationLike?.origin || (typeof window !== "undefined" ? window.location.origin : "")
-  ).replace(/\/+$/u, "");
-  const bases = origin ? [`${origin}/api`, remoteApiBase] : [remoteApiBase];
-  return Array.from(new Set(bases.map(normalizeBase).filter(Boolean)));
-}
-
 export function readAuthToken(options: { storageLike?: Storage | null | undefined } = {}): string {
-  return readStorageValue(options.storageLike || null, AUTH_TOKEN_KEY) || "";
+  return getAuthToken({ storageLike: options.storageLike || null });
 }
 
 export async function requestLogout(options: RequestLogoutOptions = {}): Promise<JsonRecord> {
@@ -114,7 +98,7 @@ async function fetchWithTimeout(
 }
 
 export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClient {
-  const bases = Array.from(new Set(options.bases.map(normalizeBase).filter(Boolean)));
+  const bases = Array.from(new Set(options.bases.map(normalizeApiBase).filter(Boolean)));
   const fetchLike =
     options.fetchLike ||
     (typeof fetch !== "undefined" ? (fetch.bind(globalThis) as FetchLike) : null);
@@ -133,7 +117,11 @@ export function createJsonApiClient(options: JsonApiClientOptions): JsonApiClien
             headers.set("Content-Type", "application/json");
           }
           const allowFallback = canTryNextApiBase(requestOptions, headers);
-          const response = await fetchWithTimeout(fetchLike, base + path, { ...requestOptions, headers }, options.timeoutMs);
+          const response = await fetchWithTimeout(fetchLike, base + path, {
+            ...requestOptions,
+            headers,
+            credentials: requestOptions.credentials || "include",
+          }, options.timeoutMs);
           const data = (await response.json().catch(() => null)) as JsonRecord | null;
           if (data) {
             if (isUnavailableProxyPayload(data)) {

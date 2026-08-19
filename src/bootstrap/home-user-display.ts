@@ -79,13 +79,7 @@ function readUserId(storageLike: unknown): string {
 }
 
 function readAuthToken(storageLike: unknown): string {
-  const storage = toRecord(storageLike) as StorageLike;
-  if (typeof storage.getItem !== "function") return "";
-  try {
-    return String(storage.getItem(AUTH_TOKEN_STORAGE_KEY) || "").trim();
-  } catch {
-    return "";
-  }
+  return getAuthToken({ storageLike: storageLike as Storage | null });
 }
 
 function readUiLanguage(storageLike: unknown): "en" | "zh" {
@@ -249,6 +243,14 @@ export function bindHomeUserDisplay(input: {
       });
     }
   });
+  windowRecord.addEventListener("auth-session-change", () => {
+    syncHomeUserDisplay({
+      documentLike: input.documentLike,
+      pageId: input.pageId,
+      storageLike: input.storageLike
+    });
+  });
 
   return synced;
 }
+import { getAuthToken } from "../services/auth-session";

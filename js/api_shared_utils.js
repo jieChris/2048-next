@@ -135,6 +135,66 @@
     }
   }
 
+  /* ---------- shared in-memory authentication ---------- */
+
+  var AUTH_TOKEN_KEY = "2048_auth_token_v1";
+  var AUTH_USER_ID_KEY = "2048_auth_userId_v1";
+  var AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
+
+  function authRuntime() {
+    var runtime = global && global.AuthSessionRuntime;
+    return runtime && typeof runtime === "object" ? runtime : null;
+  }
+
+  function getAuthToken() {
+    var runtime = authRuntime();
+    if (runtime && typeof runtime.getAuthToken === "function") return toText(runtime.getAuthToken()).trim();
+    return toText(safeGetStorage(AUTH_TOKEN_KEY)).trim();
+  }
+
+  function setAuthSession(payload) {
+    var runtime = authRuntime();
+    if (runtime && typeof runtime.setAuthSession === "function") {
+      runtime.setAuthSession(payload || {});
+      return;
+    }
+    var data = payload && typeof payload === "object" ? payload : {};
+    var user = data.user && typeof data.user === "object" ? data.user : {};
+    safeSetStorage(AUTH_TOKEN_KEY, toText(data.token));
+    safeSetStorage(AUTH_USER_ID_KEY, toText(user.id != null ? user.id : (data.userId != null ? data.userId : data.user_id)));
+    safeSetStorage(AUTH_NICKNAME_KEY, toText(user.nickname != null ? user.nickname : data.nickname));
+  }
+
+  function clearAuthSession() {
+    var runtime = authRuntime();
+    if (runtime && typeof runtime.clearAuthSession === "function") {
+      runtime.clearAuthSession();
+      return;
+    }
+    safeRemoveStorage(AUTH_TOKEN_KEY);
+    safeRemoveStorage(AUTH_USER_ID_KEY);
+    safeRemoveStorage(AUTH_NICKNAME_KEY);
+  }
+
+  function restoreAuthSession() {
+    var runtime = authRuntime();
+    if (runtime && typeof runtime.restoreAuthSession === "function") return runtime.restoreAuthSession();
+    return Promise.resolve({ status: getAuthToken() ? "authenticated" : "unauthenticated" });
+  }
+
+  function fetchWithAuth(url, requestInit) {
+    var runtime = authRuntime();
+    if (runtime && typeof runtime.fetchWithAuth === "function") {
+      return runtime.fetchWithAuth(url, requestInit || {});
+    }
+    var init = Object.assign({ credentials: "include" }, requestInit || {});
+    var headers = Object.assign({}, init.headers || {});
+    var token = getAuthToken();
+    if (token) headers.Authorization = "Bearer " + token;
+    init.headers = headers;
+    return callFetch(url, init);
+  }
+
   /* ---------- public namespace ---------- */
 
   global.ApiSharedUtils = {
@@ -144,7 +204,12 @@
     safeRemoveStorage: safeRemoveStorage,
     buildApiBaseCandidates: buildApiBaseCandidates,
     resolveApiTimeoutMs: resolveApiTimeoutMs,
-    callFetch: callFetch
+    callFetch: callFetch,
+    getAuthToken: getAuthToken,
+    setAuthSession: setAuthSession,
+    clearAuthSession: clearAuthSession,
+    restoreAuthSession: restoreAuthSession,
+    fetchWithAuth: fetchWithAuth
   };
 
 })(typeof window !== "undefined" ? window : undefined);

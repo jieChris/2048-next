@@ -684,6 +684,10 @@ function hasRankedCheckpointAuthTokenForSetup(manager) {
   if (!manager || manager.rankPolicy !== "ranked") return false;
   var windowLike = manager.getWindowLike ? manager.getWindowLike() : null;
   try {
+    var authRuntime = windowLike && windowLike.AuthSessionRuntime;
+    if (authRuntime && typeof authRuntime.getAuthToken === "function") {
+      return !!String(authRuntime.getAuthToken() || "").trim();
+    }
     var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
     var token = storage && typeof storage.getItem === "function"
       ? String(storage.getItem("2048_auth_token_v1") || "").trim()

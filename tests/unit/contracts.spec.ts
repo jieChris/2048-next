@@ -217,6 +217,50 @@ describe("contracts: HistoryRecord type shape", () => {
     expect(normalized?.diagnostics_index_entries).toEqual([]);
   });
 
+  it("preserves durable delivery metadata and gives legacy evidence a retryable status", () => {
+    const normalized = normalizeHistoryRecordLike({
+      id: "local-1",
+      replay_string: "REPLAY_v1RPL_B64_test",
+      owner_type: "user",
+      owner_user_id: "42",
+      owner_key: "user:42",
+      client_record_id: "rec-client-1",
+      sync_status: "retry_wait",
+      server_record_id: "rec-server-1",
+      replay_sha256: "a".repeat(64),
+      replay_byte_size: 23,
+      upload_attempts: 3,
+      next_retry_at: "2026-08-19T00:00:30.000Z",
+      last_upload_attempt_at: "2026-08-19T00:00:00.000Z",
+      last_error_code: "NETWORK_ERROR",
+      last_error_message: "offline"
+    });
+
+    expect(normalized).toMatchObject({
+      client_record_id: "rec-client-1",
+      sync_status: "retry_wait",
+      server_record_id: "rec-server-1",
+      replay_sha256: "a".repeat(64),
+      replay_byte_size: 23,
+      upload_attempts: 3,
+      next_retry_at: "2026-08-19T00:00:30.000Z",
+      last_upload_attempt_at: "2026-08-19T00:00:00.000Z",
+      last_error_code: "NETWORK_ERROR",
+      last_error_message: "offline"
+    });
+
+    expect(normalizeHistoryRecordLike(
+      { id: "legacy-local-7", replay_string: "RPL", owner_type: "user", owner_user_id: "7" }
+    )).toMatchObject({
+      client_record_id: "legacy-local-7",
+      sync_status: "pending",
+      server_record_id: null,
+      upload_attempts: 0
+    });
+    expect(normalizeHistoryRecordLike({ replay_string: "RPL", owner_type: "guest" }))
+      .toMatchObject({ sync_status: "waiting_auth" });
+  });
+
   it("calculates and persists board sum from legacy final boards", () => {
     expect(calculateHistoryBoardSum([[2, "4", 0], [8, -1, Number.NaN]])).toBe(14);
 

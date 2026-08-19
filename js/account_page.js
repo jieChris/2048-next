@@ -82,6 +82,14 @@
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var sharedGetAuthToken = _u.getAuthToken || function () { return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim(); };
+  var sharedSetAuthSession = _u.setAuthSession || function (payload) { safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token)); };
+  var sharedClearAuthSession = _u.clearAuthSession || function () {
+    safeRemoveStorage(STORAGE_TOKEN_KEY);
+    safeRemoveStorage(STORAGE_USER_ID_KEY);
+    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+  };
+  var sharedFetchWithAuth = _u.fetchWithAuth || function (url, requestInit) { return callFetch(url, requestInit); };
   var callFetch = _u.callFetch || function (url, requestInit) {
     if (!global || typeof global["fetch"] !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
@@ -571,7 +579,7 @@
   }
 
   function getToken() {
-    return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
+    return toText(sharedGetAuthToken()).trim();
   }
 
   function getUserId() {
@@ -590,7 +598,7 @@
           : (payload.user_id != null ? payload.user_id : payload.id)
       )
     ).trim();
-    safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
+    sharedSetAuthSession(payload || {});
     if (userIdValue) {
       safeSetStorage(STORAGE_USER_ID_KEY, userIdValue);
     } else {
@@ -600,9 +608,7 @@
   }
 
   function clearAuth() {
-    safeRemoveStorage(STORAGE_TOKEN_KEY);
-    safeRemoveStorage(STORAGE_USER_ID_KEY);
-    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+    sharedClearAuthSession();
   }
 
   function resolveRequestTimeoutMs(path, options) {
@@ -635,7 +641,8 @@
       var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
       var requestInit = {
         method: method,
-        headers: headers
+        headers: headers,
+        credentials: "include"
       };
       var timeoutHandle = null;
       var controller = null;
@@ -661,7 +668,7 @@
             try { controller.abort(); } catch (_err) {}
           }, timeoutMs);
         }
-        var response = await callFetch(base + path, requestInit);
+        var response = await (opts.auth ? sharedFetchWithAuth(base + path, requestInit) : callFetch(base + path, requestInit));
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
@@ -680,11 +687,16 @@
 
         if (!response.ok) {
           var responseCode = toText(data && data.code).trim().toUpperCase();
-          var isUnauthorizedResponse =
-            response.status === 401 ||
-            response.status === 403 ||
-            responseCode === "UNAUTHORIZED" ||
-            responseCode === "INVALID_TOKEN";
+          var isUnauthorizedResponse = [
+            "ACCOUNT_DELETED",
+            "ACCOUNT_INACTIVE",
+            "ACCOUNT_PENDING_DELETION",
+            "INVALID_TOKEN",
+            "SESSION_REVOKED",
+            "TOKEN_REDEEMED",
+            "TOKEN_REVOKED",
+            "UNAUTHORIZED"
+          ].indexOf(responseCode) >= 0;
           if (opts.auth && isUnauthorizedResponse) {
             clearAuth();
             syncAuthState();

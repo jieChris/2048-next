@@ -109,10 +109,23 @@ paths:
   /logout:
     post:
       tags: [Auth]
-      summary: Clear the browser page-access session cookie.
+      summary: Revoke the current browser device session and clear its cookies.
       security: []
       responses:
         "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Restore a short-lived access token from the persistent HttpOnly device session.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/AuthResponse"
+        "401":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "503":
           $ref: "#/components/responses/ApiEnvelopeResponse"
 
   /login/captcha:
@@ -437,6 +450,11 @@ paths:
     post:
       tags: [Records]
       summary: Submit a completed game record.
+      parameters:
+        - $ref: "#/components/parameters/ClientVersionHeader"
+        - $ref: "#/components/parameters/RecordModeKeyHeader"
+        - $ref: "#/components/parameters/ClientRecordIdHeader"
+        - $ref: "#/components/parameters/RecordDeliverySourceHeader"
       requestBody:
         required: true
         content:
@@ -459,6 +477,106 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/UserAchievement"
+
+  /records/uploads:
+    post:
+      tags: [Records]
+      summary: Create or resume an idempotent chunk upload for a large replay.
+      parameters:
+        - $ref: "#/components/parameters/ClientVersionHeader"
+        - $ref: "#/components/parameters/RecordModeKeyHeader"
+        - $ref: "#/components/parameters/ClientRecordIdHeader"
+        - $ref: "#/components/parameters/RecordDeliverySourceHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordUploadCreateRequest"
+      responses:
+        "200":
+          description: Current upload task or an already completed matching record.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RecordUploadTask"
+
+  /records/uploads/{taskId}:
+    get:
+      tags: [Records]
+      summary: Read verified received chunks for an owned replay upload task.
+      parameters:
+        - $ref: "#/components/parameters/RecordUploadTaskIdPath"
+      responses:
+        "200":
+          description: Current upload task.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RecordUploadTask"
+
+  /records/uploads/{taskId}/chunks/{index}:
+    put:
+      tags: [Records]
+      summary: Store one idempotent replay chunk after byte length and SHA-256 verification.
+      parameters:
+        - $ref: "#/components/parameters/RecordUploadTaskIdPath"
+        - name: index
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0, maximum: 8191 }
+        - name: X-Chunk-Sha256
+          in: header
+          required: true
+          schema: { type: string, pattern: "^[a-f0-9]{64}$" }
+        - name: X-Chunk-Byte-Size
+          in: header
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: "#/components/parameters/ClientVersionHeader"
+        - $ref: "#/components/parameters/RecordModeKeyHeader"
+        - $ref: "#/components/parameters/ClientRecordIdHeader"
+        - $ref: "#/components/parameters/RecordDeliverySourceHeader"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /records/uploads/{taskId}/complete:
+    post:
+      tags: [Records]
+      summary: Verify all chunks and atomically create or return the completed game record.
+      parameters:
+        - $ref: "#/components/parameters/RecordUploadTaskIdPath"
+        - $ref: "#/components/parameters/ClientVersionHeader"
+        - $ref: "#/components/parameters/RecordModeKeyHeader"
+        - $ref: "#/components/parameters/ClientRecordIdHeader"
+        - $ref: "#/components/parameters/RecordDeliverySourceHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameRecordSubmitRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
 
   /records/{recordId}:
     delete:
@@ -876,6 +994,30 @@ paths:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
 
+  /admin/record-delivery-health:
+    get:
+      tags: [Admin, Records]
+      summary: Aggregate only record delivery requests and upload tasks observed by the server.
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: mode_key
+          in: query
+          schema: { type: string }
+        - name: client_version
+          in: query
+          schema: { type: string }
+        - name: code
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
   /admin/users:
     get:
       tags: [Admin]
@@ -908,6 +1050,36 @@ paths:
       summary: Read a unified account, game, achievement, rescue, and audit summary.
       parameters:
         - $ref: "#/components/parameters/AdminUserIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/users/{id}/device-sessions:
+    get:
+      tags: [Admin, Auth]
+      summary: List safe metadata for a user's browser device sessions without credential hashes.
+      parameters:
+        - $ref: "#/components/parameters/AdminUserIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/users/{id}/device-sessions/{sessionId}/revoke:
+    post:
+      tags: [Admin, Auth]
+      summary: Revoke one browser device session with an audited administrator reason.
+      parameters:
+        - $ref: "#/components/parameters/AdminUserIdPath"
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReasonRequest"
       responses:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
@@ -979,6 +1151,12 @@ paths:
       summary: Revoke all existing authentication tokens for a user without changing the password.
       parameters:
         - $ref: "#/components/parameters/AdminUserIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReasonRequest"
       responses:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
@@ -1040,6 +1218,18 @@ paths:
           in: query
           schema: { type: string }
         - name: record_id
+          in: query
+          schema: { type: string }
+        - name: client_record_id
+          in: query
+          schema: { type: string }
+        - name: replay_fingerprint
+          in: query
+          schema: { type: string }
+        - name: upload_status
+          in: query
+          schema: { type: string, enum: [created, uploading, completed, failed, expired] }
+        - name: last_error_code
           in: query
           schema: { type: string }
         - name: from
@@ -1167,6 +1357,14 @@ paths:
       summary: Revoke super administrator access as the root administrator.
       parameters:
         - $ref: "#/components/parameters/AdminUserIdPath"
+      responses:
+        "200":
+          $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/reconciliation:
+    get:
+      tags: [Admin, Records]
+      summary: Generate the fixed read-only release and migration reconciliation snapshot.
       responses:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
@@ -1590,6 +1788,40 @@ components:
       required: true
       schema:
         type: string
+    RecordUploadTaskIdPath:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+    ClientVersionHeader:
+      name: X-Client-Version
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 80
+    RecordModeKeyHeader:
+      name: X-Record-Mode-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 160
+    ClientRecordIdHeader:
+      name: X-Client-Record-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 160
+    RecordDeliverySourceHeader:
+      name: X-Record-Delivery-Source
+      in: header
+      required: false
+      schema:
+        type: string
+        enum: [automatic, manual]
     OfferIdPath:
       name: offerId
       in: path
@@ -1650,6 +1882,10 @@ components:
                 properties:
                   token:
                     type: string
+                  expiresAt:
+                    type: integer
+                  ttl:
+                    type: integer
                   user:
                     $ref: "#/components/schemas/User"
     UserResponse:
@@ -1720,6 +1956,68 @@ components:
           type: string
           minLength: 1
           maxLength: 500
+
+    RecordUploadCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [client_record_id, mode_key, replay_sha256, replay_byte_size, chunk_size]
+      properties:
+        client_record_id:
+          type: string
+          minLength: 1
+          maxLength: 160
+        mode_key:
+          type: string
+          minLength: 1
+        replay_sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        replay_byte_size:
+          type: integer
+          minimum: 1
+          maximum: 536870912
+        chunk_size:
+          type: integer
+          minimum: 65536
+          maximum: 1048576
+
+    RecordUploadTask:
+      type: object
+      additionalProperties: false
+      properties:
+        upload_task_id:
+          type: [string, "null"]
+        client_record_id:
+          type: string
+        mode_key:
+          type: string
+        replay_sha256:
+          type: string
+        replay_byte_size:
+          type: integer
+        chunk_size:
+          type: integer
+        chunk_count:
+          type: integer
+        received_chunks:
+          type: array
+          items: { type: integer, minimum: 0 }
+        status:
+          type: string
+          enum: [created, uploading, completed, failed, expired]
+        server_record_id:
+          type: [string, "null"]
+        last_error_code:
+          type: [string, "null"]
+        created_at:
+          type: [string, "null"]
+          format: date-time
+        updated_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
 
     User:
       type: object

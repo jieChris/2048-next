@@ -29,12 +29,16 @@ describe("core game manager actuate persistence", () => {
     expect(manager.tryAutoSubmitOnGameOver).not.toHaveBeenCalled();
   });
 
-  it("clears saved state and submits terminal non-practice games", () => {
+  it("clears terminal state only after the local record is durably saved", async () => {
+    let finishLocalSave: (() => void) | null = null;
+    const localSave = new Promise<void>((resolve) => {
+      finishLocalSave = resolve;
+    });
     const manager = {
       modeKey: "ranked",
       over: false,
       clearSavedGameState: vi.fn(),
-      tryAutoSubmitOnGameOver: vi.fn()
+      tryAutoSubmitOnGameOver: vi.fn(() => localSave)
     };
     const operations = {
       publishSavedStateSyncSnapshot: vi.fn(),
@@ -42,12 +46,41 @@ describe("core game manager actuate persistence", () => {
       isTerminalSessionForPersistence: vi.fn(() => true)
     };
 
-    finalizeActuatePersistence(manager, operations);
+    const finalized = finalizeActuatePersistence(manager, operations);
 
     expect(operations.publishSavedStateSyncSnapshot).toHaveBeenCalledWith(manager);
-    expect(manager.clearSavedGameState).toHaveBeenCalledWith("ranked");
+    expect(manager.clearSavedGameState).not.toHaveBeenCalled();
     expect(manager.tryAutoSubmitOnGameOver).toHaveBeenCalledTimes(1);
     expect(operations.saveGameState).not.toHaveBeenCalled();
+
+    finishLocalSave?.();
+    await finalized;
+
+    expect(manager.clearSavedGameState).toHaveBeenCalledWith("ranked");
+  });
+
+  it("keeps terminal state recoverable when durable local persistence fails", async () => {
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      over: true,
+      clearSavedGameState: vi.fn(),
+      tryAutoSubmitOnGameOver: vi.fn(() => Promise.reject(new Error("idb_write_failed")))
+    };
+
+    await expect(finalizeActuatePersistence(manager, {})).resolves.toBe(false);
+    expect(manager.clearSavedGameState).not.toHaveBeenCalled();
+  });
+
+  it("keeps terminal state when the durable history store is unavailable", () => {
+    const manager = {
+      modeKey: "standard_4x4_pow2_no_undo",
+      over: true,
+      clearSavedGameState: vi.fn(),
+      tryAutoSubmitOnGameOver: vi.fn(() => null)
+    };
+
+    expect(finalizeActuatePersistence(manager, {})).toBe(false);
+    expect(manager.clearSavedGameState).not.toHaveBeenCalled();
   });
 
   it("skips all persistence work when the skip flag is consumed", () => {

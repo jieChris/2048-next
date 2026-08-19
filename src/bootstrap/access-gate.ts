@@ -1,12 +1,11 @@
-import { removeStorageValue } from "../storage/browser-storage";
 import {
-  AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
   createJsonApiClient,
   readAuthToken,
   type FetchLike,
   type JsonRecord
 } from "../services/api-client";
+import { clearAuthSession } from "../services/auth-session";
 
 export const ACTIVE_BETA_NOTICE_VERSION = "beta_notice_2026_06_26_v1";
 export const BETA_ACCESS_SMOKE_BYPASS_KEY = "2048_beta_access_smoke_bypass_v1";
@@ -254,7 +253,7 @@ export async function runBetaAccessGate(
   // the runtime initialize (allowed) or to mask + redirect (definitive denial).
   const access = await fetchBetaAccessStatus({ ...options, windowLike: windowLike || undefined, storageLike });
   if (access.unauthorized) {
-    removeStorageValue(storageLike, AUTH_TOKEN_KEY);
+    clearAuthSession({ storageLike });
     maskProtectedDocument(documentLike);
     safeNavigate(windowLike, buildGateHref("beta-login.html", windowLike, "login"));
     return { allowed: false };

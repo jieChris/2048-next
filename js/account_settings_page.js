@@ -18,6 +18,14 @@
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var sharedGetAuthToken = _u.getAuthToken || function () { return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim(); };
+  var sharedSetAuthSession = _u.setAuthSession || function (payload) { safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token)); };
+  var sharedClearAuthSession = _u.clearAuthSession || function () {
+    safeRemoveStorage(STORAGE_TOKEN_KEY);
+    safeRemoveStorage(STORAGE_USER_ID_KEY);
+    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+  };
+  var sharedFetchWithAuth = _u.fetchWithAuth || function (url, requestInit) { return callFetch(url, requestInit); };
   var callFetch = _u.callFetch || function (url, requestInit) {
     if (!global || typeof global["fetch"] !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
@@ -261,7 +269,7 @@
   }
 
   function getToken() {
-    return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
+    return toText(sharedGetAuthToken()).trim();
   }
 
   function getStoredNickname() {
@@ -280,7 +288,7 @@
           : (payload.user_id != null ? payload.user_id : payload.id)
       )
     ).trim();
-    safeSetStorage(STORAGE_TOKEN_KEY, toText(payload && payload.token));
+    sharedSetAuthSession(payload || {});
     if (userIdValue) {
       safeSetStorage(STORAGE_USER_ID_KEY, userIdValue);
     } else {
@@ -290,9 +298,7 @@
   }
 
   function clearAuth() {
-    safeRemoveStorage(STORAGE_TOKEN_KEY);
-    safeRemoveStorage(STORAGE_USER_ID_KEY);
-    safeRemoveStorage(STORAGE_NICKNAME_KEY);
+    sharedClearAuthSession();
   }
 
   function isTimeoutErrorText(errorLike) {
@@ -397,7 +403,7 @@
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
       var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
-      var requestInit = { method: method, headers: headers };
+      var requestInit = { method: method, headers: headers, credentials: "include" };
       var timeoutHandle = null;
       var controller = null;
 
@@ -424,7 +430,7 @@
           }, timeoutMs);
         }
 
-        var response = await callFetch(base + path, requestInit);
+        var response = await (opts.auth ? sharedFetchWithAuth(base + path, requestInit) : callFetch(base + path, requestInit));
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
@@ -889,7 +895,7 @@
         }
       });
       if (result && result.success) {
-        if (result.token) safeSetStorage(STORAGE_TOKEN_KEY, toText(result.token));
+        if (result.token) sharedSetAuthSession(result);
         if (oldInput) oldInput.value = "";
         if (newInput) newInput.value = "";
         setTip(t("passwordChanged"), "ok");

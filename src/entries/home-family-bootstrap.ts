@@ -2,6 +2,7 @@ import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/pag
 import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
 import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
+import { restoreAuthSession } from "../services/auth-session";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
@@ -323,6 +324,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     throw new Error(`Unknown page manifest: ${pageId}`);
   }
 
+  await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
   bindNightBackgroundSync();
   if (shouldRunBetaAccessGate(pageId)) {
     const access = await runBetaAccessGate(pageId);

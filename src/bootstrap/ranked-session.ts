@@ -1,9 +1,13 @@
 import { parsePlayModeKey } from "./play-query";
 import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from "./storage";
+import {
+  clearAuthSession as clearSharedAuthSession,
+  fetchWithAuth,
+  getAuthToken,
+} from "../services/auth-session";
 
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
 const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
-const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const RANKED_SESSION_SUPPRESS_NEXT_AUTH_RELOAD_KEY = "__rankedSessionSuppressNextAuthReload";
 const ACTIVE_SESSION_STORAGE_KEY_PREFIX = "ranked_session_active:v1:";
 const PREFETCH_SESSION_STORAGE_KEY_PREFIX = "ranked_session_prefetch:v1:";
@@ -221,9 +225,7 @@ function removeStorageKey(storageLike: Storage | null, key: string): void {
 }
 
 function clearAuthSession(storageLike: Storage | null): void {
-  removeStorageKey(storageLike, AUTH_TOKEN_STORAGE_KEY);
-  removeStorageKey(storageLike, AUTH_USER_ID_STORAGE_KEY);
-  removeStorageKey(storageLike, AUTH_NICKNAME_STORAGE_KEY);
+  clearSharedAuthSession({ storageLike });
 }
 
 function markInternalAuthTransition(windowLike: RankedSessionWindowLike): void {
@@ -244,12 +246,21 @@ function consumeInternalAuthTransition(windowLike: RankedSessionWindowLike): boo
 }
 
 function readAuthToken(windowLike: RankedSessionWindowLike): string {
-  return (
-    safeReadStorageItem({
-      storageLike: resolveLocalStorage(windowLike),
-      key: AUTH_TOKEN_STORAGE_KEY
-    }) || ""
-  ).trim();
+  return getAuthToken({ storageLike: resolveLocalStorage(windowLike) });
+}
+
+function isTerminalAuthCode(codeLike: unknown): boolean {
+  const code = String(codeLike || "").trim().toUpperCase();
+  return [
+    "ACCOUNT_DELETED",
+    "ACCOUNT_INACTIVE",
+    "ACCOUNT_PENDING_DELETION",
+    "INVALID_TOKEN",
+    "SESSION_REVOKED",
+    "TOKEN_REDEEMED",
+    "TOKEN_REVOKED",
+    "UNAUTHORIZED",
+  ].includes(code);
 }
 
 function readAuthUserId(windowLike: RankedSessionWindowLike): string {
@@ -655,7 +666,7 @@ export function createRankedSessionRuntime(
         const apiBases = buildRankedSessionApiBaseCandidates(windowLike);
         for (let index = 0; index < apiBases.length; index += 1) {
           try {
-            const response = await fetchLike(`${apiBases[index]}/ranked-session/start`, {
+            const response = await fetchWithAuth(`${apiBases[index]}/ranked-session/start`, {
               method: "POST",
               headers: {
                 "content-type": "application/json",
@@ -666,6 +677,10 @@ export function createRankedSessionRuntime(
                 attempt_schema_version: ATTEMPT_SCHEMA_VERSION,
                 spawn_sequence_version: SPAWN_SEQUENCE_VERSION
               })
+            }, {
+              bases: apiBases,
+              fetchLike,
+              storageLike,
             });
             const payload = (await response.json().catch(() => null)) as {
               success?: boolean;
@@ -674,7 +689,7 @@ export function createRankedSessionRuntime(
               error?: string;
             } | null;
             if (!response.ok) {
-              if (response.status === 401 || response.status === 403) {
+              if (isTerminalAuthCode(payload?.code)) {
                 clearAuthSession(storageLike);
                 markInternalAuthTransition(windowLike);
                 clearActiveSession(modeKey);
@@ -754,7 +769,7 @@ export function createRankedSessionRuntime(
     const apiBase = buildRankedSessionApiBaseCandidates(windowLike)[0];
     if (!fetchLike || !apiBase) return "retry";
     try {
-      const response = await fetchLike(`${apiBase}/ranked-session/attempt`, {
+      const response = await fetchWithAuth(`${apiBase}/ranked-session/attempt`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -762,9 +777,13 @@ export function createRankedSessionRuntime(
         },
         body: JSON.stringify(item.payload),
         keepalive: options.keepalive === true
+      }, {
+        bases: buildRankedSessionApiBaseCandidates(windowLike),
+        fetchLike,
+        storageLike,
       });
-      const payload = (await response.json().catch(() => null)) as { success?: boolean } | null;
-      if (response.status === 401 || response.status === 403) {
+      const payload = (await response.json().catch(() => null)) as { success?: boolean; code?: string } | null;
+      if (isTerminalAuthCode(payload?.code)) {
         clearAuthSession(storageLike);
         markInternalAuthTransition(windowLike);
         return "retry";

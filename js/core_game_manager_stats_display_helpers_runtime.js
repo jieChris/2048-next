@@ -305,9 +305,16 @@ function finalizeActuatePersistenceFallback(manager) {
     (typeof isTerminalSessionForPersistence === "function" && isTerminalSessionForPersistence(manager))
   );
   if (shouldFinalizeAsTerminated) {
-    manager.clearSavedGameState(manager.modeKey);
-    manager.tryAutoSubmitOnGameOver();
-    return;
+    var persistenceResult = manager.tryAutoSubmitOnGameOver();
+    if (persistenceResult && typeof persistenceResult.then === "function") {
+      return Promise.resolve(persistenceResult).then(function () {
+        manager.clearSavedGameState(manager.modeKey);
+        return true;
+      }, function () {
+        return false;
+      });
+    }
+    return false;
   }
   saveGameState(manager);
 }

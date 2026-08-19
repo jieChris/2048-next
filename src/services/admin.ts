@@ -2,6 +2,34 @@ import { createAdminService } from "./admin-rescue";
 
 export type AdminRecord = Record<string, unknown>;
 
+export interface AdminRecordDeliveryHealth extends AdminRecord {
+  scope?: "server_observed_only";
+  limitation?: string;
+  summary?: AdminRecord;
+  by_mode?: AdminRecord[];
+  by_client_version?: AdminRecord[];
+  by_code?: AdminRecord[];
+  upload_tasks?: AdminRecord[];
+}
+
+export interface AdminDeviceSession extends AdminRecord {
+  id?: string;
+  device_label?: string;
+  created_at?: string;
+  last_used_at?: string;
+  revoked_at?: string | null;
+  status?: "active" | "revoked";
+}
+
+export interface AdminReconciliationSnapshot extends AdminRecord {
+  readonly?: boolean;
+  generated_at?: string;
+  totals?: AdminRecord;
+  leaderboard_modes?: AdminRecord[];
+  top_records?: AdminRecord[];
+  target_speed_eligibility?: AdminRecord[];
+}
+
 export interface AdminApiResponse<T = unknown> extends AdminRecord {
   success?: boolean;
   data?: T;

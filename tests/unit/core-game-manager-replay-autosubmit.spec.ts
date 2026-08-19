@@ -34,17 +34,20 @@ function loadReplayHelpersRuntime() {
   };
   vm.runInNewContext(script, context);
   return context as typeof context & {
-    tryAutoSubmitOnGameOver: (manager: Record<string, unknown>) => void;
+    tryAutoSubmitOnGameOver: (manager: Record<string, unknown>) => Promise<unknown> | null;
   };
 }
 
 describe("core game manager replay auto submit", () => {
-  it("saves recovered games with rescue replay fallback when live serialization is unavailable", () => {
+  it("durably saves recovered games with rescue replay fallback before marking the session complete", async () => {
     const runtime = loadReplayHelpersRuntime();
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
+    const alertLike = vi.fn();
     const manager = {
       sessionSubmitDone: false,
+      sessionSubmitPromise: null as Promise<unknown> | null,
+      localHistorySaveFailureNotified: false,
       replayMode: false,
       over: true,
       won: false,
@@ -73,12 +76,12 @@ describe("core game manager replay auto submit", () => {
       },
       getDurationMs: vi.fn(() => 1200),
       clonePlain: vi.fn((value: unknown) => JSON.parse(JSON.stringify(value))),
-      getWindowLike: vi.fn(() => ({})),
+      getWindowLike: vi.fn(() => ({ alert: alertLike })),
       resolveNormalizedCoreValueOrFallback: vi.fn(
         (_coreValue: unknown, _normalize: unknown, fallback: () => unknown) => fallback()
       ),
       resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordDurable") return null;
         return {
           scope: {},
           method(record: Record<string, unknown>) {
@@ -92,7 +95,7 @@ describe("core game manager replay auto submit", () => {
       })
     };
 
-    expect(() => runtime.tryAutoSubmitOnGameOver(manager)).not.toThrow();
+    await runtime.tryAutoSubmitOnGameOver(manager);
     expect(savedRecords).toHaveLength(1);
     expect(savedRecords[0]).toMatchObject({
       mode_key: "standard_4x4_pow2_no_undo",
@@ -101,5 +104,21 @@ describe("core game manager replay auto submit", () => {
       replay_string: "REPLAY_v1RPL_B64_rescue"
     });
     expect(resultWrites[0]).toMatchObject({ ok: true, local_saved: true });
+    expect(manager.sessionSubmitDone).toBe(true);
+    expect(alertLike).not.toHaveBeenCalled();
+
+    manager.sessionSubmitDone = false;
+    manager.sessionSubmitPromise = null;
+    (manager.resolveWindowNamespaceMethod as ReturnType<typeof vi.fn>).mockReturnValue({
+      scope: {},
+      method: vi.fn(async () => {
+        throw new Error("indexeddb_quota_exceeded");
+      })
+    });
+
+    await expect(runtime.tryAutoSubmitOnGameOver(manager)).rejects.toThrow("indexeddb_quota_exceeded");
+    expect(manager.sessionSubmitDone).toBe(false);
+    expect(resultWrites.at(-1)).toMatchObject({ ok: false, error: "indexeddb_quota_exceeded" });
+    expect(alertLike).toHaveBeenCalledWith(expect.stringContaining("先导出回放文件"));
   });
 });

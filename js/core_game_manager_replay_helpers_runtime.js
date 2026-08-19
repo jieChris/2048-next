@@ -1685,12 +1685,24 @@ function calculateAutoSubmitBoardSum(finalBoard) {
 function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
   var replayPayload = resolveAutoSubmitReplayPayload(manager);
   var finalBoard = getFinalBoardMatrix(manager);
+  var clientRecordId = "";
+  if (typeof resolveManagerClientRecordId === "function") {
+    try { clientRecordId = String(resolveManagerClientRecordId(manager) || "").trim(); } catch (_errId) {}
+  }
+  if (!clientRecordId) clientRecordId = String(manager && manager.clientRecordId || "").trim();
+  var initialSeed = Number(manager && manager.initialSeed);
   return {
+    record_schema_version: 1,
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height,
     ruleset: manager.ruleset, undo_enabled: !!manager.modeConfig.undo_enabled,
     ranked_bucket: manager.rankedBucket, mode_family: manager.modeFamily, rank_policy: manager.rankPolicy,
+    mode_bucket: manager.rankedBucket || null,
+    ranked_session_token: manager.rankedSessionToken || null,
     challenge_id: manager.challengeId || null,
+    initial_seed: Number.isFinite(initialSeed) ? Math.floor(initialSeed) : null,
+    seed: Number.isFinite(initialSeed) ? Math.floor(initialSeed) : null,
+    client_record_id: clientRecordId || null,
     special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
     score: manager.score, board_sum: calculateAutoSubmitBoardSum(finalBoard), best_tile: bestTileValue, duration_ms: getDurationMs(manager),
     final_board: finalBoard, ended_at: endedAt, replay: replayPayload.replay,
@@ -1773,9 +1785,20 @@ function writeAutoSubmitErrorResult(manager, endedAt, payload, error) {
   });
 }
 
+function notifyAutoSubmitPersistenceFailure(manager) {
+  if (!manager || manager.localHistorySaveFailureNotified === true) return;
+  var windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  if (!windowLike || typeof windowLike.alert !== "function") return;
+  manager.localHistorySaveFailureNotified = true;
+  windowLike.alert(
+    "无法安全保存本局记录。请不要刷新或直接开始新游戏；先导出回放文件，释放浏览器存储空间后再重试。\n\n" +
+    "This game could not be saved safely. Export the replay before refreshing or starting a new game."
+  );
+}
+
 function resolveLocalHistorySaveRecord(manager) {
   if (!manager) return null;
-  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecord");
+  return manager.resolveWindowNamespaceMethod("LocalHistoryStore", "saveRecordDurable");
 }
 
 function writeLocalHistoryStoreMissingResult(manager) {
@@ -1784,6 +1807,7 @@ function writeLocalHistoryStoreMissingResult(manager) {
     ok: false,
     reason: "local_history_store_missing"
   });
+  notifyAutoSubmitPersistenceFailure(manager);
 }
 
 function createAutoSubmitExecutionContext(manager) {
@@ -1800,37 +1824,38 @@ function isPromiseLike(value) {
 }
 
 function executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext) {
-  try {
-    var saveResult = localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
-    if (isPromiseLike(saveResult)) {
-      saveResult.then(function (savedRecord) {
-        writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
-      }).catch(function (error) {
-        writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
-      });
-      return;
-    }
-    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, saveResult);
-  } catch (error) {
+  return Promise.resolve().then(function () {
+    return localHistorySaveRecord.method.call(localHistorySaveRecord.scope, executionContext.payload);
+  }).then(function (savedRecord) {
+    manager.sessionSubmitDone = true;
+    manager.localHistorySaveFailureNotified = false;
+    manager.localHistoryRecordId = savedRecord && savedRecord.id ? savedRecord.id : null;
+    writeAutoSubmitSuccessResult(manager, executionContext.endedAt, executionContext.payload, savedRecord);
+    return savedRecord;
+  }).catch(function (error) {
+    manager.sessionSubmitPromise = null;
     writeAutoSubmitErrorResult(manager, executionContext.endedAt, executionContext.payload, error);
-  }
+    notifyAutoSubmitPersistenceFailure(manager);
+    throw error;
+  });
 }
 
 function tryAutoSubmitOnGameOver(manager) {
-  if (!manager || manager.sessionSubmitDone) return;
+  if (!manager || manager.sessionSubmitDone) return manager && manager.sessionSubmitPromise ? manager.sessionSubmitPromise : null;
+  if (manager.sessionSubmitPromise && isPromiseLike(manager.sessionSubmitPromise)) return manager.sessionSubmitPromise;
   var skippedReason = resolveAutoSubmitSkippedReason(manager);
   if (skippedReason) {
     writeAutoSubmitSkippedResult(manager, skippedReason);
-    return;
+    return null;
   }
   var localHistorySaveRecord = resolveLocalHistorySaveRecord(manager);
   if (!localHistorySaveRecord) {
     writeLocalHistoryStoreMissingResult(manager);
-    return;
+    return null;
   }
-  manager.sessionSubmitDone = true;
   var executionContext = createAutoSubmitExecutionContext(manager);
-  executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext);
+  manager.sessionSubmitPromise = executeAutoSubmitWithLocalHistory(manager, localHistorySaveRecord, executionContext);
+  return manager.sessionSubmitPromise;
 }
 
 function isSessionTerminated(manager) {

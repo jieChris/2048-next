@@ -95,7 +95,37 @@ export interface HistoryRecord {
   owner_nickname: string;
   owner_key: string;
   diagnostics_index_entries: HistoryDiagnosticsIndexEntry[];
+  client_record_id?: string | null;
+  server_record_id?: string | null;
+  sync_status?: HistorySyncStatus;
+  replay_sha256?: string | null;
+  replay_byte_size?: number;
+  upload_task_id?: string | null;
+  uploaded_chunk_count?: number;
+  upload_attempts?: number;
+  next_retry_at?: string | null;
+  last_upload_attempt_at?: string | null;
+  last_error_code?: string | null;
+  last_error_message?: string | null;
+  record_schema_version?: number;
+  mode_bucket?: string | null;
+  ranked_session_token?: string | null;
+  initial_seed?: number | null;
+  seed?: number | null;
+  ranked_verification?: Record<string, unknown> | null;
+  min_steps_2048?: number | null;
+  min_steps_4096?: number | null;
+  min_steps_8192?: number | null;
 }
+
+export type HistorySyncStatus =
+  | "finalized_local"
+  | "pending"
+  | "waiting_auth"
+  | "retry_wait"
+  | "needs_action"
+  | "invalid"
+  | "synced";
 
 export interface HistoryOwnerMeta {
   owner_type: "guest" | "user";
@@ -223,6 +253,42 @@ function normalizeHistoryReplayString(
     }
   }
   return "";
+}
+
+const HISTORY_SYNC_STATUSES = new Set<HistorySyncStatus>([
+  "finalized_local",
+  "pending",
+  "waiting_auth",
+  "retry_wait",
+  "needs_action",
+  "invalid",
+  "synced"
+]);
+
+function normalizeNullableText(value: unknown): string | null {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized || null;
+}
+
+function normalizeNullableInteger(value: unknown): number | null {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? Math.floor(normalized) : null;
+}
+
+function normalizeHistorySyncStatus(
+  value: unknown,
+  replayString: string,
+  ownerType: HistoryOwnerMeta["owner_type"]
+): HistorySyncStatus {
+  const normalized = String(value || "").trim() as HistorySyncStatus;
+  if (HISTORY_SYNC_STATUSES.has(normalized)) return normalized;
+  if (!replayString) return "needs_action";
+  return ownerType === "user" ? "pending" : "waiting_auth";
+}
+
+function utf8ByteLength(value: string): number {
+  if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(value).byteLength;
+  return unescape(encodeURIComponent(value)).length;
 }
 
 function normalizeHistoryDiagnosticPayloadArrayValue(
@@ -413,6 +479,7 @@ export function normalizeHistoryRecordLike(
   const idFactory = typeof options?.idFactory === "function" ? options.idFactory : createHistoryRecordId;
   const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
   const replay = isNonArrayObject(source.replay) ? source.replay : null;
+  const replayString = normalizeHistoryReplayString(source.replay_string, replay);
   const ownerMeta = normalizeHistoryOwnerMetaLike(source);
   const diagnosticsEntries = normalizeHistoryDiagnosticsIndexEntriesLike(
     source.diagnostics_index_entries
@@ -447,12 +514,33 @@ export function normalizeHistoryRecordLike(
         ? source.client_version
         : String(options?.defaultClientVersion || "1.8"),
     replay,
-    replay_string: normalizeHistoryReplayString(source.replay_string, replay),
+    replay_string: replayString,
     owner_type: ownerMeta.owner_type,
     owner_user_id: ownerMeta.owner_user_id,
     owner_nickname: ownerMeta.owner_nickname,
     owner_key: ownerMeta.owner_key,
-    diagnostics_index_entries: diagnosticsEntries
+    diagnostics_index_entries: diagnosticsEntries,
+    client_record_id: normalizeNullableText(source.client_record_id) || id,
+    server_record_id: normalizeNullableText(source.server_record_id),
+    sync_status: normalizeHistorySyncStatus(source.sync_status, replayString, ownerMeta.owner_type),
+    replay_sha256: normalizeNullableText(source.replay_sha256),
+    replay_byte_size: normalizeNonNegativeInteger(source.replay_byte_size, utf8ByteLength(replayString)),
+    upload_task_id: normalizeNullableText(source.upload_task_id),
+    uploaded_chunk_count: normalizeNonNegativeInteger(source.uploaded_chunk_count, 0),
+    upload_attempts: normalizeNonNegativeInteger(source.upload_attempts, 0),
+    next_retry_at: normalizeNullableText(source.next_retry_at),
+    last_upload_attempt_at: normalizeNullableText(source.last_upload_attempt_at),
+    last_error_code: normalizeNullableText(source.last_error_code),
+    last_error_message: normalizeNullableText(source.last_error_message),
+    record_schema_version: normalizePositiveInteger(source.record_schema_version, 1),
+    mode_bucket: normalizeNullableText(source.mode_bucket),
+    ranked_session_token: normalizeNullableText(source.ranked_session_token),
+    initial_seed: normalizeNullableInteger(source.initial_seed),
+    seed: normalizeNullableInteger(source.seed),
+    ranked_verification: isNonArrayObject(source.ranked_verification) ? source.ranked_verification : null,
+    min_steps_2048: normalizeNullableInteger(source.min_steps_2048),
+    min_steps_4096: normalizeNullableInteger(source.min_steps_4096),
+    min_steps_8192: normalizeNullableInteger(source.min_steps_8192)
   };
 }
 

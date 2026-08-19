@@ -976,7 +976,7 @@ function parseReplayImportEnvelope(manager: ManagerLike, text: string): Record<s
   return parseStructuredReplayJson(manager, trimmed);
 }
 
-export function getFinalBoardMatrix(manager: ManagerLike): unknown[][] {
+export function getFinalBoardMatrix(manager: ManagerLike): number[][] {
   const grid = toRecord(manager.grid);
   const width = Math.max(0, Math.floor(Number(manager.width || grid.size || 4)));
   const height = Math.max(0, Math.floor(Number(manager.height || grid.size || width || 4)));
@@ -1672,7 +1672,7 @@ function resolveLocalHistorySave(manager: ManagerLike): { scope: unknown; method
   const resolver = asFunction<(namespace: string, methodName: string) => unknown>(
     manager.resolveWindowNamespaceMethod
   );
-  const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", "saveRecord") : null);
+  const resolved = toRecord(resolver ? resolver.call(manager, "LocalHistoryStore", "saveRecordDurable") : null);
   const method = asFunction<(record: unknown) => unknown>(resolved.method);
   return method ? { scope: resolved.scope || null, method } : null;
 }
@@ -1693,23 +1693,65 @@ function writeAutoSubmitSkippedResult(manager: ManagerLike, reason: string): voi
   });
 }
 
-export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
-  if (!manager || manager.sessionSubmitDone) return;
+function notifyAutoSubmitPersistenceFailure(manager: ManagerLike): void {
+  if (!manager || manager.localHistorySaveFailureNotified === true) return;
+  const getWindowLike = asFunction<() => unknown>(manager.getWindowLike);
+  const windowLike = toRecord(
+    getWindowLike
+      ? getWindowLike.call(manager)
+      : typeof window === "undefined"
+        ? null
+        : window
+  );
+  const alertLike = asFunction<(message: string) => void>(windowLike.alert);
+  if (!alertLike) return;
+  manager.localHistorySaveFailureNotified = true;
+  alertLike.call(
+    windowLike,
+    "无法安全保存本局记录。请不要刷新或直接开始新游戏；先导出回放文件，释放浏览器存储空间后再重试。\n\n" +
+      "This game could not be saved safely. Export the replay before refreshing or starting a new game."
+  );
+}
+
+export function tryAutoSubmitOnGameOver(manager: ManagerLike): Promise<unknown> | null {
+  if (!manager || manager.sessionSubmitDone) {
+    return manager && manager.sessionSubmitPromise instanceof Promise
+      ? manager.sessionSubmitPromise
+      : null;
+  }
+  if (manager.sessionSubmitPromise instanceof Promise) return manager.sessionSubmitPromise;
   if (manager.replayMode) {
     writeAutoSubmitSkippedResult(manager, "replay_mode");
-    return;
+    return null;
   }
   if (!isTerminalSessionForPersistence(manager)) {
     writeAutoSubmitSkippedResult(manager, "not_game_over");
-    return;
+    return null;
   }
   const endedAt = new Date().toISOString();
   const replayString = serializeReplay(manager);
   const finalBoard = getFinalBoardMatrix(manager);
   const record = {
+    record_schema_version: 1,
+    mode: manager.mode,
     mode_key: manager.modeKey || manager.mode,
+    mode_bucket: manager.rankedBucket || null,
+    board_width: manager.width,
+    board_height: manager.height,
+    ruleset: manager.ruleset,
+    undo_enabled: !!toRecord(manager.modeConfig).undo_enabled,
+    ranked_bucket: manager.rankedBucket,
+    mode_family: manager.modeFamily,
+    rank_policy: manager.rankPolicy,
+    special_rules_snapshot: cloneJsonSafe(manager.specialRules) || {},
+    ranked_session_token: manager.rankedSessionToken || null,
+    challenge_id: manager.challengeId || null,
+    initial_seed: Number.isFinite(Number(manager.initialSeed)) ? Math.floor(Number(manager.initialSeed)) : null,
+    seed: Number.isFinite(Number(manager.initialSeed)) ? Math.floor(Number(manager.initialSeed)) : null,
+    client_record_id: String(manager.clientRecordId || "").trim() || null,
     score: manager.score,
     board_sum: calculateHistoryBoardSum(finalBoard),
+    best_tile: Math.max(0, ...finalBoard.flat()),
     final_board: finalBoard,
     duration_ms: manager.getDurationMs ? asFunction<() => unknown>(manager.getDurationMs)?.call(manager) : 0,
     ended_at: endedAt,
@@ -1724,18 +1766,40 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): void {
       ok: false,
       reason: "local_history_store_missing"
     });
-    return;
+    notifyAutoSubmitPersistenceFailure(manager);
+    return null;
   }
-  const saved = toRecord(saveRecord.method.call(saveRecord.scope, record));
-  manager.sessionSubmitDone = true;
-  writeAutoSubmitResultRecord(manager, {
-    at: endedAt,
-    ok: true,
-    local_saved: true,
-    record_id: saved.id || null,
-    mode_key: record.mode_key,
-    score: record.score
-  });
+  const pending = Promise.resolve()
+    .then(() => saveRecord.method.call(saveRecord.scope, record))
+    .then((savedValue) => {
+      const saved = toRecord(savedValue);
+      manager.sessionSubmitDone = true;
+      manager.localHistorySaveFailureNotified = false;
+      manager.localHistoryRecordId = saved.id || null;
+      writeAutoSubmitResultRecord(manager, {
+        at: endedAt,
+        ok: true,
+        local_saved: true,
+        record_id: saved.id || null,
+        mode_key: record.mode_key,
+        score: record.score
+      });
+      return savedValue;
+    })
+    .catch((error) => {
+      manager.sessionSubmitPromise = null;
+      writeAutoSubmitResultRecord(manager, {
+        at: endedAt,
+        ok: false,
+        mode_key: record.mode_key,
+        score: record.score,
+        error: error instanceof Error ? error.message : "local_save_failed"
+      });
+      notifyAutoSubmitPersistenceFailure(manager);
+      throw error;
+    });
+  manager.sessionSubmitPromise = pending;
+  return pending;
 }
 
 export interface GameManagerReplayHelpersRuntime {

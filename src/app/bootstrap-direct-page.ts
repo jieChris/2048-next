@@ -4,6 +4,7 @@ import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { getPageManifest } from "../entries/runtime-manifest";
 import { bindStandaloneInternalNavigation } from "./standalone-navigation";
+import { restoreAuthSession } from "../services/auth-session";
 
 export interface DirectPageBootstrapResult {
   pageId: string;
@@ -62,6 +63,7 @@ export async function bootstrapDirectPage(
   for (const hook of hooks) {
     await hook.run();
   }
+  await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
 
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-page-entry-architecture", "manifest-bootstrap");

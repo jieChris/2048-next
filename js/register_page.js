@@ -12,6 +12,7 @@
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
+  var sharedSetAuthSession = _u.setAuthSession || function () {};
   var callFetch = _u.callFetch || function (url, requestInit) {
     if (!global || typeof global["fetch"] !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
@@ -441,7 +442,8 @@
       var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
       var requestInit = {
         method: method,
-        headers: headers
+        headers: headers,
+        credentials: "include"
       };
       var timeoutHandle = null;
       var controller = null;
@@ -665,6 +667,7 @@
       });
 
       if (result && result.success) {
+        if (result.token) sharedSetAuthSession(result);
         setTip(t("registerOk"), "ok");
         global.setTimeout(function () {
           global.location.href = "account_settings.html?registered=1";

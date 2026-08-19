@@ -108,6 +108,12 @@
   }
 
   function getAuthToken() {
+    var runtime = global.AuthSessionRuntime;
+    if (runtime && typeof runtime.getAuthToken === "function") {
+      try {
+        return toText(runtime.getAuthToken()).trim();
+      } catch (_errRuntime) {}
+    }
     try {
       var storage = getStorage();
       return storage ? toText(storage.getItem(AUTH_TOKEN_KEY)).trim() : "";

@@ -22,7 +22,7 @@
     var n = Number(fallback);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_TIMEOUT_MS;
   };
-  var callFetch = _u.callFetch || function (url, init) {
+  var callFetch = _u.fetchWithAuth || _u.callFetch || function (url, init) {
     var fetchFn = global && global["fetch"];
     if (typeof fetchFn !== "function") {
       return Promise.reject(new Error("fetch_unavailable"));
@@ -325,7 +325,9 @@
   }
 
   function resolveToken() {
-    return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
+    return typeof _u.getAuthToken === "function"
+      ? toText(_u.getAuthToken()).trim()
+      : toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
   }
 
   function resolveUserIdText() {
@@ -333,6 +335,10 @@
   }
 
   function clearRelayAuthStorage() {
+    if (typeof _u.clearAuthSession === "function") {
+      _u.clearAuthSession();
+      return;
+    }
     safeRemoveStorage(STORAGE_TOKEN_KEY);
     safeRemoveStorage(STORAGE_USER_ID_KEY);
     safeRemoveStorage("2048_auth_nickname_v1");
@@ -1398,12 +1404,17 @@
           throw lastErr;
         }
         var code = parseErrorCode(payload);
-        if (
-          response.status === 401 ||
-          response.status === 403 ||
-          code === "UNAUTHORIZED" ||
-          code === "INVALID_TOKEN"
-        ) {
+        if ([
+          "ACCOUNT_DELETED",
+          "ACCOUNT_INACTIVE",
+          "ACCOUNT_PENDING_DELETION",
+          "INVALID_TOKEN",
+          "SESSION_REVOKED",
+          "TOKEN_EXPIRED",
+          "TOKEN_REDEEMED",
+          "TOKEN_REVOKED",
+          "UNAUTHORIZED"
+        ].indexOf(code) >= 0) {
           clearRelayAuthStorage();
           setLoginPill();
           setMyCasePill();

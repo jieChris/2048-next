@@ -944,7 +944,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(manager.actuate).not.toHaveBeenCalled();
   });
 
-  it("skips non-terminal win prompts but persists capped win-stop sessions", () => {
+  it("skips non-terminal win prompts but persists capped win-stop sessions", async () => {
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
     const baseManager = {
@@ -959,7 +959,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       grid: createGrid(),
       getDurationMs: vi.fn(() => 1200),
       resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordDurable") return null;
         return {
           scope: {},
           method(record: Record<string, unknown>) {
@@ -986,7 +986,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       sessionSubmitDone: false
     };
 
-    tryAutoSubmitOnGameOver(cappedManager);
+    await tryAutoSubmitOnGameOver(cappedManager);
 
     expect(savedRecords).toHaveLength(1);
     expect(savedRecords[0]).toMatchObject({
@@ -997,7 +997,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
     expect(cappedManager.sessionSubmitDone).toBe(true);
   });
 
-  it("auto-submits terminal local history records with live replay evidence", () => {
+  it("auto-submits terminal local history records with live replay evidence", async () => {
     const savedRecords: Record<string, unknown>[] = [];
     const resultWrites: Record<string, unknown>[] = [];
     const manager = {
@@ -1012,7 +1012,7 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       grid: createGrid(),
       getDurationMs: vi.fn(() => 1200),
       resolveWindowNamespaceMethod: vi.fn((namespace: string, methodName: string) => {
-        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecord") return null;
+        if (namespace !== "LocalHistoryStore" || methodName !== "saveRecordDurable") return null;
         return {
           scope: {},
           method(record: Record<string, unknown>) {
@@ -1026,12 +1026,13 @@ describe("bootstrap game-manager replay helpers runtime", () => {
       })
     };
 
-    expect(() => tryAutoSubmitOnGameOver(manager)).not.toThrow();
+    await tryAutoSubmitOnGameOver(manager);
     expect(savedRecords).toHaveLength(1);
     expect(savedRecords[0]).toMatchObject({
       mode_key: "standard_4x4_pow2_no_undo",
       score: 4096,
-      board_sum: 6
+      board_sum: 6,
+      best_tile: 4
     });
     expect(savedRecords[0].replay_string).not.toBe("REPLAY_v1RPL_B64_rescue");
     expect(String(savedRecords[0].replay_string)).toMatch(/^REPLAY_v1RPL_B64_/);

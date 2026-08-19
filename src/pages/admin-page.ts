@@ -1,4 +1,12 @@
-import { createAdminApi, adminQuery, type AdminApiResponse, type AdminRecord } from "../services/admin";
+import {
+  createAdminApi,
+  adminQuery,
+  type AdminApiResponse,
+  type AdminDeviceSession,
+  type AdminRecord,
+  type AdminRecordDeliveryHealth,
+  type AdminReconciliationSnapshot
+} from "../services/admin";
 import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
 
 type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "governance" | "audit" | "tools";
@@ -40,6 +48,19 @@ const copy: Record<Language, Record<string, string>> = {
     recentUsers: "最近注册用户",
     recentAudit: "最近管理员操作",
     recentEvents: "近期异常事件",
+    serverObservedDelivery: "服务器已观测投递",
+    serverObservedLimitation: "仅统计已经到达服务器的请求；无法统计从未到达服务器的浏览器本地记录。",
+    observedRequests: "已观测请求",
+    acceptedUploads: "接收成功",
+    idempotentDuplicates: "幂等重复命中",
+    authFailures: "认证失败",
+    payloadTooLarge: "请求体超限",
+    rateLimited: "请求限流",
+    serverErrors: "服务端错误",
+    replayInvalid: "回放验证失败",
+    uploadTasks: "分块任务",
+    clientVersion: "客户端版本",
+    errorCode: "错误代码",
     user: "用户",
     email: "邮箱",
     role: "角色",
@@ -76,6 +97,12 @@ const copy: Record<Language, Record<string, string>> = {
     earnedAchievements: "已获成就",
     rescueHistory: "恢复单历史",
     activity: "活动记录",
+    deviceSessions: "设备会话",
+    deviceLabel: "设备",
+    lastUsed: "最近使用",
+    revokeDeviceSession: "撤销此设备",
+    revoked: "已撤销",
+    sessionRevokeHint: "撤销后该设备将无法继续恢复登录；浏览器本地成绩不会被删除。",
     editProfile: "修正资料",
     changeStatus: "启停账户",
     changeRole: "调整角色",
@@ -128,6 +155,12 @@ const copy: Record<Language, Record<string, string>> = {
     toDate: "结束日期",
     finalBoard: "最终盘面",
     verification: "校验摘要",
+    deliveryDiagnostics: "投递与验证诊断",
+    uploadStatus: "分块状态",
+    targetSpeedEligibility: "目标速度资格",
+    eligible: "有效",
+    ineligible: "无资格",
+    unknown: "未知",
     replay: "查看回放",
     achievementCatalog: "成就目录",
     newAchievement: "新建成就",
@@ -173,6 +206,11 @@ const copy: Record<Language, Record<string, string>> = {
     tableBrowser: "表浏览",
     readonlySql: "只读 SQL",
     readonlyHint: "仅允许单条 SELECT；只读事务、5 秒超时、最多返回受控数据量。",
+    reconciliation: "固定只读发布对账",
+    reconciliationHint: "固定查询当前记录、玩家、各模式榜单、Top 10 与目标速度资格；不会修改或隐藏任何成绩。",
+    totalRecords: "总记录",
+    activeRecords: "有效记录",
+    players: "玩家数",
     table: "数据表",
     limit: "条数",
     load: "加载",
@@ -219,6 +257,19 @@ const copy: Record<Language, Record<string, string>> = {
     recentUsers: "Recent Users",
     recentAudit: "Recent Admin Actions",
     recentEvents: "Recent Incidents",
+    serverObservedDelivery: "Server-observed Delivery",
+    serverObservedLimitation: "Only requests that reached the server are counted. Browser-local records that were never sent cannot be measured here.",
+    observedRequests: "Observed Requests",
+    acceptedUploads: "Accepted",
+    idempotentDuplicates: "Idempotent Duplicates",
+    authFailures: "Authentication Failures",
+    payloadTooLarge: "Payload Too Large",
+    rateLimited: "Rate Limited",
+    serverErrors: "Server Errors",
+    replayInvalid: "Replay Validation Failed",
+    uploadTasks: "Chunk Upload Tasks",
+    clientVersion: "Client Version",
+    errorCode: "Error Code",
     user: "User",
     email: "Email",
     role: "Role",
@@ -255,6 +306,12 @@ const copy: Record<Language, Record<string, string>> = {
     earnedAchievements: "Earned Achievements",
     rescueHistory: "Rescue History",
     activity: "Activity",
+    deviceSessions: "Device Sessions",
+    deviceLabel: "Device",
+    lastUsed: "Last Used",
+    revokeDeviceSession: "Revoke Device",
+    revoked: "Revoked",
+    sessionRevokeHint: "This device will no longer restore login. Browser-local game records are not deleted.",
     editProfile: "Edit Profile",
     changeStatus: "Account Status",
     changeRole: "Change Role",
@@ -307,6 +364,12 @@ const copy: Record<Language, Record<string, string>> = {
     toDate: "To",
     finalBoard: "Final Board",
     verification: "Verification",
+    deliveryDiagnostics: "Delivery & Verification Diagnostics",
+    uploadStatus: "Chunk Status",
+    targetSpeedEligibility: "Target Speed Eligibility",
+    eligible: "Eligible",
+    ineligible: "Ineligible",
+    unknown: "Unknown",
     replay: "Replay",
     achievementCatalog: "Achievement Catalog",
     newAchievement: "New Achievement",
@@ -352,6 +415,11 @@ const copy: Record<Language, Record<string, string>> = {
     tableBrowser: "Table Browser",
     readonlySql: "Read-only SQL",
     readonlyHint: "One SELECT only, read-only transaction, five-second timeout, and bounded results.",
+    reconciliation: "Fixed Read-only Release Reconciliation",
+    reconciliationHint: "Fixed queries cover records, players, leaderboard modes, Top 10, and target speed eligibility without changing or hiding any result.",
+    totalRecords: "Total Records",
+    activeRecords: "Active Records",
+    players: "Players",
     table: "Table",
     limit: "Limit",
     load: "Load",
@@ -589,8 +657,21 @@ function markActiveNavigation(): void {
 }
 
 async function renderDashboard(): Promise<void> {
-  const response = await request<AdminRecord>("/admin/dashboard");
+  const url = currentUrl();
+  const deliveryFilters = {
+    from: url.searchParams.get("delivery_from") || "",
+    to: url.searchParams.get("delivery_to") || "",
+    mode_key: url.searchParams.get("delivery_mode_key") || "",
+    client_version: url.searchParams.get("delivery_client_version") || "",
+    code: url.searchParams.get("delivery_code") || ""
+  };
+  const [response, deliveryResponse] = await Promise.all([
+    request<AdminRecord>("/admin/dashboard"),
+    request<AdminRecordDeliveryHealth>(adminQuery("/admin/record-delivery-health", deliveryFilters))
+  ]);
   const data = record(response.data);
+  const delivery = record(deliveryResponse.data);
+  const deliverySummary = record(delivery.summary);
   const metrics = record(data.metrics);
   const metricCards: Array<[string, unknown, string]> = [
     ["totalUsers", metrics.total_users, "2"], ["activeUsers", metrics.active_users, "4"], ["newUsers7d", metrics.new_users_7d, "8"],
@@ -599,10 +680,26 @@ async function renderDashboard(): Promise<void> {
   const recentUsers = rows(data.recent_users);
   const recentAudit = rows(data.recent_audit);
   const recentEvents = rows(data.recent_events);
+  const deliveryMetrics: Array<[string, unknown]> = [
+    ["observedRequests", deliverySummary.observed],
+    ["acceptedUploads", deliverySummary.accepted],
+    ["idempotentDuplicates", deliverySummary.duplicate],
+    ["authFailures", deliverySummary.authentication_failed],
+    ["payloadTooLarge", deliverySummary.payload_too_large],
+    ["rateLimited", deliverySummary.rate_limited],
+    ["serverErrors", deliverySummary.server_error],
+    ["replayInvalid", deliverySummary.replay_invalid]
+  ];
+  const uploadTasks = rows(delivery.upload_tasks);
   byId("admin-content").innerHTML = pageHeader(t("dashboard"), t("environment"), `<button class="btn btn-primary" data-refresh>${escapeHtml(t("refresh"))}</button>`) +
     `<div class="admin-metric-grid">${metricCards.map(([label, value, tile]) => `<button class="admin-metric tile-${tile}" data-metric="${label}"><span>${escapeHtml(t(label))}</span><strong>${number(value).toLocaleString()}</strong><i>${tile}</i></button>`).join("")}</div>` +
+    card(t("serverObservedDelivery"), `<div class="alert alert-info">${escapeHtml(t("serverObservedLimitation"))}</div><form class="admin-record-filter mb-3" data-delivery-filter><label>${escapeHtml(t("fromDate"))}<input class="form-control" type="date" name="delivery_from" value="${escapeHtml(deliveryFilters.from)}"></label><label>${escapeHtml(t("toDate"))}<input class="form-control" type="date" name="delivery_to" value="${escapeHtml(deliveryFilters.to)}"></label><label>${escapeHtml(t("modeKey"))}<input class="form-control" name="delivery_mode_key" value="${escapeHtml(deliveryFilters.mode_key)}"></label><label>${escapeHtml(t("clientVersion"))}<input class="form-control" name="delivery_client_version" value="${escapeHtml(deliveryFilters.client_version)}"></label><label>${escapeHtml(t("errorCode"))}<input class="form-control" name="delivery_code" value="${escapeHtml(deliveryFilters.code)}"></label><button class="btn btn-primary" type="submit">${escapeHtml(t("search"))}</button></form><div class="admin-stat-list">${deliveryMetrics.map(([label, value]) => `<div><span>${escapeHtml(t(label))}</span><strong>${number(value).toLocaleString()}</strong></div>`).join("")}</div>${uploadTasks.length ? `<h3 class="mt-3">${escapeHtml(t("uploadTasks"))}</h3>${table([t("status"), t("recordCount")], uploadTasks.map((item) => `<tr><td>${badge(statusLabel(item.status), item.status === "failed" ? "red" : "azure")}</td><td>${number(item.total).toLocaleString()}</td></tr>`).join(""))}` : ""}`, "admin-wide-card") +
     `<div class="admin-dashboard-grid">${card(t("recentUsers"), table([t("user"), t("role"), t("createdAt")], recentUsers.map((user) => `<tr><td><button class="admin-link" data-user="${escapeHtml(user.id)}">${escapeHtml(user.nickname || user.display_name || user.email)}</button><small>${escapeHtml(user.email)}</small></td><td>${badge(roleLabel(user.role), "azure")}</td><td>${escapeHtml(formatDate(user.created_at))}</td></tr>`).join("")))}${card(t("recentAudit"), table([t("actor"), t("action"), t("createdAt")], recentAudit.map((item) => `<tr><td>${escapeHtml(item.actor_email || `#${item.actor_user_id}`)}</td><td><code>${escapeHtml(item.action)}</code></td><td>${escapeHtml(formatDate(item.created_at))}</td></tr>`).join("")))}${card(t("recentEvents"), table([t("severity"), t("eventType"), t("createdAt")], recentEvents.map((item) => `<tr><td>${badge(text(item.severity), item.severity === "critical" || item.severity === "error" ? "red" : "yellow")}</td><td><code>${escapeHtml(item.event_type)}</code></td><td>${escapeHtml(formatDate(item.created_at))}</td></tr>`).join("")), "admin-dashboard-events")}</div>`;
   byId("admin-content").querySelector("[data-refresh]")?.addEventListener("click", () => void renderCurrentView());
+  byId("admin-content").querySelector<HTMLFormElement>("[data-delivery-filter]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    navigate("dashboard", Object.fromEntries(new FormData(event.currentTarget as HTMLFormElement).entries()));
+  });
   byId("admin-content").querySelectorAll<HTMLElement>("[data-user]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: node.dataset.user })));
   byId("admin-content").querySelectorAll<HTMLElement>("[data-metric]").forEach((node) => node.addEventListener("click", () => {
     const metric = node.dataset.metric;
@@ -665,6 +762,14 @@ async function renderUserDetail(userId: string): Promise<void> {
   if (section === "records") {
     const recordsResponse = await request<AdminRecord[]>(adminQuery("/admin/records", { user_id: userId, limit: 50 }));
     sectionBody = recordsTable(rows(recordsResponse.data));
+  } else if (section === "sessions") {
+    const sessionsResponse = await request<AdminDeviceSession[]>(`/admin/users/${encodeURIComponent(userId)}/device-sessions`);
+    const sessions = Array.isArray(sessionsResponse.data) ? sessionsResponse.data : [];
+    const canRevoke = number(user.id) !== 0 && number(user.id) !== number(adminIdentity.user_id);
+    sectionBody = card(t("deviceSessions"), table(
+      [t("deviceLabel"), t("status"), t("createdAt"), t("lastUsed"), t("actions")],
+      sessions.map((session) => `<tr><td><strong>${escapeHtml(session.device_label || "—")}</strong><small><code>${escapeHtml(session.id)}</code></small></td><td>${badge(statusLabel(session.status), session.status === "active" ? "green" : "secondary")}</td><td>${escapeHtml(formatDate(session.created_at))}</td><td>${escapeHtml(formatDate(session.last_used_at))}</td><td>${canRevoke && session.status === "active" ? `<button class="btn btn-sm btn-outline-danger" data-revoke-device-session="${escapeHtml(session.id)}">${escapeHtml(t("revokeDeviceSession"))}</button>` : "—"}</td></tr>`).join("")
+    ));
   } else if (section === "achievements") {
     sectionBody = `<div class="admin-two-column">${card(t("earnedAchievements"), achievements.length ? achievements.map((item) => `<div class="admin-list-row"><strong>${escapeHtml(item.name || item.achievement_id)}</strong><span>${escapeHtml(formatDate(item.earned_at))}</span></div>`).join("") : emptyState())}${card(t("rescueHistory"), rescues.length ? rescues.map((item) => `<div class="admin-list-row"><strong>${escapeHtml(item.mode_key)}</strong>${badge(statusLabel(item.rescue_status), "orange")}<span>${escapeHtml(formatDate(item.created_at))}</span></div>`).join("") : emptyState())}</div>`;
   } else if (section === "activity") {
@@ -676,7 +781,7 @@ async function renderUserDetail(userId: string): Promise<void> {
   const protectedUser = number(user.id) === 0 || text(user.role) === "super_admin";
   byId("admin-content").innerHTML = pageHeader(text(user.nickname || user.display_name || user.email), `${text(user.email)} · #${text(user.id)}`, `<button class="btn" data-edit-profile>${escapeHtml(t("editProfile"))}</button><button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button><div class="dropdown"><button class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" ${isSelf || number(user.id) === 0 ? "disabled" : ""}>${escapeHtml(t("actions"))}</button><div class="dropdown-menu dropdown-menu-end"><button class="dropdown-item" data-status ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeStatus"))}</button><button class="dropdown-item" data-role ${protectedUser ? "disabled" : ""}>${escapeHtml(t("changeRole"))}</button><button class="dropdown-item" data-revoke-sessions>${escapeHtml(t("revokeSessions"))}</button><button class="dropdown-item" data-password-reset>${escapeHtml(t("passwordReset"))}</button></div></div>`) +
     `<section class="card admin-user-hero"><div class="card-body"><span class="avatar avatar-xl">${escapeHtml(text(user.nickname || user.email).slice(0, 1).toUpperCase())}</span><div><h2>${escapeHtml(user.nickname || user.display_name || user.email)}</h2><p>${escapeHtml(user.email)} · #${escapeHtml(user.id)}</p><div class="d-flex gap-2">${badge(roleLabel(user.role), user.role === "super_admin" ? "purple" : "azure")}${badge(user.is_active === false ? t("inactive") : t("active"), user.is_active === false ? "red" : "green")}</div></div></div></section>` +
-    `<div class="admin-tabs" role="tablist">${[["overview", t("overview")], ["records", t("records")], ["achievements", `${t("achievements")} / ${t("rescue")}`], ["activity", t("activity")]].map(([key, label]) => `<button class="${section === key ? "is-active" : ""}" data-section="${key}">${escapeHtml(label)}</button>`).join("")}</div><div class="admin-section-body">${sectionBody}</div>`;
+    `<div class="admin-tabs" role="tablist">${[["overview", t("overview")], ["records", t("records")], ["sessions", t("deviceSessions")], ["achievements", `${t("achievements")} / ${t("rescue")}`], ["activity", t("activity")]].map(([key, label]) => `<button class="${section === key ? "is-active" : ""}" data-section="${key}">${escapeHtml(label)}</button>`).join("")}</div><div class="admin-section-body">${sectionBody}</div>`;
   byId("admin-content").querySelectorAll<HTMLElement>("[data-section]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: userId, section: node.dataset.section })));
   byId("admin-content").querySelector("[data-edit-profile]")?.addEventListener("click", () => editProfile(user));
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(userId));
@@ -684,6 +789,7 @@ async function renderUserDetail(userId: string): Promise<void> {
   byId("admin-content").querySelector("[data-role]")?.addEventListener("click", () => changeUserRole(user));
   byId("admin-content").querySelector("[data-revoke-sessions]")?.addEventListener("click", () => revokeUserSessions(user));
   byId("admin-content").querySelector("[data-password-reset]")?.addEventListener("click", () => sendPasswordReset(user));
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-revoke-device-session]").forEach((node) => node.addEventListener("click", () => revokeDeviceSession(user, node.dataset.revokeDeviceSession || "")));
   bindRecordActions();
 }
 
@@ -710,23 +816,50 @@ function changeUserRole(user: AdminRecord): void {
 }
 
 function revokeUserSessions(user: AdminRecord): void {
-  openDialog({ title: t("revokeSessions"), body: `<div class="alert alert-warning">${escapeHtml(t("revokeSessionsHint"))}</div><p><strong>${escapeHtml(user.email)}</strong></p>`, danger: true, confirmLabel: t("dangerousConfirm"), onConfirm: async () => { await request(`/admin/users/${user.id}/revoke-sessions`, { method: "POST" }); toast(t("success")); } });
+  openDialog({ title: t("revokeSessions"), body: `<div class="alert alert-warning">${escapeHtml(t("revokeSessionsHint"))}</div><p><strong>${escapeHtml(user.email)}</strong></p><label class="form-label">${escapeHtml(t("reason"))}</label><textarea id="dialog-session-reason" class="form-control" rows="3" required></textarea>`, danger: true, confirmLabel: t("dangerousConfirm"), onConfirm: async () => { const reason = dialogValue("dialog-session-reason"); if (!reason) { toast(t("reasonRequired"), "error"); return false; } await request(`/admin/users/${user.id}/revoke-sessions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }); toast(t("success")); } });
+}
+
+function revokeDeviceSession(user: AdminRecord, sessionId: string): void {
+  openDialog({ title: t("revokeDeviceSession"), body: `<div class="alert alert-warning">${escapeHtml(t("sessionRevokeHint"))}</div><p><strong>${escapeHtml(user.email)}</strong></p><label class="form-label">${escapeHtml(t("reason"))}</label><textarea id="dialog-device-session-reason" class="form-control" rows="3" required></textarea>`, danger: true, confirmLabel: t("dangerousConfirm"), onConfirm: async () => { const reason = dialogValue("dialog-device-session-reason"); if (!reason) { toast(t("reasonRequired"), "error"); return false; } await request(`/admin/users/${user.id}/device-sessions/${encodeURIComponent(sessionId)}/revoke`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }); toast(t("success")); await renderCurrentView(); } });
 }
 
 function sendPasswordReset(user: AdminRecord): void {
   openDialog({ title: t("passwordReset"), body: `<div class="alert alert-info">${escapeHtml(t("passwordResetHint"))}</div><p><strong>${escapeHtml(user.email)}</strong></p>`, confirmLabel: t("confirm"), onConfirm: async () => { await request(`/admin/users/${user.id}/password-reset`, { method: "POST" }); toast(t("success")); } });
 }
 
+function recordDiagnostics(item: AdminRecord): string {
+  const tileTimes = record(item.tile_times_ms);
+  const exclusions = record(item.speed_metric_exclusions_v1);
+  const targetRows = [2048, 4096, 8192, 16384, 32768].map((target) => {
+    const exclusion = record(exclusions[String(target)]);
+    const state = Object.keys(exclusion).length ? "ineligible" : tileTimes[String(target)] != null ? "eligible" : "unknown";
+    const detail = state === "ineligible" ? text(exclusion.reason || "—") : state === "eligible" ? formatDuration(tileTimes[String(target)]) : "—";
+    return `<tr><td>${target.toLocaleString()}</td><td>${badge(t(state), state === "eligible" ? "green" : state === "ineligible" ? "red" : "secondary")}</td><td><code>${escapeHtml(detail)}</code></td></tr>`;
+  }).join("");
+  const fields: Array<[string, unknown]> = [
+    ["recordId", item.id],
+    ["clientRecordId", item.client_record_id],
+    ["fingerprint", item.replay_fingerprint],
+    ["verification", item.verifier_version],
+    ["clientVersion", item.client_version],
+    ["eventType", item.last_delivery_event],
+    ["errorCode", item.last_delivery_code || item.upload_last_error_code],
+    ["uploadTasks", item.upload_task_id],
+    ["uploadStatus", item.upload_status]
+  ];
+  return `<h3>${escapeHtml(t("deliveryDiagnostics"))}</h3><dl class="admin-definition">${fields.map(([label, value]) => `<dt>${escapeHtml(t(label))}</dt><dd><code>${escapeHtml(value || "—")}</code></dd>`).join("")}</dl><h3>${escapeHtml(t("targetSpeedEligibility"))}</h3>${table([t("bestTile"), t("status"), t("details")], targetRows)}<details class="mt-3"><summary>${escapeHtml(t("verification"))}</summary><pre class="admin-json">${escapeHtml(prettyJson(item.verification_summary))}</pre></details>`;
+}
+
 function recordsTable(list: AdminRecord[]): string {
-  return table([t("recordId"), t("user"), t("mode"), t("score"), t("bestTile"), t("duration"), t("source"), t("status"), t("endedAt"), t("actions")], list.map((item) => `<tr><td><code>${escapeHtml(item.id)}</code>${item.is_leaderboard_best ? `<small>${escapeHtml(t("leaderboardBest"))}</small>` : ""}</td><td><button class="admin-link" data-record-user="${escapeHtml(item.user_id)}">${escapeHtml(item.user_name || `#${item.user_id}`)}</button><small>${escapeHtml(item.email)}</small></td><td><code>${escapeHtml(item.mode_key)}</code></td><td>${number(item.score).toLocaleString()}</td><td>${number(item.best_tile).toLocaleString()}</td><td>${escapeHtml(formatDuration(item.duration_ms))}</td><td>${item.source === "admin" ? badge(t("adminImport"), "orange") : escapeHtml(item.source)}</td><td>${badge(statusLabel(item.status), item.status === "hidden" ? "red" : "green")}</td><td>${escapeHtml(formatDate(item.ended_at))}</td><td><div class="btn-list flex-nowrap"><button class="btn btn-sm" data-record-details="${escapeHtml(item.id)}">${escapeHtml(t("details"))}</button>${item.status === "hidden" ? `<button class="btn btn-sm btn-success" data-record-restore="${escapeHtml(item.id)}">${escapeHtml(t("restoreRecord"))}</button>` : `<button class="btn btn-sm btn-outline-danger" data-record-hide="${escapeHtml(item.id)}">${escapeHtml(t("hideRecord"))}</button>`}<a class="btn btn-sm" href="/api/records/${encodeURIComponent(text(item.id))}/replay" target="_blank" rel="noopener">${escapeHtml(t("replay"))}</a></div><template data-record-json="${escapeHtml(item.id)}">${escapeHtml(prettyJson(item))}</template></td></tr>`).join(""));
+  return table([t("recordId"), t("clientRecordId"), t("user"), t("mode"), t("score"), t("bestTile"), t("duration"), t("uploadStatus"), t("status"), t("endedAt"), t("actions")], list.map((item) => `<tr><td><code>${escapeHtml(item.id)}</code>${item.is_leaderboard_best ? `<small>${escapeHtml(t("leaderboardBest"))}</small>` : ""}</td><td><code>${escapeHtml(item.client_record_id || "—")}</code></td><td><button class="admin-link" data-record-user="${escapeHtml(item.user_id)}">${escapeHtml(item.user_name || `#${item.user_id}`)}</button><small>${escapeHtml(item.email)}</small></td><td><code>${escapeHtml(item.mode_key)}</code></td><td>${number(item.score).toLocaleString()}</td><td>${number(item.best_tile).toLocaleString()}</td><td>${escapeHtml(formatDuration(item.duration_ms))}</td><td>${item.upload_status ? badge(statusLabel(item.upload_status), item.upload_status === "failed" ? "red" : "azure") : "—"}</td><td>${badge(statusLabel(item.status), item.status === "hidden" ? "red" : "green")}</td><td>${escapeHtml(formatDate(item.ended_at))}</td><td><div class="btn-list flex-nowrap"><button class="btn btn-sm" data-record-details="${escapeHtml(item.id)}">${escapeHtml(t("details"))}</button>${item.status === "hidden" ? `<button class="btn btn-sm btn-success" data-record-restore="${escapeHtml(item.id)}">${escapeHtml(t("restoreRecord"))}</button>` : `<button class="btn btn-sm btn-outline-danger" data-record-hide="${escapeHtml(item.id)}">${escapeHtml(t("hideRecord"))}</button>`}<a class="btn btn-sm" href="/api/records/${encodeURIComponent(text(item.id))}/replay" target="_blank" rel="noopener">${escapeHtml(t("replay"))}</a></div><template data-record-json="${escapeHtml(item.id)}">${recordDiagnostics(item)}</template></td></tr>`).join(""));
 }
 
 async function renderRecords(): Promise<void> {
   const url = currentUrl();
-  const params = { user_id: url.searchParams.get("user_id") || "", mode_key: url.searchParams.get("mode_key") || "", status: url.searchParams.get("status") || "", record_id: url.searchParams.get("record_id") || "", from: url.searchParams.get("from") || "", to: url.searchParams.get("to") || "", page: url.searchParams.get("page") || "1", limit: "50" };
+  const params = { user_id: url.searchParams.get("user_id") || "", mode_key: url.searchParams.get("mode_key") || "", status: url.searchParams.get("status") || "", record_id: url.searchParams.get("record_id") || "", client_record_id: url.searchParams.get("client_record_id") || "", replay_fingerprint: url.searchParams.get("replay_fingerprint") || "", upload_status: url.searchParams.get("upload_status") || "", last_error_code: url.searchParams.get("last_error_code") || "", from: url.searchParams.get("from") || "", to: url.searchParams.get("to") || "", page: url.searchParams.get("page") || "1", limit: "50" };
   const response = await request<AdminRecord[]>(adminQuery("/admin/records", params));
   latestExport = response.data;
-  byId("admin-content").innerHTML = pageHeader(t("records"), t("officialImportHint"), `<button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) + `<section class="card admin-filter-card"><form class="card-body admin-record-filter" data-record-filter><label>${escapeHtml(t("targetUserId"))}<input class="form-control" name="user_id" value="${escapeHtml(params.user_id)}"></label><label>${escapeHtml(t("modeKey"))}<input class="form-control" name="mode_key" value="${escapeHtml(params.mode_key)}"></label><label>${escapeHtml(t("status"))}<select class="form-select" name="status"><option value="">${escapeHtml(t("allStatuses"))}</option>${["verified", "hidden", "pending", "rejected"].map((value) => `<option value="${value}" ${params.status === value ? "selected" : ""}>${escapeHtml(statusLabel(value))}</option>`).join("")}</select></label><label>${escapeHtml(t("recordId"))}<input class="form-control" name="record_id" value="${escapeHtml(params.record_id)}"></label><label>${escapeHtml(t("fromDate"))}<input class="form-control" type="date" name="from" value="${escapeHtml(params.from)}"></label><label>${escapeHtml(t("toDate"))}<input class="form-control" type="date" name="to" value="${escapeHtml(params.to)}"></label><button class="btn btn-primary" type="submit">${escapeHtml(t("search"))}</button></form></section>${card(t("records"), recordsTable(rows(response.data)))}${pagination("records", response, params)}`;
+  byId("admin-content").innerHTML = pageHeader(t("records"), t("officialImportHint"), `<button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) + `<section class="card admin-filter-card"><form class="card-body admin-record-filter" data-record-filter><label>${escapeHtml(t("targetUserId"))}<input class="form-control" name="user_id" value="${escapeHtml(params.user_id)}"></label><label>${escapeHtml(t("modeKey"))}<input class="form-control" name="mode_key" value="${escapeHtml(params.mode_key)}"></label><label>${escapeHtml(t("status"))}<select class="form-select" name="status"><option value="">${escapeHtml(t("allStatuses"))}</option>${["verified", "hidden", "pending", "rejected"].map((value) => `<option value="${value}" ${params.status === value ? "selected" : ""}>${escapeHtml(statusLabel(value))}</option>`).join("")}</select></label><label>${escapeHtml(t("recordId"))}<input class="form-control" name="record_id" value="${escapeHtml(params.record_id)}"></label><label>${escapeHtml(t("clientRecordId"))}<input class="form-control" name="client_record_id" value="${escapeHtml(params.client_record_id)}"></label><label>${escapeHtml(t("fingerprint"))}<input class="form-control" name="replay_fingerprint" value="${escapeHtml(params.replay_fingerprint)}"></label><label>${escapeHtml(t("uploadStatus"))}<select class="form-select" name="upload_status"><option value="">${escapeHtml(t("allStatuses"))}</option>${["created", "uploading", "completed", "failed", "expired"].map((value) => `<option value="${value}" ${params.upload_status === value ? "selected" : ""}>${escapeHtml(statusLabel(value))}</option>`).join("")}</select></label><label>${escapeHtml(t("errorCode"))}<input class="form-control" name="last_error_code" value="${escapeHtml(params.last_error_code)}"></label><label>${escapeHtml(t("fromDate"))}<input class="form-control" type="date" name="from" value="${escapeHtml(params.from)}"></label><label>${escapeHtml(t("toDate"))}<input class="form-control" type="date" name="to" value="${escapeHtml(params.to)}"></label><button class="btn btn-primary" type="submit">${escapeHtml(t("search"))}</button></form></section>${card(t("records"), recordsTable(rows(response.data)))}${pagination("records", response, params)}`;
   byId("admin-content").querySelector<HTMLFormElement>("[data-record-filter]")?.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(event.currentTarget as HTMLFormElement); navigate("records", Object.fromEntries(data.entries())); });
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog(params.user_id));
   bindRecordActions();
@@ -866,16 +999,25 @@ function auditTabs(active: string): string {
 }
 
 async function renderTools(): Promise<void> {
-  const tablesResponse = await request<string[]>("/admin/tables");
+  const [tablesResponse, reconciliationResponse] = await Promise.all([
+    request<string[]>("/admin/tables"),
+    request<AdminReconciliationSnapshot>("/admin/reconciliation")
+  ]);
   const tableNames = Array.isArray(tablesResponse.data) ? tablesResponse.data.map(text) : [];
+  const reconciliation = record(reconciliationResponse.data);
+  const reconciliationTotals = record(reconciliation.totals);
   const selectedTable = currentUrl().searchParams.get("table") || tableNames[0] || "";
   let tableResult: AdminApiResponse<unknown> | null = null;
   if (selectedTable) tableResult = await request(adminQuery(`/admin/table/${encodeURIComponent(selectedTable)}`, { limit: 50 }));
   latestExport = tableResult?.data || null;
-  byId("admin-content").innerHTML = pageHeader(t("tools"), t("readonlyHint"), `<button class="btn" data-export>${escapeHtml(t("export"))}</button>`) + `<div class="admin-two-column admin-tools-grid">${card(t("tableBrowser"), `<form data-table-form class="admin-inline-filter"><label>${escapeHtml(t("table"))}<select class="form-select" name="table">${tableNames.map((name) => `<option value="${escapeHtml(name)}" ${selectedTable === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-primary">${escapeHtml(t("load"))}</button></form><div class="admin-raw-result">${renderRawRows(tableResult?.data)}</div>`)}${card(t("readonlySql"), `<div class="alert alert-warning">${escapeHtml(t("readonlyHint"))}</div><form data-sql-form><textarea class="form-control admin-sql" name="sql" rows="12" spellcheck="false">SELECT id, email, role, is_active, created_at FROM users ORDER BY id DESC LIMIT 20</textarea><button class="btn btn-primary mt-3" type="submit">${escapeHtml(t("run"))}</button></form><div class="admin-raw-result" data-sql-result></div>`)}</div>`;
+  byId("admin-content").innerHTML = pageHeader(t("tools"), t("readonlyHint"), `<button class="btn" data-export>${escapeHtml(t("export"))}</button>`) + card(t("reconciliation"), `<div class="alert alert-info">${escapeHtml(t("reconciliationHint"))}</div><div class="admin-stat-list"><div><span>${escapeHtml(t("totalRecords"))}</span><strong>${number(reconciliationTotals.total_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("activeRecords"))}</span><strong>${number(reconciliationTotals.active_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("players"))}</span><strong>${number(reconciliationTotals.players).toLocaleString()}</strong></div><div><span>${escapeHtml(t("createdAt"))}</span><strong>${escapeHtml(formatDate(reconciliation.generated_at))}</strong></div></div><details class="mt-3"><summary>${escapeHtml(t("details"))}</summary><pre class="admin-json">${escapeHtml(prettyJson(reconciliation))}</pre></details><button class="btn mt-3" data-export-reconciliation>${escapeHtml(t("export"))}</button>`, "admin-wide-card") + `<div class="admin-two-column admin-tools-grid">${card(t("tableBrowser"), `<form data-table-form class="admin-inline-filter"><label>${escapeHtml(t("table"))}<select class="form-select" name="table">${tableNames.map((name) => `<option value="${escapeHtml(name)}" ${selectedTable === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-primary">${escapeHtml(t("load"))}</button></form><div class="admin-raw-result">${renderRawRows(tableResult?.data)}</div>`)}${card(t("readonlySql"), `<div class="alert alert-warning">${escapeHtml(t("readonlyHint"))}</div><form data-sql-form><textarea class="form-control admin-sql" name="sql" rows="12" spellcheck="false">SELECT id, email, role, is_active, created_at FROM users ORDER BY id DESC LIMIT 20</textarea><button class="btn btn-primary mt-3" type="submit">${escapeHtml(t("run"))}</button></form><div class="admin-raw-result" data-sql-result></div>`)}</div>`;
   byId("admin-content").querySelector<HTMLFormElement>("[data-table-form]")?.addEventListener("submit", (event) => { event.preventDefault(); navigate("tools", { table: new FormData(event.currentTarget as HTMLFormElement).get("table") }); });
   byId("admin-content").querySelector<HTMLFormElement>("[data-sql-form]")?.addEventListener("submit", async (event) => { event.preventDefault(); const sql = text(new FormData(event.currentTarget as HTMLFormElement).get("sql")); const result = await request("/admin/query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sql }) }); latestExport = result.data; const target = byId("admin-content").querySelector<HTMLElement>("[data-sql-result]"); if (target) target.innerHTML = renderRawRows(result.data); });
   byId("admin-content").querySelector("[data-export]")?.addEventListener("click", exportLatest);
+  byId("admin-content").querySelector("[data-export-reconciliation]")?.addEventListener("click", () => {
+    latestExport = reconciliation;
+    exportLatest();
+  });
 }
 
 function renderRawRows(value: unknown): string {

@@ -18,7 +18,14 @@ describe("history-record-normalize", () => {
       replay_string: "replay",
       owner_type: "GUEST",
       owner_user_id: "",
-      owner_nickname: ""
+      owner_nickname: "",
+      client_record_id: "client-abc",
+      server_record_id: "server-abc",
+      sync_status: "retry_wait",
+      upload_attempts: 2,
+      last_upload_attempt_at: "2026-08-19T00:00:00.000Z",
+      last_error_code: "NETWORK_ERROR",
+      last_error_message: "offline"
     };
 
     const result = normalizeHistoryRecordForView(record);
@@ -31,6 +38,15 @@ describe("history-record-normalize", () => {
     expect(result.ended_at).toBe("2024-01-01T00:00:00.000Z");
     expect(result.replay_string).toBe("replay");
     expect(result.owner_type).toBe("guest");
+    expect(result).toMatchObject({
+      client_record_id: "client-abc",
+      server_record_id: "server-abc",
+      sync_status: "retry_wait",
+      upload_attempts: 2,
+      last_upload_attempt_at: "2026-08-19T00:00:00.000Z",
+      last_error_code: "NETWORK_ERROR",
+      last_error_message: "offline"
+    });
   });
 
   it("resolves mode label from catalog when available", () => {

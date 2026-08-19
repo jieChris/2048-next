@@ -1,6 +1,5 @@
-import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
+import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
 import {
-  AUTH_TOKEN_KEY,
   buildApiBaseCandidates,
   createJsonApiClient,
   type JsonRecord
@@ -9,9 +8,8 @@ import {
   fetchBetaAccessStatus,
   shouldBypassBetaGateForLocalDevelopment
 } from "../bootstrap/access-gate";
+import { setAuthSession } from "../services/auth-session";
 
-const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
-const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
 const UI_LANGUAGE_KEY = "ui_language_v1";
 
 type TipState = "ok" | "err" | "busy" | "idle";
@@ -191,14 +189,8 @@ function api() {
 }
 
 function persistAuth(payload: JsonRecord): void {
-  const user = toRecord(payload.user);
   const data = toRecord(payload.data);
-  const token = toText(payload.token || data.token).trim();
-  const userId = toText(payload.userId || payload.user_id || user.id || data.userId || data.user_id).trim();
-  const nickname = toText(payload.nickname || user.nickname || data.nickname || user.email || data.email).trim();
-  writeStorageValue(window.localStorage, AUTH_TOKEN_KEY, token);
-  if (userId) writeStorageValue(window.localStorage, AUTH_USER_ID_KEY, userId);
-  if (nickname) writeStorageValue(window.localStorage, AUTH_NICKNAME_KEY, nickname);
+  setAuthSession({ ...data, ...payload }, { storageLike: window.localStorage });
 }
 
 function authError(payload: JsonRecord, fallback: string): string {

@@ -411,7 +411,18 @@
     return readLocalStorageItem(key);
   }
 
+  function authRuntime() {
+    var utils = global.ApiSharedUtils || {};
+    return {
+      getToken: typeof utils.getAuthToken === "function" ? utils.getAuthToken : null,
+      clear: typeof utils.clearAuthSession === "function" ? utils.clearAuthSession : null,
+      request: typeof utils.fetchWithAuth === "function" ? utils.fetchWithAuth : null
+    };
+  }
+
   function getAuthToken() {
+    var runtime = authRuntime();
+    if (runtime.getToken) return toText(runtime.getToken()).trim();
     return toText(safeGetStorage(STORAGE_TOKEN_KEY)).trim();
   }
 
@@ -538,7 +549,8 @@
       var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
       var requestInit = {
         method: method,
-        headers: headers
+        headers: headers,
+        credentials: "include"
       };
       var timeoutHandle = null;
       var controller = null;
@@ -566,7 +578,10 @@
           }, timeoutMs);
         }
 
-        var response = await callFetch(base + path, requestInit);
+        var runtime = authRuntime();
+        var response = await (opts.auth && runtime.request
+          ? runtime.request(base + path, requestInit)
+          : callFetch(base + path, requestInit));
         if (timeoutHandle) {
           global.clearTimeout(timeoutHandle);
           timeoutHandle = null;
@@ -2522,6 +2537,11 @@
   }
 
   function clearAuthState() {
+    var runtime = authRuntime();
+    if (runtime.clear) {
+      runtime.clear();
+      return;
+    }
     removeLocalStorageItem(STORAGE_TOKEN_KEY);
     removeLocalStorageItem(STORAGE_USER_ID_KEY);
     removeLocalStorageItem(STORAGE_NICKNAME_KEY);

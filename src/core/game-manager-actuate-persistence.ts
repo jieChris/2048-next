@@ -2,7 +2,7 @@ export interface GameManagerActuatePersistenceManagerLike {
   modeKey?: unknown;
   over?: unknown;
   clearSavedGameState?: (modeKey: unknown) => void;
-  tryAutoSubmitOnGameOver?: () => void;
+  tryAutoSubmitOnGameOver?: () => unknown;
 }
 
 export interface GameManagerActuatePersistenceOperations {
@@ -37,14 +37,22 @@ function shouldFinalizeAsTerminated(
 export function finalizeActuatePersistence(
   manager: GameManagerActuatePersistenceManagerLike | null | undefined,
   operations: GameManagerActuatePersistenceOperations = {}
-): void {
+): void | boolean | Promise<boolean> {
   if (!manager) return;
   if (operations.consumeSkipActuatePersistenceOnce?.(manager)) return;
   operations.publishSavedStateSyncSnapshot?.(manager);
   if (shouldFinalizeAsTerminated(manager, operations)) {
-    manager.clearSavedGameState?.(manager.modeKey);
-    manager.tryAutoSubmitOnGameOver?.();
-    return;
+    const persistenceResult = manager.tryAutoSubmitOnGameOver?.();
+    if (persistenceResult && typeof (persistenceResult as PromiseLike<unknown>).then === "function") {
+      return Promise.resolve(persistenceResult).then(
+        () => {
+          manager.clearSavedGameState?.(manager.modeKey);
+          return true;
+        },
+        () => false
+      );
+    }
+    return false;
   }
   operations.saveGameState?.(manager);
 }

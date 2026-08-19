@@ -117,20 +117,46 @@ function toUint8Array(data: ArrayBuffer | ArrayLike<number> | Uint8Array): Uint8
   return new Uint8Array(data);
 }
 
-function appendBytes(chunks: number[][], bytes: number[]): void {
-  chunks.push(bytes);
+const REPLAY_ENCODE_BLOCK_BYTES = 64 * 1024;
+
+interface ReplayByteWriter {
+  blocks: Uint8Array[];
+  current: Uint8Array;
+  offset: number;
+  length: number;
 }
 
-function concatByteChunks(chunks: number[][]): Uint8Array {
-  let total = 0;
-  for (let i = 0; i < chunks.length; i += 1) total += chunks[i].length;
-  const out = new Uint8Array(total);
+function createReplayByteWriter(): ReplayByteWriter {
+  return {
+    blocks: [],
+    current: new Uint8Array(REPLAY_ENCODE_BLOCK_BYTES),
+    offset: 0,
+    length: 0
+  };
+}
+
+function appendBytes(writer: ReplayByteWriter, bytes: number[]): void {
+  for (let i = 0; i < bytes.length; i += 1) {
+    writer.current[writer.offset] = bytes[i] & 0xff;
+    writer.offset += 1;
+    writer.length += 1;
+    if (writer.offset === writer.current.length) {
+      writer.blocks.push(writer.current);
+      writer.current = new Uint8Array(REPLAY_ENCODE_BLOCK_BYTES);
+      writer.offset = 0;
+    }
+  }
+}
+
+function concatByteChunks(writer: ReplayByteWriter): Uint8Array {
+  const out = new Uint8Array(writer.length);
   let offset = 0;
-  for (let i = 0; i < chunks.length; i += 1) {
-    const chunk = chunks[i];
+  for (let i = 0; i < writer.blocks.length; i += 1) {
+    const chunk = writer.blocks[i];
     out.set(chunk, offset);
     offset += chunk.length;
   }
+  if (writer.offset > 0) out.set(writer.current.subarray(0, writer.offset), offset);
   return out;
 }
 
@@ -317,7 +343,7 @@ export function encodeReplayV1Rpl(input: ReplayV1EncodeInput): Uint8Array {
     flags &= ~REPLAY_V1_FLAG_EXTENDED_INIT_TILES;
   }
 
-  const chunks: number[][] = [];
+  const chunks = createReplayByteWriter();
   appendBytes(chunks, [82, 80, 76, 49]); // RPL1
   appendBytes(chunks, [(width & 0x0f) | ((height & 0x0f) << 4)]);
   appendBytes(chunks, [flags & 0xff]);

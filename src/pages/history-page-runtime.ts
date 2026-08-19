@@ -30,6 +30,8 @@ const HISTORY_COPY: Record<
     duration: string;
     ended: string;
     replay: string;
+    uploadRecord: string;
+    assignAndUpload: string;
     exportRecord: string;
     deleteRecord: string;
     exportOneSuccess: string;
@@ -44,6 +46,16 @@ const HISTORY_COPY: Record<
     clearAllConfirm: string;
     clearAllSuccess: string;
     clearFailed: string;
+    retryAllRunning: string;
+    retryAllSuccess: string;
+    retryFailed: string;
+    authRequired: string;
+    ownerMismatch: string;
+    deliveryUnavailable: string;
+    assignGuestConfirm: string;
+    serverRecord: string;
+    lastAttempt: string;
+    errorLabel: string;
     diagnosticsPrefix: string;
     diagnosticsValid: string;
     diagnosticsPlaced: string;
@@ -64,6 +76,8 @@ const HISTORY_COPY: Record<
     duration: "\u65f6\u957f",
     ended: "\u7ed3\u675f",
     replay: "\u56de\u653e",
+    uploadRecord: "\u4e0a\u4f20/\u91cd\u8bd5",
+    assignAndUpload: "\u5f52\u5165\u5f53\u524d\u8d26\u53f7\u5e76\u4e0a\u4f20",
     exportRecord: "\u5bfc\u51fa",
     deleteRecord: "\u5220\u9664",
     exportOneSuccess: "\u5df2\u5bfc\u51fa 1 \u6761\u8bb0\u5f55\uff08TXT + JSON\uff09",
@@ -78,6 +92,16 @@ const HISTORY_COPY: Record<
     clearAllConfirm: "\u786e\u8ba4\u6e05\u7a7a\u5168\u90e8\u672c\u5730\u5386\u53f2\u8bb0\u5f55\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\u3002",
     clearAllSuccess: "\u5df2\u6e05\u7a7a\u5168\u90e8\u5386\u53f2\u8bb0\u5f55",
     clearFailed: "\u6e05\u7a7a\u5931\u8d25",
+    retryAllRunning: "\u6b63\u5728\u68c0\u67e5\u5e76\u8865\u4f20\u672c\u5730\u8bb0\u5f55\u2026\u2026",
+    retryAllSuccess: "\u68c0\u67e5\u5b8c\u6210\uff0c\u5df2\u5237\u65b0\u540c\u6b65\u72b6\u6001",
+    retryFailed: "\u8865\u4f20\u5931\u8d25\uff0c\u8bb0\u5f55\u4ecd\u4fdd\u7559\u5728\u672c\u5730",
+    authRequired: "\u8bf7\u5148\u767b\u5f55\uff0c\u672c\u5730\u8bb0\u5f55\u4e0d\u4f1a\u88ab\u5220\u9664",
+    ownerMismatch: "\u8fd9\u6761\u8bb0\u5f55\u5c5e\u4e8e\u5176\u4ed6\u8d26\u53f7\uff0c\u4e0d\u4f1a\u4e0a\u4f20\u5230\u5f53\u524d\u8d26\u53f7",
+    deliveryUnavailable: "\u8865\u4f20\u6a21\u5757\u672a\u52a0\u8f7d\uff0c\u8bb0\u5f55\u4ecd\u4fdd\u7559\u5728\u672c\u5730",
+    assignGuestConfirm: "\u5c06\u8fd9\u6761\u6e38\u5ba2\u8bb0\u5f55\u5f52\u5165\u5f53\u524d\u8d26\u53f7\u5e76\u4e0a\u4f20\uff1f",
+    serverRecord: "\u670d\u52a1\u5668\u8bb0\u5f55",
+    lastAttempt: "\u6700\u540e\u5c1d\u8bd5",
+    errorLabel: "\u9519\u8bef",
     diagnosticsPrefix: "\u8bca\u65ad",
     diagnosticsValid: "\u6709\u6548",
     diagnosticsPlaced: "\u653e\u7f6e",
@@ -97,6 +121,8 @@ const HISTORY_COPY: Record<
     duration: "Duration",
     ended: "Ended",
     replay: "Replay",
+    uploadRecord: "Upload / Retry",
+    assignAndUpload: "Assign & Upload",
     exportRecord: "Export",
     deleteRecord: "Delete",
     exportOneSuccess: "Exported 1 record (TXT + JSON)",
@@ -111,6 +137,16 @@ const HISTORY_COPY: Record<
     clearAllConfirm: "Clear all local history records? This cannot be undone.",
     clearAllSuccess: "Cleared all local history records",
     clearFailed: "Clear failed",
+    retryAllRunning: "Checking and uploading local records\u2026",
+    retryAllSuccess: "Check complete; sync status refreshed",
+    retryFailed: "Upload failed; the record is still stored locally",
+    authRequired: "Sign in first; local records will not be deleted",
+    ownerMismatch: "This record belongs to another account and will not be uploaded",
+    deliveryUnavailable: "Upload runtime is unavailable; the record is still stored locally",
+    assignGuestConfirm: "Assign this guest record to the current account and upload it?",
+    serverRecord: "Server record",
+    lastAttempt: "Last attempt",
+    errorLabel: "Error",
     diagnosticsPrefix: "Diagnostics",
     diagnosticsValid: "valid",
     diagnosticsPlaced: "placed",
@@ -221,11 +257,9 @@ async function callStore(store: Record<string, unknown> | null, methodName: stri
   if (!store) {
     throw new Error("local_history_store_missing");
   }
-  let method = store[methodName];
-  if (typeof method !== "function") {
-    const preferredAsyncName = methodName + "Async";
-    method = store[preferredAsyncName];
-  }
+  const preferredAsyncName = methodName + "Async";
+  let method = store[preferredAsyncName];
+  if (typeof method !== "function") method = store[methodName];
   if (typeof method !== "function") {
     throw new Error("local_history_method_missing:" + methodName);
   }
@@ -247,6 +281,51 @@ function formatDuration(ms: number): string {
 function formatEndedAt(value: string): string {
   if (!value) return "-";
   return new Date(value).toLocaleString();
+}
+
+function getSyncStatusLabel(statusLike: unknown, lang: HistoryUiLang): string {
+  const status = toText(statusLike).trim();
+  const labels = lang === "en"
+    ? {
+        finalized_local: "Saved locally",
+        pending: "Pending upload",
+        waiting_auth: "Waiting for sign-in",
+        retry_wait: "Retry scheduled",
+        needs_action: "Action needed",
+        invalid: "Verification failed",
+        synced: "Synced"
+      }
+    : {
+        finalized_local: "\u5df2\u4fdd\u5b58\u672c\u5730",
+        pending: "\u5f85\u4e0a\u4f20",
+        waiting_auth: "\u7b49\u5f85\u767b\u5f55",
+        retry_wait: "\u7a0d\u540e\u91cd\u8bd5",
+        needs_action: "\u9700\u5904\u7406",
+        invalid: "\u9a8c\u8bc1\u5931\u8d25",
+        synced: "\u5df2\u540c\u6b65"
+      };
+  return labels[status as keyof typeof labels] || (lang === "en" ? "Local only" : "\u4ec5\u672c\u5730");
+}
+
+function isRetryableSyncStatus(statusLike: unknown): boolean {
+  return ["finalized_local", "pending", "waiting_auth", "retry_wait", "needs_action"]
+    .includes(toText(statusLike).trim());
+}
+
+function readCurrentAuthUser(windowLike: Window): { id: string; nickname: string } {
+  const storageLike = resolveStorageByName({
+    windowLike: windowLike as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  return {
+    id: toText(safeReadStorageItem({ storageLike, key: "2048_auth_userId_v1" })).trim(),
+    nickname: toText(safeReadStorageItem({ storageLike, key: "2048_auth_nickname_v1" })).trim()
+  };
+}
+
+function getRecordDeliveryRuntime(windowLike: Window): Record<string, unknown> | null {
+  const runtime = (windowLike as any).OnlineLeaderboardRuntime;
+  return runtime && typeof runtime === "object" ? runtime : null;
 }
 
 function resolveHistorySecondaryPlacementDiagnosticsEntry(
@@ -364,7 +443,8 @@ function renderList(
   historyStore: Record<string, unknown> | null,
   items: unknown[],
   controller: ReturnType<typeof createHistoryPageController>,
-  lang: HistoryUiLang
+  lang: HistoryUiLang,
+  reloadHistory: () => Promise<void>
 ): void {
   const list = documentLike.getElementById("history-list");
   if (!list) return;
@@ -386,12 +466,26 @@ function renderList(
     const item = controller.normalizeRecord(items[i]);
     const modeText = controller.resolveModeLabel(item.mode_key, item.mode, lang);
     const ownerDisplay = normalizeOwnerDisplay(item, lang);
+    const currentUser = readCurrentAuthUser(windowLike);
+    const isCurrentOwner = item.owner_type === "user" && !!currentUser.id && item.owner_user_id === currentUser.id;
+    const isGuest = item.owner_type === "guest" || !item.owner_user_id;
+    const canRetry = isRetryableSyncStatus(item.sync_status) && (isCurrentOwner || isGuest);
+    const uploadLabel = isGuest ? copy.assignAndUpload : copy.uploadRecord;
+    const syncDetailParts: string[] = [];
+    if (item.server_record_id) syncDetailParts.push(copy.serverRecord + ": " + item.server_record_id);
+    if (item.last_upload_attempt_at) syncDetailParts.push(copy.lastAttempt + ": " + formatEndedAt(item.last_upload_attempt_at));
+    if (item.last_error_code || item.last_error_message) {
+      syncDetailParts.push(copy.errorLabel + ": " + [item.last_error_code, item.last_error_message].filter(Boolean).join(" · "));
+    }
     const node = documentLike.createElement("div");
     node.className = "history-item";
     node.innerHTML =
       "<div class='history-item-head'>" +
         "<strong>" + escapeHtml(modeText) + "</strong>" +
         "<span class='history-owner-tag'>" + escapeHtml(ownerDisplay.label) + "</span>" +
+        "<span class='history-sync-badge' data-status='" + escapeHtml(item.sync_status) + "'>" +
+          escapeHtml(getSyncStatusLabel(item.sync_status, lang)) +
+        "</span>" +
         "<span>" + escapeHtml(copy.score) + ": " + escapeHtml(Number(item.score) || 0) + "</span>" +
         "<span>" + escapeHtml(copy.boardSum) + ": " + escapeHtml(Number(item.board_sum) || 0) + "</span>" +
         "<span>" + escapeHtml(copy.bestTile) + ": " + escapeHtml(Number(item.best_tile) || 0) + "</span>" +
@@ -399,10 +493,14 @@ function renderList(
         "<span>" + escapeHtml(copy.ended) + ": " + escapeHtml(formatEndedAt(item.ended_at)) + "</span>" +
       "</div>" +
       "<div class='history-item-actions'>" +
+        (canRetry ? "<button class='replay-button history-upload-btn'>" + escapeHtml(uploadLabel) + "</button>" : "") +
         "<button class='replay-button history-replay-btn'>" + escapeHtml(copy.replay) + "</button>" +
         "<button class='replay-button history-export-btn'>" + escapeHtml(copy.exportRecord) + "</button>" +
         "<button class='replay-button history-delete-btn'>" + escapeHtml(copy.deleteRecord) + "</button>" +
-      "</div>";
+      "</div>" +
+      (syncDetailParts.length
+        ? "<div class='history-sync-detail'>" + escapeHtml(syncDetailParts.join(" · ")) + "</div>"
+        : "");
 
     appendHistoryDiagnosticsSummary(documentLike, node, item, lang);
 
@@ -420,6 +518,51 @@ function renderList(
           return;
         }
         windowLike.location.href = url;
+      });
+    }
+
+    const uploadBtn = node.querySelector(".history-upload-btn") as HTMLButtonElement | null;
+    if (uploadBtn) {
+      uploadBtn.addEventListener("click", async () => {
+        const runtime = getRecordDeliveryRuntime(windowLike);
+        const retryOne = runtime && runtime.retryLocalHistoryRecord;
+        if (typeof retryOne !== "function") {
+          setStatus(documentLike, copy.deliveryUnavailable, true);
+          return;
+        }
+        const user = readCurrentAuthUser(windowLike);
+        if (!user.id) {
+          setStatus(documentLike, copy.authRequired, true);
+          return;
+        }
+        if (!isGuest && item.owner_user_id !== user.id) {
+          setStatus(documentLike, copy.ownerMismatch, true);
+          return;
+        }
+        uploadBtn.disabled = true;
+        try {
+          if (isGuest) {
+            const confirmed = await confirmWithGameDialog(windowLike, copy.assignGuestConfirm, { kind: "confirm" });
+            if (!confirmed) return;
+            await callStore(historyStore, "updateRecord", item.id, {
+              owner_type: "user",
+              owner_user_id: user.id,
+              owner_nickname: user.nickname,
+              owner_key: "user:" + user.id,
+              sync_status: "pending",
+              next_retry_at: null,
+              last_error_code: null,
+              last_error_message: null
+            });
+          }
+          await retryOne.call(runtime, item.id);
+          await reloadHistory();
+          setStatus(documentLike, copy.retryAllSuccess, false);
+        } catch (_err) {
+          setStatus(documentLike, copy.retryFailed, true);
+        } finally {
+          uploadBtn.disabled = false;
+        }
       });
     }
 
@@ -677,7 +820,8 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
         historyStore,
         Array.isArray(result.items) ? result.items : [],
         controller,
-        lang
+        lang,
+        () => loadHistory(false)
       );
       renderSummary(documentLike, result || {}, state, lang);
       await rebuildOwnerFilterOptions(historyStore, documentLike, controller, lang, state.ownerKey);
@@ -769,6 +913,33 @@ export function bootstrapHistoryPageRuntime(options?: HistoryPageRuntimeOptions)
           handlePayload(result);
         } catch (_err) {
           setStatus(documentLike, getHistoryCopy(resolveLang()).exportFailed, true);
+        }
+      });
+    }
+
+    const retryAllBtn = documentLike.getElementById("history-retry-all-btn") as HTMLButtonElement | null;
+    if (retryAllBtn) {
+      retryAllBtn.addEventListener("click", async () => {
+        const runtime = getRecordDeliveryRuntime(windowLike);
+        const retryAll = runtime && runtime.retryAllLocalHistoryRecords;
+        if (typeof retryAll !== "function") {
+          setStatus(documentLike, getHistoryCopy(resolveLang()).deliveryUnavailable, true);
+          return;
+        }
+        if (!readCurrentAuthUser(windowLike).id) {
+          setStatus(documentLike, getHistoryCopy(resolveLang()).authRequired, true);
+          return;
+        }
+        retryAllBtn.disabled = true;
+        setStatus(documentLike, getHistoryCopy(resolveLang()).retryAllRunning, false);
+        try {
+          await retryAll.call(runtime);
+          await loadHistory(false);
+          setStatus(documentLike, getHistoryCopy(resolveLang()).retryAllSuccess, false);
+        } catch (_err) {
+          setStatus(documentLike, getHistoryCopy(resolveLang()).retryFailed, true);
+        } finally {
+          retryAllBtn.disabled = false;
         }
       });
     }

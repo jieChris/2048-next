@@ -22,7 +22,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 const DB_NAME = "game_history_db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "records";
 const LEGACY_STORAGE_KEY = "local_game_history_v1";
 const MIGRATION_FLAG = "idb_history_migrated_v1";
@@ -98,6 +98,15 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!store.indexNames.contains("board_sum")) {
         store.createIndex("board_sum", "board_sum", { unique: false });
+      }
+      if (!store.indexNames.contains("client_record_id")) {
+        store.createIndex("client_record_id", "client_record_id", { unique: false });
+      }
+      if (!store.indexNames.contains("sync_status")) {
+        store.createIndex("sync_status", "sync_status", { unique: false });
+      }
+      if (!store.indexNames.contains("owner_key")) {
+        store.createIndex("owner_key", "owner_key", { unique: false });
       }
       const cursorRequest = store.openCursor();
       cursorRequest.onsuccess = () => {

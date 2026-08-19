@@ -677,6 +677,35 @@ describe("core game manager restart seed runtime", () => {
     expect(shouldSchedule?.(manager, false, {})).toBe(true);
   });
 
+  it("recognizes an in-memory auth token after the legacy bearer is removed", () => {
+    let operations: Record<string, unknown> | null = null;
+    const resolveSetupRestoreAndInitialBoardState = vi.fn(
+      (_manager, _hasInputSeed, _normalizedOptions, runtimeOperations) => {
+        operations = runtimeOperations;
+        return { restoredFromSavedState: false };
+      }
+    );
+    const windowLike = {
+      localStorage: { getItem: vi.fn(() => null) },
+      AuthSessionRuntime: { getAuthToken: vi.fn(() => "memory-token") },
+    };
+    const { runtime } = loadRestartSeedRuntime({
+      setupRestoreInitialBoardStateRuntime: { resolveSetupRestoreAndInitialBoardState }
+    });
+    const manager = {
+      rankPolicy: "ranked",
+      modeKey: "standard_4x4_pow2_no_undo",
+      getWindowLike: () => windowLike,
+    } as Record<string, unknown>;
+
+    runtime.resolveSetupRestoreAndInitialBoardState(manager, false, {});
+    const hasAuth = operations?.hasRankedCheckpointAuthTokenForSetup as
+      | ((target: Record<string, unknown>) => boolean)
+      | undefined;
+
+    expect(hasAuth?.(manager)).toBe(true);
+  });
+
   it("delegates setup state initialization orchestration to the TypeScript runtime", () => {
     const runSetupStateInitialization = vi.fn();
     const { runtime } = loadRestartSeedRuntime({

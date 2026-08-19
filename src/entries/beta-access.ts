@@ -1,5 +1,6 @@
-import { createBrowserStorageAccess, readStorageValue, removeStorageValue } from "../storage/browser-storage";
-import { AUTH_TOKEN_KEY, requestLogout, type JsonRecord } from "../services/api-client";
+import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
+import { requestLogout, type JsonRecord } from "../services/api-client";
+import { clearAuthSession } from "../services/auth-session";
 import {
   ACTIVE_BETA_NOTICE_VERSION,
   acceptBetaNotice,
@@ -8,8 +9,6 @@ import {
   type BetaAccessStatus
 } from "../bootstrap/access-gate";
 
-const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
-const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
 const UI_LANGUAGE_KEY = "ui_language_v1";
 
 type TipState = "ok" | "err" | "busy" | "idle";
@@ -179,9 +178,7 @@ function setSummary(status: BetaAccessStatus | null, text: string): void {
 }
 
 function clearAuth(): void {
-  removeStorageValue(window.localStorage, AUTH_TOKEN_KEY);
-  removeStorageValue(window.localStorage, AUTH_USER_ID_KEY);
-  removeStorageValue(window.localStorage, AUTH_NICKNAME_KEY);
+  clearAuthSession({ storageLike: window.localStorage });
 }
 
 function redirectToLogin(): void {

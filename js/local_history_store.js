@@ -9,11 +9,20 @@
   var MAX_DIAGNOSTIC_ARRAY_ITEMS = 8;
 
   var DB_NAME = "game_history_db";
-  var DB_VERSION = 2;
+  var DB_VERSION = 3;
   var STORE_NAME = "records";
   var MIGRATION_FLAG = "idb_history_migrated_v1";
   var AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
   var AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
+  var SYNC_STATUSES = {
+    finalized_local: true,
+    pending: true,
+    waiting_auth: true,
+    retry_wait: true,
+    needs_action: true,
+    invalid: true,
+    synced: true
+  };
 
   var idbReadyPromise = null;
   var migrationPromise = null;
@@ -126,6 +135,67 @@
 
   function nowIso() {
     return new Date().toISOString();
+  }
+
+  function normalizeNullableText(value) {
+    var normalized = typeof value === "string" ? value.trim() : "";
+    return normalized || null;
+  }
+
+  function normalizeNullableInteger(value) {
+    var normalized = Number(value);
+    return Number.isFinite(normalized) ? Math.floor(normalized) : null;
+  }
+
+  function normalizeNonNegativeInteger(value, fallback) {
+    var normalized = Number(value);
+    if (!Number.isFinite(normalized)) return Math.max(0, Math.floor(Number(fallback) || 0));
+    return Math.max(0, Math.floor(normalized));
+  }
+
+  function utf8ByteLength(value) {
+    var text = toText(value);
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(text).byteLength;
+    try {
+      return unescape(encodeURIComponent(text)).length;
+    } catch (_err) {
+      return text.length;
+    }
+  }
+
+  function normalizeSyncStatus(value, replayString, ownerType) {
+    var normalized = toText(value).trim();
+    if (SYNC_STATUSES[normalized]) return normalized;
+    if (!replayString) return "needs_action";
+    return ownerType === "user" ? "pending" : "waiting_auth";
+  }
+
+  function normalizeDeliveryMetadata(raw, base) {
+    var replayString = toText(base && base.replay_string);
+    var ownerType = toText(base && base.owner_type).trim() === "user" ? "user" : "guest";
+    return {
+      client_record_id: normalizeNullableText(raw.client_record_id) || normalizeNullableText(base && base.id),
+      server_record_id: normalizeNullableText(raw.server_record_id),
+      sync_status: normalizeSyncStatus(raw.sync_status, replayString, ownerType),
+      replay_sha256: normalizeNullableText(raw.replay_sha256),
+      replay_byte_size: normalizeNonNegativeInteger(raw.replay_byte_size, utf8ByteLength(replayString)),
+      upload_task_id: normalizeNullableText(raw.upload_task_id),
+      uploaded_chunk_count: normalizeNonNegativeInteger(raw.uploaded_chunk_count, 0),
+      upload_attempts: normalizeNonNegativeInteger(raw.upload_attempts, 0),
+      next_retry_at: normalizeNullableText(raw.next_retry_at),
+      last_upload_attempt_at: normalizeNullableText(raw.last_upload_attempt_at),
+      last_error_code: normalizeNullableText(raw.last_error_code),
+      last_error_message: normalizeNullableText(raw.last_error_message),
+      record_schema_version: Math.max(1, normalizeNonNegativeInteger(raw.record_schema_version, 1)),
+      mode_bucket: normalizeNullableText(raw.mode_bucket),
+      ranked_session_token: normalizeNullableText(raw.ranked_session_token),
+      initial_seed: normalizeNullableInteger(raw.initial_seed),
+      seed: normalizeNullableInteger(raw.seed),
+      ranked_verification: isPlainObject(raw.ranked_verification) ? raw.ranked_verification : null,
+      min_steps_2048: normalizeNullableInteger(raw.min_steps_2048),
+      min_steps_4096: normalizeNullableInteger(raw.min_steps_4096),
+      min_steps_8192: normalizeNullableInteger(raw.min_steps_8192)
+    };
   }
 
   var localHistoryIdFallbackCounter = 0;
@@ -366,11 +436,12 @@
       final_board: finalBoard
     });
     if (hasRuntimeBase) {
-      return Object.assign({}, base, {
+      base = Object.assign({}, base, {
         diagnostics_index_entries: Array.isArray(base.diagnostics_index_entries)
           ? base.diagnostics_index_entries
           : []
       });
+      return Object.assign({}, base, normalizeDeliveryMetadata(raw, base));
     }
     var ownerMeta = resolveOwnerMetaFromRaw(base);
     var diagnosticsSource =
@@ -378,13 +449,14 @@
         ? base.diagnostics_index_entries
         : raw.diagnostics_index_entries;
 
-    return Object.assign({}, base, {
+    base = Object.assign({}, base, {
       owner_type: ownerMeta.owner_type,
       owner_user_id: ownerMeta.owner_user_id,
       owner_nickname: ownerMeta.owner_nickname,
       owner_key: ownerMeta.owner_key,
       diagnostics_index_entries: normalizeDiagnosticsIndexEntries(diagnosticsSource)
     });
+    return Object.assign({}, base, normalizeDeliveryMetadata(raw, base));
   }
 
   function requestToPromise(request) {
@@ -433,6 +505,15 @@
         }
         if (!store.indexNames.contains("board_sum")) {
           store.createIndex("board_sum", "board_sum", { unique: false });
+        }
+        if (!store.indexNames.contains("client_record_id")) {
+          store.createIndex("client_record_id", "client_record_id", { unique: false });
+        }
+        if (!store.indexNames.contains("sync_status")) {
+          store.createIndex("sync_status", "sync_status", { unique: false });
+        }
+        if (!store.indexNames.contains("owner_key")) {
+          store.createIndex("owner_key", "owner_key", { unique: false });
         }
         var cursorRequest = store.openCursor();
         cursorRequest.onsuccess = function () {
@@ -603,6 +684,188 @@
       page_size: pageSize,
       items: filteredFallback.slice(fallbackStart, fallbackStart + pageSize)
     };
+  }
+
+  function resolveCryptoLike() {
+    try {
+      if (typeof globalThis !== "undefined" && globalThis.crypto) return globalThis.crypto;
+    } catch (_err) {}
+    try {
+      if (typeof window !== "undefined" && window.crypto) return window.crypto;
+    } catch (_err2) {}
+    return null;
+  }
+
+  async function sha256Hex(value) {
+    var cryptoLike = resolveCryptoLike();
+    if (!cryptoLike || !cryptoLike.subtle || typeof cryptoLike.subtle.digest !== "function") return null;
+    if (typeof TextEncoder === "undefined") return null;
+    var digest = await cryptoLike.subtle.digest("SHA-256", new TextEncoder().encode(toText(value)));
+    var bytes = new Uint8Array(digest);
+    var out = "";
+    for (var i = 0; i < bytes.length; i += 1) out += bytes[i].toString(16).padStart(2, "0");
+    return out || null;
+  }
+
+  async function prepareRecordForDurableSave(record) {
+    var item = normalizeRecord(record);
+    var replayString = toText(item.replay_string);
+    var replaySha256 = await sha256Hex(replayString);
+    return Object.assign({}, item, {
+      replay_sha256: replaySha256 || item.replay_sha256 || null,
+      replay_byte_size: utf8ByteLength(replayString)
+    });
+  }
+
+  function verifyDurableRecord(expected, stored) {
+    if (!stored || stored.id !== expected.id) throw new Error("history_readback_id_mismatch");
+    if (toText(stored.client_record_id) !== toText(expected.client_record_id)) {
+      throw new Error("history_readback_client_record_id_mismatch");
+    }
+    if (toText(stored.replay_string) !== toText(expected.replay_string)) {
+      throw new Error("history_readback_replay_mismatch");
+    }
+    if (Number(stored.replay_byte_size) !== Number(expected.replay_byte_size)) {
+      throw new Error("history_readback_size_mismatch");
+    }
+    if (expected.replay_sha256 && stored.replay_sha256 !== expected.replay_sha256) {
+      throw new Error("history_readback_hash_mismatch");
+    }
+  }
+
+  async function putDurableRecord(item) {
+    var db = await getDatabase();
+    if (!db) throw new Error("indexeddb_unavailable");
+
+    await ensureMigrated();
+    var tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(item);
+    await txDonePromise(tx);
+
+    var readTx = db.transaction(STORE_NAME, "readonly");
+    var stored = await requestToPromise(readTx.objectStore(STORE_NAME).get(item.id));
+    await txDonePromise(readTx);
+    stored = stored ? normalizeRecord(stored) : null;
+    verifyDurableRecord(item, stored);
+    return stored;
+  }
+
+  async function saveRecordDurable(record) {
+    return putDurableRecord(await prepareRecordForDurableSave(record));
+  }
+
+  async function getByClientRecordId(clientRecordId) {
+    var key = toText(clientRecordId).trim();
+    if (!key) return null;
+    var db = await getDatabase();
+    if (!db) throw new Error("indexeddb_unavailable");
+    await ensureMigrated();
+    var tx = db.transaction(STORE_NAME, "readonly");
+    var value = await requestToPromise(tx.objectStore(STORE_NAME).index("client_record_id").get(key));
+    await txDonePromise(tx);
+    return value ? normalizeRecord(value) : null;
+  }
+
+  function createHistoryRecordFromSubmitPayload(payload) {
+    var finalBoard = Array.isArray(payload.final_board) ? payload.final_board : [];
+    var height = finalBoard.length;
+    var width = height > 0 && Array.isArray(finalBoard[0]) ? finalBoard[0].length : 4;
+    var modeKey = toText(payload.mode_key).trim() || "unknown";
+    var owner = resolveOwnerMetaFromRaw(payload);
+    return Object.assign({}, payload, {
+      id: makeId(),
+      mode: toText(payload.mode).trim() || "local",
+      mode_key: modeKey,
+      board_width: width || 4,
+      board_height: height || 4,
+      ruleset: modeKey.indexOf("fib_") === 0 ? "fibonacci" : "pow2",
+      undo_enabled: modeKey.indexOf("no_undo") < 0 && modeKey.indexOf("_undo") >= 0,
+      ranked_bucket: toText(payload.mode_bucket || payload.mode).trim() || "none",
+      mode_family: modeKey.indexOf("fib_") === 0 ? "fibonacci" : "pow2",
+      rank_policy: "leaderboard",
+      special_rules_snapshot: {},
+      owner_type: owner.owner_type,
+      owner_user_id: owner.owner_user_id,
+      owner_nickname: owner.owner_nickname,
+      owner_key: owner.owner_key,
+      sync_status: owner.owner_type === "user" ? "pending" : "waiting_auth"
+    });
+  }
+
+  async function prepareRecordSubmit(recordId, payload) {
+    var normalizedPayload = isPlainObject(payload) ? payload : null;
+    if (!normalizedPayload || !toText(normalizedPayload.replay_string).trim()) {
+      throw new Error("record_submit_payload_invalid");
+    }
+    var clientRecordId = toText(normalizedPayload.client_record_id).trim();
+    var existing = recordId ? await getById(recordId) : null;
+    if (!existing && clientRecordId) existing = await getByClientRecordId(clientRecordId);
+    var base = existing || createHistoryRecordFromSubmitPayload(normalizedPayload);
+    var owner = resolveOwnerMetaFromRaw(base);
+    return saveRecordDurable(Object.assign({}, base, normalizedPayload, {
+      id: base.id,
+      owner_type: owner.owner_type,
+      owner_user_id: owner.owner_user_id,
+      owner_nickname: owner.owner_nickname,
+      owner_key: owner.owner_key,
+      sync_status: owner.owner_type === "user" ? "pending" : "waiting_auth",
+      server_record_id: base.server_record_id || null,
+      upload_attempts: base.upload_attempts || 0,
+      next_retry_at: null,
+      last_error_code: null,
+      last_error_message: null
+    }));
+  }
+
+  async function updateRecord(id, patch) {
+    var existing = await getById(id);
+    if (!existing) throw new Error("history_record_not_found");
+    var next = Object.assign({}, existing, isPlainObject(patch) ? patch : {}, { id: existing.id });
+    if (toText(next.replay_string) === toText(existing.replay_string)) {
+      next = normalizeRecord(next);
+      next.replay_sha256 = existing.replay_sha256 || null;
+      next.replay_byte_size = existing.replay_byte_size;
+      return putDurableRecord(next);
+    }
+    return saveRecordDurable(next);
+  }
+
+  async function listSyncCandidates(options) {
+    var opts = isPlainObject(options) ? options : {};
+    var ownerUserId = toText(opts.owner_user_id).trim();
+    var statuses = Array.isArray(opts.statuses) && opts.statuses.length
+      ? opts.statuses.map(function (value) { return toText(value).trim(); })
+      : ["pending", "retry_wait"];
+    var allowed = {};
+    for (var i = 0; i < statuses.length; i += 1) allowed[statuses[i]] = true;
+    var nowMs = Number.isFinite(Number(opts.now_ms)) ? Number(opts.now_ms) : Date.now();
+    var includeFutureRetries = opts.include_future_retries === true;
+    var db = await getDatabase();
+    if (!db) throw new Error("indexeddb_unavailable");
+    await ensureMigrated();
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction(STORE_NAME, "readonly");
+      var request = tx.objectStore(STORE_NAME).openCursor();
+      var out = [];
+      request.onsuccess = function () {
+        var cursor = request.result;
+        if (!cursor) {
+          out.sort(compareDatesDesc);
+          resolve(out);
+          return;
+        }
+        var item = normalizeRecord(cursor.value);
+        var retryAt = Date.parse(toText(item.next_retry_at)) || 0;
+        if (
+          allowed[item.sync_status] &&
+          (!ownerUserId || toText(item.owner_user_id).trim() === ownerUserId) &&
+          (includeFutureRetries || !retryAt || retryAt <= nowMs)
+        ) out.push(item);
+        cursor.continue();
+      };
+      request.onerror = function () { reject(request.error || new Error("idb_cursor_failed")); };
+      tx.onerror = function () { reject(tx.error || new Error("idb_tx_failed")); };
+    });
   }
 
   async function saveRecord(record, skipFallbackMirror) {
@@ -1137,7 +1400,12 @@
     getAll: getAllCompat,
     // Async APIs stay available for newer runtime call sites.
     saveRecordAsync: saveRecord,
+    saveRecordDurable: saveRecordDurable,
     getByIdAsync: getById,
+    getByClientRecordIdAsync: getByClientRecordId,
+    prepareRecordSubmitAsync: prepareRecordSubmit,
+    updateRecordAsync: updateRecord,
+    listSyncCandidatesAsync: listSyncCandidates,
     deleteByIdAsync: deleteById,
     clearAllAsync: clearAll,
     listRecordsAsync: listRecords,

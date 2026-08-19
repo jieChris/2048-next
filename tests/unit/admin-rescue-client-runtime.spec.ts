@@ -93,6 +93,29 @@ describe("admin rescue client runtime", () => {
     vi.useRealTimers();
   });
 
+  it("uses the shared in-memory auth session after legacy token migration", async () => {
+    const context = loadRuntime({
+      localStorage: {
+        getItem: () => "",
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      AuthSessionRuntime: {
+        getAuthToken: () => "memory-token",
+      },
+    });
+    context.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    await context.AdminRescueClientRuntime.checkAndOfferRescue({
+      modeKey: "standard_4x4_pow2_no_undo",
+    });
+
+    expect(context.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("applies replay and stats fields from a rescue offer", async () => {
     const offer = {
       id: "rescue_full_state",

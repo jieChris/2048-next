@@ -33,6 +33,7 @@ const HISTORY_STATIC_COPY: Record<
     sortBoardSumDesc: string;
     refresh: string;
     exportAll: string;
+    retryAll: string;
     clearAll: string;
     prev: string;
     next: string;
@@ -59,6 +60,7 @@ const HISTORY_STATIC_COPY: Record<
     sortBoardSumDesc: "按盘面和（高到低）",
     refresh: "刷新",
     exportAll: "导出全部",
+    retryAll: "检查并补传",
     clearAll: "清空全部",
     prev: "上一页",
     next: "下一页"
@@ -84,6 +86,7 @@ const HISTORY_STATIC_COPY: Record<
     sortBoardSumDesc: "By Board Sum (High to Low)",
     refresh: "Refresh",
     exportAll: "Export All",
+    retryAll: "Check & Upload",
     clearAll: "Clear All",
     prev: "Prev",
     next: "Next"
@@ -198,6 +201,7 @@ function applyHistoryPageLanguage(): void {
   setSelectOptionText("#history-sort option[value='board_sum_desc']", copy.sortBoardSumDesc);
   setText("#history-load-btn", copy.refresh);
   setText("#history-export-all-btn", copy.exportAll);
+  setText("#history-retry-all-btn", copy.retryAll);
   setText("#history-clear-all-btn", copy.clearAll);
   setText("#history-prev-page", copy.prev);
   setText("#history-next-page", copy.next);
@@ -214,10 +218,21 @@ function syncNightBackgroundAttribute(): void {
   document.documentElement.removeAttribute("data-night-background");
 }
 
-export function bootstrapHistoryPage(): void {
+async function ensureHistoryRecordDeliveryRuntime(): Promise<void> {
+  if (typeof window === "undefined" || (window as any).OnlineLeaderboardRuntime) return;
+  (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
+  // @ts-expect-error Legacy browser runtime is intentionally loaded for its window side effect.
+  await import("../../js/api_shared_utils.js");
+  // @ts-expect-error Legacy browser runtime is intentionally loaded for its window side effect.
+  await import("../../js/online_leaderboard_runtime.js");
+}
+
+export async function bootstrapHistoryPage(): Promise<void> {
   if (typeof document === "undefined") {
     return;
   }
+
+  await ensureHistoryRecordDeliveryRuntime().catch(() => undefined);
 
   syncNightBackgroundAttribute();
   applyHistoryPageLanguage();
@@ -246,4 +261,18 @@ export function bootstrapHistoryPage(): void {
     storageRuntime: createHistoryStorageRuntime(),
     historyStore: resolveHistoryLocalStore(window)
   });
+
+  const deliveryRuntime = (window as any).OnlineLeaderboardRuntime;
+  const currentUserId = safeReadStorageItem({
+    storageLike: resolveStorageByName({
+      windowLike: window as unknown as Record<string, unknown>,
+      storageName: "localStorage"
+    }),
+    key: "2048_auth_userId_v1"
+  });
+  if (currentUserId && typeof deliveryRuntime?.retryAllLocalHistoryRecords === "function") {
+    void Promise.resolve(deliveryRuntime.retryAllLocalHistoryRecords({ deliverySource: "automatic" }))
+      .then(() => document.getElementById("history-load-btn")?.click())
+      .catch(() => undefined);
+  }
 }
