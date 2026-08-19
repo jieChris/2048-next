@@ -11,7 +11,7 @@
   <script src="/js/core_night_mode_preload.js?v=20260722-default-appearance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260803-operation-feedback-live-lock-v3" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260811-glow-controls-v24" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260819-settings-order-v1" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -29,21 +29,21 @@
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
         <a class="replay-button palette-nav-btn palette-touch-entry" href="touch_sensitivity.html">触屏灵敏度</a>
-        <a class="replay-button palette-nav-btn palette-guide-entry" href="#contextual-guide-settings" aria-controls="contextual-guide-settings">新手指引</a>
+        <div class="palette-language-switch" role="group" aria-label="界面语言">
+          <button type="button" class="palette-language-btn is-active" data-ui-language="zh" aria-pressed="true">中文</button>
+          <button type="button" class="palette-language-btn" data-ui-language="en" aria-pressed="false">EN</button>
+        </div>
       </nav>
     </header>
 
     <div class="settings-workbench">
       <nav class="settings-category-nav" aria-label="设置分类">
         <span class="settings-category-active-bookmark" aria-hidden="true"></span>
-        <a class="settings-category-link is-active" href="#timer-settings" aria-controls="timer-settings" aria-current="location">
-          <strong>计时器</strong>
-        </a>
-        <a class="settings-category-link" href="#appearance-settings" aria-controls="appearance-settings">
+        <a class="settings-category-link is-active" href="#appearance-settings" aria-controls="appearance-settings" aria-current="location">
           <strong>外观与配色</strong>
         </a>
-        <a class="settings-category-link" href="#language-settings" aria-controls="language-settings">
-          <strong>界面语言</strong>
+        <a class="settings-category-link" href="#timer-settings" aria-controls="timer-settings">
+          <strong>计时器</strong>
         </a>
         <a class="settings-category-link" href="#contextual-guide-settings" aria-controls="contextual-guide-settings">
           <strong>新手指引</strong>
@@ -52,14 +52,12 @@
 
       <div class="settings-category-content">
         <section id="timer-settings" class="palette-settings-section">
-          <details id="custom-secondary-timer-editor" class="settings-disclosure">
+          <details id="custom-secondary-timer-editor" class="settings-disclosure" open>
             <summary>
               <span class="settings-disclosure-copy">
                 <strong>计时器</strong>
                 <small>自定义子计时器规则</small>
               </span>
-              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
-              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
             </summary>
             <div class="custom-secondary-timer-body">
           <div class="custom-secondary-timer-family-tabs" role="tablist" aria-label="子计时器规则体系">
@@ -103,14 +101,12 @@
         </section>
 
         <section id="appearance-settings" class="palette-settings-section">
-          <details id="appearance-settings-editor" class="settings-disclosure appearance-settings-disclosure">
+          <details id="appearance-settings-editor" class="settings-disclosure appearance-settings-disclosure" open>
             <summary>
               <span class="settings-disclosure-copy appearance-settings-disclosure-copy">
                 <strong>外观与配色</strong>
                 <small>主题、色板与棋盘预览</small>
               </span>
-              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
-              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
             </summary>
           <section class="palette-grid">
       <aside class="palette-sidebar card-surface">
@@ -244,34 +240,6 @@
      </section>
           </details>
     </section>
-
-        <section id="language-settings" class="palette-settings-section">
-          <details id="language-settings-editor" class="settings-disclosure language-settings-disclosure">
-            <summary>
-              <span class="settings-disclosure-copy language-settings-disclosure-copy">
-                <strong>界面语言</strong>
-                <small>切换网站显示语言</small>
-              </span>
-              <span class="settings-disclosure-action settings-disclosure-open">展开设置</span>
-              <span class="settings-disclosure-action settings-disclosure-close">收起设置</span>
-            </summary>
-            <div class="language-settings-body">
-              <div id="ui-language-settings-row" class="settings-row settings-toggle-row language-settings-row">
-                <div class="settings-toggle-main language-toggle-main">
-                  <div class="settings-toggle-copy">
-                    <div id="ui-language-label" class="settings-toggle-title">界面语言</div>
-                    <div id="ui-language-desc" class="settings-toggle-desc">页面中英文切换</div>
-                  </div>
-                  <label class="settings-switch language-settings-switch" aria-label="界面语言">
-                    <input id="ui-language-toggle" type="checkbox" role="switch">
-                    <span class="settings-switch-slider language-switch-slider"></span>
-                    <span id="ui-language-toggle-thumb" class="language-switch-thumb">中</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </details>
-        </section>
 
         <section id="contextual-guide-settings" class="palette-settings-section">
           <div id="contextual-guide-catalog-row" class="contextual-guide-catalog-row">

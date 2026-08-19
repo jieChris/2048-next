@@ -137,9 +137,10 @@ test.describe("custom secondary timers", () => {
     const settingsResponse = await settingsPage.goto("/palette.html", { waitUntil: "domcontentloaded" });
     expect(settingsResponse?.ok()).toBeTruthy();
     await expect(settingsPage.locator(".palette-title")).toHaveText("设置");
-    await expect(settingsPage.locator("#custom-secondary-timer-editor")).not.toHaveAttribute("open", "");
-    await expect(settingsPage.locator("#custom-secondary-timer-rules")).toBeHidden();
+    await expect(settingsPage.locator("#custom-secondary-timer-editor")).toHaveAttribute("open", "");
+    await expect(settingsPage.locator("#custom-secondary-timer-rules")).toBeVisible();
     await settingsPage.locator("#custom-secondary-timer-editor summary").click();
+    await expect(settingsPage.locator("#custom-secondary-timer-editor")).toHaveAttribute("open", "");
     await expect(settingsPage.locator("#custom-secondary-timer-rules")).toBeVisible();
     await expect(settingsPage.locator("#custom-secondary-timer-range-end option[value='67108864']")).toHaveCount(1);
     await expect(settingsPage.locator("#custom-secondary-timer-range-end option[value='134217728']")).toHaveCount(0);

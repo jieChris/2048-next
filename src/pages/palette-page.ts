@@ -25,18 +25,21 @@ const CUSTOM_TIMER_PREVIEW_STYLE_SLOTS = [
 ];
 let customTimerFamily: CustomSecondaryTimerFamily = "pow2";
 const SETTINGS_SECTION_IDS = [
-  "timer-settings",
   "appearance-settings",
-  "language-settings",
+  "timer-settings",
   "contextual-guide-settings",
 ] as const;
 type SettingsSectionId = typeof SETTINGS_SECTION_IDS[number];
 const settingsSectionVisibility = new Map<SettingsSectionId, number>();
+let settingsCategoryScrollLock: SettingsSectionId | null = null;
+let settingsCategoryScrollUnlockTimer: number | undefined;
+let settingsCategoryScrollUnlockListener: (() => void) | undefined;
 
 const globalWindow = window as Window & {
   ThemeManager?: Record<string, unknown>;
   UII18N?: {
     getLanguage?: () => string;
+    setLanguage?: (language: string) => void;
   };
   CoreThemeSettingsRuntime?: typeof themeSettingsRuntime;
   CoreThemeSettingsHostRuntime?: {
@@ -352,13 +355,9 @@ function applyThemePageCopy(): void {
         themeSelectLabel: "Select Theme",
         timerCategory: "Timer",
         appearanceCategory: "Appearance & Palette",
-        languageCategory: "Language",
-        languageDisclosureTitle: "Interface Language",
-        languageDisclosureDesc: "Switch the website display language",
+        guideCategory: "Beginner guides",
         customTimerTitle: "Timer",
         customTimerDesc: "Custom sub-timer rules",
-        expandSettings: "Expand settings",
-        collapseSettings: "Collapse settings",
         rulesLabel: "Rule text",
         saveRules: "Save rules",
         clearRules: "Clear",
@@ -391,13 +390,9 @@ function applyThemePageCopy(): void {
         themeSelectLabel: "\u9009\u62e9\u4e3b\u9898",
         timerCategory: "\u8ba1\u65f6\u5668",
         appearanceCategory: "\u5916\u89c2\u4e0e\u914d\u8272",
-        languageCategory: "\u754c\u9762\u8bed\u8a00",
-        languageDisclosureTitle: "\u754c\u9762\u8bed\u8a00",
-        languageDisclosureDesc: "\u5207\u6362\u7f51\u7ad9\u663e\u793a\u8bed\u8a00",
+        guideCategory: "\u65b0\u624b\u6307\u5f15",
         customTimerTitle: "\u8ba1\u65f6\u5668",
         customTimerDesc: "\u81ea\u5b9a\u4e49\u5b50\u8ba1\u65f6\u5668\u89c4\u5219",
-        expandSettings: "\u5c55\u5f00\u8bbe\u7f6e",
-        collapseSettings: "\u6536\u8d77\u8bbe\u7f6e",
         rulesLabel: "\u89c4\u5219\u5185\u5bb9",
         saveRules: "\u4fdd\u5b58\u89c4\u5219",
         clearRules: "\u6e05\u7a7a",
@@ -427,11 +422,8 @@ function applyThemePageCopy(): void {
   const pageTitle = document.querySelector(".palette-title");
   const pageSubtitle = document.querySelector(".palette-subtitle");
   const navLinks = document.querySelectorAll(".palette-nav .palette-nav-btn");
-  const guideEntry = document.querySelector<HTMLAnchorElement>(".palette-guide-entry");
   const appearanceDisclosureTitle = document.querySelector(".appearance-settings-disclosure-copy strong");
   const appearanceDisclosureDesc = document.querySelector(".appearance-settings-disclosure-copy small");
-  const languageDisclosureTitle = document.querySelector(".language-settings-disclosure-copy strong");
-  const languageDisclosureDesc = document.querySelector(".language-settings-disclosure-copy small");
   const themeSelectLabel = document.querySelector(".theme-selection-col > label");
   const listTitle = document.querySelector(".palette-sidebar .panel-head h2");
   const paletteMappingNote = document.querySelector(".palette-variant-note");
@@ -448,8 +440,6 @@ function applyThemePageCopy(): void {
   const categoryLinks = document.querySelectorAll(".settings-category-link");
   const customTimerTitle = document.querySelector(".settings-disclosure-copy strong");
   const customTimerDesc = document.querySelector(".settings-disclosure-copy small");
-  const expandSettings = document.querySelector(".settings-disclosure-open");
-  const collapseSettings = document.querySelector(".settings-disclosure-close");
   const rulesLabel = document.querySelector(".custom-secondary-timer-label");
   const saveRules = document.getElementById("custom-secondary-timer-save");
   const clearRules = document.getElementById("custom-secondary-timer-clear");
@@ -464,14 +454,8 @@ function applyThemePageCopy(): void {
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
   if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
   if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
-  if (guideEntry) {
-    guideEntry.textContent = isEnglish ? "Beginner guides" : "新手指引";
-    guideEntry.setAttribute("aria-label", isEnglish ? "Open beginner guides" : "打开新手指引");
-  }
   if (appearanceDisclosureTitle) appearanceDisclosureTitle.textContent = copy.appearanceDisclosureTitle;
   if (appearanceDisclosureDesc) appearanceDisclosureDesc.textContent = copy.appearanceDisclosureDesc;
-  if (languageDisclosureTitle) languageDisclosureTitle.textContent = copy.languageDisclosureTitle;
-  if (languageDisclosureDesc) languageDisclosureDesc.textContent = copy.languageDisclosureDesc;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
   if (listTitle) listTitle.textContent = copy.paletteList;
   if (paletteMappingNote) paletteMappingNote.textContent = copy.paletteMappingNote;
@@ -498,7 +482,7 @@ function applyThemePageCopy(): void {
   }
   if (categoryLinks[2]) {
     const titleNode = categoryLinks[2].querySelector("strong");
-    if (titleNode) titleNode.textContent = copy.languageCategory;
+    if (titleNode) titleNode.textContent = copy.guideCategory;
   }
   document.querySelector(".settings-category-nav")?.setAttribute("aria-label", isEnglish ? "Settings categories" : "\u8bbe\u7f6e\u5206\u7c7b");
   document.querySelector(".custom-secondary-timer-family-tabs")?.setAttribute(
@@ -507,8 +491,6 @@ function applyThemePageCopy(): void {
   );
   if (customTimerTitle) customTimerTitle.textContent = copy.customTimerTitle;
   if (customTimerDesc) customTimerDesc.textContent = copy.customTimerDesc;
-  if (expandSettings) expandSettings.textContent = copy.expandSettings;
-  if (collapseSettings) collapseSettings.textContent = copy.collapseSettings;
   if (rulesLabel) rulesLabel.textContent = copy.rulesLabel;
   if (saveRules) saveRules.textContent = copy.saveRules;
   if (clearRules) clearRules.textContent = copy.clearRules;
@@ -550,9 +532,66 @@ function openAndScrollSettingsCategory(targetId: SettingsSectionId): void {
   section?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function bindSettingsDisclosureLock(): void {
+  document.querySelectorAll<HTMLDetailsElement>(".settings-disclosure").forEach((disclosure) => {
+    disclosure.open = true;
+    disclosure.querySelector("summary")?.addEventListener("click", (event) => event.preventDefault());
+  });
+}
+
+function bindPaletteLanguageButtons(): void {
+  const buttons = document.querySelectorAll<HTMLButtonElement>("[data-ui-language]");
+  const switchGroup = document.querySelector<HTMLElement>(".palette-language-switch");
+  const sync = (): void => {
+    const activeLanguage = isEnglishUi() ? "en" : "zh";
+    switchGroup?.setAttribute("aria-label", activeLanguage === "en" ? "Language" : "界面语言");
+    buttons.forEach((button) => {
+      const active = button.dataset.uiLanguage === activeLanguage;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        activeLanguage === "en"
+          ? (button.dataset.uiLanguage === "en" ? "Current language: English" : "Switch to Chinese")
+          : (button.dataset.uiLanguage === "zh" ? "当前语言：中文" : "切换到英文")
+      );
+    });
+  };
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const language = button.dataset.uiLanguage === "en" ? "en" : "zh";
+      globalWindow.UII18N?.setLanguage?.(language);
+      sync();
+    });
+  });
+  window.addEventListener("uilanguagechange", sync);
+  sync();
+}
+
+function releaseSettingsCategoryScrollLock(): void {
+  settingsCategoryScrollLock = null;
+  if (settingsCategoryScrollUnlockTimer !== undefined) {
+    window.clearTimeout(settingsCategoryScrollUnlockTimer);
+    settingsCategoryScrollUnlockTimer = undefined;
+  }
+  if (settingsCategoryScrollUnlockListener) {
+    window.removeEventListener("scrollend", settingsCategoryScrollUnlockListener);
+    settingsCategoryScrollUnlockListener = undefined;
+  }
+}
+
+function lockSettingsCategoryDuringScroll(activeId: SettingsSectionId): void {
+  releaseSettingsCategoryScrollLock();
+  settingsCategoryScrollLock = activeId;
+  settingsCategoryScrollUnlockListener = releaseSettingsCategoryScrollLock;
+  window.addEventListener("scrollend", settingsCategoryScrollUnlockListener, { once: true });
+  settingsCategoryScrollUnlockTimer = window.setTimeout(releaseSettingsCategoryScrollLock, 700);
+}
+
 export function syncSettingsCategory(): void {
   const targetId = SETTINGS_SECTION_IDS.find((id) => window.location.hash === `#${id}`);
-  const activeId = targetId ?? "timer-settings";
+  const activeId = targetId ?? "appearance-settings";
   setActiveSettingsCategory(activeId);
 
   if (!targetId) return;
@@ -561,7 +600,10 @@ export function syncSettingsCategory(): void {
 
 export function bindSettingsCategoryNavigation(): void {
   for (const id of SETTINGS_SECTION_IDS) {
-    document.querySelector<HTMLAnchorElement>(`.settings-category-link[href="#${id}"]`)?.addEventListener("click", () => {
+    document.querySelector<HTMLAnchorElement>(`.settings-category-link[href="#${id}"]`)?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (window.location.hash !== `#${id}`) window.history.pushState(null, "", `#${id}`);
+      lockSettingsCategoryDuringScroll(id);
       setActiveSettingsCategory(id);
       openAndScrollSettingsCategory(id);
     });
@@ -569,6 +611,10 @@ export function bindSettingsCategoryNavigation(): void {
 }
 
 export function syncSettingsCategoryFromEntries(entries: IntersectionObserverEntry[]): void {
+  if (settingsCategoryScrollLock) {
+    setActiveSettingsCategory(settingsCategoryScrollLock);
+    return;
+  }
   for (const entry of entries) {
     const id = entry.target.id as SettingsSectionId;
     if (SETTINGS_SECTION_IDS.includes(id)) {
@@ -578,7 +624,7 @@ export function syncSettingsCategoryFromEntries(entries: IntersectionObserverEnt
 
   const currentId = SETTINGS_SECTION_IDS.find((id) =>
     document.querySelector(`.settings-category-link[href="#${id}"]`)?.classList.contains("is-active")
-  ) ?? "timer-settings";
+  ) ?? "appearance-settings";
   let activeId = currentId;
   let activeRatio = settingsSectionVisibility.get(currentId) ?? 0;
 
@@ -637,10 +683,15 @@ export function bootstrapPalettePage(): void {
   }
 
   initCustomTimerEditor();
+  bindSettingsDisclosureLock();
+  bindPaletteLanguageButtons();
   bindSettingsCategoryNavigation();
   syncSettingsCategory();
-  observeSettingsCategories();
+  window.setTimeout(observeSettingsCategories, 1000);
   applyThemePageCopy();
+  window.setTimeout(() => {
+    if (!window.location.hash && window.scrollY <= 8) setActiveSettingsCategory("appearance-settings");
+  }, 0);
   window.addEventListener("hashchange", () => syncSettingsCategory());
   window.addEventListener("resize", syncSettingsBookmarkPosition);
   window.addEventListener("uilanguagechange", applyThemePageCopy);

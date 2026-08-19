@@ -4,14 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const SETTINGS_HTML = `
   <nav class="settings-category-nav">
     <span class="settings-category-active-bookmark"></span>
-    <a class="settings-category-link is-active" href="#timer-settings" aria-current="location">计时器</a>
-    <a class="settings-category-link" href="#appearance-settings" aria-current="false">外观与配色</a>
-    <a class="settings-category-link" href="#language-settings" aria-current="false">界面语言</a>
+    <a class="settings-category-link is-active" href="#appearance-settings" aria-current="location">外观与配色</a>
+    <a class="settings-category-link" href="#timer-settings" aria-current="false">计时器</a>
     <a class="settings-category-link" href="#contextual-guide-settings" aria-current="false">新手指引</a>
   </nav>
-  <section id="timer-settings"><details id="custom-secondary-timer-editor"></details></section>
-  <section id="appearance-settings"><details id="appearance-settings-editor"></details></section>
-  <section id="language-settings"><details id="language-settings-editor"></details></section>
+  <section id="timer-settings"><details id="custom-secondary-timer-editor" open></details></section>
+  <section id="appearance-settings"><details id="appearance-settings-editor" open></details></section>
   <section id="contextual-guide-settings"></section>
 `;
 
@@ -47,7 +45,7 @@ describe("palette settings navigation", () => {
     module.syncSettingsCategory();
 
     expect((dom.window.document.getElementById("appearance-settings-editor") as HTMLDetailsElement).open).toBe(true);
-    expect((dom.window.document.getElementById("custom-secondary-timer-editor") as HTMLDetailsElement).open).toBe(false);
+    expect((dom.window.document.getElementById("custom-secondary-timer-editor") as HTMLDetailsElement).open).toBe(true);
     expect(scrollOptions).toEqual({ behavior: "smooth", block: "start" });
     expect(dom.window.document.querySelector('a[href="#appearance-settings"]')?.getAttribute("aria-current")).toBe("location");
     dom.window.close();
@@ -85,15 +83,45 @@ describe("palette settings navigation", () => {
     dom.window.close();
   });
 
-  it("opens the language module from its settings bookmark", async () => {
-    const { dom, module } = await loadPalettePageModule("#language-settings");
-    const section = dom.window.document.getElementById("language-settings") as HTMLElement;
-    section.scrollIntoView = () => undefined;
+  it("prevents the native anchor jump before smoothly scrolling to a category", async () => {
+    const { dom, module } = await loadPalettePageModule("");
+    const section = dom.window.document.getElementById("appearance-settings") as HTMLElement;
+    let scrollOptions: ScrollIntoViewOptions | undefined;
+    section.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+      if (typeof options === "object") scrollOptions = options;
+    };
 
-    module.syncSettingsCategory();
+    module.bindSettingsCategoryNavigation();
+    const click = new dom.window.MouseEvent("click", { bubbles: true, cancelable: true });
+    dom.window.document.querySelector('a[href="#appearance-settings"]')?.dispatchEvent(click);
 
-    expect((dom.window.document.getElementById("language-settings-editor") as HTMLDetailsElement).open).toBe(true);
-    expect(dom.window.document.querySelector('a[href="#language-settings"]')?.classList.contains("is-active")).toBe(true);
+    expect(click.defaultPrevented).toBe(true);
+    expect(dom.window.location.hash).toBe("#appearance-settings");
+    expect(scrollOptions).toEqual({ behavior: "smooth", block: "start" });
+    dom.window.close();
+  });
+
+  it("keeps the clicked bookmark active until smooth scrolling ends", async () => {
+    const { dom, module } = await loadPalettePageModule("");
+    const appearance = dom.window.document.getElementById("appearance-settings") as HTMLElement;
+    appearance.scrollIntoView = () => undefined;
+
+    module.bindSettingsCategoryNavigation();
+    const click = new dom.window.MouseEvent("click", { bubbles: true, cancelable: true });
+    dom.window.document.querySelector('a[href="#appearance-settings"]')?.dispatchEvent(click);
+
+    module.syncSettingsCategoryFromEntries([
+      { isIntersecting: true, intersectionRatio: 0.9, target: dom.window.document.getElementById("timer-settings") },
+      { isIntersecting: true, intersectionRatio: 0.1, target: appearance }
+    ] as IntersectionObserverEntry[]);
+    expect(dom.window.document.querySelector('a[href="#appearance-settings"]')?.classList.contains("is-active")).toBe(true);
+
+    dom.window.dispatchEvent(new dom.window.Event("scrollend"));
+    module.syncSettingsCategoryFromEntries([
+      { isIntersecting: true, intersectionRatio: 0.9, target: dom.window.document.getElementById("timer-settings") },
+      { isIntersecting: true, intersectionRatio: 0.1, target: appearance }
+    ] as IntersectionObserverEntry[]);
+    expect(dom.window.document.querySelector('a[href="#timer-settings"]')?.classList.contains("is-active")).toBe(true);
     dom.window.close();
   });
 

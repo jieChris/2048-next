@@ -212,13 +212,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
       "Turn on to show timers, turn off to show leaderboard."
     );
 
-    const settingsResponse = await page.goto("/palette.html#language-settings", {
+    const settingsResponse = await page.goto("/palette.html", {
       waitUntil: "domcontentloaded"
     });
     expect(settingsResponse?.ok(), "Settings response should be 2xx").toBeTruthy();
-    await expect(page.locator("#language-settings-editor")).toHaveAttribute("open", "");
-    await expect(page.locator("#ui-language-toggle")).toBeChecked();
-    await page.click("label.language-settings-switch");
+    await expect(page.locator('[data-ui-language="en"]')).toHaveAttribute("aria-pressed", "true");
+    await page.locator('[data-ui-language="zh"]').click();
     await page.waitForFunction(() => window.localStorage.getItem("ui_language_v1") === "zh");
 
     const updatedHomeResponse = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });

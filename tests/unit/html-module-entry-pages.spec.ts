@@ -81,32 +81,34 @@ describe("module entry html pages", () => {
     expect(html).toContain('id="custom-secondary-timer-editor"');
     expect(html).toContain('<strong>计时器</strong>');
     expect(html).toContain('<small>自定义子计时器规则</small>');
-    expect(html).not.toContain('id="custom-secondary-timer-editor" open');
+    expect(html).toContain('id="custom-secondary-timer-editor" class="settings-disclosure" open');
+    expect(html).not.toContain('class="settings-disclosure-action"');
     expect(html).not.toContain('id="palette-preview-legend"');
   });
 
-  it("palette.html keeps the whole appearance workspace collapsed by default", () => {
+  it("palette.html keeps every settings workspace expanded", () => {
     const html = readHtml("palette.html");
 
     expect(html).toContain('id="appearance-settings" class="palette-settings-section"');
     expect(html).not.toContain('id="appearance-settings" class="palette-settings-section" hidden');
     expect(html).toContain('class="settings-category-active-bookmark" aria-hidden="true"></span>');
-    expect(html).toContain('href="#timer-settings" aria-controls="timer-settings" aria-current="location"');
-    expect(html).toContain('href="#appearance-settings" aria-controls="appearance-settings"');
+    expect(html).toContain('href="#appearance-settings" aria-controls="appearance-settings" aria-current="location"');
+    expect(html).toContain('href="#timer-settings" aria-controls="timer-settings"');
     expect(html).toContain('id="appearance-settings-editor"');
-    expect(html).not.toContain('id="appearance-settings-editor" open');
+    expect(html).toContain('id="appearance-settings-editor" class="settings-disclosure appearance-settings-disclosure" open');
     expect(html).toContain('class="settings-disclosure appearance-settings-disclosure"');
     expect(html).not.toContain('id="theme-selection-editor"');
   });
 
-  it("palette.html exposes the interface language settings entry", () => {
+  it("palette.html exposes the top language switcher", () => {
     const html = readHtml("palette.html");
 
-    expect(html).toContain('href="#language-settings" aria-controls="language-settings"');
-    expect(html).toContain('id="language-settings" class="palette-settings-section"');
-    expect(html).toContain('id="language-settings-editor"');
-    expect(html).not.toContain('id="language-settings-editor" open');
-    expect(html).toContain('id="ui-language-toggle"');
+    expect(html).not.toContain('href="#language-settings" aria-controls="language-settings"');
+    expect(html).not.toContain('id="language-settings" class="palette-settings-section"');
+    expect(html).not.toContain('id="ui-language-toggle"');
+    expect(html).toContain('class="palette-language-switch" role="group" aria-label="界面语言"');
+    expect(html).toContain('data-ui-language="zh"');
+    expect(html).toContain('data-ui-language="en"');
     expect(html).not.toContain('id="operation-feedback-toggle"');
   });
 
@@ -114,9 +116,10 @@ describe("module entry html pages", () => {
     const html = readHtml("palette.html");
 
     expect(html).toContain('href="#contextual-guide-settings" aria-controls="contextual-guide-settings"');
-    expect(html).toContain('class="replay-button palette-nav-btn palette-guide-entry"');
+    expect(html).not.toContain('class="replay-button palette-nav-btn palette-guide-entry"');
     expect(html).toContain('id="contextual-guide-settings" class="palette-settings-section"');
     expect(html).toContain('id="contextual-guide-catalog-row"');
+    expect(html).toContain('<strong>新手指引</strong>');
   });
 
   it("palette settings navigation keeps labels left aligned at every breakpoint", () => {

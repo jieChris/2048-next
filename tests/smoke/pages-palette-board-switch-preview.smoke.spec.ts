@@ -132,7 +132,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".palette-variant-note")).toHaveText("色板颜色会按方块等级映射到其他棋盘变体。");
     await expect(page.locator('link[href^="style/palette_page.css"]')).toHaveAttribute(
       "href",
-      "style/palette_page.css?v=20260811-glow-controls-v24"
+      "style/palette_page.css?v=20260819-settings-order-v1"
     );
 
     await page.waitForSelector(".swatch-chip", { state: "attached" });
