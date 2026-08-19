@@ -9,6 +9,16 @@ function extractRule(source: string, selector: string): string {
 }
 
 describe("timer leaderboard rank style", () => {
+  it("keeps nickname descenders inside their clipped line box", () => {
+    const css = readCssEntry("style/main.css");
+    const nameTileRule = extractRule(
+      css,
+      ".timer-leaderboard-row .timer-leaderboard-name-tile"
+    );
+
+    expect(nameTileRule).toContain("line-height: 1.2;");
+  });
+
   it("shows the static leaderboard shell when preload marks the initial leaderboard view", () => {
     const css = readCssEntry("style/main.css");
     const hiddenRule = extractRule(css, 'html[data-initial-timer-leaderboard="1"] #timerbox > *');
