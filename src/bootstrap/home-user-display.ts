@@ -43,6 +43,7 @@ const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "account-settings",
   "achievements",
   "admin",
+  "history",
   "modes",
   "password",
   "palette",

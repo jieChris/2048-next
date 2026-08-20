@@ -176,7 +176,7 @@ describe("bootstrap home user display", () => {
       }
     };
 
-    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "history" })).toBe(true);
+    expect(bindHomeUserDisplay({ documentLike, storageLike, pageId: "relay-5x5" })).toBe(true);
     expect(appended).toHaveLength(1);
     expect(appended[0]).toMatchObject({
       id: "home-user-display",
@@ -256,6 +256,7 @@ describe("bootstrap home user display", () => {
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account-hub" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "account-settings" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "achievements" })).toBe(false);
+    expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "history" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "palette-hub" })).toBe(false);
     expect(bindHomeUserDisplay({ documentLike, storageLike: null, pageId: "modes" })).toBe(false);

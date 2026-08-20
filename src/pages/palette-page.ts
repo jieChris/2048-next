@@ -338,7 +338,7 @@ function initCustomTimerEditor(): void {
   syncCustomTimerEditor(true);
 }
 
-function applyThemePageCopy(): void {
+export function applyThemePageCopy(): void {
   const isEnglish = isEnglishUi();
   const title = isEnglish ? "Settings" : "\u8bbe\u7f6e";
   const subtitle = isEnglish
@@ -437,7 +437,9 @@ function applyThemePageCopy(): void {
   const previewPanelHead = document.getElementById("palette-preview-panel-head");
   const dimensionTabs = document.querySelectorAll(".palette-dimension-tab");
   const dimensionTabList = document.getElementById("palette-dimension-tabs");
-  const categoryLinks = document.querySelectorAll(".settings-category-link");
+  const appearanceCategoryTitle = document.querySelector('.settings-category-link[href="#appearance-settings"] strong');
+  const timerCategoryTitle = document.querySelector('.settings-category-link[href="#timer-settings"] strong');
+  const guideCategoryTitle = document.querySelector('.settings-category-link[href="#contextual-guide-settings"] strong');
   const customTimerTitle = document.querySelector(".settings-disclosure-copy strong");
   const customTimerDesc = document.querySelector(".settings-disclosure-copy small");
   const rulesLabel = document.querySelector(".custom-secondary-timer-label");
@@ -472,18 +474,9 @@ function applyThemePageCopy(): void {
   if (dimensionTabs[1]) dimensionTabs[1].textContent = copy.text;
   if (dimensionTabs[2]) dimensionTabs[2].textContent = copy.border;
   if (dimensionTabs[3]) dimensionTabs[3].textContent = copy.glow;
-  if (categoryLinks[0]) {
-    const titleNode = categoryLinks[0].querySelector("strong");
-    if (titleNode) titleNode.textContent = copy.timerCategory;
-  }
-  if (categoryLinks[1]) {
-    const titleNode = categoryLinks[1].querySelector("strong");
-    if (titleNode) titleNode.textContent = copy.appearanceCategory;
-  }
-  if (categoryLinks[2]) {
-    const titleNode = categoryLinks[2].querySelector("strong");
-    if (titleNode) titleNode.textContent = copy.guideCategory;
-  }
+  if (appearanceCategoryTitle) appearanceCategoryTitle.textContent = copy.appearanceCategory;
+  if (timerCategoryTitle) timerCategoryTitle.textContent = copy.timerCategory;
+  if (guideCategoryTitle) guideCategoryTitle.textContent = copy.guideCategory;
   document.querySelector(".settings-category-nav")?.setAttribute("aria-label", isEnglish ? "Settings categories" : "\u8bbe\u7f6e\u5206\u7c7b");
   document.querySelector(".custom-secondary-timer-family-tabs")?.setAttribute(
     "aria-label",

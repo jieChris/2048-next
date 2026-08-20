@@ -604,7 +604,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     await expect(page.locator('link[href^="style/replay_page_rebuild.css"]')).toHaveAttribute(
       "href",
-      "style/replay_page_rebuild.css?v=20260721-profile-text-v1"
+      "style/replay_page_rebuild.css?v=20260820-theme-colors-v1"
     );
   });
 

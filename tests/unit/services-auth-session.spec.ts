@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -15,6 +16,13 @@ beforeEach(() => {
 });
 
 describe("durable browser auth session", () => {
+  it("resyncs legacy account screens after cookie restoration", () => {
+    for (const file of ["js/account_page.js", "js/account_settings_page.js"]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).toMatch(/addEventListener\("auth-session-change"[\s\S]*?syncAuthState\(\);[\s\S]*?refreshUserInfo\(/u);
+    }
+  });
+
   it("restores from the HttpOnly cookie and removes the legacy persisted bearer", async () => {
     const storage = new MemoryStorage();
     storage.setItem("2048_auth_token_v1", "legacy-token");

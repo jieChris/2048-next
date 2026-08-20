@@ -376,6 +376,31 @@ body[data-page="replay"] .replay-singleline-unit {
   font-weight: 700;
 }
 
+html[data-theme="classic"] body[data-page="replay"] .replay-metric-card {
+  background: var(--app-surface-board);
+  color: var(--app-text-on-action);
+}
+
+html[data-theme="classic"] body[data-page="replay"] .replay-metric-label {
+  color: var(--app-text-on-board-muted);
+}
+
+html[data-theme="classic"] body[data-page="replay"] .replay-metric-value {
+  color: var(--app-text-on-action);
+}
+
+html[data-theme="classic"] body[data-page="replay"] .replay-control-btn,
+html[data-theme="classic"] body[data-page="replay"] .import-replay-button {
+  background: var(--app-action-bg);
+  color: var(--app-text-on-action);
+}
+
+html[data-theme="classic"] body[data-page="replay"] .replay-control-btn:hover,
+html[data-theme="classic"] body[data-page="replay"] .import-replay-button:hover {
+  background: color-mix(in srgb, var(--app-action-bg) 88%, black);
+  color: var(--app-text-on-action);
+}
+
 html[data-night-background="1"] body[data-page="replay"] {
   background:
     radial-gradient(1180px 520px at 16% -16%, rgba(95, 121, 166, 0.18), transparent 66%),

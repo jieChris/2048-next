@@ -406,12 +406,6 @@ test("mist cyan night runtime and mobile utility pages keep the shared visual sy
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
 
   await page.goto("/history.html", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#home-user-display")).toBeVisible();
-  const headerGap = await page.locator("body").evaluate(() => {
-    const badge = document.querySelector<HTMLElement>("#home-user-display");
-    const back = document.querySelector<HTMLElement>(".portal-header .page-back-button");
-    if (!badge || !back) return Number.POSITIVE_INFINITY;
-    return back.getBoundingClientRect().top - badge.getBoundingClientRect().bottom;
-  });
-  expect(headerGap).toBeGreaterThanOrEqual(8);
+  await expect(page.locator("#home-user-display")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
 });

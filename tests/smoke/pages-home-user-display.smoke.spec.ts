@@ -113,7 +113,7 @@ test.describe("Home user display", () => {
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
-    for (const path of ["/account.html", "/palette.html", "/modes.html", "/medal-wall.html"]) {
+    for (const path of ["/account.html", "/history.html", "/palette.html", "/modes.html", "/medal-wall.html"]) {
       const response = await page.goto(path, { waitUntil: "domcontentloaded" });
       expect(response, `${path} response should exist`).not.toBeNull();
       expect(response?.ok(), `${path} response should be 2xx`).toBeTruthy();

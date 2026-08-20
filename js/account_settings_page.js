@@ -1073,6 +1073,10 @@
         refreshUserInfo();
       }
     });
+    global.addEventListener("auth-session-change", function () {
+      syncAuthState();
+      refreshUserInfo();
+    });
   }
 
   function init() {

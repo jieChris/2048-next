@@ -1637,6 +1637,10 @@
     global.addEventListener("uilanguagechange", function () {
       applyLanguage();
     });
+    global.addEventListener("auth-session-change", function () {
+      syncAuthState();
+      refreshUserInfo({ silentTimeout: true });
+    });
   }
 
   function init() {

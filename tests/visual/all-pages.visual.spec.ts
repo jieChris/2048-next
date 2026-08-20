@@ -248,6 +248,10 @@ async function scrollAppearanceSettingsIntoView(page: Page): Promise<void> {
 }
 
 async function prepareVisualPage(page: Page, pageKey: string, theme: Theme): Promise<void> {
+  if (pageKey === "history") {
+    await expect(page.locator("#home-user-display")).toHaveCount(0);
+  }
+
   if (pageKey === "not-found") {
     await expect(page.locator("#tile-playground .play-tile")).toHaveCount(10);
   }

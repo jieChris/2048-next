@@ -8,7 +8,7 @@ html[data-night-background="1"] h1.title a {
   color: var(--night-ink);
 }
 
-html[data-night-background="1"] a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button) {
+html[data-night-background="1"] a:not(.top-action-btn):not(.restart-button):not(.replay-button):not(.replay-control-btn):not(.import-replay-button):not(.mode-hub-btn):not(.keep-playing-button):not(.retry-button):not(.undo-button) {
   color: #f0dcc0;
 }
 

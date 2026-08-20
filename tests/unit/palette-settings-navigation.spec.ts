@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const SETTINGS_HTML = `
   <nav class="settings-category-nav">
     <span class="settings-category-active-bookmark"></span>
-    <a class="settings-category-link is-active" href="#appearance-settings" aria-current="location">外观与配色</a>
-    <a class="settings-category-link" href="#timer-settings" aria-current="false">计时器</a>
-    <a class="settings-category-link" href="#contextual-guide-settings" aria-current="false">新手指引</a>
+    <a class="settings-category-link is-active" href="#appearance-settings" aria-current="location"><strong>外观与配色</strong></a>
+    <a class="settings-category-link" href="#timer-settings" aria-current="false"><strong>计时器</strong></a>
+    <a class="settings-category-link" href="#contextual-guide-settings" aria-current="false"><strong>新手指引</strong></a>
   </nav>
   <section id="timer-settings"><details id="custom-secondary-timer-editor" open></details></section>
   <section id="appearance-settings"><details id="appearance-settings-editor" open></details></section>
@@ -34,6 +34,17 @@ afterEach(() => {
 });
 
 describe("palette settings navigation", () => {
+  it("keeps localized category labels aligned with their target anchors", async () => {
+    const { dom, module } = await loadPalettePageModule("");
+
+    module.applyThemePageCopy();
+
+    expect(dom.window.document.querySelector('a[href="#appearance-settings"] strong')?.textContent).toBe("外观与配色");
+    expect(dom.window.document.querySelector('a[href="#timer-settings"] strong')?.textContent).toBe("计时器");
+    expect(dom.window.document.querySelector('a[href="#contextual-guide-settings"] strong')?.textContent).toBe("新手指引");
+    dom.window.close();
+  });
+
   it("opens and scrolls the settings module targeted by the hash", async () => {
     const { dom, module } = await loadPalettePageModule("#appearance-settings");
     const section = dom.window.document.getElementById("appearance-settings") as HTMLElement;

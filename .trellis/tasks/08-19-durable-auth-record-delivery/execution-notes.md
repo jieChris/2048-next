@@ -89,6 +89,7 @@
 - 设备 Cookie 最初设计为每次 refresh 轮换；并发多标签页会产生响应乱序并使刚写入的 Cookie 失效，因此改为稳定 opaque token + 服务端撤销/`auth_version`。这是保守的数据安全修复，不降低 Cookie 的随机强度、HttpOnly 或撤销能力。
 - 前端工作树缺少被忽略的 `node_modules/.bin/openapi-typescript` 链接；只在被忽略的 `node_modules` 内链接主工作树现有二进制以运行 `api:types:check`，没有修改源码或依赖清单。
 - 根级约束禁止启动独立 Playwright/外部浏览器；内置浏览器截图接口本轮不可用，且管理页需要真实管理员 API 会话，因此没有运行/更新 416 张视觉基线。采用最保守替代：内置浏览器 DOM/边界检查历史页、管理员前端结构单测及后端 API 专项，并明确保留该验证边界。
+- 生产发布前备份已完成本地归档、校验和与前后引用一致性检查，也已传完异地文件，但外层 SSH 通道未正常回收，脚本没有写入新的 `last-success` 状态。发布因此暂停，直到独立通过本地 `sha256sum`、`pg_restore --list` 和异地 `rsync --checksum --dry-run` 逐文件一致性验证；未降低备份标准，也未修改或删除玩家数据。
 
 ## 发布前仍需完成
 
