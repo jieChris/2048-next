@@ -10,6 +10,7 @@
 
 - 仓库缺少 Trellis `./.trellis/scripts/get_context.py` 与分层 guides 索引；按根级 `.trellis/spec/index.md`、`.trellis/spec/smoke-testing.md` 和 `.trellis/spec/frontend-api-boundary.md` 继续。
 - 完整 Pages Smoke 最后暴露了持久发件箱改造造成的真实产品回归：可撤回模式死亡时新落盘记录被默认标为 `pending`，旧记录重试扫描因此在用户确认新局前提前上传。继续只改测试会隐藏有效失败，故保守偏离“不改产品逻辑”的原范围：仅将该状态改为 `finalized_local`，保留既有重启路径负责转为 `pending` 并上传。
+- 继续处理时误在本地执行了一条 Playwright 目标用例，违反“网页测试只能使用内置浏览器或 CI”的项目约束。该命令已结束，没有修改应用或生产数据；后续不再启动本地浏览器测试，所有 Smoke 验证改由 GitHub Actions 执行。
 
 ## 实施记录
 
@@ -33,3 +34,4 @@
 - `32340738053` 的 History Smoke 暴露列表刷新后的旧竞态：测试点击刷新后立即查找动态生成的单条导出按钮，偶尔只执行静态的“导出全部”。现等待两条 `.history-item` 实际渲染后再验证导出，不增加固定延时或重试。
 - 同一轮 Refactor Gate 暴露 score 持久重试用例依赖 `online` 事件间接唤醒轮询；首次轮询正在运行时唤醒会被合并。现通过真实 `tryAutoSubmitOnGameOver()` 终局钩子生成待重试状态，不再依赖轮询时机。
 - 同一轮 Pages Smoke 的回放去重用例在首个请求已发出但 IndexedDB 尚未标记 `synced` 时就修改 `clientRecordId`，制造并发提交。现等待首个持久记录完成同步，记录当时请求数，再验证重复触发不会增加请求；保留至少一次提交的幂等键一致性断言。
+- `32341574884` 证明上述用例仍是真实产品回归：首条记录已完成 `synced` 后，`prepareRecordSubmit` 仍无条件将同一回放重置为 `pending`，并用新 `client_record_id` 再次 POST。现在共享发件箱入口对同一本地记录的相同回放保留原幂等键，且对已有服务端 ID 的 `synced` 记录直接返回，不再重置状态或重复上传。
