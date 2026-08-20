@@ -28,3 +28,4 @@
 - 练习板模式选择用例此前把选中父元素的 `z-index` 与内部 `.tile-inner` 的 `auto` 值比较，得到 `NaN`。现按真实契约比较选中棋子与未选中兄弟棋子的层级，并将 `auto` 视为 0；未改 CSS。
 - 练习板首步用例此前在 `practice_fresh=1` 的异步清空完成前就放置棋子，fresh bootstrap 随后清掉棋子。现等待 URL 中的 `practice_fresh` 被移除后再执行操作。
 - 下一轮 CI 继续暴露两个被前序失败短路的时序点：重启文件的“无预取”用例也必须等待终局提交 Promise，并显式关闭重启确认；score 旧 localStorage 用例在请求数达到 2 时响应清理尚未完成，现等待 pending key 清空且 last signature 写入后再断言。
+- 再下一轮 Pages Smoke 暴露旧的“重启前冲刷”用例仍断言已淘汰的 `online_last_record_submit_signature_v1`。当前记录上传以 IndexedDB 发件箱为权威，现改为等待并断言 `LocalHistoryStore.getAllAsync()` 的最新记录为 `synced` 且含服务端记录 ID，同时保留请求载荷完整性断言。

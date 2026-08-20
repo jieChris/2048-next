@@ -461,41 +461,53 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.restart();
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
-      timeout: 4000
+    await expect.poll(async () => page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return Number((window as any).__recordSubmitCalls || 0) >= 1 &&
+        String(latest?.sync_status || "") === "synced" &&
+        String(latest?.server_record_id || "") === "rec-smoke-1";
+    }), { timeout: 4000 }).toBe(true);
+
+    const snapshot = await page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return {
+        calls: Number((window as any).__recordSubmitCalls || 0),
+        latestSyncStatus: String(latest?.sync_status || ""),
+        latestServerRecordId: String(latest?.server_record_id || ""),
+        payloadClientRecordId: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return payload ? String((payload as any).client_record_id || "") : "";
+        })(),
+        payloadHasRequiredKeys: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          const requiredKeys = [
+            "score",
+            "best_tile",
+            "duration_ms",
+            "mode",
+            "mode_key",
+            "ended_at",
+            "end_reason",
+            "final_board",
+            "replay",
+            "replay_string"
+          ];
+          return !!payload && requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(payload, key));
+        })(),
+        payloadFinalBoardIsArray: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return !!payload && Array.isArray((payload as any).final_board);
+        })()
+      };
     });
 
-    const snapshot = await page.evaluate(() => ({
-      calls: Number((window as any).__recordSubmitCalls || 0),
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
-      payloadClientRecordId: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return payload ? String((payload as any).client_record_id || "") : "";
-      })(),
-      payloadHasRequiredKeys: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        const requiredKeys = [
-          "score",
-          "best_tile",
-          "duration_ms",
-          "mode",
-          "mode_key",
-          "ended_at",
-          "end_reason",
-          "final_board",
-          "replay",
-          "replay_string"
-        ];
-        return !!payload && requiredKeys.every((key) => Object.prototype.hasOwnProperty.call(payload, key));
-      })(),
-      payloadFinalBoardIsArray: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return !!payload && Array.isArray((payload as any).final_board);
-      })()
-    }));
-
     expect(snapshot.calls).toBeGreaterThanOrEqual(1);
-    expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+    expect(snapshot.latestSyncStatus).toBe("synced");
+    expect(snapshot.latestServerRecordId).toBe("rec-smoke-1");
     expect(snapshot.payloadClientRecordId.length).toBeGreaterThan(0);
     expect(snapshot.payloadHasRequiredKeys).toBe(true);
     expect(snapshot.payloadFinalBoardIsArray).toBe(true);
