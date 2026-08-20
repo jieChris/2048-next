@@ -14,10 +14,16 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  smoke:
+    name: Full Smoke Gate
+    uses: ./.github/workflows/smoke.yml
+    secrets: inherit
+
   build:
     name: Build Release Package
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: smoke
     outputs:
       release_id: ${{ steps.meta.outputs.release_id }}
       artifact_name: ${{ steps.meta.outputs.artifact_name }}

@@ -71,23 +71,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#account-password", "smoke_password");
     await page.click("#account-login-btn");
 
-    await page.waitForFunction(() => {
-      return (
-        window.localStorage.getItem("2048_auth_token_v1") === "smoke_token" &&
-        window.localStorage.getItem("2048_auth_userId_v1") === "42" &&
-        window.localStorage.getItem("2048_auth_nickname_v1") === "Smoke"
-      );
-    });
-
-    const snapshot = await page.evaluate(() => ({
-      token: window.localStorage.getItem("2048_auth_token_v1"),
-      userId: window.localStorage.getItem("2048_auth_userId_v1"),
-      nickname: window.localStorage.getItem("2048_auth_nickname_v1")
-    }));
-
-    expect(snapshot.token).toBe("smoke_token");
-    expect(snapshot.userId).toBe("42");
-    expect(snapshot.nickname).toBe("Smoke");
+    await expect(page.locator(".account-user-card")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          token: window.localStorage.getItem("2048_auth_token_v1"),
+          userId: window.localStorage.getItem("2048_auth_userId_v1"),
+          nickname: window.localStorage.getItem("2048_auth_nickname_v1")
+        }))
+      )
+      .toEqual({ token: null, userId: "42", nickname: "Smoke" });
     expect(loginCalls).toBe(1);
     expect(recordUploadCalls).toBe(0);
     await expect(page.locator(".account-auth-form-surface")).toBeHidden();
@@ -165,7 +158,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     resolveLogin?.();
 
-    await page.waitForFunction(() => window.localStorage.getItem("2048_auth_token_v1") === "pending_token");
+    await expect(page.locator(".account-user-card")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          token: window.localStorage.getItem("2048_auth_token_v1"),
+          userId: window.localStorage.getItem("2048_auth_userId_v1"),
+          nickname: window.localStorage.getItem("2048_auth_nickname_v1")
+        }))
+      )
+      .toEqual({ token: null, userId: "44", nickname: "PendingSmoke" });
     await expect(page.locator("#account-action-row")).toBeHidden();
   });
 
@@ -246,13 +248,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.fill("#account-password", "correct_password");
     await page.press("#account-password", "Enter");
 
-    await page.waitForFunction(() => {
-      return (
-        window.localStorage.getItem("2048_auth_token_v1") === "enter_token" &&
-        window.localStorage.getItem("2048_auth_userId_v1") === "43" &&
-        window.localStorage.getItem("2048_auth_nickname_v1") === "EnterSmoke"
-      );
-    });
+    await expect(page.locator(".account-user-card")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          token: window.localStorage.getItem("2048_auth_token_v1"),
+          userId: window.localStorage.getItem("2048_auth_userId_v1"),
+          nickname: window.localStorage.getItem("2048_auth_nickname_v1")
+        }))
+      )
+      .toEqual({ token: null, userId: "43", nickname: "EnterSmoke" });
 
     expect(loginCalls).toBe(2);
   });
