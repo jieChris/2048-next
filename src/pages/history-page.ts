@@ -1,6 +1,7 @@
 import { runRefactorCutoverMigration } from "../bootstrap/refactor-cutover-migration";
 import { resolveHistoryLocalStore } from "../bootstrap/history-local-store";
 import { resolveHistoryModeCatalog } from "../bootstrap/history-mode-catalog";
+import { ensureHistoryRecordDeliveryRuntime } from "../bootstrap/history-record-delivery-runtime";
 import { createHistoryStorageRuntime } from "../bootstrap/history-storage-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bootstrapHistoryPageRuntime } from "./history-page-runtime";
@@ -216,15 +217,6 @@ function syncNightBackgroundAttribute(): void {
     return;
   }
   document.documentElement.removeAttribute("data-night-background");
-}
-
-async function ensureHistoryRecordDeliveryRuntime(): Promise<void> {
-  if (typeof window === "undefined" || (window as any).OnlineLeaderboardRuntime) return;
-  (window as any).__DISABLE_ONLINE_LEADERBOARD__ = true;
-  // @ts-expect-error Legacy browser runtime is intentionally loaded for its window side effect.
-  await import("../../js/api_shared_utils.js");
-  // @ts-expect-error Legacy browser runtime is intentionally loaded for its window side effect.
-  await import("../../js/online_leaderboard_runtime.js");
 }
 
 export async function bootstrapHistoryPage(): Promise<void> {
