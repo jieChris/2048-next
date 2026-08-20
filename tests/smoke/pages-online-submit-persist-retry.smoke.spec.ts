@@ -1,7 +1,21 @@
-﻿import { expect, test } from "@playwright/test";
+﻿import { expect, test, type Page } from "@playwright/test";
 
 import { mockAcceptedBetaAccess } from "./support/beta-access";
 import { installRankedSessionForMode } from "./support/ranked-session";
+
+async function readLatestDurableRecord(page: Page) {
+  return page.evaluate(async () => {
+    const store = (window as any).LocalHistoryStore;
+    const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+    const record = Array.isArray(records) ? records[0] : null;
+    return record ? {
+      clientRecordId: String(record.client_record_id || ""),
+      nextRetryAt: String(record.next_retry_at || ""),
+      serverRecordId: String(record.server_record_id || ""),
+      syncStatus: String(record.sync_status || "")
+    } : null;
+  });
+}
 
 test.describe("Legacy Multi-Page Smoke", () => {
   test.beforeEach(async ({ page }) => {
@@ -108,7 +122,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(Number(scoreBodies[1]?.score || 0)).toBeGreaterThan(0);
   });
 
-  test("online record submit replays persisted pending payload after reload", async ({ page }) => {
+  test("online record submit replays the durable outbox record after reload", async ({ page }) => {
     await installRankedSessionForMode(page, "board_3x3_pow2_no_undo", {
       ownerUserId: "42",
       seed: 818,
@@ -205,13 +219,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .poll(() => recordCalls, { timeout: 4000 })
       .toBeGreaterThanOrEqual(1);
 
-    const firstSnapshot = await page.evaluate(() => ({
-      pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
-      last: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
-    }));
+    await expect.poll(async () => (await readLatestDurableRecord(page))?.syncStatus).toBe("retry_wait");
+    const firstRecord = await readLatestDurableRecord(page);
+    const clientRecordId = String(recordBodies[0]?.client_record_id || "");
+    expect(clientRecordId).not.toBe("");
+    expect(firstRecord?.clientRecordId).toBe(clientRecordId);
+    expect(firstRecord?.serverRecordId).toBe("");
+    expect(await page.evaluate(() => window.localStorage.getItem("online_pending_record_submit_signature_v1"))).toBeNull();
 
-    expect(firstSnapshot.pending.length).toBeGreaterThan(0);
-    expect(firstSnapshot.last).toBe("");
+    await expect.poll(async () => {
+      const nextRetryAt = Date.parse((await readLatestDurableRecord(page))?.nextRetryAt || "");
+      return nextRetryAt > 0 && nextRetryAt <= Date.now();
+    }, { timeout: 6000 }).toBe(true);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => !!(window as any).OnlineLeaderboardRuntime);
@@ -220,21 +239,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .poll(() => recordCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(2);
 
-    const finalSnapshot = await page.evaluate(() => ({
-      pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
-      last: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
-    }));
-
-    expect(finalSnapshot.pending).toBe("");
-    expect(finalSnapshot.last.length).toBeGreaterThan(0);
-    expect(recordBodies).toHaveLength(2);
-    expect(String(recordBodies[0]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
-    expect(String(recordBodies[1]?.mode_key || "")).toBe("board_3x3_pow2_no_undo");
-    expect(String(recordBodies[0]?.replay_string || "").length).toBeGreaterThan(0);
-    expect(String(recordBodies[1]?.replay_string || "")).toBe(String(recordBodies[0]?.replay_string || ""));
+    await expect.poll(async () => (await readLatestDurableRecord(page))?.syncStatus).toBe("synced");
+    expect((await readLatestDurableRecord(page))?.serverRecordId).toBe("rec-smoke-persist-1");
+    expect(recordBodies.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(recordBodies.map((body) => String(body.client_record_id || "")))).toEqual(new Set([clientRecordId]));
+    expect(recordBodies.every((body) => String(body.mode_key || "") === "board_3x3_pow2_no_undo")).toBe(true);
+    const replayStrings = recordBodies.map((body) => String(body.replay_string || ""));
+    expect(replayStrings.every(Boolean)).toBe(true);
+    expect(new Set(replayStrings).size).toBe(1);
   });
 
-  test("online record submit keeps terminal payload pending when auth was cleared before upload", async ({ page }) => {
+  test("online record submit keeps the durable record waiting when auth was cleared before upload", async ({ page }) => {
     await installRankedSessionForMode(page, "board_3x3_pow2_no_undo", {
       ownerUserId: "42",
       seed: 919,
@@ -308,13 +323,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.tryAutoSubmitOnGameOver();
     });
 
-    await expect
-      .poll(
-        () =>
-          page.evaluate(() => String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || "")),
-        { timeout: 4000 }
-      )
-      .not.toBe("");
+    await expect.poll(async () => (await readLatestDurableRecord(page))?.syncStatus).toBe("waiting_auth");
+    const waitingRecord = await readLatestDurableRecord(page);
+    expect(waitingRecord).not.toBeNull();
+    expect(waitingRecord?.clientRecordId).not.toBe("");
+    expect(await page.evaluate(() => window.localStorage.getItem("online_pending_record_submit_signature_v1"))).toBeNull();
     expect(recordCalls).toBe(0);
 
     await page.evaluate(() => {
@@ -329,13 +342,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .poll(() => recordCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(1);
 
-    const finalSnapshot = await page.evaluate(() => ({
-      pending: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
-      last: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
-    }));
-
-    expect(finalSnapshot.pending).toBe("");
-    expect(finalSnapshot.last.length).toBeGreaterThan(0);
+    await expect.poll(async () => (await readLatestDurableRecord(page))?.syncStatus).toBe("synced");
+    const syncedRecord = await readLatestDurableRecord(page);
+    expect(syncedRecord?.clientRecordId).toBe(waitingRecord?.clientRecordId);
+    expect(syncedRecord?.serverRecordId).toBe("rec-smoke-auth-restored");
     // Reload may race the old pagehide flush with the new document's startup retry.
     expect(recordBodies.length).toBeGreaterThanOrEqual(1);
     expect(new Set(recordBodies.map((body) => String(body.client_record_id || ""))).size).toBe(1);

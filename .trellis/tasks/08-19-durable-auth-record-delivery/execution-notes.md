@@ -94,6 +94,7 @@
 - 第二次前端推送通过了上述审计与 History Smoke，但被页面 legacy 导入边界阻断；没有增加 allowlist，而是把原动态加载函数原样移到 `src/bootstrap/history-record-delivery-runtime.ts`，保持脚本顺序和禁用自动提交标志不变。随后直接边界审计、其余四个静态审计、TypeScript 和 release-readiness 均通过，服务器部署步骤仍未执行。
 - 第三次前端推送通过全部静态审计及 History/Index Smoke，完整单测 2032 项中仅一条旧断言仍要求 `history` 创建已明确移除的全局用户徽标。产品代码未调整，只将该通用正向用例切换到仍应显示徽标的 `relay-5x5`；历史页排除行为继续由独立回归覆盖，服务器部署步骤仍未执行。
 - 第四次前端推送通过静态审计和 2032 项单测，但 Smoke 发现新增 TypeScript API base helper 无条件给本地地址追加生产 fallback，导致持久会话启动请求越过本地代理并被 CSP 拦截；服务器部署步骤仍未执行。修复复用项目既有 localhost/127/IPv6 loopback 隔离规则，正式域候选不变，并增加共享 helper 回归用例。根级约束禁止本地启动独立 Playwright，因此本地只验证直接根因单测，完整 Smoke 继续交由 GitHub Actions 复验。
+- 第五次前端推送确认上述 CSP/运行时失败已全部消失，39 条 Smoke 通过；剩余两条旧 Smoke 仍要求 durable outbox 同时写入已淘汰的 localStorage pending key，与 IndexedDB 唯一发件箱合同冲突。产品代码未回退为双写；测试改为读取真实 `retry_wait`、`waiting_auth`、`synced` 和 `server_record_id`，并按持久化的 `next_retry_at` 条件等待后再刷新。服务器部署步骤仍未执行。
 
 ## 发布前仍需完成
 

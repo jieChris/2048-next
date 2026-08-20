@@ -68,6 +68,7 @@ await page.waitForFunction(
 - 所有影响被测控制流的 API 必须路由模拟；无关后台请求可禁用，但不能禁用被测行为本身。
 - 模拟需要登录的 API 时必须校验 `Authorization`，或在缺失凭证时返回 401；无条件返回 200 会掩盖前端漏传 Token。
 - `localhost`、`127.*` 和 `::1` 页面默认只能使用同源 `/api`；共享 API base 解析器不得自动追加生产 fallback，否则本地测试会越过代理隔离并被页面 CSP 拦截，或误向生产发送请求。确需跨域时必须显式启用并同步配置 CSP 和路由模拟。
+- 终局记录进入 IndexedDB 发件箱后，Smoke 应通过 `LocalHistoryStore` 的异步 API 断言 `sync_status` 和 `server_record_id`；旧 localStorage pending key 只作为迁移输入，导入成功后应为空，不能继续把它当成待上传证据。
 
 ```ts
 // 错误：刷新时 pagehide 冲刷和启动重试可能同时发生
