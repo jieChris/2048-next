@@ -113,6 +113,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .poll(() => scoreCalls, { timeout: 6000 })
       .toBeGreaterThanOrEqual(2);
 
+    await expect.poll(async () => {
+      const snapshot = await page.evaluate(() => ({
+        pending: String(window.localStorage.getItem("online_pending_score_submit_v1") || ""),
+        last: String(window.localStorage.getItem("online_last_submit_signature_v1") || "")
+      }));
+      return snapshot.pending === "" && snapshot.last.length > 0;
+    }, { timeout: 6000 }).toBe(true);
+
     const finalSnapshot = await page.evaluate(() => ({
       pending: String(window.localStorage.getItem("online_pending_score_submit_v1") || ""),
       last: String(window.localStorage.getItem("online_last_submit_signature_v1") || "")
