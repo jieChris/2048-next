@@ -759,6 +759,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         document.querySelector('.grid-cell[data-x="1"][data-y="0"]') !== null,
       12_000
     );
+    await page.waitForFunction(() => {
+      const params = new URLSearchParams(window.location.search || "");
+      return params.get("practice_fresh") !== "1";
+    });
 
     await page.locator('.selection-tile[data-value="32"]').click();
     await page.locator('.grid-cell[data-x="0"][data-y="0"]').click();

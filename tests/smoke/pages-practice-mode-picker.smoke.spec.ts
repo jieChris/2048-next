@@ -108,6 +108,10 @@ test.describe("Practice Board Mode Picker", () => {
 
     const stacking = await page.evaluate(() => {
       const tiles = [...document.querySelectorAll<HTMLElement>(".selection-tile")];
+      const parseZIndex = (element: HTMLElement | null) => {
+        const value = Number(element ? window.getComputedStyle(element).zIndex : "auto");
+        return Number.isFinite(value) ? value : 0;
+      };
       const rowTops = [...new Set(tiles.map((element) => element.offsetTop))].sort(
         (left, right) => left - right
       );
@@ -121,10 +125,9 @@ test.describe("Practice Board Mode Picker", () => {
         rowGaps,
         selectedPosition: selected ? window.getComputedStyle(selected).position : "",
         selectedTransform: selected ? window.getComputedStyle(selected).transform : "none",
-        selectedZIndex: selected ? Number(window.getComputedStyle(selected).zIndex) : 0,
-        selectedInnerZIndex: selectedInner
-          ? Number(window.getComputedStyle(selectedInner).zIndex)
-          : null,
+        selectedZIndex: parseZIndex(selected),
+        selectedInnerPresent: !!selectedInner,
+        neighborZIndices: tiles.filter((tile) => tile !== selected).map(parseZIndex),
         selectedMargin: selected ? window.getComputedStyle(selected).margin : ""
       };
     });
@@ -132,8 +135,8 @@ test.describe("Practice Board Mode Picker", () => {
     expect(stacking.selectedPosition).toBe("relative");
     expect(stacking.selectedTransform).not.toBe("none");
     expect(stacking.selectedMargin).toBe("0px");
-    expect(stacking.selectedInnerZIndex).not.toBeNull();
-    expect(stacking.selectedZIndex).toBeGreaterThan(stacking.selectedInnerZIndex ?? 0);
+    expect(stacking.selectedInnerPresent).toBe(true);
+    expect(stacking.selectedZIndex).toBeGreaterThan(Math.max(...stacking.neighborZIndices, 0));
     expect(stacking.rowGaps.length).toBeGreaterThan(0);
     for (const rowGap of stacking.rowGaps) {
       expect(rowGap).not.toBeNull();

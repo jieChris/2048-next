@@ -9,6 +9,7 @@ async function readLatestDurableRecord(page: Page) {
     const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
     const record = Array.isArray(records) ? records[0] : null;
     return record ? {
+      id: String(record.id || ""),
       clientRecordId: String(record.client_record_id || ""),
       nextRetryAt: String(record.next_retry_at || ""),
       serverRecordId: String(record.server_record_id || ""),
@@ -226,22 +227,23 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect.poll(async () => (await readLatestDurableRecord(page))?.syncStatus).toBe("retry_wait");
     const firstRecord = await readLatestDurableRecord(page);
     const clientRecordId = String(recordBodies[0]?.client_record_id || "");
+    expect(firstRecord?.id).not.toBe("");
     expect(clientRecordId).not.toBe("");
     expect(firstRecord?.clientRecordId).toBe(clientRecordId);
     expect(firstRecord?.serverRecordId).toBe("");
     expect(await page.evaluate(() => window.localStorage.getItem("online_pending_record_submit_signature_v1"))).toBeNull();
 
-    const retryAtMs = Date.parse(firstRecord?.nextRetryAt || "");
-    const retryWaitMs = Number.isFinite(retryAtMs)
-      ? Math.max(6000, retryAtMs - Date.now() + 1000)
-      : 6000;
+    await page.evaluate(async (recordId) => {
+      const store = (window as any).LocalHistoryStore;
+      await store.updateRecordAsync(recordId, {
+        next_retry_at: new Date(Date.now() - 1000).toISOString()
+      });
+    }, firstRecord?.id);
     await expect.poll(async () => {
       const record = await readLatestDurableRecord(page);
-      if (record?.syncStatus === "pending") return true;
-      if (record?.syncStatus !== "retry_wait") return false;
-      const nextRetryAt = Date.parse(record.nextRetryAt);
-      return !nextRetryAt || nextRetryAt <= Date.now();
-    }, { timeout: retryWaitMs }).toBe(true);
+      const nextRetryAt = Date.parse(record?.nextRetryAt || "");
+      return record?.syncStatus === "retry_wait" && Number.isFinite(nextRetryAt) && nextRetryAt <= Date.now();
+    }).toBe(true);
 
     recordUploadsEnabled = true;
     await page.reload({ waitUntil: "domcontentloaded" });

@@ -96,6 +96,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
         window.localStorage.removeItem("online_last_record_submit_signature_v1");
         window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+        window.localStorage.setItem("settings_restart_prompt_enabled_v1", "0");
         window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
         window.localStorage.setItem("ranked_session_prefetch:v1:" + injectedModeKey, JSON.stringify(injectedNext));
         window.confirm = () => true;
@@ -156,7 +157,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         };
       }
       manager.rankCheckpointApplying = true;
-      manager.restart();
+      await manager.restart();
       manager.rankCheckpointApplying = false;
     }, modeKey);
 
