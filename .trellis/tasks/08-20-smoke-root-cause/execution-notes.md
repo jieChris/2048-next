@@ -27,3 +27,4 @@
 - 重启提交用例此前只替换了原生 `window.confirm`，但当前实现优先使用异步 `GameDialog.confirm`；该场景不测试确认框，现显式关闭 `settings_restart_prompt_enabled_v1` 并等待 `manager.restart()` 返回的异步结果。此前关于 `promotePrefetchedSession` 需要 `await` 的推断已纠正：该 API 是同步返回布尔值。
 - 练习板模式选择用例此前把选中父元素的 `z-index` 与内部 `.tile-inner` 的 `auto` 值比较，得到 `NaN`。现按真实契约比较选中棋子与未选中兄弟棋子的层级，并将 `auto` 视为 0；未改 CSS。
 - 练习板首步用例此前在 `practice_fresh=1` 的异步清空完成前就放置棋子，fresh bootstrap 随后清掉棋子。现等待 URL 中的 `practice_fresh` 被移除后再执行操作。
+- 下一轮 CI 继续暴露两个被前序失败短路的时序点：重启文件的“无预取”用例也必须等待终局提交 Promise，并显式关闭重启确认；score 旧 localStorage 用例在请求数达到 2 时响应清理尚未完成，现等待 pending key 清空且 last signature 写入后再断言。

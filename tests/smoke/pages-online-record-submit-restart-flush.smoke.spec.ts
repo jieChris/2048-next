@@ -289,6 +289,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.setItem("2048_auth_nickname_v1", "Smoke");
         window.localStorage.removeItem("online_last_record_submit_signature_v1");
         window.localStorage.removeItem("online_pending_record_submit_signature_v1");
+        window.localStorage.setItem("settings_restart_prompt_enabled_v1", "0");
         window.localStorage.setItem("ranked_session_active:v1:" + injectedModeKey, JSON.stringify(injectedOld));
         window.localStorage.removeItem("ranked_session_prefetch:v1:" + injectedModeKey);
         (window as any).__rankedRestartAlerts = [];
@@ -325,7 +326,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
       if (typeof manager.tryAutoSubmitOnGameOver === "function") {
-        manager.tryAutoSubmitOnGameOver();
+        await manager.tryAutoSubmitOnGameOver();
       }
       const rankedRuntime = (window as any).RankedSessionRuntime;
       if (rankedRuntime && typeof rankedRuntime.startNextSession === "function") {
@@ -361,6 +362,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         managerToken: "next-ranked-token",
         alerts: 0
       });
+
+    await expect.poll(() => recordPayloads.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
     expect(recordPayloads[0]?.ranked_session_token).toBe("old-ranked-token");
     expect(recordPayloads[0]?.challenge_id).toBe("ranked-old");
