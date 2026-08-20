@@ -122,6 +122,7 @@ test.describe("History smoke: export", () => {
     });
 
     await page.click("#history-load-btn");
+    await expect(page.locator(".history-item")).toHaveCount(2);
 
     const snapshot = await page.evaluate(() => {
       const store = (window as any).LocalHistoryStore;
