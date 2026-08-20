@@ -137,7 +137,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2, 3] });
       }
 
-      await manager.actuate();
+      manager.actuate();
+      if (manager.sessionSubmitPromise && typeof manager.sessionSubmitPromise.then === "function") {
+        await manager.sessionSubmitPromise;
+      }
 
       const listAfter = Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : [];
       const latest = listAfter[0] || null;
