@@ -1697,6 +1697,7 @@ function buildAutoSubmitPayloadIdentityFields(manager, initialSeed) {
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
     mode_key: manager.modeKey, board_width: manager.width, board_height: manager.height,
     ruleset: manager.ruleset, undo_enabled: !!manager.modeConfig.undo_enabled,
+    sync_status: manager.modeConfig.undo_enabled ? "finalized_local" : undefined,
     ranked_bucket: manager.rankedBucket, mode_family: manager.modeFamily, rank_policy: manager.rankPolicy,
     mode_bucket: manager.rankedBucket || null,
     ranked_session_token: manager.rankedSessionToken || null,

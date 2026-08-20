@@ -9,6 +9,7 @@
 ## Route Deviation
 
 - 仓库缺少 Trellis `./.trellis/scripts/get_context.py` 与分层 guides 索引；按根级 `.trellis/spec/index.md`、`.trellis/spec/smoke-testing.md` 和 `.trellis/spec/frontend-api-boundary.md` 继续。
+- 完整 Pages Smoke 最后暴露了持久发件箱改造造成的真实产品回归：可撤回模式死亡时新落盘记录被默认标为 `pending`，旧记录重试扫描因此在用户确认新局前提前上传。继续只改测试会隐藏有效失败，故保守偏离“不改产品逻辑”的原范围：仅将该状态改为 `finalized_local`，保留既有重启路径负责转为 `pending` 并上传。
 
 ## 实施记录
 
