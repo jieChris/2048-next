@@ -329,7 +329,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
         const toastPointerEvents = visibleToastStyle ? visibleToastStyle.pointerEvents : "";
         const toastOpacity = visibleToastStyle ? visibleToastStyle.opacity : "";
 
-        await new Promise((resolve) => window.setTimeout(resolve, 1850));
+        await new Promise((resolve) => {
+          const waitForHiddenToast = () => {
+            if (!toast || Number(window.getComputedStyle(toast).opacity) <= 0.01) {
+              resolve(null);
+              return;
+            }
+            window.requestAnimationFrame(waitForHiddenToast);
+          };
+          waitForHiddenToast();
+        });
         const hiddenOpacity = toast ? window.getComputedStyle(toast).opacity : null;
 
         exportReplay();
