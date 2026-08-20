@@ -1555,10 +1555,23 @@ function shouldAutoLoadOnlineLeaderboard() {
   async function persistRecordPayloadToDurableOutbox(manager, payload) {
     var store = getDurableRecordOutbox();
     if (!store) return null;
-    var recordId = toText(manager && manager.localHistoryRecordId).trim();
-    var record = await store.prepareRecordSubmitAsync(recordId || null, payload);
-    if (manager && record && record.id) manager.localHistoryRecordId = record.id;
-    return record;
+    var pendingPersist = manager && manager.recordSubmitPersistPromise;
+    if (pendingPersist && typeof pendingPersist.then === "function") return pendingPersist;
+
+    var persistPromise = (async function () {
+      var recordId = toText(manager && manager.localHistoryRecordId).trim();
+      var record = await store.prepareRecordSubmitAsync(recordId || null, payload);
+      if (manager && record && record.id) manager.localHistoryRecordId = record.id;
+      return record;
+    })();
+    if (manager) manager.recordSubmitPersistPromise = persistPromise;
+    try {
+      return await persistPromise;
+    } finally {
+      if (manager && manager.recordSubmitPersistPromise === persistPromise) {
+        manager.recordSubmitPersistPromise = null;
+      }
+    }
   }
 
   async function uploadDurableRecord(store, record, options) {
