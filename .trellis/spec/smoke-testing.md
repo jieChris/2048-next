@@ -73,6 +73,7 @@ await page.waitForFunction(
 - 终局记录进入 IndexedDB 发件箱后，Smoke 应通过 `LocalHistoryStore` 的异步 API 断言 `sync_status` 和 `server_record_id`；旧 localStorage pending key 只作为迁移输入，导入成功后应为空，不能继续把它当成待上传证据。
 - 同一本地记录的回放内容未变时，重复终局钩子不得替换已持久化的 `client_record_id`；已有 `server_record_id` 的 `synced` 记录不得重置为 `pending` 或再次发起 POST。该终态保护必须在与写入相同的 IndexedDB 事务内复核，不能只依赖事务外的预读结果。
 - 同一游戏 manager 的并发终局钩子必须共享一次发件箱持久化 Promise；否则它们可在 `localHistoryRecordId` 写回前各自创建一条相同记录，表现为一条已同步、另一条仍待上传。
+- 在线终局提交必须先启动并等待游戏核心的本地历史保存，再用其写回的 `localHistoryRecordId` 准备发件箱；只合并在线钩子仍会与核心保存各创建一条记录。
 - 发件箱重试锁必须在迁移、查询候选记录等第一个异步等待前取得，并覆盖候选选择与上传；在查询后才上锁会让并发扫描选中并重复上传同一记录。
 - 可撤回模式满盘后仍可撤回；本地终局证据在用户确认新局前必须保持 `finalized_local`，不能被自动重试扫描作为 `pending` 提前上传。
 
