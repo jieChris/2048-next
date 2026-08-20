@@ -90,7 +90,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.fill("#password-change-old-password", "OldPass1!");
-    await page.fill("#password-change-new-password", "NewPass1!");
+    await page.fill("#password-change-new-password", "NewPassword1!");
     await page.click("#password-change-submit-btn");
     await expect(page.locator("#password-tip")).toContainText("Password changed successfully");
 
@@ -107,7 +107,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(resetVerifyPayload?.new_password).toBe("SmokePass1!");
 
     expect(changePayload?.old_password).toBe("OldPass1!");
-    expect(changePayload?.new_password).toBe("NewPass1!");
+    expect(changePayload?.new_password).toBe("NewPassword1!");
     expect(changeAuthHeader).toBe("Bearer smoke-token");
   });
 });

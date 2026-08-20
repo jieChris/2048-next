@@ -12,6 +12,7 @@
 - 完整 Pages Smoke 最后暴露了持久发件箱改造造成的真实产品回归：可撤回模式死亡时新落盘记录被默认标为 `pending`，旧记录重试扫描因此在用户确认新局前提前上传。继续只改测试会隐藏有效失败，故保守偏离“不改产品逻辑”的原范围：仅将该状态改为 `finalized_local`，保留既有重启路径负责转为 `pending` 并上传。
 - 继续处理时误在本地执行了一条 Playwright 目标用例，违反“网页测试只能使用内置浏览器或 CI”的项目约束。该命令已结束，没有修改应用或生产数据；后续不再启动本地浏览器测试，所有 Smoke 验证改由 GitHub Actions 执行。
 - 2026-08-20 收尾时误执行 `npm run verify:release`；该脚本进入本地 Smoke 阶段后已立即终止，没有修改应用或生产数据。合并门禁仅采用 GitHub Actions `32343744904` 的完整成功结果，后续不再本地执行任何包含 Playwright 的脚本。
+- 2026-08-20 API 手动部署首次重建时继承了生产 `.env` 中的旧 `APP_VERSION`，健康接口因此短暂显示旧静态标签；业务代码与数据库均正常。为避免修改环境文件，保守改为在 Compose 命令中用当前 Git SHA 显式覆盖 `APP_VERSION` 并强制重建 API，线上健康接口随后准确报告 `0e631618870f804042fb789bf82e9a1e868c07ba`。
 
 ## 实施记录
 
@@ -47,3 +48,4 @@
 
 - 部署门禁 `32350990171` 的 Pages Smoke 仅失败于“saved session preserves client record id across reload”。用例在等待 `rankCheckpointRestorePending` 结束后立即执行三次移动，但此状态不代表在线提交钩子已经绑定；移动因此绕过 `persistRankedCheckpointLocalMirror`，镜像仍为空。
 - 修复仅调整测试前置：等待 `OnlineLeaderboardRuntime` 与 `__onlineImmediateSubmitHooksBound === true`，移动后等待本地镜像键实际写入，再读取并断言客户端记录 ID；删除固定 1800ms 延时。该修复遵循现有 Smoke 规范的“等待能力，不等待时间”规则，不修改产品逻辑或放宽断言。
+- 密码策略部署门禁 `32368032500` 的 Pages Smoke 共 237 条通过、1 条失败；唯一失败是密码流程测试仍提交 9 位的 `NewPass1!`，新 10 位最小长度规则按预期拒绝。仅将该测试夹具及其载荷断言更新为 `NewPassword1!`，不修改产品逻辑或放宽密码校验。
