@@ -1365,13 +1365,29 @@ test.describe("Legacy Multi-Page Smoke", () => {
       const manager = (window as any).game_manager;
       return !!manager && manager.rankCheckpointRestorePending !== true;
     });
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return (
+        !!(window as any).OnlineLeaderboardRuntime &&
+        manager?.__onlineImmediateSubmitHooksBound === true
+      );
+    });
 
-    const firstSnapshot = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const manager = (window as any).game_manager;
       manager.move(2);
       manager.move(0);
       manager.move(2);
-      await new Promise((resolve) => window.setTimeout(resolve, 1800));
+    });
+
+    await page.waitForFunction(() =>
+      typeof window.localStorage.getItem(
+        "ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo"
+      ) === "string"
+    );
+
+    const firstSnapshot = await page.evaluate(() => {
+      const manager = (window as any).game_manager;
       const rawMirror = window.localStorage.getItem(
         "ranked_checkpoint_local_mirror:v1:standard_4x4_pow2_no_undo"
       );
