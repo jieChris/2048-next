@@ -92,6 +92,7 @@
 - 生产发布前备份已完成本地归档、校验和与前后引用一致性检查，也已传完异地文件，但外层 SSH 通道未正常回收，脚本没有写入新的 `last-success` 状态。发布因此暂停，直到独立通过本地 `sha256sum`、`pg_restore --list` 和异地 `rsync --checksum --dry-run` 逐文件一致性验证；未降低备份标准，也未修改或删除玩家数据。
 - 首次前端推送在发布包构建阶段被 `game-manager-audit` 的 19 行 helper 门禁阻断，服务器部署步骤没有执行；采用现有 helper 拆分模式保持 payload 字段和值不变。同期 History Smoke 仍在页面启动后写入旧 localStorage fixture，与一次性迁移时序不符；仅改为导航前注入，以继续验证真实旧数据迁移。根级约束禁止本地启动独立 Playwright，因此只本地运行直接失败的审计，浏览器 Smoke 交由 GitHub Actions 复验。
 - 第二次前端推送通过了上述审计与 History Smoke，但被页面 legacy 导入边界阻断；没有增加 allowlist，而是把原动态加载函数原样移到 `src/bootstrap/history-record-delivery-runtime.ts`，保持脚本顺序和禁用自动提交标志不变。随后直接边界审计、其余四个静态审计、TypeScript 和 release-readiness 均通过，服务器部署步骤仍未执行。
+- 第三次前端推送通过全部静态审计及 History/Index Smoke，完整单测 2032 项中仅一条旧断言仍要求 `history` 创建已明确移除的全局用户徽标。产品代码未调整，只将该通用正向用例切换到仍应显示徽标的 `relay-5x5`；历史页排除行为继续由独立回归覆盖，服务器部署步骤仍未执行。
 
 ## 发布前仍需完成
 

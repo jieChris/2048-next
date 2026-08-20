@@ -113,7 +113,7 @@ describe("app: bootstrap-direct-page", () => {
       writable: true
     });
 
-    await bootstrapDirectPage("history");
+    await bootstrapDirectPage("relay-5x5");
 
     expect(appended).toHaveLength(1);
     expect(appended[0]).toMatchObject({
