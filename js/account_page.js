@@ -77,6 +77,7 @@
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var isValidAccountPassword = _u.isValidAccountPassword || function () { return false; };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
   var safeSetStorage = _u.safeSetStorage || function () {};
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
@@ -181,7 +182,7 @@
       boardFail: "排行榜加载失败",
       boardUpdated: "排行榜已更新",
       invalidEmailFormat: "请输入正确的邮箱格式",
-      invalidPasswordPolicy: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
+      invalidPasswordPolicy: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
       requireEmailPass: "请输入邮箱和密码",
       requireRegisterFields: "请填写邮箱和密码",
       requireNickname: "请输入昵称",
@@ -261,7 +262,7 @@
       boardFail: "Failed to load leaderboard",
       boardUpdated: "Leaderboard updated",
       invalidEmailFormat: "Please enter a valid email address",
-      invalidPasswordPolicy: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      invalidPasswordPolicy: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       requireEmailPass: "Please enter email and password",
       requireRegisterFields: "Please enter email and password",
       requireNickname: "Please enter nickname",
@@ -289,7 +290,8 @@
       UNAUTHORIZED: "请先登录",
       INVALID_TOKEN: "登录状态已失效，请重新登录",
       INVALID_EMAIL: "邮箱格式不正确",
-      WEAK_PASSWORD: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
+      WEAK_PASSWORD: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
+      INVALID_PASSWORD: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
       INVALID_CREDENTIALS: "邮箱或密码错误",
       IMAGE_CAPTCHA_REQUIRED: "请先完成图片验证码",
       IMAGE_CAPTCHA_INVALID: "图片验证码错误，请重试",
@@ -306,7 +308,8 @@
       UNAUTHORIZED: "Please sign in first",
       INVALID_TOKEN: "Session expired, please sign in again",
       INVALID_EMAIL: "Invalid email format",
-      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      WEAK_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
+      INVALID_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       INVALID_CREDENTIALS: "Invalid email or password",
       IMAGE_CAPTCHA_REQUIRED: "Please complete image captcha",
       IMAGE_CAPTCHA_INVALID: "Incorrect image captcha",
@@ -493,17 +496,6 @@
     var tld = labels[labels.length - 1];
     if (!/^[A-Za-z]{2,63}$/.test(tld)) return false;
     return true;
-  }
-
-  function isValidRegisterPassword(passwordLike) {
-    var password = toText(passwordLike);
-    if (password.length < 8 || password.length > 16) return false;
-    if (/\s/.test(password)) return false;
-    var groups = 0;
-    if (/[A-Za-z]/.test(password)) groups += 1;
-    if (/[0-9]/.test(password)) groups += 1;
-    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
-    return groups >= 2;
   }
 
   function getSelectedModeBucket() {
@@ -1389,7 +1381,7 @@
 
   async function onRegisterClick() {
     var email = toText(byId("account-email") && byId("account-email").value).trim();
-    var password = toText(byId("account-password") && byId("account-password").value).trim();
+    var password = toText(byId("account-password") && byId("account-password").value);
 
     if (!email || !password) {
       setTip(byId("account-auth-tip"), t("requireRegisterFields"), "err");
@@ -1399,7 +1391,7 @@
       setTip(byId("account-auth-tip"), t("invalidEmailFormat"), "err");
       return;
     }
-    if (!isValidRegisterPassword(password)) {
+    if (!isValidAccountPassword(password)) {
       setTip(byId("account-auth-tip"), t("invalidPasswordPolicy"), "err");
       return;
     }
@@ -1424,7 +1416,7 @@
     if (loginSubmitting) return;
 
     var email = toText(byId("account-email") && byId("account-email").value).trim();
-    var password = toText(byId("account-password") && byId("account-password").value).trim();
+    var password = toText(byId("account-password") && byId("account-password").value);
     var captchaAnswer = toText(byId("account-login-captcha-answer") && byId("account-login-captcha-answer").value).trim().toUpperCase();
 
     if (!email || !password) {

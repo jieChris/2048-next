@@ -9,6 +9,7 @@
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var isValidAccountPassword = _u.isValidAccountPassword || function () { return false; };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
   var resolveApiTimeoutMs = _u.resolveApiTimeoutMs || function () { return DEFAULT_API_TIMEOUT_MS; };
@@ -298,17 +299,6 @@
     return true;
   }
 
-  function isValidRegisterPassword(passwordLike) {
-    var password = toText(passwordLike);
-    if (password.length < 10 || password.length > 16) return false;
-    if (/\s/.test(password)) return false;
-    var groups = 0;
-    if (/[A-Za-z]/.test(password)) groups += 1;
-    if (/[0-9]/.test(password)) groups += 1;
-    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
-    return groups >= 2;
-  }
-
   function isValidNickname(nicknameLike) {
     var nickname = toText(nicknameLike).trim();
     if (nickname.length < 2 || nickname.length > 10) return false;
@@ -526,13 +516,12 @@
     }
   }
 
-  async function validateNicknameAvailability(nickname, showTipOnError) {
+  async function validateNicknameAvailability(nickname) {
     var normalized = toText(nickname).trim();
     if (!isValidNickname(normalized)) {
       nicknameValidationValue = normalized;
       nicknameValidationState = "invalid";
       setNicknameValidationUi(true);
-      if (showTipOnError) setTip("", "");
       return false;
     }
     if (normalized && normalized === nicknameValidationValue && nicknameValidationState === "available") {
@@ -549,26 +538,23 @@
     if (available === true) {
       nicknameValidationState = "available";
       setNicknameValidationUi(false);
-      if (showTipOnError) setTip("", "");
       return true;
     }
     if (available === false) {
       nicknameValidationState = "unavailable";
       setNicknameValidationUi(true);
-      if (showTipOnError) setTip("", "");
       return false;
     }
 
     nicknameValidationState = "error";
     setNicknameValidationUi(true);
-    if (showTipOnError) setTip("", "");
     return false;
   }
 
   function readRegisterForm() {
     return {
       email: toText(byId("register-email") && byId("register-email").value).trim(),
-      password: toText(byId("register-password") && byId("register-password").value).trim(),
+      password: toText(byId("register-password") && byId("register-password").value),
       nickname: toText(byId("register-nickname") && byId("register-nickname").value).trim(),
       verificationCode: toText(byId("register-email-code") && byId("register-email-code").value).trim()
     };
@@ -583,7 +569,7 @@
       setTip(t("invalidEmail"), "err");
       return false;
     }
-    if (!isValidRegisterPassword(form.password)) {
+    if (!isValidAccountPassword(form.password)) {
       setTip(t("invalidPassword"), "err");
       return false;
     }
@@ -599,7 +585,7 @@
   async function onSendCodeClick() {
     var form = readRegisterForm();
     if (!validateRegisterBase(form)) return;
-    if (!(await validateNicknameAvailability(form.nickname, true))) return;
+    if (!(await validateNicknameAvailability(form.nickname))) return;
     if (!turnstileSiteKey) {
       setTip(t("turnstileMissingConfig"), "err");
       return;
@@ -650,7 +636,7 @@
   async function onSubmitRegister() {
     var form = readRegisterForm();
     if (!validateRegisterBase(form)) return;
-    if (!(await validateNicknameAvailability(form.nickname, true))) return;
+    if (!(await validateNicknameAvailability(form.nickname))) return;
     if (!form.verificationCode) {
       setTip(t("requireEmailCode"), "err");
       return;
@@ -757,7 +743,7 @@
       nicknameInput.addEventListener("blur", function () {
         var nickname = toText(nicknameInput.value).trim();
         if (!nickname) return;
-        validateNicknameAvailability(nickname, true);
+        validateNicknameAvailability(nickname);
       });
     }
     if (codeInput) {

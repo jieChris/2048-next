@@ -2,11 +2,32 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("register password policy", () => {
-  it("matches the backend's 10-character minimum and translates its error code", () => {
-    const source = readFileSync("js/register_page.js", "utf8");
+  it("uses the shared policy and translates backend errors in every account flow", () => {
+    const sources = [
+      "js/register_page.js",
+      "js/password_page.js",
+      "js/account_settings_page.js",
+      "js/account_page.js"
+    ].map((file) => readFileSync(file, "utf8"));
 
-    expect(source).toContain("password.length < 10 || password.length > 16");
-    expect(source).toContain('INVALID_PASSWORD: "\\u5bc6\\u7801\\u9700\\u4e3a10-16\\u4f4d');
-    expect(source).toContain('INVALID_PASSWORD: "Password must be 10-16 chars');
+    for (const source of sources) {
+      expect(source).toContain("isValidAccountPassword");
+      expect(source).toContain("INVALID_PASSWORD:");
+      expect(source).toMatch(/10-16(?:\\u4f4d| chars| 位)/);
+      expect(source).not.toMatch(/密码需(?:为| )?8-16|Password must be 8-16/);
+    }
+    expect(sources.join("\n")).not.toMatch(
+      /(?:register-password|password-reset-new-password|password-change-new-password|settings-new-password)[^\n]*\.trim\(\)/
+    );
+  });
+
+  it("does not let asynchronous nickname validation erase password errors", () => {
+    const source = readFileSync("js/register_page.js", "utf8");
+    const nicknameValidation = source.slice(
+      source.indexOf("async function validateNicknameAvailability"),
+      source.indexOf("function readRegisterForm")
+    );
+
+    expect(nicknameValidation).not.toContain('setTip("", "")');
   });
 });

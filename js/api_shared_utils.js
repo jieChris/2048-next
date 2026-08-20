@@ -17,6 +17,16 @@
     return value == null ? "" : String(value);
   }
 
+  function isValidAccountPassword(value) {
+    var password = toText(value);
+    if (password.length < 10 || password.length > 16 || /\s/.test(password)) return false;
+    var groups = 0;
+    if (/[A-Za-z]/.test(password)) groups += 1;
+    if (/[0-9]/.test(password)) groups += 1;
+    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
+    return groups >= 2;
+  }
+
   /* ---------- safe localStorage wrappers ---------- */
 
   function resolveLocalStorage() {
@@ -199,6 +209,7 @@
 
   global.ApiSharedUtils = {
     toText: toText,
+    isValidAccountPassword: isValidAccountPassword,
     safeGetStorage: safeGetStorage,
     safeSetStorage: safeSetStorage,
     safeRemoveStorage: safeRemoveStorage,

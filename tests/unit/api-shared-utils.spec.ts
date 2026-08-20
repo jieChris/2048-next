@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 interface ApiSharedWindowLike {
   ApiSharedUtils?: {
     buildApiBaseCandidates: () => string[];
+    isValidAccountPassword: (password: string) => boolean;
   };
   GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK?: string;
   GAME_API_BASE_URL?: string;
@@ -88,5 +89,22 @@ describe("api shared utils API base candidates", () => {
       "https://play.example.com/api",
       "https://api.example.com/api"
     ]);
+  });
+});
+
+describe("api shared utils account password policy", () => {
+  it("requires 10-16 non-space characters from at least two character groups", () => {
+    const api = loadApiSharedUtils({
+      location: {
+        hostname: "localhost",
+        origin: "http://localhost:5173"
+      }
+    });
+
+    expect(api?.isValidAccountPassword("Password1!")).toBe(true);
+    expect(api?.isValidAccountPassword("Pass1!abc")).toBe(false);
+    expect(api?.isValidAccountPassword("OnlyLetters")).toBe(false);
+    expect(api?.isValidAccountPassword("Password 1!")).toBe(false);
+    expect(api?.isValidAccountPassword("Password12345678!")).toBe(false);
   });
 });

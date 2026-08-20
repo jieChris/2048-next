@@ -10,6 +10,7 @@
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var isValidAccountPassword = _u.isValidAccountPassword || function () { return false; };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
   var safeSetStorage = _u.safeSetStorage || function () {};
   var buildApiBaseCandidates = _u.buildApiBaseCandidates || function () { return []; };
@@ -61,7 +62,7 @@
       turnstileMissingConfig: "未配置 Turnstile site key，请联系管理员",
       turnstileRequired: "请先完成人机验证",
       invalidEmail: "请输入正确的邮箱格式",
-      invalidPassword: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
+      invalidPassword: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
       codeSent: "验证码已发送，请查收邮箱",
       resetOk: "密码重置成功，请返回登录",
       changeOk: "密码修改成功",
@@ -97,7 +98,7 @@
       turnstileMissingConfig: "Turnstile site key is not configured",
       turnstileRequired: "Please complete human verification",
       invalidEmail: "Please enter a valid email address",
-      invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      invalidPassword: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       codeSent: "Verification code sent. Please check your email.",
       resetOk: "Password reset complete. Please sign in again.",
       changeOk: "Password changed successfully",
@@ -109,9 +110,11 @@
     zh: {
       MISSING_REQUIRED_PARAMS: "参数不完整",
       INVALID_EMAIL: "邮箱格式不正确",
-      WEAK_PASSWORD: "密码需为8-16位，且至少包含字母/数字/符号中的两种",
+      WEAK_PASSWORD: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
+      INVALID_PASSWORD: "密码需为10-16位，且至少包含字母/数字/符号中的两种",
       UNAUTHORIZED: "请先登录",
       INVALID_CREDENTIALS: "当前密码错误",
+      INVALID_OLD_PASSWORD: "当前密码错误",
       SAME_PASSWORD: "新密码不能与旧密码相同",
       CAPTCHA_REQUIRED: "请先完成 Turnstile 人机验证",
       CAPTCHA_FAILED: "Turnstile 校验失败，请重试",
@@ -129,9 +132,11 @@
     en: {
       MISSING_REQUIRED_PARAMS: "Missing required parameters",
       INVALID_EMAIL: "Invalid email format",
-      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      WEAK_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
+      INVALID_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       UNAUTHORIZED: "Please sign in first",
       INVALID_CREDENTIALS: "Current password is incorrect",
+      INVALID_OLD_PASSWORD: "Current password is incorrect",
       SAME_PASSWORD: "New password must differ from old password",
       CAPTCHA_REQUIRED: "Please complete Turnstile verification",
       CAPTCHA_FAILED: "Turnstile verification failed",
@@ -275,17 +280,6 @@
     var tld = labels[labels.length - 1];
     if (!/^[A-Za-z]{2,63}$/.test(tld)) return false;
     return true;
-  }
-
-  function isValidRegisterPassword(passwordLike) {
-    var password = toText(passwordLike);
-    if (password.length < 8 || password.length > 16) return false;
-    if (/\s/.test(password)) return false;
-    var groups = 0;
-    if (/[A-Za-z]/.test(password)) groups += 1;
-    if (/[0-9]/.test(password)) groups += 1;
-    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
-    return groups >= 2;
   }
 
   function setTip(message, type) {
@@ -487,7 +481,7 @@
   async function onResetSubmitClick() {
     var email = toText(byId("password-reset-email") && byId("password-reset-email").value).trim();
     var code = toText(byId("password-reset-code") && byId("password-reset-code").value).trim();
-    var newPassword = toText(byId("password-reset-new-password") && byId("password-reset-new-password").value).trim();
+    var newPassword = toText(byId("password-reset-new-password") && byId("password-reset-new-password").value);
 
     if (!email) {
       setTip(t("requireResetEmail"), "err");
@@ -505,7 +499,7 @@
       setTip(t("requireResetNewPassword"), "err");
       return;
     }
-    if (!isValidRegisterPassword(newPassword)) {
+    if (!isValidAccountPassword(newPassword)) {
       setTip(t("invalidPassword"), "err");
       return;
     }
@@ -542,13 +536,13 @@
       return;
     }
 
-    var oldPassword = toText(byId("password-change-old-password") && byId("password-change-old-password").value).trim();
-    var newPassword = toText(byId("password-change-new-password") && byId("password-change-new-password").value).trim();
+    var oldPassword = toText(byId("password-change-old-password") && byId("password-change-old-password").value);
+    var newPassword = toText(byId("password-change-new-password") && byId("password-change-new-password").value);
     if (!oldPassword || !newPassword) {
       setTip(t("requireChangeFields"), "err");
       return;
     }
-    if (!isValidRegisterPassword(newPassword)) {
+    if (!isValidAccountPassword(newPassword)) {
       setTip(t("invalidPassword"), "err");
       return;
     }

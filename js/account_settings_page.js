@@ -13,6 +13,7 @@
   // --- shared API utilities (from api_shared_utils.js) ---
   var _u = global.ApiSharedUtils || {};
   var toText = _u.toText || function (v) { return v == null ? "" : String(v); };
+  var isValidAccountPassword = _u.isValidAccountPassword || function () { return false; };
   var safeGetStorage = _u.safeGetStorage || function () { return null; };
   var safeSetStorage = _u.safeSetStorage || function () {};
   var safeRemoveStorage = _u.safeRemoveStorage || function () {};
@@ -101,7 +102,7 @@
       nicknameUpdateFail: "昵称修改失败",
       nicknameUpdateUnsupported: "当前服务端暂不支持修改昵称",
       requirePasswordFields: "请输入当前密码和新密码",
-      invalidPassword: "密码需 8-16 位，且至少包含字母/数字/符号中的两种",
+      invalidPassword: "密码需 10-16 位，且至少包含字母/数字/符号中的两种",
       passwordChanged: "密码修改成功",
       passwordChangeFail: "密码修改失败",
       logoutDone: "已退出，正在返回首页...",
@@ -164,7 +165,7 @@
       nicknameUpdateFail: "Failed to update nickname",
       nicknameUpdateUnsupported: "Server does not support nickname update yet",
       requirePasswordFields: "Please enter current and new passwords",
-      invalidPassword: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      invalidPassword: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       passwordChanged: "Password changed successfully",
       passwordChangeFail: "Failed to change password",
       logoutDone: "Logged out. Redirecting to home...",
@@ -187,8 +188,10 @@
       UNAUTHORIZED: "请先登录",
       INVALID_TOKEN: "登录状态已失效，请重新登录",
       INVALID_CREDENTIALS: "当前密码错误",
+      INVALID_OLD_PASSWORD: "当前密码错误",
       LOGIN_INVALID_CREDENTIALS: "邮箱或密码错误",
-      WEAK_PASSWORD: "密码需 8-16 位，且至少包含字母/数字/符号中的两种",
+      WEAK_PASSWORD: "密码需 10-16 位，且至少包含字母/数字/符号中的两种",
+      INVALID_PASSWORD: "密码需 10-16 位，且至少包含字母/数字/符号中的两种",
       SAME_PASSWORD: "新密码不能与旧密码相同",
       NICKNAME_UPDATE_UNSUPPORTED: "当前服务端暂不支持修改昵称",
       IMAGE_CAPTCHA_REQUIRED: "请先完成图片验证码",
@@ -209,8 +212,10 @@
       UNAUTHORIZED: "Please sign in first",
       INVALID_TOKEN: "Session expired, please sign in again",
       INVALID_CREDENTIALS: "Current password is incorrect",
+      INVALID_OLD_PASSWORD: "Current password is incorrect",
       LOGIN_INVALID_CREDENTIALS: "Invalid email or password",
-      WEAK_PASSWORD: "Password must be 8-16 chars and include at least two of letters/numbers/symbols",
+      WEAK_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
+      INVALID_PASSWORD: "Password must be 10-16 chars and include at least two of letters/numbers/symbols",
       SAME_PASSWORD: "New password must differ from old password",
       NICKNAME_UPDATE_UNSUPPORTED: "Server does not support nickname update yet",
       IMAGE_CAPTCHA_REQUIRED: "Please complete image captcha",
@@ -303,17 +308,6 @@
 
   function isTimeoutErrorText(errorLike) {
     return toText(errorLike).toLowerCase().indexOf("timeout") >= 0;
-  }
-
-  function isValidRegisterPassword(passwordLike) {
-    var password = toText(passwordLike);
-    if (password.length < 8 || password.length > 16) return false;
-    if (/\s/.test(password)) return false;
-    var groups = 0;
-    if (/[A-Za-z]/.test(password)) groups += 1;
-    if (/[0-9]/.test(password)) groups += 1;
-    if (/[^A-Za-z0-9]/.test(password)) groups += 1;
-    return groups >= 2;
   }
 
   function isValidNickname(nicknameLike) {
@@ -723,7 +717,7 @@
     if (loginSubmitting) return;
 
     var email = toText(byId("account-email") && byId("account-email").value).trim();
-    var password = toText(byId("account-password") && byId("account-password").value).trim();
+    var password = toText(byId("account-password") && byId("account-password").value);
     var captchaAnswer = toText(byId("account-login-captcha-answer") && byId("account-login-captcha-answer").value).trim().toUpperCase();
 
     if (!email || !password) {
@@ -872,14 +866,14 @@
 
     var oldInput = byId("settings-current-password");
     var newInput = byId("settings-new-password");
-    var oldPassword = toText(oldInput && oldInput.value).trim();
-    var newPassword = toText(newInput && newInput.value).trim();
+    var oldPassword = toText(oldInput && oldInput.value);
+    var newPassword = toText(newInput && newInput.value);
 
     if (!oldPassword || !newPassword) {
       setTip(t("requirePasswordFields"), "err");
       return;
     }
-    if (!isValidRegisterPassword(newPassword)) {
+    if (!isValidAccountPassword(newPassword)) {
       setTip(t("invalidPassword"), "err");
       return;
     }
