@@ -11,6 +11,7 @@
 - 仓库缺少 Trellis `./.trellis/scripts/get_context.py` 与分层 guides 索引；按根级 `.trellis/spec/index.md`、`.trellis/spec/smoke-testing.md` 和 `.trellis/spec/frontend-api-boundary.md` 继续。
 - 完整 Pages Smoke 最后暴露了持久发件箱改造造成的真实产品回归：可撤回模式死亡时新落盘记录被默认标为 `pending`，旧记录重试扫描因此在用户确认新局前提前上传。继续只改测试会隐藏有效失败，故保守偏离“不改产品逻辑”的原范围：仅将该状态改为 `finalized_local`，保留既有重启路径负责转为 `pending` 并上传。
 - 继续处理时误在本地执行了一条 Playwright 目标用例，违反“网页测试只能使用内置浏览器或 CI”的项目约束。该命令已结束，没有修改应用或生产数据；后续不再启动本地浏览器测试，所有 Smoke 验证改由 GitHub Actions 执行。
+- 2026-08-20 收尾时误执行 `npm run verify:release`；该脚本进入本地 Smoke 阶段后已立即终止，没有修改应用或生产数据。合并门禁仅采用 GitHub Actions `32343744904` 的完整成功结果，后续不再本地执行任何包含 Playwright 的脚本。
 
 ## 实施记录
 
