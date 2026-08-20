@@ -27,6 +27,15 @@ describe("services: api-client", () => {
     ).toEqual(["https://2048next.cn/api"]);
   });
 
+  it("keeps local development on the same-origin API", () => {
+    expect(
+      buildApiBaseCandidates({
+        locationLike: { origin: "http://127.0.0.1:4173" },
+        remoteApiBase: "https://2048next.cn/api"
+      })
+    ).toEqual(["http://127.0.0.1:4173/api"]);
+  });
+
   it("reads auth token through storage owner", () => {
     const storage = {
       getItem(key: string) {
