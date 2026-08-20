@@ -66,7 +66,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
-    await page.waitForFunction(() => !!(window as any).game_manager && !!(window as any).OnlineLeaderboardRuntime);
+    await page.waitForFunction(() => {
+      const manager = (window as any).game_manager;
+      return !!(window as any).OnlineLeaderboardRuntime && manager?.__onlineImmediateSubmitHooksBound === true;
+    });
 
     await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -228,8 +231,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(await page.evaluate(() => window.localStorage.getItem("online_pending_record_submit_signature_v1"))).toBeNull();
 
     await expect.poll(async () => {
-      const nextRetryAt = Date.parse((await readLatestDurableRecord(page))?.nextRetryAt || "");
-      return nextRetryAt > 0 && nextRetryAt <= Date.now();
+      const record = await readLatestDurableRecord(page);
+      if (record?.syncStatus === "pending") return true;
+      if (record?.syncStatus !== "retry_wait") return false;
+      const nextRetryAt = Date.parse(record.nextRetryAt);
+      return !nextRetryAt || nextRetryAt <= Date.now();
     }, { timeout: 6000 }).toBe(true);
 
     await page.reload({ waitUntil: "domcontentloaded" });

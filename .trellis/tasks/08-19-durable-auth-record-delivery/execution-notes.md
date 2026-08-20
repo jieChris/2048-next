@@ -95,6 +95,7 @@
 - 第三次前端推送通过全部静态审计及 History/Index Smoke，完整单测 2032 项中仅一条旧断言仍要求 `history` 创建已明确移除的全局用户徽标。产品代码未调整，只将该通用正向用例切换到仍应显示徽标的 `relay-5x5`；历史页排除行为继续由独立回归覆盖，服务器部署步骤仍未执行。
 - 第四次前端推送通过静态审计和 2032 项单测，但 Smoke 发现新增 TypeScript API base helper 无条件给本地地址追加生产 fallback，导致持久会话启动请求越过本地代理并被 CSP 拦截；服务器部署步骤仍未执行。修复复用项目既有 localhost/127/IPv6 loopback 隔离规则，正式域候选不变，并增加共享 helper 回归用例。根级约束禁止本地启动独立 Playwright，因此本地只验证直接根因单测，完整 Smoke 继续交由 GitHub Actions 复验。
 - 第五次前端推送确认上述 CSP/运行时失败已全部消失，39 条 Smoke 通过；剩余两条旧 Smoke 仍要求 durable outbox 同时写入已淘汰的 localStorage pending key，与 IndexedDB 唯一发件箱合同冲突。产品代码未回退为双写；测试改为读取真实 `retry_wait`、`waiting_auth`、`synced` 和 `server_record_id`，并按持久化的 `next_retry_at` 条件等待后再刷新。服务器部署步骤仍未执行。
+- 第六次前端推送继续保持 39 条 Smoke 通过，并暴露两处测试时序假设：计分用例未等待即时提交 hook 完成绑定；记录在首次失败后可因至少一次终局落盘从 `retry_wait` 再次变为可立即重试的 `pending`。测试改为等待既有能力标志，并按与 `listSyncCandidatesAsync` 一致的 pending/到期 retry 条件继续；未增加超时、未修改产品代码，服务器部署步骤仍未执行。
 
 ## 发布前仍需完成
 
