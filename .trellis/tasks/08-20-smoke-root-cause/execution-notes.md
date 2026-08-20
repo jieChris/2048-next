@@ -30,3 +30,6 @@
 - 练习板首步用例此前在 `practice_fresh=1` 的异步清空完成前就放置棋子，fresh bootstrap 随后清掉棋子。现等待 URL 中的 `practice_fresh` 被移除后再执行操作。
 - 下一轮 CI 继续暴露两个被前序失败短路的时序点：重启文件的“无预取”用例也必须等待终局提交 Promise，并显式关闭重启确认；score 旧 localStorage 用例在请求数达到 2 时响应清理尚未完成，现等待 pending key 清空且 last signature 写入后再断言。
 - 再下一轮 Pages Smoke 暴露旧的“重启前冲刷”用例仍断言已淘汰的 `online_last_record_submit_signature_v1`。当前记录上传以 IndexedDB 发件箱为权威，现改为等待并断言 `LocalHistoryStore.getAllAsync()` 的最新记录为 `synced` 且含服务端记录 ID，同时保留请求载荷完整性断言。
+- `32340738053` 的 History Smoke 暴露列表刷新后的旧竞态：测试点击刷新后立即查找动态生成的单条导出按钮，偶尔只执行静态的“导出全部”。现等待两条 `.history-item` 实际渲染后再验证导出，不增加固定延时或重试。
+- 同一轮 Refactor Gate 暴露 score 持久重试用例依赖 `online` 事件间接唤醒轮询；首次轮询正在运行时唤醒会被合并。现通过真实 `tryAutoSubmitOnGameOver()` 终局钩子生成待重试状态，不再依赖轮询时机。
+- 同一轮 Pages Smoke 的回放去重用例在首个请求已发出但 IndexedDB 尚未标记 `synced` 时就修改 `clientRecordId`，制造并发提交。现等待首个持久记录完成同步，记录当时请求数，再验证重复触发不会增加请求；保留至少一次提交的幂等键一致性断言。

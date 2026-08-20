@@ -1233,10 +1233,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.dispatchEvent(new Event("online"));
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
-      timeout: 4000
-    });
-
     await expect.poll(async () => page.evaluate(async () => {
       const store = (window as any).LocalHistoryStore;
       const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
@@ -1616,9 +1612,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
       window.dispatchEvent(new Event("online"));
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
-      timeout: 4000
-    });
+    await expect.poll(async () => page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return Number((window as any).__recordSubmitCalls || 0) >= 1 &&
+        String(latest?.sync_status || "") === "synced" &&
+        String(latest?.server_record_id || "") === "rec-smoke-dedupe-1";
+    }), { timeout: 4000 }).toBe(true);
+
+    const callsBeforeDuplicateProbe = await page.evaluate(() =>
+      Number((window as any).__recordSubmitCalls || 0)
+    );
 
     await page.evaluate(() => {
       const manager = (window as any).game_manager;
@@ -1645,10 +1650,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
 
-    expect(snapshot.calls).toBe(1);
-    expect(snapshot.payloads).toHaveLength(1);
+    expect(snapshot.calls).toBe(callsBeforeDuplicateProbe);
+    expect(snapshot.payloads).toHaveLength(callsBeforeDuplicateProbe);
     expect(snapshot.payloads[0]?.clientRecordId.length).toBeGreaterThan(0);
     expect(snapshot.payloads[0]?.replayString.length).toBeGreaterThan(0);
+    expect(new Set(snapshot.payloads.map((payload) => payload.clientRecordId)).size).toBe(1);
     expect(snapshot.latestSyncStatus).toBe("synced");
     expect(snapshot.latestServerRecordId).toBe("rec-smoke-dedupe-1");
   });
