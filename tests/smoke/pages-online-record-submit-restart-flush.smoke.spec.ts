@@ -114,10 +114,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !!manager && !!(window as any).OnlineLeaderboardRuntime;
     });
 
-    await page.evaluate((injectedModeKey) => {
+    await page.evaluate(async (injectedModeKey) => {
       const manager = (window as any).game_manager;
       manager.rankPolicy = "ranked";
       manager.modeKey = injectedModeKey;
+      manager.rankedSessionToken = "old-ranked-token";
+      manager.challengeId = "ranked-old";
+      manager.initialSeed = 123;
+      manager.seed = 123;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
@@ -128,7 +132,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.serialize = () => "old-ranked-replay";
       manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2] });
       if (typeof manager.tryAutoSubmitOnGameOver === "function") {
-        manager.tryAutoSubmitOnGameOver();
+        await manager.tryAutoSubmitOnGameOver();
       }
       const rankedRuntime = (window as any).RankedSessionRuntime;
       if (rankedRuntime && typeof rankedRuntime.promotePrefetchedSession === "function") {

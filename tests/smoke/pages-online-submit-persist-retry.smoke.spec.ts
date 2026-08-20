@@ -193,7 +193,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       );
     });
 
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const manager = (window as any).game_manager;
       const trySuccessfulMove = (): boolean => {
         const startLength = Array.isArray(manager.moveHistory) ? manager.moveHistory.length : 0;
@@ -216,7 +216,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.keepPlaying = false;
       manager.sessionSubmitDone = false;
       manager.score = Math.max(512, Number(manager.score || 0));
-      manager.tryAutoSubmitOnGameOver();
+      await manager.tryAutoSubmitOnGameOver();
     });
 
     await expect
@@ -231,13 +231,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(firstRecord?.serverRecordId).toBe("");
     expect(await page.evaluate(() => window.localStorage.getItem("online_pending_record_submit_signature_v1"))).toBeNull();
 
+    const retryAtMs = Date.parse(firstRecord?.nextRetryAt || "");
+    const retryWaitMs = Number.isFinite(retryAtMs)
+      ? Math.max(6000, retryAtMs - Date.now() + 1000)
+      : 6000;
     await expect.poll(async () => {
       const record = await readLatestDurableRecord(page);
       if (record?.syncStatus === "pending") return true;
       if (record?.syncStatus !== "retry_wait") return false;
       const nextRetryAt = Date.parse(record.nextRetryAt);
       return !nextRetryAt || nextRetryAt <= Date.now();
-    }, { timeout: 6000 }).toBe(true);
+    }, { timeout: retryWaitMs }).toBe(true);
 
     recordUploadsEnabled = true;
     await page.reload({ waitUntil: "domcontentloaded" });

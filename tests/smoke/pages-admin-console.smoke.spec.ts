@@ -32,6 +32,16 @@ async function installAdminApiMocks(page: Page): Promise<{
     const path = new URL(request.url()).pathname;
     paths.push(path);
 
+    if (path === "/api/auth/refresh") {
+      await route.fulfill({
+        json: {
+          success: true,
+          token: "admin-smoke-restored-token",
+          user: { id: 42, nickname: adminUser.nickname }
+        }
+      });
+      return;
+    }
     if (path === "/api/admin/me") {
       await route.fulfill({ json: { success: true, data: { user_id: 0, admin: true, rootAdmin: true, canManageSuperAdmins: true } } });
       return;
@@ -45,6 +55,27 @@ async function installAdminApiMocks(page: Page): Promise<{
             recent_users: [adminUser],
             recent_audit: [],
             recent_events: []
+          }
+        }
+      });
+      return;
+    }
+    if (path === "/api/admin/record-delivery-health") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            summary: {
+              observed: 0,
+              accepted: 0,
+              duplicate: 0,
+              authentication_failed: 0,
+              payload_too_large: 0,
+              rate_limited: 0,
+              server_error: 0,
+              replay_invalid: 0
+            },
+            upload_tasks: []
           }
         }
       });

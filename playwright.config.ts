@@ -27,6 +27,18 @@ export default defineConfig({
             {
               name: "2048_beta_access_smoke_bypass_v1",
               value: "1"
+            },
+            {
+              name: "guide_seen_v1:practice-board-v1",
+              value: "1"
+            },
+            {
+              name: "guide_seen_v1:diagonal-moves-v1",
+              value: "1"
+            },
+            {
+              name: "guide_seen_v1:replay-controls-v1",
+              value: "1"
             }
           ]
         }

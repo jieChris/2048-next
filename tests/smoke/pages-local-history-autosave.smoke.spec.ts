@@ -31,14 +31,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !!store &&
         typeof manager.tryAutoSubmitOnGameOver === "function" &&
         typeof manager.restart === "function" &&
-        typeof store.getAll === "function"
+        typeof store.getAllAsync === "function"
       );
     });
 
-    const snapshot = await page.evaluate(() => {
+    const snapshot = await page.evaluate(async () => {
       const manager = (window as any).game_manager;
       const store = (window as any).LocalHistoryStore;
-      const listBefore = Array.isArray(store.getAll()) ? store.getAll() : [];
+      const listBefore = Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : [];
       const before = listBefore.length;
 
       manager.sessionSubmitDone = false;
@@ -46,9 +46,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.over = false;
       manager.won = true;
       manager.keepPlaying = false;
-      manager.tryAutoSubmitOnGameOver();
+      await manager.tryAutoSubmitOnGameOver();
 
-      const afterWinStop = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
+      const afterWinStop = (Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : []).length;
       const submitResultRaw = window.localStorage.getItem("last_session_submit_result_v1");
       let submitReason = "";
       try {
@@ -58,16 +58,16 @@ test.describe("Legacy Multi-Page Smoke", () => {
       } catch (_err) {}
 
       manager.restart();
-      const afterRestart = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
+      const afterRestart = (Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : []).length;
 
       manager.sessionSubmitDone = false;
       manager.replayMode = false;
       manager.over = true;
       manager.won = false;
       manager.keepPlaying = false;
-      manager.tryAutoSubmitOnGameOver();
+      await manager.tryAutoSubmitOnGameOver();
 
-      const listAfterGameOver = Array.isArray(store.getAll()) ? store.getAll() : [];
+      const listAfterGameOver = Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : [];
       const afterGameOver = listAfterGameOver.length;
       const latest = listAfterGameOver[0] || null;
 
@@ -114,14 +114,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
         !!manager &&
         !!store &&
         typeof manager.actuate === "function" &&
-        typeof store.getAll === "function"
+        typeof store.getAllAsync === "function"
       );
     });
 
     const snapshot = await page.evaluate(async () => {
       const manager = (window as any).game_manager;
       const store = (window as any).LocalHistoryStore;
-      const before = (Array.isArray(store.getAll()) ? store.getAll() : []).length;
+      const before = (Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : []).length;
 
       manager.sessionSubmitDone = false;
       manager.replayMode = false;
@@ -137,10 +137,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
         manager.serializeV3 = () => ({ v: 3, actions: [0, 1, 2, 3] });
       }
 
-      manager.actuate();
-      await new Promise((resolve) => window.setTimeout(resolve, 60));
+      await manager.actuate();
 
-      const listAfter = Array.isArray(store.getAll()) ? store.getAll() : [];
+      const listAfter = Array.isArray(await store.getAllAsync()) ? await store.getAllAsync() : [];
       const latest = listAfter[0] || null;
       const submitResultRaw = window.localStorage.getItem("last_session_submit_result_v1");
       let submitResult = null;
