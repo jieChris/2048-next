@@ -4402,6 +4402,13 @@ async function refreshLeaderboard(modeLike) {
     if (durableStore) {
       var durableRecord;
       try {
+        if (
+          manager.sessionSubmitDone !== true &&
+          !(manager.sessionSubmitPromise && typeof manager.sessionSubmitPromise.then === "function") &&
+          typeof manager.tryAutoSubmitOnGameOver === "function"
+        ) {
+          manager.tryAutoSubmitOnGameOver();
+        }
         if (manager.sessionSubmitPromise && typeof manager.sessionSubmitPromise.then === "function") {
           await manager.sessionSubmitPromise;
         }

@@ -1813,6 +1813,65 @@ describe("online leaderboard terminal submission", () => {
     );
   });
 
+  it("starts the terminal durable save before preparing the upload record", async () => {
+    const localSave = createDeferred<Record<string, unknown>>();
+    const record = {
+      id: "local-terminal-started",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "pending",
+      upload_attempts: 0,
+      mode: "standard_no_undo",
+      mode_key: MODE_KEY,
+      score: 4096,
+      replay_string: "replay-v1",
+      client_record_id: "rec_client_1"
+    };
+    const manager = createTerminatedManager({
+      sessionSubmitDone: false,
+      sessionSubmitPromise: null,
+      localHistoryRecordId: null
+    });
+    const terminalSave = localSave.promise.then((savedRecord) => {
+      manager.sessionSubmitDone = true;
+      manager.localHistoryRecordId = savedRecord.id;
+      return savedRecord;
+    });
+    const tryAutoSubmitOnGameOver = vi.fn(() => {
+      manager.sessionSubmitPromise = terminalSave;
+      return terminalSave;
+    });
+    manager.tryAutoSubmitOnGameOver = tryAutoSubmitOnGameOver;
+    const prepareRecordSubmitAsync = vi.fn(async () => record);
+    const localHistoryStore = {
+      prepareRecordSubmitAsync,
+      listSyncCandidatesAsync: vi.fn(async () => []),
+      getByIdAsync: vi.fn(async () => record),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => Object.assign({}, record, patch))
+    };
+    loadOnlineLeaderboardRuntime({
+      manager,
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: true, data: { id: "server-terminal-started" } })
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    (manager.move as { call: (thisArg: unknown) => void }).call(manager);
+    await flushRuntimePromises();
+
+    expect(tryAutoSubmitOnGameOver).toHaveBeenCalled();
+    expect(prepareRecordSubmitAsync).not.toHaveBeenCalled();
+
+    localSave.resolve(record);
+    await flushRuntimePromises();
+
+    expect(prepareRecordSubmitAsync).toHaveBeenCalledWith(
+      record.id,
+      expect.objectContaining({ client_record_id: "rec_client_1" })
+    );
+  });
+
   it("respects retry time and excludes needs-action records during automatic scans", async () => {
     const listSyncCandidatesAsync = vi.fn(async () => []);
     const localHistoryStore = {
