@@ -739,7 +739,21 @@
 
     await ensureMigrated();
     var tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(item);
+    var store = tx.objectStore(STORE_NAME);
+    var currentRequest = store.get(item.id);
+    currentRequest.onsuccess = function () {
+      var current = currentRequest.result;
+      if (
+        current &&
+        toText(current.replay_string) === toText(item.replay_string) &&
+        current.sync_status === "synced" &&
+        toText(current.server_record_id).trim()
+      ) {
+        item = normalizeRecord(current);
+        return;
+      }
+      store.put(item);
+    };
     await txDonePromise(tx);
 
     var readTx = db.transaction(STORE_NAME, "readonly");
