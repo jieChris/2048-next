@@ -210,12 +210,11 @@ test("classic workshop preview shows one untransformed candidate safely", async 
 
   await page.locator('[data-preview-page-key="relay"]').click();
   await expect(candidateFrame.locator("body[data-page='relay-5x5']")).toBeVisible();
-  await expect(candidateFrame.locator("html")).toHaveAttribute("data-night-background", "1");
-  const candidateRootBackground = await candidateFrame.locator("html").evaluate((node) => {
-    const style = getComputedStyle(node);
-    return { color: style.backgroundColor, image: style.backgroundImage };
-  });
-  expect(candidateRootBackground).toEqual({ color: "rgb(24, 32, 31)", image: "none" });
+  const candidateRoot = candidateFrame.locator("html");
+  await expect(candidateRoot).toHaveAttribute("data-theme", "mist_cyan");
+  await expect(candidateRoot).toHaveAttribute("data-night-background", "1");
+  await expect(candidateRoot).toHaveCSS("background-color", "rgb(24, 32, 31)");
+  await expect(candidateRoot).toHaveCSS("background-image", "none");
   const relayHeaderGap = await candidateFrame.locator("body").evaluate(() => {
     const badge = document.querySelector<HTMLElement>(".home-user-display--global:not([hidden])");
     const header = document.querySelector<HTMLElement>(".relay-head");

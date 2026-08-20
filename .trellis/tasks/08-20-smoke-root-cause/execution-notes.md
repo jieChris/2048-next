@@ -35,3 +35,4 @@
 - 同一轮 Refactor Gate 暴露 score 持久重试用例依赖 `online` 事件间接唤醒轮询；首次轮询正在运行时唤醒会被合并。现通过真实 `tryAutoSubmitOnGameOver()` 终局钩子生成待重试状态，不再依赖轮询时机。
 - 同一轮 Pages Smoke 的回放去重用例在首个请求已发出但 IndexedDB 尚未标记 `synced` 时就修改 `clientRecordId`，制造并发提交。现等待首个持久记录完成同步，记录当时请求数，再验证重复触发不会增加请求；保留至少一次提交的幂等键一致性断言。
 - `32341574884` 证明上述用例仍是真实产品回归：首条记录已完成 `synced` 后，`prepareRecordSubmit` 仍无条件将同一回放重置为 `pending`，并用新 `client_record_id` 再次 POST。现在共享发件箱入口对同一本地记录的相同回放保留原幂等键，且对已有服务端 ID 的 `synced` 记录直接返回，不再重置状态或重复上传。
+- `32343041065` 中回放去重回归已通过，Pages Smoke 唯一失败转为经典工作台 iframe 切换 Relay 后立即读取背景色。测试原本只等待 `body` 和夜间属性，未等待子页主题初始化；现按真实能力依次等待 `data-theme="mist_cyan"`、夜间属性和最终 CSS，不改生产配色、不增加固定延时。
