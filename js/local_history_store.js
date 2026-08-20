@@ -800,9 +800,18 @@
     var clientRecordId = toText(normalizedPayload.client_record_id).trim();
     var existing = recordId ? await getById(recordId) : null;
     if (!existing && clientRecordId) existing = await getByClientRecordId(clientRecordId);
+    var sameReplay = existing &&
+      toText(existing.replay_string) === toText(normalizedPayload.replay_string);
+    if (
+      sameReplay &&
+      existing.sync_status === "synced" &&
+      toText(existing.server_record_id).trim()
+    ) return existing;
     var base = existing || createHistoryRecordFromSubmitPayload(normalizedPayload);
     var owner = resolveOwnerMetaFromRaw(base);
-    return saveRecordDurable(Object.assign({}, base, normalizedPayload, {
+    var nextPayload = Object.assign({}, normalizedPayload);
+    if (sameReplay) nextPayload.client_record_id = base.client_record_id;
+    return saveRecordDurable(Object.assign({}, base, nextPayload, {
       id: base.id,
       owner_type: owner.owner_type,
       owner_user_id: owner.owner_user_id,

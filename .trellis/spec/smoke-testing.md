@@ -71,6 +71,7 @@ await page.waitForFunction(
 - 模拟需要登录的 API 时必须校验 `Authorization`，或在缺失凭证时返回 401；无条件返回 200 会掩盖前端漏传 Token。
 - `localhost`、`127.*` 和 `::1` 页面默认只能使用同源 `/api`；共享 API base 解析器不得自动追加生产 fallback，否则本地测试会越过代理隔离并被页面 CSP 拦截，或误向生产发送请求。确需跨域时必须显式启用并同步配置 CSP 和路由模拟。
 - 终局记录进入 IndexedDB 发件箱后，Smoke 应通过 `LocalHistoryStore` 的异步 API 断言 `sync_status` 和 `server_record_id`；旧 localStorage pending key 只作为迁移输入，导入成功后应为空，不能继续把它当成待上传证据。
+- 同一本地记录的回放内容未变时，重复终局钩子不得替换已持久化的 `client_record_id`；已有 `server_record_id` 的 `synced` 记录不得重置为 `pending` 或再次发起 POST。
 - 可撤回模式满盘后仍可撤回；本地终局证据在用户确认新局前必须保持 `finalized_local`，不能被自动重试扫描作为 `pending` 提前上传。
 
 ```ts
