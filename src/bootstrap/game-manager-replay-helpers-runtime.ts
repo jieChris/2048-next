@@ -1740,6 +1740,7 @@ export function tryAutoSubmitOnGameOver(manager: ManagerLike): Promise<unknown> 
     board_height: manager.height,
     ruleset: manager.ruleset,
     undo_enabled: !!toRecord(manager.modeConfig).undo_enabled,
+    sync_status: toRecord(manager.modeConfig).undo_enabled ? "finalized_local" : undefined,
     ranked_bucket: manager.rankedBucket,
     mode_family: manager.modeFamily,
     rank_policy: manager.rankPolicy,
