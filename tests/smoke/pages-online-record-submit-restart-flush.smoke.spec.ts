@@ -1089,35 +1089,47 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.restart();
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 1, null, {
-      timeout: 4000
+    await expect.poll(async () => page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return Number((window as any).__recordSubmitCalls || 0) >= 1 &&
+        String(latest?.sync_status || "") === "synced" &&
+        String(latest?.server_record_id || "") === "rec-smoke-capped-1";
+    }), { timeout: 4000 }).toBe(true);
+
+    const snapshot = await page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return {
+        calls: Number((window as any).__recordSubmitCalls || 0),
+        latestSyncStatus: String(latest?.sync_status || ""),
+        latestServerRecordId: String(latest?.server_record_id || ""),
+        payloadModeKey: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return payload ? String((payload as any).mode_key || "") : "";
+        })(),
+        payloadMode: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return payload ? String((payload as any).mode || "") : "";
+        })(),
+        payloadEndReason: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return payload ? String((payload as any).end_reason || "") : "";
+        })(),
+        payloadHasReplayString: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return (
+            !!payload && typeof (payload as any).replay_string === "string" && !!(payload as any).replay_string.trim()
+          );
+        })()
+      };
     });
 
-    const snapshot = await page.evaluate(() => ({
-      calls: Number((window as any).__recordSubmitCalls || 0),
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
-      payloadModeKey: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return payload ? String((payload as any).mode_key || "") : "";
-      })(),
-      payloadMode: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return payload ? String((payload as any).mode || "") : "";
-      })(),
-      payloadEndReason: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return payload ? String((payload as any).end_reason || "") : "";
-      })(),
-      payloadHasReplayString: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return (
-          !!payload && typeof (payload as any).replay_string === "string" && !!(payload as any).replay_string.trim()
-        );
-      })()
-    }));
-
     expect(snapshot.calls).toBeGreaterThanOrEqual(1);
-    expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+    expect(snapshot.latestSyncStatus).toBe("synced");
+    expect(snapshot.latestServerRecordId).toBe("rec-smoke-capped-1");
     expect(snapshot.payloadModeKey).toBe("capped_4x4_pow2_64_no_undo");
     expect(snapshot.payloadMode.length).toBeGreaterThan(0);
     expect(snapshot.payloadEndReason).toBe("game_over");
@@ -1142,7 +1154,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
       (window as any).__recordSubmitCalls = 0;
       (window as any).__recordSubmitLastPayload = null;
-      (window as any).__recordSubmitShouldFailOnce = true;
+      (window as any).__recordSubmitShouldFail = true;
 
       const originalFetch = window.fetch.bind(window);
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -1161,8 +1173,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           }
           (window as any).__recordSubmitLastPayload = parsedPayload;
           (window as any).__recordSubmitCalls = Number((window as any).__recordSubmitCalls || 0) + 1;
-          if ((window as any).__recordSubmitShouldFailOnce === true) {
-            (window as any).__recordSubmitShouldFailOnce = false;
+          if ((window as any).__recordSubmitShouldFail === true) {
             return new Response(JSON.stringify({ success: false, error: "Network timeout" }), {
               status: 200,
               headers: { "Content-Type": "application/json" }
@@ -1226,38 +1237,60 @@ test.describe("Legacy Multi-Page Smoke", () => {
       timeout: 4000
     });
 
-    const firstSnapshot = await page.evaluate(() => ({
-      calls: Number((window as any).__recordSubmitCalls || 0),
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
-      pendingRaw: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || "")
-    }));
+    await expect.poll(async () => page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return {
+        calls: Number((window as any).__recordSubmitCalls || 0),
+        syncStatus: String(latest?.sync_status || ""),
+        nextRetryAt: String(latest?.next_retry_at || "")
+      };
+    }), { timeout: 4000 }).toMatchObject({
+      calls: expect.any(Number),
+      syncStatus: "retry_wait",
+      nextRetryAt: expect.any(String)
+    });
 
-    expect(firstSnapshot.calls).toBe(1);
-    expect(firstSnapshot.lastRecordSignature).toBe("");
-    expect(firstSnapshot.pendingRaw.length).toBeGreaterThan(0);
-
-    await page.waitForTimeout(2300);
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      if (latest && typeof store.updateRecordAsync === "function") {
+        await store.updateRecordAsync(latest.id, {
+          next_retry_at: new Date(Date.now() - 1000).toISOString()
+        });
+      }
+      (window as any).__recordSubmitShouldFail = false;
       window.dispatchEvent(new Event("online"));
     });
 
-    await page.waitForFunction(() => Number((window as any).__recordSubmitCalls || 0) >= 2, null, {
-      timeout: 4000
+    await expect.poll(async () => page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return String(latest?.sync_status || "") === "synced" &&
+        String(latest?.server_record_id || "") === "rec-smoke-retry-1";
+    }), { timeout: 4000 }).toBe(true);
+
+    const snapshot = await page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return {
+        calls: Number((window as any).__recordSubmitCalls || 0),
+        latestSyncStatus: String(latest?.sync_status || ""),
+        latestServerRecordId: String(latest?.server_record_id || ""),
+        payloadEndReason: (() => {
+          const payload = (window as any).__recordSubmitLastPayload;
+          return payload ? String((payload as any).end_reason || "") : "";
+        })()
+      };
     });
 
-    const snapshot = await page.evaluate(() => ({
-      calls: Number((window as any).__recordSubmitCalls || 0),
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || ""),
-      pendingRaw: String(window.localStorage.getItem("online_pending_record_submit_signature_v1") || ""),
-      payloadEndReason: (() => {
-        const payload = (window as any).__recordSubmitLastPayload;
-        return payload ? String((payload as any).end_reason || "") : "";
-      })()
-    }));
-
     expect(snapshot.calls).toBeGreaterThanOrEqual(2);
-    expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
-    expect(snapshot.pendingRaw).toBe("");
+    expect(snapshot.latestSyncStatus).toBe("synced");
+    expect(snapshot.latestServerRecordId).toBe("rec-smoke-retry-1");
     expect(snapshot.payloadEndReason).toBe("game_over");
   });
 
@@ -1595,21 +1628,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.waitForTimeout(1200);
 
-    const snapshot = await page.evaluate(() => ({
-      calls: Number((window as any).__recordSubmitCalls || 0),
-      payloads: Array.isArray((window as any).__recordSubmitPayloads)
-        ? (window as any).__recordSubmitPayloads.map((item: any) => ({
-            clientRecordId: item ? String(item.client_record_id || "") : "",
-            replayString: item ? String(item.replay_string || "") : ""
-          }))
-        : [],
-      lastRecordSignature: String(window.localStorage.getItem("online_last_record_submit_signature_v1") || "")
-    }));
+    const snapshot = await page.evaluate(async () => {
+      const store = (window as any).LocalHistoryStore;
+      const records = store && typeof store.getAllAsync === "function" ? await store.getAllAsync() : [];
+      const latest = Array.isArray(records) ? records[0] : null;
+      return {
+        calls: Number((window as any).__recordSubmitCalls || 0),
+        payloads: Array.isArray((window as any).__recordSubmitPayloads)
+          ? (window as any).__recordSubmitPayloads.map((item: any) => ({
+              clientRecordId: item ? String(item.client_record_id || "") : "",
+              replayString: item ? String(item.replay_string || "") : ""
+            }))
+          : [],
+        latestSyncStatus: String(latest?.sync_status || ""),
+        latestServerRecordId: String(latest?.server_record_id || "")
+      };
+    });
 
     expect(snapshot.calls).toBe(1);
     expect(snapshot.payloads).toHaveLength(1);
     expect(snapshot.payloads[0]?.clientRecordId.length).toBeGreaterThan(0);
     expect(snapshot.payloads[0]?.replayString.length).toBeGreaterThan(0);
-    expect(snapshot.lastRecordSignature.length).toBeGreaterThan(0);
+    expect(snapshot.latestSyncStatus).toBe("synced");
+    expect(snapshot.latestServerRecordId).toBe("rec-smoke-dedupe-1");
   });
 });
