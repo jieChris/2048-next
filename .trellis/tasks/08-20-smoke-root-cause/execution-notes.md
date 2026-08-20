@@ -42,3 +42,8 @@
 - `32347441078` 的 Pages Smoke 全绿，确认同一回放并发重复 POST 已修复；整轮唯一失败来自 Index UI 回放复制提示测试固定等待 1850ms 后读取 180ms 渐隐动画，CI 调度抖动时仍可能读到 `opacity=0.0427801`。现改为逐帧等待测试真正断言的隐藏状态，不改提示时长或生产样式。
 - 合并后的部署门禁 `32348774410` 暴露了更窄的持久化竞态：请求数仍为 1，记录先被观察为 `synced`，数毫秒后最新记录却变成另一条 `pending`。上传锁只能阻止重复发送；并发终局钩子仍可在 manager 的 `localHistoryRecordId` 写回前分别创建相同本地记录。现由共享持久化入口在同一 manager 上复用进行中的 Promise，确保一次终局只创建一条发件箱记录。
 - PR #230 的 `32349575551` 证明上述共享 Promise 只合并了在线路径，仍未覆盖游戏核心 `tryAutoSubmitOnGameOver` 的独立本地保存。重启前在线钩子可能先准备上传记录，核心保存随后再创建本地记录。现由在线提交入口在没有核心保存 Promise 时主动启动它，等待 `localHistoryRecordId` 写回后再准备发件箱；并新增 Node 单元回归验证该顺序。
+
+## 2026-08-20 部署门禁复盘
+
+- 部署门禁 `32350990171` 的 Pages Smoke 仅失败于“saved session preserves client record id across reload”。用例在等待 `rankCheckpointRestorePending` 结束后立即执行三次移动，但此状态不代表在线提交钩子已经绑定；移动因此绕过 `persistRankedCheckpointLocalMirror`，镜像仍为空。
+- 修复仅调整测试前置：等待 `OnlineLeaderboardRuntime` 与 `__onlineImmediateSubmitHooksBound === true`，移动后等待本地镜像键实际写入，再读取并断言客户端记录 ID；删除固定 1800ms 延时。该修复遵循现有 Smoke 规范的“等待能力，不等待时间”规则，不修改产品逻辑或放宽断言。
