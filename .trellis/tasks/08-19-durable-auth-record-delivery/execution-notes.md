@@ -6,7 +6,8 @@
 - 前端工作树：`2048-next/.worktrees/restart-confirm-setting-20260818`，分支 `codex/durable-auth-record-delivery-20260819`，基线 `origin/main` / `64f65a23`。
 - 后端工作树：`.worktrees/durable-auth-record-delivery-api-20260819`，分支 `codex/durable-auth-record-delivery-20260819`，基线 `origin/main` / `15ef3c6`。
 - 2026-08-20：前后端实现、限定范围最终复验和内置浏览器核对已完成；本次分别形成前端与后端本地提交。
-- 未推送、未部署、未运行生产迁移、未写生产数据；`2048-ranked` 零改动。
+- 2026-08-20：后端 `69a1753` 已部署，迁移 `0029_device_sessions`、`0030_record_upload_tasks` 已应用；生产只读对账保持记录 3169、可见已验证记录 3143、玩家 56、用户 105、榜单最佳记录 153。
+- 前端实现已推送至 `main`，仍在通过发布门禁；`2048-ranked` 零改动。
 
 ## 已实施范围
 
@@ -96,6 +97,7 @@
 - 第四次前端推送通过静态审计和 2032 项单测，但 Smoke 发现新增 TypeScript API base helper 无条件给本地地址追加生产 fallback，导致持久会话启动请求越过本地代理并被 CSP 拦截；服务器部署步骤仍未执行。修复复用项目既有 localhost/127/IPv6 loopback 隔离规则，正式域候选不变，并增加共享 helper 回归用例。根级约束禁止本地启动独立 Playwright，因此本地只验证直接根因单测，完整 Smoke 继续交由 GitHub Actions 复验。
 - 第五次前端推送确认上述 CSP/运行时失败已全部消失，39 条 Smoke 通过；剩余两条旧 Smoke 仍要求 durable outbox 同时写入已淘汰的 localStorage pending key，与 IndexedDB 唯一发件箱合同冲突。产品代码未回退为双写；测试改为读取真实 `retry_wait`、`waiting_auth`、`synced` 和 `server_record_id`，并按持久化的 `next_retry_at` 条件等待后再刷新。服务器部署步骤仍未执行。
 - 第六次前端推送继续保持 39 条 Smoke 通过，并暴露两处测试时序假设：计分用例未等待即时提交 hook 完成绑定；记录在首次失败后可因至少一次终局落盘从 `retry_wait` 再次变为可立即重试的 `pending`。测试改为等待既有能力标志，并按与 `listSyncCandidatesAsync` 一致的 pending/到期 retry 条件继续；未增加超时、未修改产品代码，服务器部署步骤仍未执行。
+- 第七次前端门禁为 40 条 Smoke 通过、1 条失败；持久发件箱用例收到 `synced` 而非预期 `retry_wait`。CI 日志确认测试只阻断首次请求，但产品终局钩子按至少一次语义立即强制重试并成功。产品代码未改；测试改为持续模拟断网，确认持久 `retry_wait` 并等待退避到期后再显式放行、刷新，继续验证同一 `client_record_id`、相同回放和最终 `server_record_id`。
 
 ## 发布前仍需完成
 

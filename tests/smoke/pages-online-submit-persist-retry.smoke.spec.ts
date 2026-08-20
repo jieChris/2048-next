@@ -133,13 +133,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     let recordCalls = 0;
+    let recordUploadsEnabled = false;
     const recordBodies: Array<Record<string, unknown>> = [];
 
     await page.route("**/api/records", async (route) => {
       recordCalls += 1;
       const body = route.request().postDataJSON() as Record<string, unknown>;
       recordBodies.push(body);
-      if (recordCalls === 1) {
+      if (!recordUploadsEnabled) {
         await route.abort("failed");
         return;
       }
@@ -238,6 +239,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return !nextRetryAt || nextRetryAt <= Date.now();
     }, { timeout: 6000 }).toBe(true);
 
+    recordUploadsEnabled = true;
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => !!(window as any).OnlineLeaderboardRuntime);
 
