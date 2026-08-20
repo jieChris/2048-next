@@ -5,12 +5,7 @@ import { mockAcceptedBetaAccess } from "./support/beta-access";
 test.describe("History smoke: export", () => {
   test("backfills, displays, sorts, searches and exports board sum", async ({ page }) => {
     await mockAcceptedBetaAccess(page);
-
-    const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
-    expect(response).not.toBeNull();
-    expect(response?.ok()).toBeTruthy();
-
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
       const now = Date.now();
       window.localStorage.setItem("local_game_history_v1", JSON.stringify([
         {
@@ -45,6 +40,10 @@ test.describe("History smoke: export", () => {
         }
       ]));
     });
+
+    const response = await page.goto("/history.html", { waitUntil: "domcontentloaded" });
+    expect(response).not.toBeNull();
+    expect(response?.ok()).toBeTruthy();
 
     await page.click("#history-load-btn");
     await expect(page.locator(".history-item")).toHaveCount(3);

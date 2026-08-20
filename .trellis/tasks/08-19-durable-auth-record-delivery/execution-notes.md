@@ -90,6 +90,7 @@
 - 前端工作树缺少被忽略的 `node_modules/.bin/openapi-typescript` 链接；只在被忽略的 `node_modules` 内链接主工作树现有二进制以运行 `api:types:check`，没有修改源码或依赖清单。
 - 根级约束禁止启动独立 Playwright/外部浏览器；内置浏览器截图接口本轮不可用，且管理页需要真实管理员 API 会话，因此没有运行/更新 416 张视觉基线。采用最保守替代：内置浏览器 DOM/边界检查历史页、管理员前端结构单测及后端 API 专项，并明确保留该验证边界。
 - 生产发布前备份已完成本地归档、校验和与前后引用一致性检查，也已传完异地文件，但外层 SSH 通道未正常回收，脚本没有写入新的 `last-success` 状态。发布因此暂停，直到独立通过本地 `sha256sum`、`pg_restore --list` 和异地 `rsync --checksum --dry-run` 逐文件一致性验证；未降低备份标准，也未修改或删除玩家数据。
+- 首次前端推送在发布包构建阶段被 `game-manager-audit` 的 19 行 helper 门禁阻断，服务器部署步骤没有执行；采用现有 helper 拆分模式保持 payload 字段和值不变。同期 History Smoke 仍在页面启动后写入旧 localStorage fixture，与一次性迁移时序不符；仅改为导航前注入，以继续验证真实旧数据迁移。根级约束禁止本地启动独立 Playwright，因此只本地运行直接失败的审计，浏览器 Smoke 交由 GitHub Actions 复验。
 
 ## 发布前仍需完成
 

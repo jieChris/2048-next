@@ -1682,15 +1682,16 @@ function calculateAutoSubmitBoardSum(finalBoard) {
   return boardSum;
 }
 
-function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
-  var replayPayload = resolveAutoSubmitReplayPayload(manager);
-  var finalBoard = getFinalBoardMatrix(manager);
+function resolveAutoSubmitClientRecordId(manager) {
   var clientRecordId = "";
   if (typeof resolveManagerClientRecordId === "function") {
     try { clientRecordId = String(resolveManagerClientRecordId(manager) || "").trim(); } catch (_errId) {}
   }
   if (!clientRecordId) clientRecordId = String(manager && manager.clientRecordId || "").trim();
-  var initialSeed = Number(manager && manager.initialSeed);
+  return clientRecordId;
+}
+
+function buildAutoSubmitPayloadIdentityFields(manager, initialSeed) {
   return {
     record_schema_version: 1,
     mode: resolveReplayModeTag(manager.modeKey, manager.mode),
@@ -1702,12 +1703,22 @@ function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
     challenge_id: manager.challengeId || null,
     initial_seed: Number.isFinite(initialSeed) ? Math.floor(initialSeed) : null,
     seed: Number.isFinite(initialSeed) ? Math.floor(initialSeed) : null,
-    client_record_id: clientRecordId || null,
-    special_rules_snapshot: manager.clonePlain(manager.specialRules || {}),
+    client_record_id: resolveAutoSubmitClientRecordId(manager) || null,
+    special_rules_snapshot: manager.clonePlain(manager.specialRules || {})
+  };
+}
+
+function buildAutoSubmitPayloadBase(manager, endedAt, bestTileValue) {
+  var replayPayload = resolveAutoSubmitReplayPayload(manager);
+  var finalBoard = getFinalBoardMatrix(manager);
+  var initialSeed = Number(manager && manager.initialSeed);
+  var payload = buildAutoSubmitPayloadIdentityFields(manager, initialSeed);
+  assignAutoSubmitPayloadFields(payload, {
     score: manager.score, board_sum: calculateAutoSubmitBoardSum(finalBoard), best_tile: bestTileValue, duration_ms: getDurationMs(manager),
     final_board: finalBoard, ended_at: endedAt, replay: replayPayload.replay,
     replay_string: replayPayload.replayString
-  };
+  });
+  return payload;
 }
 
 function resolveAutoSubmitRescueReplayString(manager) {
