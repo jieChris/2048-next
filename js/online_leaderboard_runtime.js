@@ -4500,46 +4500,46 @@ async function refreshLeaderboard(modeLike) {
   async function retryDurablePendingRecordSubmit(options) {
     var store = getDurableRecordOutbox();
     if (!store || recordSubmitLock) return null;
-    await migrateLegacyPendingRecordsToDurableOutbox();
-    var opts = options && typeof options === "object" ? options : {};
-    var records = [];
-    var recordId = toText(opts.recordId).trim();
-    if (recordId) {
-      var selected = await store.getByIdAsync(recordId);
-      if (selected && selected.sync_status !== "synced") {
-        var selectedStatus = toText(selected.sync_status).trim();
-        var selectedRetryAt = Date.parse(toText(selected.next_retry_at)) || 0;
-        var selectedStatusAllowed = ["pending", "retry_wait", "waiting_auth"].indexOf(selectedStatus) >= 0 ||
-          (opts.includeNeedsAction === true && selectedStatus === "needs_action");
-        if (
-          selectedStatusAllowed &&
-          (opts.forcePendingRetry === true || !selectedRetryAt || selectedRetryAt <= Date.now())
-        ) records.push(selected);
-      }
-    } else {
-      records = await store.listSyncCandidatesAsync({
-        owner_user_id: toText(getUserId()).trim(),
-        statuses: opts.includeNeedsAction === true
-          ? ["pending", "retry_wait", "waiting_auth", "needs_action"]
-          : ["pending", "retry_wait", "waiting_auth"],
-        include_future_retries: opts.forcePendingRetry === true
-      });
-    }
-    if (!records.length) return null;
-    if (opts.all !== true) records = records.slice(0, 1);
-
     recordSubmitLock = true;
-    var lastResult = null;
     try {
+      await migrateLegacyPendingRecordsToDurableOutbox();
+      var opts = options && typeof options === "object" ? options : {};
+      var records = [];
+      var recordId = toText(opts.recordId).trim();
+      if (recordId) {
+        var selected = await store.getByIdAsync(recordId);
+        if (selected && selected.sync_status !== "synced") {
+          var selectedStatus = toText(selected.sync_status).trim();
+          var selectedRetryAt = Date.parse(toText(selected.next_retry_at)) || 0;
+          var selectedStatusAllowed = ["pending", "retry_wait", "waiting_auth"].indexOf(selectedStatus) >= 0 ||
+            (opts.includeNeedsAction === true && selectedStatus === "needs_action");
+          if (
+            selectedStatusAllowed &&
+            (opts.forcePendingRetry === true || !selectedRetryAt || selectedRetryAt <= Date.now())
+          ) records.push(selected);
+        }
+      } else {
+        records = await store.listSyncCandidatesAsync({
+          owner_user_id: toText(getUserId()).trim(),
+          statuses: opts.includeNeedsAction === true
+            ? ["pending", "retry_wait", "waiting_auth", "needs_action"]
+            : ["pending", "retry_wait", "waiting_auth"],
+          include_future_retries: opts.forcePendingRetry === true
+        });
+      }
+      if (!records.length) return null;
+      if (opts.all !== true) records = records.slice(0, 1);
+
+      var lastResult = null;
       for (var i = 0; i < records.length; i += 1) {
         var outcome = await uploadDurableRecord(store, records[i], opts);
         lastResult = outcome && outcome.result ? outcome.result : outcome;
         if (!getAuthToken()) break;
       }
+      return lastResult;
     } finally {
       recordSubmitLock = false;
     }
-    return lastResult;
   }
 
   async function retryPendingRecordSubmit(options) {
