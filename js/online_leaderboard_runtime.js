@@ -40,15 +40,6 @@
   var RECORD_SCHEMA_VERSION = 1;
   var RANKED_RESTART_SETUP_DEFERRED = { rankedRestartSetupDeferred: true };
   var RANKED_RESTART_ATTEMPT_PERSIST_FAILED = { rankedRestartAttemptPersistFailed: true };
-  var RANKED_NAVIGATION_LINK_IDS = {
-    "home-title-link": true,
-    "home-user-display": true,
-    "toolkit-account-link": true,
-    "toolkit-palette-link": true,
-    "top-modes-btn": true,
-    "top-practice-btn": true,
-    "top-user-profile-btn": true
-  };
   var BREAKOUT_EASTER_EGG_GAME_URL = "./easter-eggs/breakout/index.html";
   var BREAKOUT_EASTER_EGG_TRIGGER_COUNT = 19;
 
@@ -245,7 +236,6 @@
   var pollingVisibilityBound = false;
   var pollingUsingScheduler = false;
   var lifecycleSubmitFlushBound = false;
-  var rankedNavigationAttemptBound = false;
   var authBestScoreSyncBound = false;
   var durableOutboxMigrationPromise = null;
   var schedulerTaskName = "online-leaderboard-main";
@@ -4932,29 +4922,6 @@ async function refreshLeaderboard(modeLike) {
     global.addEventListener("beforeunload", flushTerminalSubmitOnPageHide);
   }
 
-  function bindRankedNavigationAttemptPersistence() {
-    if (rankedNavigationAttemptBound || !global.document || typeof global.document.addEventListener !== "function") return;
-    rankedNavigationAttemptBound = true;
-    global.document.addEventListener("click", function (eventLike) {
-      if (!eventLike || eventLike.defaultPrevented) return;
-      if (eventLike.button != null && eventLike.button !== 0) return;
-      if (eventLike.metaKey || eventLike.ctrlKey || eventLike.shiftKey || eventLike.altKey) return;
-      var target = eventLike.target;
-      if (target && target.nodeType === 3) target = target.parentElement;
-      if (!target || typeof target.closest !== "function") return;
-      var anchor = target.closest("a[href]");
-      if (!anchor) return;
-      var anchorId = toText(anchor.id).trim();
-      var isTitleLink = typeof anchor.closest === "function" && !!anchor.closest(".title");
-      if (!RANKED_NAVIGATION_LINK_IDS[anchorId] && !isTitleLink) return;
-      var manager = global.game_manager;
-      if (persistRankedAbandonForAction(manager, "navigation")) return;
-      if (typeof eventLike.preventDefault === "function") eventLike.preventDefault();
-      if (typeof eventLike.stopImmediatePropagation === "function") eventLike.stopImmediatePropagation();
-      notifyRankedAttemptPersistenceBlocked(manager);
-    }, true);
-  }
-
   function bindModeIntroRefresh() {
     if (modeIntroBound) return;
     var introBtn = byId("top-mode-intro-btn");
@@ -5132,7 +5099,6 @@ function init() {
     bindLanguageSync();
     bindAuthBestScoreSync();
     bindLifecycleSubmitFlush();
-    bindRankedNavigationAttemptPersistence();
     bindModeIntroRefresh();
     ensureTimerLeaderboardPanel();
     syncTimerLeaderboardViewMode();

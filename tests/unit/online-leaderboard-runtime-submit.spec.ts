@@ -403,7 +403,7 @@ describe("online leaderboard terminal submission", () => {
     }
   );
 
-  it("persists navigation abandon and blocks the fixed game links when persistence fails", async () => {
+  it("does not abandon an active game when opening the practice board", async () => {
     const manager = createTerminatedManager({
       over: false,
       rankPolicy: "ranked",
@@ -415,7 +415,7 @@ describe("online leaderboard terminal submission", () => {
       manager,
       fetchImpl: async () => createJsonResponse({ success: true, data: [] })
     });
-    const enqueueAttempt = vi.fn(() => true);
+    const enqueueAttempt = vi.fn(() => false);
     runtime.windowLike.RankedSessionRuntime = {
       enqueueAttempt,
       flushAttemptOutbox: vi.fn(async () => true),
@@ -438,23 +438,13 @@ describe("online leaderboard terminal submission", () => {
       };
     };
 
-    const allowed = createNavigationEvent("top-modes-btn");
-    clickHandler?.(allowed);
-    expect(enqueueAttempt).toHaveBeenCalledWith(expect.objectContaining({
-      event: "abandon",
-      reason: "navigation",
-      ranked_session_token: "navigation-token"
-    }));
-    expect(allowed.preventDefault).not.toHaveBeenCalled();
+    const navigation = createNavigationEvent("top-practice-btn");
+    clickHandler?.(navigation);
 
-    enqueueAttempt.mockReturnValue(false);
-    const blocked = createNavigationEvent("top-practice-btn");
-    clickHandler?.(blocked);
-    expect(blocked.preventDefault).toHaveBeenCalledTimes(1);
-    expect(blocked.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(runtime.windowLike.alert).toHaveBeenCalledWith(
-      "暂时无法保存本局排位记录，请重试后再离开游戏。\n失败原因：浏览器本地存储写入失败（attempt_outbox_write_failed）。\n如果对局最终未正常上传，可以添加QQ群1103144436申请补录成绩。"
-    );
+    expect(enqueueAttempt).not.toHaveBeenCalled();
+    expect(navigation.preventDefault).not.toHaveBeenCalled();
+    expect(navigation.stopImmediatePropagation).not.toHaveBeenCalled();
+    expect(runtime.windowLike.alert).not.toHaveBeenCalled();
   });
 
   it("does not expose timer leaderboard support for 6x6 through 10x10 board modes", () => {
