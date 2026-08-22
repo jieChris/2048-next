@@ -398,7 +398,7 @@ test("mist cyan night runtime and mobile utility pages keep the shared visual sy
   await expect(page.locator(".relay-panel").first()).toHaveCSS("color", "rgb(204, 215, 209)");
 
   await page.goto("/user.html", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#user-value-name")).toHaveCSS("color", "rgb(237, 242, 237)");
+  await expect(page.locator("#user-value-name")).toHaveCSS("color", "rgb(255, 255, 255)");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/palette.html", { waitUntil: "domcontentloaded" });

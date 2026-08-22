@@ -1,6 +1,19 @@
 ﻿import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    // The profile suite mocks its own user/record endpoints. Keep the shared
+    // cookie-first auth restore on the same mocked boundary so it cannot fall
+    // through to the unavailable local API server during page bootstrap.
+    await page.route("**/api/auth/refresh", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, token: "smoke-restored-token" })
+      });
+    });
+  });
+
   test("home page keeps its Chinese SEO title", async ({ page }) => {
     const response = await page.goto("/index.html", { waitUntil: "domcontentloaded" });
     expect(response, "Index response should exist").not.toBeNull();
@@ -244,11 +257,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/user.html?id=12&nickname=Hui", { waitUntil: "domcontentloaded" });
     expect(response, "User response should exist").not.toBeNull();
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
-    await expect(page.locator(".user-profile-inline-info")).toBeVisible();
+    await expect(page.locator(".user-profile-copy")).toBeVisible();
+    await page.click("#user-tab-records");
     await expect(page.locator(".user-record-card")).toBeVisible();
 
     const heights = await page.evaluate(() => {
-      const infoCard = document.querySelector(".user-profile-inline-info");
+      const infoCard = document.querySelector(".user-profile-copy");
       const recordCard = document.querySelector(".user-record-card");
       return {
         info: infoCard ? infoCard.getBoundingClientRect().height : 0,

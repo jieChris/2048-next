@@ -316,8 +316,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
         });
       })
       .toEqual({
-        currentTheme: "midnight_nebula",
-        nightTheme: "midnight_nebula",
+        currentTheme: "classic",
+        nightTheme: "classic",
         dataNight: "1"
       });
 

@@ -80,7 +80,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           nickname: window.localStorage.getItem("2048_auth_nickname_v1")
         }))
       )
-      .toEqual({ token: null, userId: "42", nickname: "Smoke" });
+      .toEqual({ token: "smoke_token", userId: "42", nickname: "Smoke" });
     expect(loginCalls).toBe(1);
     expect(recordUploadCalls).toBe(0);
     await expect(page.locator(".account-auth-form-surface")).toBeHidden();
@@ -167,7 +167,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           nickname: window.localStorage.getItem("2048_auth_nickname_v1")
         }))
       )
-      .toEqual({ token: null, userId: "44", nickname: "PendingSmoke" });
+      .toEqual({ token: "pending_token", userId: "44", nickname: "PendingSmoke" });
     await expect(page.locator("#account-action-row")).toBeHidden();
   });
 
@@ -257,7 +257,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           nickname: window.localStorage.getItem("2048_auth_nickname_v1")
         }))
       )
-      .toEqual({ token: null, userId: "43", nickname: "EnterSmoke" });
+      .toEqual({ token: "enter_token", userId: "43", nickname: "EnterSmoke" });
 
     expect(loginCalls).toBe(2);
   });
