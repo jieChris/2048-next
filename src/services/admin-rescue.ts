@@ -22,18 +22,15 @@ export function createAdminService(options: AdminServiceOptions = {}): AdminServ
   const storageAccess = createBrowserStorageAccess({
     windowLike: windowLike as unknown as Record<string, unknown>
   });
-  const token = readAuthToken({ storageLike: storageAccess.local() });
-  const client = createJsonApiClient({
-    bases: buildApiBaseCandidates({ locationLike: windowLike?.location }),
-    token
-  });
+  const storageLike = storageAccess.local();
+  const bases = buildApiBaseCandidates({ locationLike: windowLike?.location });
 
   return {
-    async request(path, requestOptions) {
-      if (!token) {
-        return { success: false, code: "NO_TOKEN", error: "未登录或 token 不存在" };
-      }
-      return client.request(path, requestOptions);
+    request(path, requestOptions) {
+      return createJsonApiClient({
+        bases,
+        token: readAuthToken({ storageLike })
+      }).request(path, requestOptions);
     }
   };
 }
