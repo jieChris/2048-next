@@ -48,13 +48,21 @@ npx playwright install-deps chromium
 
 > 若未安装浏览器二进制，`npm run test:smoke` / `npm run verify:refactor` 可能出现 `Executable doesn't exist` 报错。
 
-### 3. 本地开发
+### 3. 人工本地测试（默认连接线上后端）
+
+```bash
+npm run dev:cloud-api
+```
+
+该命令先检查 `https://2048next.cn/api/health`，确认生产后端可用后再启动前端，并将所有 `/api/*` 请求代理到线上后端。启动后按终端提示访问本地地址（通常为 `http://localhost:5173`）。
+
+这是人工体验验证的默认入口，账号、排行榜、云端记录等数据与线上一致。登录、上传记录、删除记录等写操作会作用于线上真实数据。
+
+仅做隔离的静态页面或自动化测试时使用裸 Vite：
 
 ```bash
 npm run dev
 ```
-
-启动后按终端提示访问本地地址（通常为 `http://localhost:5173`）。
 
 ### 3.1 本地联调 API（登录/账号/排行榜可直接测）
 
@@ -83,7 +91,7 @@ npm run dev
 
 这样页面里所有 `/api/*` 请求都会转发到本地 API，不需要先推服务器。
 
-如果你希望本地页面使用线上 `2048next.cn` API，可直接运行：
+如果你希望本地页面使用线上 `2048next.cn` API，可直接运行（人工测试默认使用此命令）：
 
 ```bash
 npm run dev:cloud-api
