@@ -201,6 +201,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response, "Account settings response should exist").not.toBeNull();
     expect(response?.ok(), "Account settings response should be 2xx").toBeTruthy();
     await expect(page.locator("body")).toBeVisible();
+    await page.evaluate(() => {
+      const browserWindow = window as Window & {
+        GameDialog?: { confirm?: (message: string) => Promise<boolean> };
+        __nicknameConfirmMessages?: string[];
+      };
+      browserWindow.__nicknameConfirmMessages = [];
+      if (browserWindow.GameDialog) {
+        browserWindow.GameDialog.confirm = async (message: string) => {
+          browserWindow.__nicknameConfirmMessages?.push(String(message || ""));
+          return true;
+        };
+      }
+    });
 
     await expect(page.locator("#settings-current-nickname")).toHaveText("SmokeUser");
     await expect(page.locator("#settings-nav-user")).toBeVisible();
@@ -242,6 +255,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(nicknameCheckCalls).toBeGreaterThanOrEqual(2);
     expect(nicknameUpdateCalls).toBe(1);
     expect(nicknameUpdatePayload?.nickname).toBe("SmokeNew");
+    await expect.poll(() => page.evaluate(
+      () => (window as Window & { __nicknameConfirmMessages?: string[] }).__nicknameConfirmMessages?.[0] || ""
+    )).toContain("once per calendar month");
     await expect(page.locator("#settings-current-nickname")).toHaveText("SmokeNew");
     await page.waitForFunction(() => window.localStorage.getItem("2048_auth_nickname_v1") === "SmokeNew");
 

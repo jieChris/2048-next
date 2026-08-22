@@ -98,6 +98,7 @@
       invalidNickname: "昵称需 2-10 位，仅支持中文、字母、数字、空格、下划线和短横线",
       nicknameUnavailableInline: "当前昵称不可用，请更换昵称",
       nicknameCheckFailed: "昵称校验失败，请稍后重试",
+      nicknameChangeConfirm: "每个自然月仅有一次修改昵称的机会。确认将昵称修改为“{nickname}”吗？确认后本月无法再次修改。",
       nicknameUpdated: "昵称修改成功",
       nicknameUpdateFail: "昵称修改失败",
       nicknameUpdateUnsupported: "当前服务端暂不支持修改昵称",
@@ -161,6 +162,7 @@
       invalidNickname: "Nickname must be 2-10 chars and use letters/numbers/spaces/_/-/Chinese only",
       nicknameUnavailableInline: "Nickname unavailable, please choose another",
       nicknameCheckFailed: "Nickname validation failed, please retry",
+      nicknameChangeConfirm: "You can change your nickname once per calendar month. Change it to \"{nickname}\"? You cannot change it again this month.",
       nicknameUpdated: "Nickname updated",
       nicknameUpdateFail: "Failed to update nickname",
       nicknameUpdateUnsupported: "Server does not support nickname update yet",
@@ -185,6 +187,7 @@
       NICKNAME_EXISTS: "昵称已被占用，请更换",
       DUPLICATE_NICKNAME: "昵称已被占用，请更换",
       NICKNAME_TAKEN: "昵称已被占用，请更换",
+      NICKNAME_CHANGE_MONTHLY_LIMIT: "本自然月的昵称修改机会已使用，请下个自然月再试",
       UNAUTHORIZED: "请先登录",
       INVALID_TOKEN: "登录状态已失效，请重新登录",
       INVALID_CREDENTIALS: "当前密码错误",
@@ -209,6 +212,7 @@
       NICKNAME_EXISTS: "Nickname already exists",
       DUPLICATE_NICKNAME: "Nickname already exists",
       NICKNAME_TAKEN: "Nickname already exists",
+      NICKNAME_CHANGE_MONTHLY_LIMIT: "You have already used this calendar month's nickname change. Try again next month.",
       UNAUTHORIZED: "Please sign in first",
       INVALID_TOKEN: "Session expired, please sign in again",
       INVALID_CREDENTIALS: "Current password is incorrect",
@@ -254,6 +258,15 @@
     if (!message) return;
     if (type === "ok") node.classList.add("ok");
     if (type === "err") node.classList.add("err");
+  }
+
+  function confirmNicknameChange(nextNickname) {
+    var message = t("nicknameChangeConfirm").replace("{nickname}", toText(nextNickname));
+    if (global.GameDialog && typeof global.GameDialog.confirm === "function") {
+      return Promise.resolve(global.GameDialog.confirm(message, { kind: "confirm" }));
+    }
+    if (typeof global.confirm !== "function") return Promise.resolve(false);
+    return Promise.resolve(global.confirm(message));
   }
 
   function setAuthTip(message, type) {
@@ -371,7 +384,8 @@
       code === "SENSITIVE" ||
       code === "NICKNAME_EXISTS" ||
       code === "DUPLICATE_NICKNAME" ||
-      code === "NICKNAME_TAKEN"
+      code === "NICKNAME_TAKEN" ||
+      code === "NICKNAME_CHANGE_MONTHLY_LIMIT"
     );
   }
 
@@ -839,6 +853,7 @@
     }
 
     if (!(await validateNicknameAvailability(nextNickname, true))) return;
+    if (!(await confirmNicknameChange(nextNickname))) return;
 
     setNicknameButtonEnabled(false);
     try {

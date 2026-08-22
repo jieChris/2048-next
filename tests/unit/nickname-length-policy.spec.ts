@@ -22,4 +22,15 @@ describe("nickname length policy", () => {
     expect(accountRuntime).toContain("Nickname length must be 2-10 characters");
     expect(accountRuntime).not.toContain("2-20");
   });
+
+  it("confirms the monthly nickname chance and translates the backend limit", () => {
+    const settingsRuntime = readFileSync("js/account_settings_page.js", "utf8");
+
+    expect(settingsRuntime).toContain("每个自然月仅有一次修改昵称的机会");
+    expect(settingsRuntime).toContain("NICKNAME_CHANGE_MONTHLY_LIMIT");
+    expect(settingsRuntime).toContain("await confirmNicknameChange(nextNickname)");
+    expect(settingsRuntime.indexOf("await confirmNicknameChange(nextNickname)")).toBeLessThan(
+      settingsRuntime.indexOf("await updateNicknameOnServer(nextNickname)")
+    );
+  });
 });
