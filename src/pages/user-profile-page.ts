@@ -698,6 +698,14 @@ function applyLanguage(): void {
     const node = document.querySelector<HTMLElement>(selector);
     if (node) node.textContent = en ? english : zh;
   });
+  const ariaCopies: Array<[string, string, string]> = [
+    [".user-page-nav .palette-nav", "用户主页导航", "User profile navigation"],
+    [".user-profile-tabs", "个人主页内容", "Profile content"]
+  ];
+  ariaCopies.forEach(([selector, zh, english]) => {
+    const node = document.querySelector<HTMLElement>(selector);
+    if (node) node.setAttribute("aria-label", en ? english : zh);
+  });
   renderProfile();
   renderStatsContent();
   renderAchievements();

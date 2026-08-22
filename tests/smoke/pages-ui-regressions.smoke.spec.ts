@@ -35,7 +35,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     return await page.evaluate(() => {
       const results: Array<{ kind: string; selector: string; text: string }> = [];
       const seen = new Set<string>();
-      const ignoredIds = new Set(["user-value-name"]);
+      // Nickname-derived content is player data, not translatable UI copy.
+      const ignoredIds = new Set(["user-value-name", "user-profile-avatar"]);
 
       function isVisible(element: Element) {
         const styles = window.getComputedStyle(element);

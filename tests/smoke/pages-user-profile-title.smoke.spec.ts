@@ -1,6 +1,11 @@
 ﻿import { expect, test } from "@playwright/test";
 
 test.describe("Legacy Multi-Page Smoke", () => {
+  async function openRecordsTab(page: import("@playwright/test").Page) {
+    await page.locator("#user-tab-records").click();
+    await expect(page.locator("#user-panel-records")).toBeVisible();
+  }
+
   test.beforeEach(async ({ page }) => {
     // The profile suite mocks its own user/record endpoints. Keep the shared
     // cookie-first auth restore on the same mocked boundary so it cannot fall
@@ -191,7 +196,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.click("#user-nav-menu");
     await expect(page.locator("#user-nav-logout")).toBeVisible();
-    await page.click("#user-record-heading");
+    await page.click("#user-profile-cover");
     await expect(page.locator("#user-nav-logout")).toBeHidden();
 
     await page.click("#user-nav-menu");
@@ -388,6 +393,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     const response = await page.goto("/user.html?id=7&nickname=Alice", { waitUntil: "domcontentloaded" });
     expect(response, "User response should exist").not.toBeNull();
     expect(response?.ok(), "User response should be 2xx").toBeTruthy();
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
 
     await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
@@ -572,6 +578,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await expect(page.locator("#user-profile-edit")).toBeHidden();
     await expect(page.locator("#user-featured-edit")).toBeHidden();
@@ -727,6 +734,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await page.locator(".user-record-row").first().click();
     await expect(page.locator(".user-replay-export-btn")).toBeVisible();
@@ -840,6 +848,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await page.locator(".user-record-row").first().click();
 
@@ -921,6 +930,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await page.locator(".user-record-row").first().click();
     await page.locator(".user-replay-btn").click();
@@ -991,6 +1001,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await page.locator(".user-record-row").first().click();
     await expect(page.locator(".user-record-action-btn")).toHaveCount(1);
@@ -1068,6 +1079,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     });
 
     await page.goto("/user.html?id=9&nickname=Owner", { waitUntil: "domcontentloaded" });
+    await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
     await expect.poll(() => recordRequests.length).toBeGreaterThanOrEqual(1);
     const recordsBeforeDelete = recordRequests.length;
@@ -1175,6 +1187,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await page.waitForSelector("#user-record-visibility");
     await page.selectOption("#user-record-visibility", "deleted");
     await page.waitForSelector(".user-record-item.is-deleted");
@@ -1334,6 +1347,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response).not.toBeNull();
     expect(response?.ok()).toBeTruthy();
 
+    await openRecordsTab(page);
     await expect(page.locator(".user-record-item")).toHaveCount(2);
     await expect(page.locator(".user-record-era-badge")).toHaveCount(1);
     await expect(page.locator(".user-record-era-badge")).toHaveText("内测成绩");
