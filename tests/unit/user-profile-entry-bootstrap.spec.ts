@@ -46,4 +46,19 @@ describe("user-profile entry bootstrap", () => {
     expect(page).toContain('"--profile-cover-foreground-x"');
     expect(page).not.toContain('hasAttribute("data-night-background") ? 1 : 0.25');
   });
+
+  it("uses the shared storage boundary and the 150-code-point bio contract", () => {
+    const html = readEntry("user.html");
+    const page = readEntry("src/pages/user-profile-page.ts");
+    const openapi = readEntry("openapi/2048next.v1.yaml");
+
+    expect(html).toContain('id="user-profile-bio-count">0 / 150');
+    expect(html).toContain('maxlength="150"');
+    expect(page).toContain('safeReadStorageItem');
+    expect(page).toContain(" / 150");
+    expect(page).not.toContain("window.localStorage");
+    expect(openapi).toContain("profile_bio:\n          type: string\n          maxLength: 150");
+    expect(openapi).toContain("profileBio:\n          type: string\n          maxLength: 150");
+    expect(openapi).not.toContain("profile_bio:\n          type: string\n          maxLength: 80");
+  });
 });

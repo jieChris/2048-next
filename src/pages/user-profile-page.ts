@@ -1,4 +1,5 @@
 import { installUserProfileLegacyRuntime } from "../bootstrap/user-profile-legacy-runtime";
+import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { groupAchievementFamilies } from "../services/achievement-families";
 import { achievementIconMarkupFor } from "../services/achievement-icons";
 import {
@@ -90,11 +91,11 @@ function integer(value: unknown): number {
 }
 
 function language(): "zh" | "en" {
-  try {
-    return String(window.localStorage.getItem("ui_language_v1") || "").toLowerCase().startsWith("en") ? "en" : "zh";
-  } catch {
-    return "zh";
-  }
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  return String(safeReadStorageItem({ storageLike, key: "ui_language_v1" }) || "").toLowerCase().startsWith("en") ? "en" : "zh";
 }
 
 function localized(source: JsonRecord, key: "name" | "description"): string {
@@ -478,7 +479,7 @@ function selectedCover(): string {
 function updateBioCount(): void {
   const input = byId<HTMLTextAreaElement>("user-profile-bio-input");
   const count = byId("user-profile-bio-count");
-  if (input && count) count.textContent = `${Array.from(input.value).length} / 80`;
+  if (input && count) count.textContent = `${Array.from(input.value).length} / 150`;
 }
 
 function bindProfileCoverMotion(): void {
@@ -750,7 +751,11 @@ function bindEnhancedEvents(): void {
 }
 
 function bootstrapEnhancedProfile(): void {
-  const token = readAuthToken({ storageLike: window.localStorage });
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  const token = readAuthToken({ storageLike: storageLike as Storage | null });
   apiClient = createJsonApiClient({
     bases: buildApiBaseCandidates({ locationLike: window.location }),
     token,

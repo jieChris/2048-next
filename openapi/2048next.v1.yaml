@@ -2206,10 +2206,10 @@ components:
           type: [string, "null"]
         profile_bio:
           type: string
-          maxLength: 80
+          maxLength: 150
         profileBio:
           type: string
-          maxLength: 80
+          maxLength: 150
         profile_cover:
           type: string
           enum: [tide, sunset, midnight, forest, plum]
@@ -2244,7 +2244,7 @@ components:
       properties:
         profile_bio:
           type: string
-          maxLength: 80
+          maxLength: 150
         profile_cover:
           type: string
           enum: [tide, sunset, midnight, forest, plum]
