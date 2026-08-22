@@ -62,6 +62,31 @@ describe("Next admin console", () => {
     expect(dom.window.document.body.textContent).not.toContain("内测资格");
   });
 
+  it("uses the HttpOnly admin session when no local bearer is available", async () => {
+    const dom = installDom();
+    dom.window.localStorage.removeItem("2048_auth_token_v1");
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/admin/me")) {
+        const headers = new Headers(init?.headers || {});
+        expect(headers.get("Authorization")).toBeNull();
+        expect(init?.credentials).toBe("include");
+        return { json: async () => ({ success: true, data: { user_id: 0, admin: true, rootAdmin: true } }) };
+      }
+      if (url.includes("/admin/dashboard")) {
+        return { json: async () => ({ success: true, data: { metrics: {}, recent_users: [], recent_audit: [], recent_events: [] } }) };
+      }
+      return { json: async () => ({ success: true, data: [] }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { bootstrapAdminPage } = await import("../../src/pages/admin-page");
+
+    bootstrapAdminPage();
+    await flush();
+
+    expect(dom.window.document.getElementById("admin-shell")?.hidden).toBe(false);
+  });
+
   it("keeps Tabler and admin styles isolated to the admin entry", () => {
     const root = process.cwd();
     const entry = readFileSync(resolve(root, "src/entries/admin.ts"), "utf8");
