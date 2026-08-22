@@ -4,9 +4,9 @@ import { resolveHistoryModeCatalog } from "../bootstrap/history-mode-catalog";
 import { ensureHistoryRecordDeliveryRuntime } from "../bootstrap/history-record-delivery-runtime";
 import { createHistoryStorageRuntime } from "../bootstrap/history-storage-runtime";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+import { bindDisplayModeSync } from "../bootstrap/display-mode";
 import { bootstrapHistoryPageRuntime } from "./history-page-runtime";
 
-const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
 const UI_LANGUAGE_KEY = "ui_language_v1";
 
 type HistoryStaticLang = "en" | "zh";
@@ -93,22 +93,6 @@ const HISTORY_STATIC_COPY: Record<
     next: "Next"
   }
 };
-
-function readNightBackgroundPreference(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
-    storageName: "localStorage"
-  });
-  return (
-    safeReadStorageItem({
-      storageLike,
-      key: NIGHT_BACKGROUND_STORAGE_KEY
-    }) === "1"
-  );
-}
 
 function normalizeHistoryStaticLang(value: unknown): HistoryStaticLang | "" {
   const lang = String(value || "").trim().toLowerCase();
@@ -208,17 +192,6 @@ function applyHistoryPageLanguage(): void {
   setText("#history-next-page", copy.next);
 }
 
-function syncNightBackgroundAttribute(): void {
-  if (typeof document === "undefined" || !document.documentElement) {
-    return;
-  }
-  if (readNightBackgroundPreference()) {
-    document.documentElement.setAttribute("data-night-background", "1");
-    return;
-  }
-  document.documentElement.removeAttribute("data-night-background");
-}
-
 export async function bootstrapHistoryPage(): Promise<void> {
   if (typeof document === "undefined") {
     return;
@@ -226,7 +199,7 @@ export async function bootstrapHistoryPage(): Promise<void> {
 
   await ensureHistoryRecordDeliveryRuntime().catch(() => undefined);
 
-  syncNightBackgroundAttribute();
+  bindDisplayModeSync({ documentLike: document, windowLike: window });
   applyHistoryPageLanguage();
   runRefactorCutoverMigration(window);
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
@@ -238,9 +211,6 @@ export async function bootstrapHistoryPage(): Promise<void> {
       applyHistoryPageLanguage();
     });
     window.addEventListener("storage", (event) => {
-      if (!event || !event.key || event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
-        syncNightBackgroundAttribute();
-      }
       if (!event || !event.key || event.key === UI_LANGUAGE_KEY) {
         applyHistoryPageLanguage();
       }

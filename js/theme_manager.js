@@ -2,6 +2,7 @@
   var STORAGE_KEY = "theme_profile_v1";
   var STYLE_ID = "theme-dynamic-style";
   var NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
+  var DISPLAY_MODE_STORAGE_KEY = "settings_display_mode_v2";
   var DAY_THEME_STORAGE_KEY = "settings_day_theme_profile_v1";
   var NIGHT_THEME_STORAGE_KEY = "settings_night_theme_profile_v1";
   var DAY_TILE_PALETTE_STORAGE_KEY = "settings_day_tile_palette_v1";
@@ -128,7 +129,19 @@
   }
 
   function isNightBackgroundEnabled() {
-    return readLocalStorageItem(NIGHT_BACKGROUND_STORAGE_KEY) === STORAGE_TRUE_VALUE;
+    var mode = String(readLocalStorageItem(DISPLAY_MODE_STORAGE_KEY) || "").trim().toLowerCase();
+    if (mode !== "auto" && mode !== "day" && mode !== "night") {
+      var legacy = readLocalStorageItem(NIGHT_BACKGROUND_STORAGE_KEY);
+      mode = legacy === "1" ? "night" : legacy === "0" ? "day" : "auto";
+      if (legacy === "1" || legacy === "0") writeLocalStorageItem(DISPLAY_MODE_STORAGE_KEY, mode);
+    }
+    if (mode === "night") return true;
+    if (mode === "day") return false;
+    try {
+      return !!window.matchMedia && !!window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } catch (_err) {
+      return false;
+    }
   }
 
   function resolveActiveAppearanceStorageKeys() {

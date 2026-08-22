@@ -4,6 +4,7 @@
   if (!global) return;
 
   var STORAGE_KEY = "settings_night_background_enabled_v1";
+  var DISPLAY_MODE_STORAGE_KEY = "settings_display_mode_v2";
   var AUTO_THEME_APPLIED_KEY = "settings_night_theme_auto_applied_v1";
   var AUTO_THEME_PENDING_KEY = "settings_night_theme_pending_v1";
   // Legacy releases wrote this theme automatically. New night mode keeps the
@@ -24,10 +25,12 @@
 
   var state = {
     enabled: false,
+    displayMode: "auto",
     hasToggleBinding: false,
     hasLanguageBinding: false,
     hasStorageBinding: false,
-    hasThemeChangeBinding: false
+    hasThemeChangeBinding: false,
+    hasDisplayModeMediaBinding: false
   };
 
   function isRecord(value) {
@@ -93,8 +96,40 @@
     }
   }
 
-  function safeReadStorageFlag() {
-    return safeReadBooleanFlag(STORAGE_KEY);
+  function normalizeDisplayMode(value) {
+    var mode = String(value || "").trim().toLowerCase();
+    return mode === "auto" || mode === "day" || mode === "night" ? mode : "";
+  }
+
+  function readDisplayModePreference() {
+    var current = normalizeDisplayMode(safeReadTextValue(DISPLAY_MODE_STORAGE_KEY));
+    if (current) return current;
+    var legacy = safeReadTextValue(STORAGE_KEY);
+    var migrated = legacy === STORAGE_TRUE_VALUE ? "night" : legacy === STORAGE_FALSE_VALUE ? "day" : "auto";
+    if (legacy === STORAGE_TRUE_VALUE || legacy === STORAGE_FALSE_VALUE) {
+      safeWriteTextValue(DISPLAY_MODE_STORAGE_KEY, migrated);
+    }
+    return migrated;
+  }
+
+  function resolveSystemNight() {
+    var matchMedia = asFunction(toRecord(global).matchMedia);
+    if (!matchMedia) return false;
+    try {
+      return !!toRecord(matchMedia.call(global, "(prefers-color-scheme: dark)")).matches;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function resolveNightForDisplayMode(mode) {
+    return mode === "night" || (mode === "auto" && resolveSystemNight());
+  }
+
+  function syncDisplayModeStateFromStorage() {
+    state.displayMode = readDisplayModePreference();
+    state.enabled = !!resolveNightForDisplayMode(state.displayMode);
+    return state.enabled;
   }
 
   function safeWriteBooleanFlag(key, enabled) {
@@ -330,32 +365,19 @@
 
   function buildCopy() {
     var isEn = readUiLanguage() === "en";
+    var mode = state.displayMode;
+    var modeLabel = mode === "auto" ? (isEn ? "Auto" : "自动") : mode === "night" ? (isEn ? "Night" : "夜晚") : (isEn ? "Day" : "白天");
     if (isEn) {
-      if (!state.enabled) {
-        return {
-          title: "Night Mode",
-          desc: "Switch supported pages to a softer nighttime look.",
-          note: "Disabled. The page keeps its current background."
-        };
-      }
       return {
-        title: "Night Mode",
-        desc: "Switch supported pages to a softer nighttime look.",
-        note: "Enabled. All pages with settings will follow this background."
-      };
-    }
-
-    if (!state.enabled) {
-      return {
-        title: "\u591c\u95f4\u6a21\u5f0f",
-        desc: "\u4e3a\u9875\u9762\u5207\u6362\u6210\u67d4\u548c\u7684\u591c\u95f4\u6a21\u5f0f\u3002",
-        note: "\u672a\u5f00\u542f\uff0c\u5f53\u524d\u4fdd\u6301\u539f\u6709\u9875\u9762\u80cc\u666f\u3002"
+        title: "Display Mode",
+        desc: "Choose whether the page follows your system, daytime, or nighttime appearance.",
+        note: "Current: " + modeLabel + (mode === "auto" ? (state.enabled ? " (night resolved)" : " (day resolved)") : "") + "."
       };
     }
     return {
-      title: "\u591c\u95f4\u6a21\u5f0f",
-      desc: "\u4e3a\u9875\u9762\u5207\u6362\u6210\u67d4\u548c\u7684\u591c\u95f4\u6a21\u5f0f\u3002",
-      note: "\u5df2\u5f00\u542f\uff0c\u6240\u6709\u5e26\u8bbe\u7f6e\u5f39\u7a97\u7684\u9875\u9762\u90fd\u4f1a\u540c\u6b65\u4f7f\u7528\u8fd9\u4e2a\u80cc\u666f\u3002"
+      title: "\u663e\u793a\u6a21\u5f0f",
+      desc: "\u9009\u62e9\u81ea\u52a8\u8ddf\u968f\u7cfb\u7edf\u3001\u767d\u5929\u6216\u591c\u665a\u663e\u793a\u3002",
+      note: "\u5f53\u524d\uff1a" + modeLabel + (mode === "auto" ? (state.enabled ? "\uff08\u5f53\u524d\u8ddf\u968f\u4e3a\u591c\u665a\uff09" : "\uff08\u5f53\u524d\u8ddf\u968f\u4e3a\u767d\u5929\uff09") : "") + "\u3002"
     };
   }
 
@@ -390,6 +412,7 @@
     var doc = getDocumentLike();
     if (!doc || !doc.documentElement) return false;
     var root = doc.documentElement;
+    root.setAttribute("data-display-mode", state.displayMode || "auto");
     if (enabled) {
       root.setAttribute("data-night-background", "1");
       root.style.colorScheme = "dark";
@@ -414,7 +437,12 @@
     var copy = buildCopy();
 
     if (toggle) {
-      toRecord(toggle).checked = !!state.enabled;
+      toRecord(toggle).indeterminate = state.displayMode === "auto";
+      toRecord(toggle).checked = state.displayMode === "night";
+      var toggleSetAttribute = asFunction(toRecord(toggle).setAttribute);
+      if (toggleSetAttribute) {
+        toggleSetAttribute.call(toggle, "aria-checked", state.displayMode === "auto" ? "mixed" : state.displayMode === "night" ? "true" : "false");
+      }
     }
     if (title) {
       toRecord(title).textContent = copy.title;
@@ -444,52 +472,49 @@
     return syncAppearanceForCurrentState();
   }
 
-  function setNightBackgroundEnabled(enabled) {
+  function setDisplayMode(mode) {
+    var normalized = normalizeDisplayMode(mode) || "auto";
     var wasEnabled = !!state.enabled;
-    if (wasEnabled && !enabled) {
-      syncCurrentAppearanceToMode(true);
-    } else if (!wasEnabled && enabled) {
-      syncCurrentAppearanceToMode(false);
-    }
-    state.enabled = !!enabled;
+    if (wasEnabled) syncCurrentAppearanceToMode(true);
+    else syncCurrentAppearanceToMode(false);
+    state.displayMode = normalized;
+    safeWriteTextValue(DISPLAY_MODE_STORAGE_KEY, normalized);
+    state.enabled = !!resolveNightForDisplayMode(normalized);
+    // Keep the old flag for pages/bundles that have not yet moved to v2.
     safeWriteStorageFlag(state.enabled);
     applyNightBackground(state.enabled);
+    if (state.enabled && !safeReadTextValue(NIGHT_THEME_KEY)) {
+      safeWriteTextValue(NIGHT_THEME_KEY, readDayThemeId());
+    }
+    if (state.enabled && !safeReadTextValue(NIGHT_TILE_PALETTE_KEY)) {
+      safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, DEFAULT_NIGHT_TILE_PALETTE_ID);
+    }
+    if (!state.enabled && !safeReadTextValue(DAY_THEME_KEY)) {
+      safeWriteTextValue(DAY_THEME_KEY, DEFAULT_DAY_THEME_ID);
+    }
+    if (!state.enabled && !safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
+      safeWriteTextValue(DAY_TILE_PALETTE_KEY, DEFAULT_DAY_TILE_PALETTE_ID);
+    }
     if (state.enabled && !wasEnabled) {
-      if (!safeReadTextValue(NIGHT_THEME_KEY)) {
-        safeWriteTextValue(
-          NIGHT_THEME_KEY,
-          readDayThemeId()
-        );
-      }
-      if (!safeReadTextValue(NIGHT_TILE_PALETTE_KEY)) {
-        safeWriteTextValue(NIGHT_TILE_PALETTE_KEY, DEFAULT_NIGHT_TILE_PALETTE_ID);
-      }
       if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY)) {
         safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, true);
       } else if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
         safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
       }
-      syncAppearanceForCurrentState();
-    } else if (!state.enabled && wasEnabled) {
-      if (!safeReadTextValue(DAY_THEME_KEY)) {
-        safeWriteTextValue(DAY_THEME_KEY, DEFAULT_DAY_THEME_ID);
-      }
-      if (!safeReadTextValue(DAY_TILE_PALETTE_KEY)) {
-        safeWriteTextValue(DAY_TILE_PALETTE_KEY, DEFAULT_DAY_TILE_PALETTE_ID);
-      }
-      syncAppearanceForCurrentState();
-      if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
-        safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
-      }
-    } else {
-      syncAppearanceForCurrentState();
+    } else if (!state.enabled && wasEnabled && safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+      safeWriteBooleanFlag(AUTO_THEME_PENDING_KEY, false);
     }
+    syncAppearanceForCurrentState();
     syncNightModeSettingsUI();
-    return state.enabled;
+    return state.displayMode;
+  }
+
+  function setNightBackgroundEnabled(enabled) {
+    return setDisplayMode(enabled ? "night" : "day") === "night";
   }
 
   function syncNightBackgroundStateFromStorage() {
-    state.enabled = safeReadStorageFlag();
+    syncDisplayModeStateFromStorage();
     applyNightBackground(state.enabled);
     syncAppearanceForCurrentState();
     syncNightModeSettingsUI();
@@ -500,7 +525,10 @@
     var toggle = getElementById("night-bg-toggle");
     if (!toggle || state.hasToggleBinding) return false;
     bindListener(toggle, "change", function () {
-      setNightBackgroundEnabled(!!toRecord(toggle).checked);
+      // Preserve the three explicit choices while retaining the old checkbox DOM.
+      if (state.displayMode === "auto") setDisplayMode("night");
+      else if (state.displayMode === "night") setDisplayMode("day");
+      else setDisplayMode("auto");
     });
     state.hasToggleBinding = true;
     return true;
@@ -523,6 +551,7 @@
       if (
         key &&
         key !== STORAGE_KEY &&
+        key !== DISPLAY_MODE_STORAGE_KEY &&
         key !== DAY_THEME_KEY &&
         key !== NIGHT_THEME_KEY &&
         key !== DAY_TILE_PALETTE_KEY &&
@@ -531,6 +560,14 @@
         key !== AUTO_THEME_PENDING_KEY
       ) {
         return;
+      }
+      // Legacy pages still publish the boolean key. Treat that event as a
+      // compatibility update and mirror it into v2 before resolving state.
+      if (key === STORAGE_KEY) {
+        var legacy = safeReadTextValue(STORAGE_KEY);
+        if (legacy === STORAGE_TRUE_VALUE || legacy === STORAGE_FALSE_VALUE) {
+          safeWriteTextValue(DISPLAY_MODE_STORAGE_KEY, legacy === STORAGE_TRUE_VALUE ? "night" : "day");
+        }
       }
       syncNightBackgroundStateFromStorage();
     });
@@ -550,11 +587,43 @@
     return true;
   }
 
+  function bindDisplayModeMediaListener() {
+    if (state.hasDisplayModeMediaBinding) return false;
+    var matchMedia = asFunction(toRecord(global).matchMedia);
+    if (!matchMedia) return false;
+    var media = null;
+    try {
+      media = matchMedia.call(global, "(prefers-color-scheme: dark)");
+    } catch (_err) {
+      return false;
+    }
+    if (!media) return false;
+    var listener = function () {
+      if (state.displayMode !== "auto") return;
+      syncDisplayModeStateFromStorage();
+      applyNightBackground(state.enabled);
+      syncAppearanceForCurrentState();
+      syncNightModeSettingsUI();
+    };
+    var bound = bindListener(media, "change", listener);
+    if (!bound) {
+      var addListener = asFunction(toRecord(media).addListener);
+      if (addListener) {
+        addListener.call(media, listener);
+        bound = true;
+      }
+    }
+    state.hasDisplayModeMediaBinding = bound;
+    return bound;
+  }
+
   function getRuntimeSnapshot() {
     var doc = getDocumentLike();
     var root = doc && doc.documentElement ? doc.documentElement : null;
     return {
       enabled: !!state.enabled,
+      displayMode: state.displayMode,
+      resolvedNight: !!state.enabled,
       hasStyleTag: !!getElementById(STYLE_ID),
       dataAttribute: root ? String(root.getAttribute("data-night-background") || "") : "",
       togglePresent: !!getElementById("night-bg-toggle"),
@@ -568,7 +637,7 @@
   }
 
   function init() {
-    state.enabled = safeReadStorageFlag();
+    syncDisplayModeStateFromStorage();
     applyNightBackground(state.enabled);
     if (state.enabled) {
       if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY)) {
@@ -586,11 +655,13 @@
     bindLanguageListener();
     bindStorageListener();
     bindThemeChangeListener();
+    bindDisplayModeMediaListener();
     syncNightModeSettingsUI();
   }
 
   global.CoreNightModeRuntime = global.CoreNightModeRuntime || {};
   global.CoreNightModeRuntime.setNightBackgroundEnabled = setNightBackgroundEnabled;
+  global.CoreNightModeRuntime.setDisplayMode = setDisplayMode;
   global.CoreNightModeRuntime.syncNightModeSettingsUI = syncNightModeSettingsUI;
   global.CoreNightModeRuntime.getNightModeRuntimeSnapshot = getRuntimeSnapshot;
   global.syncNightModeSettingsUI = syncNightModeSettingsUI;

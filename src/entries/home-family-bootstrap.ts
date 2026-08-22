@@ -3,8 +3,8 @@ import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/
 import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { restoreAuthSession } from "../services/auth-session";
-import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
+import { resolveStorageByName } from "../bootstrap/storage";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
 import { installAchievementUnlockToastRuntime } from "../bootstrap/achievement-unlock-toast";
 import { installDirectionLockRuntime } from "../bootstrap/direction-lock-runtime";
@@ -107,8 +107,8 @@ import { installCryptoRandomRuntime } from "../utils/crypto-random";
 import { loadLegacyScriptsSequentially } from "./legacy-loader";
 import { getPageManifest, type RuntimeCapability } from "./runtime-manifest";
 import { resolveHomeFamilyScriptsByCapabilities } from "./home-family-shared";
+import { bindDisplayModeSync } from "../bootstrap/display-mode";
 
-const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
 const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "core",
   "capped-core",
@@ -139,47 +139,17 @@ const LEGACY_INDEX_UI_RUNTIME_NAMES = [
   "index_ui"
 ] as const;
 
-function readNightBackgroundPreference(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
-    storageName: "localStorage"
-  });
-  return safeReadStorageItem({
-    storageLike,
-    key: NIGHT_BACKGROUND_STORAGE_KEY
-  }) === "1";
-}
-
-function syncNightBackgroundAttribute(): void {
-  if (typeof document === "undefined" || !document.documentElement) {
-    return;
-  }
-  if (readNightBackgroundPreference()) {
-    document.documentElement.setAttribute("data-night-background", "1");
-    return;
-  }
-  document.documentElement.removeAttribute("data-night-background");
-}
-
 function bindNightBackgroundSync(): void {
   if (typeof window === "undefined") {
     return;
   }
   const typedWindow = window as Window & { __nightBackgroundSyncBound?: boolean };
   if (typedWindow.__nightBackgroundSyncBound) {
-    syncNightBackgroundAttribute();
+    bindDisplayModeSync({ documentLike: document, windowLike: window });
     return;
   }
   typedWindow.__nightBackgroundSyncBound = true;
-  syncNightBackgroundAttribute();
-  window.addEventListener("storage", (event) => {
-    if (!event || !event.key || event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
-      syncNightBackgroundAttribute();
-    }
-  });
+  bindDisplayModeSync({ documentLike: document, windowLike: window });
 }
 
 function bindHomeFamilyMobilePageScrollLock(): void {
@@ -336,7 +306,10 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
       documentLike: document,
       pageId,
       windowLike: window,
-      storageLike: window.localStorage
+      storageLike: resolveStorageByName({
+        windowLike: window as unknown as Record<string, unknown>,
+        storageName: "localStorage"
+      })
     });
   }
   await runBootstrapPipeline(pageId);

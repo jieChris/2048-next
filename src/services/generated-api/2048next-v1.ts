@@ -3529,28 +3529,40 @@ export interface components {
             email?: string;
             avatar_url?: string | null;
             avatarUrl?: string | null;
+            /** @description Public approved bio. Empty during P0a until bio review is enabled. */
             profile_bio?: string;
+            /** @description Camel-case compatibility alias for profile_bio. */
             profileBio?: string;
-            /** @enum {string} */
-            profile_cover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
-            /** @enum {string} */
-            profileCover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
+            /**
+             * @description Published profile background scene. P0a exposes only the built-in default.
+             * @enum {string}
+             */
+            background_scene_id?: "default";
+            /**
+             * @description Camel-case compatibility alias for background_scene_id.
+             * @enum {string}
+             */
+            backgroundSceneId?: "default";
             featured_mode_keys?: string[];
             featuredModeKeys?: string[];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             createdAt?: string;
+            revision?: number;
             admin?: boolean;
             super_admin?: boolean;
         } & {
             [key: string]: unknown;
         };
         UserProfileUpdateRequest: {
-            profile_bio?: string;
-            /** @enum {string} */
-            profile_cover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
+            /**
+             * @description P0a accepts only the built-in default scene.
+             * @enum {string}
+             */
+            background_scene_id?: "default";
             featured_mode_keys?: string[];
+            revision?: number;
         };
         AvatarSubmission: {
             id: string;

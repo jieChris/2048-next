@@ -1,5 +1,6 @@
 (function () {
   var STORAGE_KEY = "settings_night_background_enabled_v1";
+  var DISPLAY_MODE_STORAGE_KEY = "settings_display_mode_v2";
   var THEME_PROFILE_KEY = "theme_profile_v1";
   var DAY_THEME_KEY = "settings_day_theme_profile_v1";
   var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
@@ -74,6 +75,34 @@
     }
   }
 
+  function writeStorageItem(key, value) {
+    try {
+      if (window.localStorage) {
+        window.localStorage.setItem(key, String(value));
+        return true;
+      }
+    } catch (_err) {}
+    return false;
+  }
+
+  function resolveDisplayMode() {
+    var raw = String(readStorageItem(DISPLAY_MODE_STORAGE_KEY) || "").trim().toLowerCase();
+    if (raw !== "auto" && raw !== "day" && raw !== "night") {
+      var legacy = readStorageItem(STORAGE_KEY);
+      raw = legacy === "1" ? "night" : legacy === "0" ? "day" : "auto";
+      if (legacy === "1" || legacy === "0") writeStorageItem(DISPLAY_MODE_STORAGE_KEY, raw);
+    }
+    var isNight = raw === "night";
+    if (raw === "auto") {
+      try {
+        isNight = !!window.matchMedia && !!window.matchMedia("(prefers-color-scheme: dark)").matches;
+      } catch (_errMedia) {
+        isNight = false;
+      }
+    }
+    return { mode: raw, isNight: isNight };
+  }
+
   function resolveInitialModeKey() {
     var search = "";
     var pathname = "";
@@ -95,7 +124,9 @@
   }
 
   function syncInitialThemeAttribute() {
-    var isNight = readStorageItem(STORAGE_KEY) === "1";
+    var resolved = resolveDisplayMode();
+    var isNight = resolved.isNight;
+    documentElement.setAttribute("data-display-mode", resolved.mode);
     var modeThemeKey = isNight ? NIGHT_THEME_KEY : DAY_THEME_KEY;
     var themeId = readStorageItem(modeThemeKey);
     if (
@@ -129,7 +160,9 @@
   syncInitialThemeAttribute();
 
   try {
-    if (readStorageItem(STORAGE_KEY) === "1") {
+    var resolved = resolveDisplayMode();
+    documentElement.setAttribute("data-display-mode", resolved.mode);
+    if (resolved.isNight) {
       documentElement.setAttribute("data-night-background", "1");
       documentElement.style.colorScheme = "dark";
       var style = ensureStyleTag();

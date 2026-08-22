@@ -255,9 +255,9 @@
       buildSettingsToggleRowHtml({
         rowId: "night-bg-settings-row",
         inputId: "night-bg-toggle",
-        title: isEn ? "Night Mode" : "夜间模式",
+        title: isEn ? "Display Mode" : "显示模式",
         descId: "night-bg-toggle-desc",
-        desc: isEn ? "Use a softer night background" : "为页面切换成柔和的夜间模式",
+        desc: isEn ? "Auto, day, or night (click to cycle)" : "自动、白天或夜晚（点击切换）",
         noteId: "night-bg-note",
         note: isEn
           ? "This setting is shared across pages with settings dialogs."

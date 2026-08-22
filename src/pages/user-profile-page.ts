@@ -45,8 +45,6 @@ interface EarnedAchievement {
 type UserProfileWindow = Window & { UserProfilePageRuntime?: LegacyProfileRuntime };
 
 const PROFILE_COVERS = new Set(["tide", "sunset", "midnight", "forest", "plum"]);
-const AVATAR_MAX_BYTES = 200 * 1024;
-const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const VALID_TABS = new Set<ProfileTab>(["overview", "performance", "records", "achievements"]);
 
 let apiClient: JsonApiClient | null = null;
@@ -54,8 +52,6 @@ let state: LegacyProfileState = emptyState();
 let recentRecords: JsonRecord[] = [];
 let earnedAchievements: EarnedAchievement[] = [];
 let achievementsUserId = 0;
-let selectedAvatar: File | null = null;
-let avatarPreviewUrl = "";
 let editModeEnabled = false;
 
 function emptyState(): LegacyProfileState {
@@ -201,7 +197,6 @@ function syncLegacyState(raw: unknown): void {
   renderProfile();
   renderStatsContent();
   if (next.targetUserId > 0 && achievementsUserId !== next.targetUserId) void loadAchievements(next.targetUserId);
-  if (next.isOwnProfile) void loadAvatarStatus();
 }
 
 function syncEditModeUi(): void {
@@ -220,9 +215,11 @@ function syncEditModeUi(): void {
   const edit = byId<HTMLButtonElement>("user-profile-edit");
   const featuredEdit = byId<HTMLButtonElement>("user-featured-edit");
   const wallLink = byId<HTMLAnchorElement>("user-showcase-wall-link");
-  if (edit) edit.hidden = !(canEdit && editModeEnabled);
+  // P0a only supports featured-mode editing. Bio, cover, and avatar APIs are
+  // intentionally not wired until their review contracts exist.
+  if (edit) edit.hidden = true;
   if (featuredEdit) featuredEdit.hidden = !(canEdit && editModeEnabled);
-  if (wallLink) wallLink.hidden = !(canEdit && editModeEnabled);
+  if (wallLink) wallLink.hidden = true;
 }
 
 function renderProfile(): void {
@@ -230,7 +227,8 @@ function renderProfile(): void {
   if (!Object.keys(profile).length) return;
   const nickname = text(profile.nickname) || "--";
   const bio = text(profileValue(profile, "profile_bio", "profileBio"));
-  const cover = text(profileValue(profile, "profile_cover", "profileCover"));
+  const sceneId = text(profileValue(profile, "background_scene_id", "backgroundSceneId"));
+  const cover = text(profileValue(profile, "profile_cover", "profileCover")) || (sceneId === "default" ? "tide" : sceneId);
   const avatarUrl = text(profileValue(profile, "avatar_url", "avatarUrl"));
   const createdAt = profileValue(profile, "created_at", "createdAt");
   byId("user-profile-cover")?.setAttribute("data-cover", PROFILE_COVERS.has(cover) ? cover : "tide");
@@ -471,17 +469,6 @@ function closeDialog(id: string): void {
   byId<HTMLDialogElement>(id)?.close();
 }
 
-function selectedCover(): string {
-  const selected = document.querySelector<HTMLInputElement>('input[name="user-profile-cover"]:checked');
-  return selected && PROFILE_COVERS.has(selected.value) ? selected.value : "tide";
-}
-
-function updateBioCount(): void {
-  const input = byId<HTMLTextAreaElement>("user-profile-bio-input");
-  const count = byId("user-profile-bio-count");
-  if (input && count) count.textContent = `${Array.from(input.value).length} / 150`;
-}
-
 function bindProfileCoverMotion(): void {
   const cover = byId<HTMLElement>("user-profile-cover");
   if (!cover || cover.dataset.motionBound === "1") return;
@@ -536,84 +523,12 @@ function bindProfileCoverMotion(): void {
   cover.addEventListener("pointercancel", reset);
 }
 
-function prepareProfileDialog(): void {
-  const bio = text(profileValue(state.profile, "profile_bio", "profileBio"));
-  const cover = text(profileValue(state.profile, "profile_cover", "profileCover"));
-  const nickname = text(state.profile.nickname) || "--";
-  const avatarUrl = text(profileValue(state.profile, "avatar_url", "avatarUrl"));
-  const input = byId<HTMLTextAreaElement>("user-profile-bio-input");
-  if (input) input.value = bio;
-  const radio = document.querySelector<HTMLInputElement>(`input[name="user-profile-cover"][value="${PROFILE_COVERS.has(cover) ? cover : "tide"}"]`);
-  if (radio) radio.checked = true;
-  setAvatar(byId("user-avatar-preview"), avatarUrl, nickname);
-  selectedAvatar = null;
-  const fileInput = byId<HTMLInputElement>("user-avatar-file");
-  if (fileInput) fileInput.value = "";
-  if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
-  avatarPreviewUrl = "";
-  setDialogStatus("user-profile-save-status", "");
-  updateBioCount();
-  openDialog("user-profile-dialog");
-}
-
 function setDialogStatus(id: string, message: string, kind: "" | "error" | "ok" = ""): void {
   const host = byId(id);
   if (!host) return;
   host.textContent = message;
   host.classList.toggle("is-error", kind === "error");
   host.classList.toggle("is-ok", kind === "ok");
-}
-
-function avatarStatusCopy(status: string, note: string): string {
-  if (language() === "en") {
-    if (status === "pending") return "Avatar pending review";
-    if (status === "approved") return "Current avatar approved";
-    if (status === "rejected") return note ? `Rejected: ${note}` : "Avatar rejected";
-    return "No avatar awaiting review";
-  }
-  if (status === "pending") return "头像正在等待审核";
-  if (status === "approved") return "当前头像已通过审核";
-  if (status === "rejected") return note ? `审核未通过：${note}` : "头像审核未通过";
-  return "当前没有待审核头像";
-}
-
-async function loadAvatarStatus(): Promise<void> {
-  const result = await apiClient?.request("/user/me/avatar-submission", { method: "GET" });
-  const data = record(result?.data);
-  const host = byId("user-avatar-status");
-  if (host) host.textContent = avatarStatusCopy(text(data.status), text(data.review_note));
-}
-
-async function saveProfile(event: SubmitEvent): Promise<void> {
-  event.preventDefault();
-  const input = byId<HTMLTextAreaElement>("user-profile-bio-input");
-  const button = byId<HTMLButtonElement>("user-profile-save");
-  if (!input || !button || !apiClient) return;
-  button.disabled = true;
-  setDialogStatus("user-profile-save-status", language() === "en" ? "Saving…" : "正在保存…");
-  const payload = { profile_bio: input.value.trim(), profile_cover: selectedCover() };
-  const profileResult = await apiClient.request("/user/me/profile", { method: "PATCH", body: JSON.stringify(payload) });
-  if (!profileResult.success) {
-    setDialogStatus("user-profile-save-status", text(profileResult.error) || (language() === "en" ? "Save failed" : "保存失败"), "error");
-    button.disabled = false;
-    return;
-  }
-  state.profile = { ...state.profile, ...payload, ...record(profileResult.data) };
-  renderProfile();
-  if (selectedAvatar) {
-    const form = new FormData();
-    form.set("avatar", selectedAvatar, selectedAvatar.name);
-    const avatarResult = await apiClient.request("/user/me/avatar-submission", { method: "POST", body: form });
-    if (!avatarResult.success) {
-      setDialogStatus("user-profile-save-status", text(avatarResult.error) || (language() === "en" ? "Profile saved, avatar upload failed" : "主页已保存，但头像提交失败"), "error");
-      button.disabled = false;
-      return;
-    }
-  }
-  await legacyRuntime().refreshProfile?.();
-  await loadAvatarStatus();
-  button.disabled = false;
-  closeDialog("user-profile-dialog");
 }
 
 function availableFeaturedModes(): JsonRecord[] {
@@ -663,16 +578,23 @@ async function saveFeaturedModes(event: SubmitEvent): Promise<void> {
   const button = byId<HTMLButtonElement>("user-featured-save");
   if (!button) return;
   button.disabled = true;
+  const revision = integer(profileValue(state.profile, "revision", "revision"));
   const result = await apiClient.request("/user/me/profile", {
     method: "PATCH",
-    body: JSON.stringify({ featured_mode_keys: selected })
+    body: JSON.stringify({ featured_mode_keys: selected, revision })
   });
   button.disabled = false;
   if (!result.success) {
     setDialogStatus("user-featured-save-status", text(result.error) || (language() === "en" ? "Save failed" : "保存失败"), "error");
     return;
   }
-  state.profile = { ...state.profile, featured_mode_keys: selected, featuredModeKeys: selected };
+  const returnedProfile = record(result.data);
+  state.profile = {
+    ...state.profile,
+    ...returnedProfile,
+    featured_mode_keys: selected,
+    featuredModeKeys: selected
+  };
   renderFeaturedModes();
   await legacyRuntime().refreshProfile?.();
   closeDialog("user-featured-dialog");
@@ -728,33 +650,10 @@ function bindEnhancedEvents(): void {
     const menu = byId("user-nav-edit-mode")?.closest("details");
     if (menu) menu.open = false;
   });
-  byId("user-profile-edit")?.addEventListener("click", prepareProfileDialog);
   byId("user-featured-edit")?.addEventListener("click", prepareFeaturedDialog);
-  byId<HTMLFormElement>("user-profile-form")?.addEventListener("submit", (event) => void saveProfile(event));
   byId<HTMLFormElement>("user-featured-form")?.addEventListener("submit", (event) => void saveFeaturedModes(event));
-  byId("user-profile-bio-input")?.addEventListener("input", updateBioCount);
-  byId<HTMLInputElement>("user-avatar-file")?.addEventListener("change", (event) => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0] || null;
-    if (!file) return;
-    if (!AVATAR_TYPES.has(file.type) || file.size > AVATAR_MAX_BYTES) {
-      selectedAvatar = null;
-      input.value = "";
-      const message = file.size > AVATAR_MAX_BYTES
-        ? (language() === "en" ? "Image exceeds 200 KB" : "图片超过 200 KB")
-        : (language() === "en" ? "Choose a JPEG, PNG, or WebP image" : "请选择 JPEG、PNG 或 WebP 图片");
-      byId("user-avatar-status")!.textContent = message;
-      return;
-    }
-    selectedAvatar = file;
-    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
-    avatarPreviewUrl = URL.createObjectURL(file);
-    setAvatar(byId("user-avatar-preview"), avatarPreviewUrl, text(state.profile.nickname));
-    byId("user-avatar-status")!.textContent = language() === "en" ? "Local preview · review required after upload" : "本地预览 · 提交后等待审核";
-  });
   window.addEventListener("uilanguagechange", applyLanguage);
   window.addEventListener("storage", (event) => { if (event.key === "ui_language_v1") applyLanguage(); });
-  window.addEventListener("beforeunload", () => { if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl); });
   bindProfileCoverMotion();
 }
 

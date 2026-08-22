@@ -1,5 +1,13 @@
 ﻿import { installPaletteLegacyRuntime } from "../bootstrap/palette-legacy-runtime";
-import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+import { resolveStorageByName, safeReadStorageItem, safeSetStorageItem } from "../bootstrap/storage";
+import {
+  bindDisplayModeSync,
+  DISPLAY_MODE_STORAGE_KEY,
+  LEGACY_NIGHT_BACKGROUND_STORAGE_KEY,
+  readDisplayModePreference,
+  syncDisplayModeAttributes,
+  type DisplayMode
+} from "../bootstrap/display-mode";
 import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
 import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
 import * as themeSettingsRuntimeModule from "../bootstrap/theme-settings";
@@ -14,7 +22,6 @@ import {
 import { resolveSecondaryTimerLegendFontSize } from "../core/game-manager-base-helpers";
 import { getTimerMilestoneValues, getTimerSlotIdsForBoard } from "../core/rules";
 
-const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
 // ponytail: recommendation picker intentionally stops at 5x5; raise only if larger-board rules become useful.
 const CUSTOM_TIMER_PARENT_VALUES: Record<CustomSecondaryTimerFamily, number[]> = {
   pow2: getTimerSlotIdsForBoard("pow2", 5, 5),
@@ -48,6 +55,9 @@ const globalWindow = window as Window & {
   CoreThemeSettingsPageHostRuntime?: {
     applyThemeSettingsPageInit: typeof applyThemeSettingsPageInit;
   };
+  CoreNightModeRuntime?: {
+    setDisplayMode?: (mode: DisplayMode) => unknown;
+  };
 };
 
 const themeSettingsRuntime = {
@@ -70,27 +80,6 @@ const themeSettingsPageHostRuntime = {
   applyThemeSettingsPageInit
 };
 
-function readNightBackgroundPreference(): boolean {
-  const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
-    storageName: "localStorage"
-  });
-  return (
-    safeReadStorageItem({
-      storageLike,
-      key: NIGHT_BACKGROUND_STORAGE_KEY
-    }) === "1"
-  );
-}
-
-function syncNightBackgroundAttribute(): void {
-  if (readNightBackgroundPreference()) {
-    document.documentElement.setAttribute("data-night-background", "1");
-    return;
-  }
-  document.documentElement.removeAttribute("data-night-background");
-}
-
 function ensureThemeSettingsGlobals(): void {
   if (!globalWindow.CoreThemeSettingsRuntime) {
     globalWindow.CoreThemeSettingsRuntime = themeSettingsRuntime;
@@ -112,6 +101,56 @@ function isEnglishUi(): boolean {
     ? globalWindow.UII18N.getLanguage()
     : safeReadStorageItem({ storageLike, key: "ui_language_v1" }) || "zh";
   return String(lang || "").toLowerCase().startsWith("en");
+}
+
+function localStorageLike(): unknown {
+  return resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+}
+
+function syncDisplayModeControls(): void {
+  const isEn = isEnglishUi();
+  const mode = readDisplayModePreference(window);
+  const labels: Record<DisplayMode, [string, string]> = {
+    auto: ["自动", "Auto"],
+    day: ["白天", "Day"],
+    night: ["夜晚", "Night"]
+  };
+  const group = document.querySelector<HTMLElement>(".palette-display-mode-switch");
+  group?.setAttribute("aria-label", isEn ? "Display mode" : "显示模式");
+  document.querySelectorAll<HTMLButtonElement>("button[data-display-mode]").forEach((button) => {
+    const value = button.dataset.displayMode as DisplayMode;
+    const active = value === mode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.textContent = labels[value]?.[isEn ? 1 : 0] || value;
+  });
+}
+
+function bindDisplayModeControls(): void {
+  const storageLike = resolveStorageByName({
+    windowLike: window as unknown as Record<string, unknown>,
+    storageName: "localStorage"
+  });
+  document.querySelectorAll<HTMLButtonElement>("button[data-display-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.displayMode as DisplayMode;
+      if (mode !== "auto" && mode !== "day" && mode !== "night") return;
+      const runtime = globalWindow.CoreNightModeRuntime;
+      if (typeof runtime?.setDisplayMode === "function") {
+        runtime.setDisplayMode(mode);
+      } else {
+        safeSetStorageItem({ storageLike, key: DISPLAY_MODE_STORAGE_KEY, value: mode });
+        syncDisplayModeAttributes(document, window);
+      }
+      const resolved = syncDisplayModeAttributes(document, window);
+      syncDisplayModeControls();
+      window.dispatchEvent(new CustomEvent("displaymodechange", { detail: resolved }));
+    });
+  });
+  syncDisplayModeControls();
 }
 
 function resolveCustomTimerPreviewStyleSlot(parent: number): number {
@@ -233,7 +272,7 @@ function syncCustomTimerEditor(reloadText: boolean): void {
   const familyNote = document.getElementById("custom-secondary-timer-family");
   if (!input) return;
   if (reloadText) {
-    input.value = readCustomSecondaryTimerRuleText(window.localStorage, customTimerFamily);
+    input.value = readCustomSecondaryTimerRuleText(localStorageLike(), customTimerFamily);
     input.removeAttribute("aria-invalid");
     if (note) {
       note.textContent = "";
@@ -254,7 +293,7 @@ function syncCustomTimerEditor(reloadText: boolean): void {
     button.tabIndex = active ? 0 : -1;
   });
   syncCustomTimerGenerator(reloadText);
-  renderCustomTimerPreview(readCustomSecondaryTimerRuleText(window.localStorage, customTimerFamily));
+  renderCustomTimerPreview(readCustomSecondaryTimerRuleText(localStorageLike(), customTimerFamily));
 }
 
 function generateCustomTimerRules(): void {
@@ -300,7 +339,7 @@ function saveCustomTimerRules(): void {
     return;
   }
   input.removeAttribute("aria-invalid");
-  const saved = writeCustomSecondaryTimerRuleText(window.localStorage, customTimerFamily, input.value);
+  const saved = writeCustomSecondaryTimerRuleText(localStorageLike(), customTimerFamily, input.value);
   if (saved) renderCustomTimerPreview(input.value);
   if (note) {
     note.textContent = saved
@@ -646,17 +685,11 @@ function observeSettingsCategories(): void {
 
 export function bootstrapPalettePage(): void {
   installPaletteLegacyRuntime();
-  syncNightBackgroundAttribute();
+  bindDisplayModeSync({ documentLike: document, windowLike: window });
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
     document.body.setAttribute("data-page-family", "palette");
   }
-  window.addEventListener("storage", (event) => {
-    if (!event || !event.key || event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
-      syncNightBackgroundAttribute();
-    }
-  });
-
   ensureThemeSettingsGlobals();
 
   if (typeof applyThemeSettingsPageInit === "function") {
@@ -678,6 +711,7 @@ export function bootstrapPalettePage(): void {
   initCustomTimerEditor();
   bindSettingsDisclosureLock();
   bindPaletteLanguageButtons();
+  bindDisplayModeControls();
   bindSettingsCategoryNavigation();
   syncSettingsCategory();
   window.setTimeout(observeSettingsCategories, 1000);
@@ -688,4 +722,11 @@ export function bootstrapPalettePage(): void {
   window.addEventListener("hashchange", () => syncSettingsCategory());
   window.addEventListener("resize", syncSettingsBookmarkPosition);
   window.addEventListener("uilanguagechange", applyThemePageCopy);
+  window.addEventListener("uilanguagechange", syncDisplayModeControls);
+  window.addEventListener("storage", (event) => {
+    if (!event.key || event.key === DISPLAY_MODE_STORAGE_KEY || event.key === LEGACY_NIGHT_BACKGROUND_STORAGE_KEY) {
+      syncDisplayModeAttributes(document, window);
+      syncDisplayModeControls();
+    }
+  });
 }

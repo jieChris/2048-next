@@ -1,6 +1,6 @@
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
+import { bindDisplayModeSync } from "../bootstrap/display-mode";
 
-const NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
 const UI_LANGUAGE_KEY = "ui_language_v1";
 
 type ModesPageLang = "en" | "zh";
@@ -173,31 +173,6 @@ const MODES_PAGE_COPY: Record<
   }
 };
 
-function readNightBackgroundPreference(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
-    storageName: "localStorage"
-  });
-  return safeReadStorageItem({
-    storageLike,
-    key: NIGHT_BACKGROUND_STORAGE_KEY
-  }) === "1";
-}
-
-function syncNightBackgroundAttribute(): void {
-  if (typeof document === "undefined" || !document.documentElement) {
-    return;
-  }
-  if (readNightBackgroundPreference()) {
-    document.documentElement.setAttribute("data-night-background", "1");
-    return;
-  }
-  document.documentElement.removeAttribute("data-night-background");
-}
-
 function normalizeModesPageLang(value: unknown): ModesPageLang | "" {
   const lang = String(value || "").trim().toLowerCase();
   if (lang.startsWith("en")) return "en";
@@ -285,7 +260,7 @@ export function bootstrapModesPage(): void {
     return;
   }
 
-  syncNightBackgroundAttribute();
+  bindDisplayModeSync({ documentLike: document, windowLike: window });
   applyModesPageLanguage();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   if (document.body) {
@@ -296,9 +271,6 @@ export function bootstrapModesPage(): void {
   });
 
   window.addEventListener("storage", (event) => {
-    if (event.key === NIGHT_BACKGROUND_STORAGE_KEY) {
-      syncNightBackgroundAttribute();
-    }
     if (!event.key || event.key === UI_LANGUAGE_KEY) {
       applyModesPageLanguage();
     }
