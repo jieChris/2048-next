@@ -172,14 +172,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterNightEnable.night.enabled).toBe(true);
     expect(afterNightEnable.night.dataAttribute).toBe("1");
     expect(afterNightEnable.night.hasStyleTag).toBe(true);
-    expect(afterNightEnable.currentTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.currentTheme).toBe("classic");
     expect(afterNightEnable.currentTilePalette).toBe("follow-theme");
-    expect(afterNightEnable.savedTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.savedTheme).toBe("classic");
     expect(afterNightEnable.savedTilePalette).toBe("follow-theme");
     expect(afterNightEnable.autoThemeApplied).toBe("1");
     expect(afterNightEnable.autoThemePending).toBe("0");
     expect(afterNightEnable.dayTheme).toBe("classic");
-    expect(afterNightEnable.nightTheme).toBe("midnight_nebula");
+    expect(afterNightEnable.nightTheme).toBe("classic");
     expect(afterNightEnable.dayTilePalette).toBe("follow-theme");
     expect(afterNightEnable.nightTilePalette).toBe("follow-theme");
 

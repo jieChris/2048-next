@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 Next · 个人主页布局选择</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #203337;
+      --muted: #6c7d7d;
+      --line: #c8d3cf;
+      --paper: #fffdf8;
+      --panel: rgba(255, 255, 255, .9);
+      --teal: #2f8691;
+      --teal-dark: #245f68;
+      --gold: #c69744;
+      --green: #4f8660;
+      --shadow: 0 20px 58px rgba(43, 73, 75, .14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 8% -10%, rgba(198, 151, 68, .2), transparent 31rem),
+        radial-gradient(circle at 94% 2%, rgba(47, 134, 145, .17), transparent 30rem),
+        #e9efec;
+    }
+
+    button { font: inherit; }
+
+    .chooser {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px clamp(18px, 4vw, 52px);
+      border-bottom: 1px solid rgba(117, 139, 135, .35);
+      background: rgba(239, 244, 241, .92);
+      backdrop-filter: blur(18px);
+    }
+
+    .chooser h1 { margin: 0; font-size: clamp(17px, 2vw, 23px); letter-spacing: -.03em; }
+    .chooser p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .switcher { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .switcher button {
+      min-width: 96px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--teal-dark);
+      background: rgba(255,255,255,.8);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .switcher button[aria-pressed="true"] {
+      border-color: var(--teal);
+      color: white;
+      background: var(--teal);
+      box-shadow: 0 7px 20px rgba(47, 134, 145, .2);
+    }
+
+    .stage { width: min(1180px, calc(100vw - 32px)); margin: 30px auto 60px; }
+    .variant { display: none; }
+    .variant.is-active { display: block; animation: enter .22s ease-out; }
+    @keyframes enter { from { opacity: 0; transform: translateY(7px); } }
+
+    .option-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 0 4px 15px; }
+    .option-head h2 { margin: 0; font-size: 20px; }
+    .option-head p { max-width: 720px; margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .badge { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; color: #725118; background: #f5e7c5; font-size: 11px; font-weight: 800; }
+
+    .page {
+      overflow: hidden;
+      border: 1px solid rgba(119, 140, 136, .52);
+      border-radius: 18px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .topnav { display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 22px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.84); }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; letter-spacing: -.03em; }
+    .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: white; background: var(--teal); font-size: 12px; }
+    .navlinks { display: flex; gap: 18px; color: var(--muted); font-size: 12px; font-weight: 700; }
+
+    .profile-cover { position: relative; min-height: 182px; padding: 32px 34px 25px; color: white; background: linear-gradient(118deg, #245c64, #3d9292 58%, #ccb06e); }
+    .profile-cover::after { content: ""; position: absolute; inset: 0; opacity: .25; background-image: linear-gradient(120deg, transparent 0 35%, rgba(255,255,255,.2) 35% 36%, transparent 36% 62%, rgba(255,255,255,.15) 62% 63%, transparent 63%); }
+    .profile-row { position: relative; z-index: 1; display: flex; align-items: end; gap: 20px; }
+    .avatar { display: grid; place-items: center; flex: 0 0 auto; width: 96px; height: 96px; border: 5px solid rgba(255,255,255,.82); border-radius: 25px; color: #fff8df; background: #bb8143; box-shadow: 0 12px 32px rgba(23,59,62,.26); font: 900 30px/1 Georgia, serif; }
+    .identity { flex: 1; min-width: 0; }
+    .identity h3 { margin: 0; font: 800 29px/1.1 Georgia, "Songti SC", serif; }
+    .identity p { margin: 7px 0 0; max-width: 620px; color: rgba(255,255,255,.84); font-size: 13px; }
+    .edit { position: relative; z-index: 1; padding: 9px 15px; border: 1px solid rgba(255,255,255,.62); border-radius: 9px; color: white; background: rgba(20,58,61,.25); font-weight: 800; }
+
+    .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); background: #f4f7f3; }
+    .stat { padding: 15px 20px; border-right: 1px solid var(--line); }
+    .stat:last-child { border-right: 0; }
+    .stat span { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .stat strong { display: block; margin-top: 5px; font: 800 19px/1 Georgia, serif; }
+
+    .two-col { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 18px; padding: 20px; }
+    .stack { display: grid; gap: 14px; align-content: start; }
+    .panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: 0 5px 16px rgba(45,70,70,.05); }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 900; }
+    .panel-body { padding: 14px; }
+    .bio { margin: 0; color: #4d6061; font-size: 12px; line-height: 1.65; }
+    .medals { display: flex; gap: 9px; }
+    .medal { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #e1c079; background: #fff3cf; font-size: 20px; }
+    .rank-list, .records { display: grid; gap: 8px; }
+    .rank-item, .record { display: grid; align-items: center; gap: 10px; padding: 10px 11px; border: 1px solid #d9e1de; border-radius: 9px; background: #fbfcfa; }
+    .rank-item { grid-template-columns: 1fr auto; }
+    .rank-item span, .record span { color: var(--muted); font-size: 11px; }
+    .rank-item strong { color: var(--teal-dark); font-size: 14px; }
+    .record { grid-template-columns: minmax(125px, 1.3fr) repeat(4, minmax(70px, 1fr)); }
+    .record strong { font-size: 12px; }
+    .tabs { display: flex; gap: 18px; padding: 0 15px; border-bottom: 1px solid var(--line); }
+    .tabs span { padding: 12px 0 10px; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .tabs .active { color: var(--teal-dark); border-bottom: 3px solid var(--teal); }
+
+    /* B */
+    .bento-page { padding: 20px; background: #efe8da; }
+    .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 112px; gap: 12px; }
+    .tile { position: relative; overflow: hidden; padding: 17px; border: 1px solid rgba(79, 96, 92, .25); border-radius: 20px; background: #fffdf7; box-shadow: 0 8px 22px rgba(64,67,58,.08); }
+    .tile h3 { margin: 0; font: 800 16px/1.2 Georgia, serif; }
+    .tile p { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .tile-main { grid-column: span 7; grid-row: span 2; color: white; background: linear-gradient(135deg, #255d62, #4f9a8d); }
+    .tile-main p { color: rgba(255,255,255,.78); }
+    .tile-avatar { width: 65px; height: 65px; margin-bottom: 15px; border-radius: 19px; font-size: 20px; }
+    .tile-score { grid-column: span 5; grid-row: span 1; background: #fae6b1; }
+    .tile-medals { grid-column: span 5; grid-row: span 1; }
+    .tile-rank { grid-column: span 4; grid-row: span 2; background: #d9e8e3; }
+    .tile-recent { grid-column: span 8; grid-row: span 2; }
+    .big-number { margin-top: 10px; color: #744e16; font: 900 30px/1 Georgia, serif; }
+    .mini-bars { display: grid; gap: 8px; margin-top: 15px; }
+    .mini-bar { height: 8px; border-radius: 9px; background: rgba(42,93,95,.14); }
+    .mini-bar::after { content: ""; display: block; width: var(--w); height: 100%; border-radius: inherit; background: var(--teal); }
+
+    /* C */
+    .compact-profile { display: flex; align-items: center; gap: 19px; padding: 22px 24px; background: linear-gradient(160deg, #fdfbf5, #e8efeb); }
+    .compact-profile .avatar { width: 78px; height: 78px; border-width: 3px; border-radius: 50%; font-size: 23px; }
+    .compact-profile .identity h3 { color: var(--ink); font-size: 24px; }
+    .compact-profile .identity p { color: var(--muted); }
+    .compact-profile .edit { color: var(--teal-dark); border-color: var(--line); background: white; }
+    .wide-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: white; }
+    .wide-tabs span { padding: 14px; color: var(--muted); text-align: center; font-size: 12px; font-weight: 800; }
+    .wide-tabs .active { color: var(--teal-dark); box-shadow: inset 0 -3px var(--teal); }
+    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; padding: 18px; }
+    .dashboard .stat { border: 1px solid var(--line); border-radius: 11px; background: white; }
+    .dashboard .span-3 { grid-column: span 3; }
+    .dashboard .span-1 { grid-column: span 1; }
+
+    .verdict { margin-top: 14px; padding: 12px 16px; border: 1px dashed #9fb4ae; border-radius: 12px; color: #456063; background: rgba(255,255,255,.48); font-size: 12px; line-height: 1.6; }
+
+    @media (max-width: 760px) {
+      .chooser { align-items: flex-start; flex-direction: column; }
+      .switcher { justify-content: flex-start; }
+      .stage { width: min(100% - 18px, 1180px); margin-top: 12px; }
+      .profile-row, .compact-profile { align-items: flex-start; flex-wrap: wrap; }
+      .edit { margin-left: auto; }
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+      .stat:nth-child(2) { border-right: 0; }
+      .two-col { grid-template-columns: 1fr; padding: 12px; }
+      .record { grid-template-columns: 1.2fr 1fr 1fr; }
+      .record span:nth-child(n+4) { display: none; }
+      .bento-page { padding: 10px; }
+      .bento-grid { grid-template-columns: 1fr; grid-auto-rows: auto; }
+      .tile, .tile-main, .tile-score, .tile-medals, .tile-rank, .tile-recent { grid-column: auto; grid-row: auto; min-height: 128px; }
+      .dashboard { grid-template-columns: repeat(2, 1fr); padding: 12px; }
+      .dashboard .span-3, .dashboard .span-1 { grid-column: span 2; }
+      .wide-tabs span { padding-inline: 5px; }
+      .navlinks span:nth-child(-n+2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="chooser">
+    <div>
+      <h1>公开玩家个人主页 · 布局方向</h1>
+      <p>切换 A / B / C，先只判断信息层级和整体感觉。</p>
+    </div>
+    <nav class="switcher" aria-label="布局方案">
+      <button type="button" data-target="a" aria-pressed="true">A · 双栏玩家页</button>
+      <button type="button" data-target="b" aria-pressed="false">B · 个性 Bento</button>
+      <button type="button" data-target="c" aria-pressed="false">C · 标签页主页</button>
+    </nav>
+  </header>
+
+  <main class="stage">
+    <section class="variant is-active" data-variant="a">
+      <div class="option-head">
+        <div><h2>A · Tabler 骨架 + Lichess 信息层级</h2><p>身份与个性展示放在上方，左侧承载简介、成就和排行榜表现，右侧保留历史记录主线。信息完整，且最容易从现有页面平滑升级。</p></div>
+        <span class="badge">推荐</span>
+      </div>
+      <article class="page">
+        <div class="topnav"><div class="brand"><span class="brand-mark">2048</span>Next</div><div class="navlinks"><span>模式</span><span>排行榜</span><span>设置</span><span>返回游戏</span></div></div>
+        <div class="profile-cover">
+          <div class="profile-row">
+            <div class="avatar">河</div>
+            <div class="identity"><h3>河畔观棋</h3><p>喜欢慢慢堆叠大数，也在挑战 5×5 长局。加入 2048 Next 第 428 天。</p></div>
+            <button class="edit" type="button">编辑主页</button>
+          </div>
+        </div>
+        <div class="summary-strip">
+          <div class="stat"><span>总记录</span><strong>328</strong></div><div class="stat"><span>最高分</span><strong>1,245,876</strong></div><div class="stat"><span>最大方块</span><strong>32768</strong></div><div class="stat"><span>最近活跃</span><strong>2 小时前</strong></div>
+        </div>
+        <div class="two-col">
+          <aside class="stack">
+            <div class="panel"><div class="panel-title">关于我</div><div class="panel-body"><p class="bio">最近主攻 4×4 无撤回，也会记录一些有趣的残局。主页资料由本人维护，游戏数据由服务器统计。</p></div></div>
+            <div class="panel"><div class="panel-title">展示成就 <span>查看全部 →</span></div><div class="panel-body medals"><span class="medal">◆</span><span class="medal">♜</span><span class="medal">★</span></div></div>
+            <div class="panel"><div class="panel-title">排行榜表现</div><div class="panel-body rank-list"><div class="rank-item"><span>5×5 · 盘面和</span><strong>#6</strong></div><div class="rank-item"><span>4×4 · 无撤回</span><strong>#27</strong></div><div class="rank-item"><span>2K 竞速</span><strong>#112</strong></div></div></div>
+          </aside>
+          <section class="panel">
+            <div class="tabs"><span class="active">最近记录</span><span>最佳成绩</span><span>成就</span></div>
+            <div class="panel-body records">
+              <div class="record"><strong>4×4 · 无撤回</strong><span>892,340 分</span><span>16384</span><span>2小时18分</span><span>查看回放 →</span></div>
+              <div class="record"><strong>5×5 · 可撤回</strong><span>1,245,876 分</span><span>32768</span><span>1天4小时</span><span>查看回放 →</span></div>
+              <div class="record"><strong>3×3 · 无撤回</strong><span>42,716 分</span><span>2048</span><span>18分41秒</span><span>查看回放 →</span></div>
+              <div class="record"><strong>2K 竞速</strong><span>目标 2048</span><span>2048</span><span>1分12秒</span><span>查看回放 →</span></div>
+            </div>
+          </section>
+        </div>
+      </article>
+      <div class="verdict">特点：最稳妥、信息密度合理、移动端易降级；个性主要来自封面、头像、简介与成就展示，不会让成绩入口变难找。</div>
+    </section>
+
+    <section class="variant" data-variant="b">
+      <div class="option-head"><div><h2>B · Bento 式个性玩家卡片</h2><p>把身份、最佳成绩、勋章、排行榜和最近记录做成大小不一的卡片。最有个性，但长记录和筛选必须进入二级页或弹层。</p></div></div>
+      <article class="page">
+        <div class="topnav"><div class="brand"><span class="brand-mark">2048</span>Next</div><div class="navlinks"><span>排行榜</span><span>主页设置</span><span>返回游戏</span></div></div>
+        <div class="bento-page">
+          <div class="bento-grid">
+            <section class="tile tile-main"><div class="avatar tile-avatar">河</div><h3>河畔观棋</h3><p>慢慢堆叠大数的长期主义者。当前主攻 5×5 与 4×4 无撤回。</p><button class="edit" type="button">编辑主页</button></section>
+            <section class="tile tile-score"><h3>生涯最高分</h3><div class="big-number">1,245,876</div></section>
+            <section class="tile tile-medals"><h3>展示成就</h3><div class="medals" style="margin-top:12px"><span class="medal">◆</span><span class="medal">♜</span><span class="medal">★</span></div></section>
+            <section class="tile tile-rank"><h3>排行榜轨迹</h3><p>5×5 盘面和 · #6<br>4×4 无撤回 · #27<br>2K 竞速 · #112</p><div class="mini-bars"><div class="mini-bar" style="--w:88%"></div><div class="mini-bar" style="--w:68%"></div><div class="mini-bar" style="--w:42%"></div></div></section>
+            <section class="tile tile-recent"><h3>最近记录</h3><div class="records" style="margin-top:12px"><div class="rank-item"><span>5×5 · 1,245,876 分</span><strong>回放 →</strong></div><div class="rank-item"><span>4×4 · 892,340 分</span><strong>回放 →</strong></div><div class="rank-item"><span>3×3 · 42,716 分</span><strong>回放 →</strong></div></div></section>
+          </div>
+        </div>
+      </article>
+      <div class="verdict">特点：记忆点最强，适合强调“个性主页”；代价是数据密度低，现有完整历史列表很难留在首屏。</div>
+    </section>
+
+    <section class="variant" data-variant="c">
+      <div class="option-head"><div><h2>C · 资料头部 + 概览/记录/成就/排名标签页</h2><p>主页头部保持简洁，所有功能按标签页平铺。学习成本最低、扩展容易，但不同内容相互分隔，个人主页的整体感弱一些。</p></div></div>
+      <article class="page">
+        <div class="topnav"><div class="brand"><span class="brand-mark">2048</span>Next</div><div class="navlinks"><span>模式</span><span>排行榜</span><span>返回游戏</span></div></div>
+        <div class="compact-profile"><div class="avatar">河</div><div class="identity"><h3>河畔观棋</h3><p>喜欢慢慢堆叠大数，也在挑战 5×5 长局 · 加入第 428 天</p></div><button class="edit" type="button">编辑资料</button></div>
+        <div class="wide-tabs"><span class="active">概览</span><span>游戏记录</span><span>成就</span><span>排行榜</span></div>
+        <div class="dashboard">
+          <div class="stat"><span>总记录</span><strong>328</strong></div><div class="stat"><span>最高分</span><strong>1,245,876</strong></div><div class="stat"><span>最大方块</span><strong>32768</strong></div><div class="stat"><span>最近活跃</span><strong>2 小时前</strong></div>
+          <section class="panel span-3"><div class="panel-title">最近记录 <span>查看全部 →</span></div><div class="panel-body records"><div class="rank-item"><span>5×5 · 1,245,876 分</span><strong>查看回放</strong></div><div class="rank-item"><span>4×4 · 892,340 分</span><strong>查看回放</strong></div><div class="rank-item"><span>3×3 · 42,716 分</span><strong>查看回放</strong></div></div></section>
+          <aside class="panel span-1"><div class="panel-title">展示成就</div><div class="panel-body medals"><span class="medal">◆</span><span class="medal">★</span></div></aside>
+        </div>
+      </article>
+      <div class="verdict">特点：最清晰、最容易维护；适合作为功能型主页，但首页只看得到当前标签内容，跨模块浏览感较弱。</div>
+    </section>
+  </main>
+
+  <script>
+    const buttons = document.querySelectorAll('[data-target]');
+    const variants = document.querySelectorAll('[data-variant]');
+    buttons.forEach((button) => button.addEventListener('click', () => {
+      buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      variants.forEach((item) => item.classList.toggle('is-active', item.dataset.variant === button.dataset.target));
+      history.replaceState(null, '', '#' + button.dataset.target);
+    }));
+    const initial = location.hash.slice(1);
+    if (initial) document.querySelector(`[data-target="${initial}"]`)?.click();
+  </script>
+</body>
+</html>

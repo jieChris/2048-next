@@ -61,6 +61,15 @@ function defaultStorage(): Storage | null {
   }
 }
 
+function isLocalDevelopmentPage(): boolean {
+  try {
+    const hostname = String(typeof window !== "undefined" ? window.location?.hostname || "" : "").toLowerCase();
+    return hostname === "localhost" || hostname === "::1" || hostname === "[::1]" || hostname.startsWith("127.");
+  } catch (_error) {
+    return false;
+  }
+}
+
 function storage(options?: { storageLike?: Storage | null }): Storage | null {
   return options && "storageLike" in options ? options.storageLike || null : defaultStorage();
 }
@@ -126,7 +135,7 @@ export function setAuthSession(payload: JsonRecord, options: { storageLike?: Sto
     : null;
   accessToken = String(payload.token || "").trim();
   accessTokenExpiresAt = Math.floor(Number(payload.expiresAt || payload.expires_at || 0));
-  write(storageLike, LEGACY_AUTH_TOKEN_KEY, "");
+  write(storageLike, LEGACY_AUTH_TOKEN_KEY, isLocalDevelopmentPage() ? accessToken : "");
   write(storageLike, AUTH_USER_ID_KEY, user?.id ?? payload.userId ?? payload.user_id ?? payload.id);
   write(storageLike, AUTH_NICKNAME_KEY, user?.nickname ?? payload.nickname);
   notifyAuthChanged();

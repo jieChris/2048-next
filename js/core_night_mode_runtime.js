@@ -6,7 +6,9 @@
   var STORAGE_KEY = "settings_night_background_enabled_v1";
   var AUTO_THEME_APPLIED_KEY = "settings_night_theme_auto_applied_v1";
   var AUTO_THEME_PENDING_KEY = "settings_night_theme_pending_v1";
-  var AUTO_THEME_ID = "midnight_nebula";
+  // Legacy releases wrote this theme automatically. New night mode keeps the
+  // active daytime UI theme instead of replacing it with a different theme.
+  var LEGACY_AUTO_THEME_ID = "midnight_nebula";
   var THEME_PROFILE_KEY = "theme_profile_v1";
   var TILE_PALETTE_ACTIVE_KEY = "tile_palette_active_v1";
   var DAY_THEME_KEY = "settings_day_theme_profile_v1";
@@ -161,11 +163,31 @@
     return isNight ? DEFAULT_NIGHT_TILE_PALETTE_ID : DEFAULT_DAY_TILE_PALETTE_ID;
   }
 
+  function readDayThemeId() {
+    return safeReadTextValue(DAY_THEME_KEY) ||
+      safeReadTextValue(THEME_PROFILE_KEY) ||
+      readCurrentThemeId() ||
+      DEFAULT_DAY_THEME_ID;
+  }
+
+  function migrateLegacyAutomaticNightTheme() {
+    if (!state.enabled || safeReadTextValue(NIGHT_THEME_KEY) !== LEGACY_AUTO_THEME_ID) {
+      return false;
+    }
+    var dayThemeId = readDayThemeId();
+    if (!dayThemeId || dayThemeId === LEGACY_AUTO_THEME_ID) return false;
+    if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY) && !safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
+      return false;
+    }
+    safeWriteTextValue(NIGHT_THEME_KEY, dayThemeId);
+    return true;
+  }
+
   function readModeAppearance(isNight) {
     return {
       themeId:
         safeReadTextValue(getModeThemeStorageKey(isNight)) ||
-        (isNight ? AUTO_THEME_ID : DEFAULT_DAY_THEME_ID),
+        (isNight ? readDayThemeId() : DEFAULT_DAY_THEME_ID),
       tilePaletteId:
         safeReadTextValue(getModeTilePaletteStorageKey(isNight)) ||
         getModeDefaultTilePaletteId(isNight)
@@ -224,17 +246,18 @@
 
   function ensureCurrentModeAppearanceSeeded() {
     if (state.enabled) {
+      migrateLegacyAutomaticNightTheme();
       var hasNightTheme = !!safeReadTextValue(NIGHT_THEME_KEY);
       var hasNightPalette = !!safeReadTextValue(NIGHT_TILE_PALETTE_KEY);
       if (!hasNightTheme) {
         if (!safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY) && !safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
           // Preserve legacy users who already had night mode enabled before per-mode tile sync shipped.
-          safeWriteTextValue(NIGHT_THEME_KEY, readCurrentThemeId() || AUTO_THEME_ID);
+          safeWriteTextValue(NIGHT_THEME_KEY, readDayThemeId());
           markNightThemeAutoApplied();
         } else if (safeReadBooleanFlag(AUTO_THEME_PENDING_KEY)) {
-          safeWriteTextValue(NIGHT_THEME_KEY, AUTO_THEME_ID);
+          safeWriteTextValue(NIGHT_THEME_KEY, readDayThemeId());
         } else {
-          safeWriteTextValue(NIGHT_THEME_KEY, readCurrentThemeId() || AUTO_THEME_ID);
+          safeWriteTextValue(NIGHT_THEME_KEY, readDayThemeId());
         }
       }
       if (!hasNightPalette) {
@@ -286,7 +309,8 @@
   function syncAppearanceForCurrentState() {
     ensureCurrentModeAppearanceSeeded();
     var applied = applyModeAppearance(state.enabled);
-    if (state.enabled && safeReadBooleanFlag(AUTO_THEME_PENDING_KEY) && applied) {
+    var hasThemeManager = !!asFunction(getThemeManager().applyTheme);
+    if (state.enabled && safeReadBooleanFlag(AUTO_THEME_PENDING_KEY) && (applied || hasThemeManager)) {
       markNightThemeAutoApplied();
     }
     return applied;
@@ -434,7 +458,7 @@
       if (!safeReadTextValue(NIGHT_THEME_KEY)) {
         safeWriteTextValue(
           NIGHT_THEME_KEY,
-          safeReadBooleanFlag(AUTO_THEME_APPLIED_KEY) ? readCurrentThemeId() || AUTO_THEME_ID : AUTO_THEME_ID
+          readDayThemeId()
         );
       }
       if (!safeReadTextValue(NIGHT_TILE_PALETTE_KEY)) {

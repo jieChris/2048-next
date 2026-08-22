@@ -105,6 +105,7 @@
   var targetUserId = 0;
   var targetNicknameHint = "";
   var resolvedProfileNickname = "";
+  var currentProfileData = null;
   var isOwnProfile = false;
   var cachedRecords = [];
   var activeModeFilter = "all";
@@ -122,6 +123,7 @@
   var summaryBestTile = 0;
   var summaryLastActive = "";
   var summaryModeStats = [];
+  var summaryRatingValue = null;
   var summaryRatingStatus = "";
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
   var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
@@ -137,33 +139,33 @@
   };
 
   var LEADERBOARD_MODE_OPTIONS = [
-    { value: "standard_no_undo", zh: "4x4", en: "4x4" },
-    { value: "standard_undo", zh: "4x4", en: "4x4" },
-    { value: "pow2_3x3", zh: "3x3", en: "3x3" },
-    { value: "pow2_3x3_undo", zh: "3x3", en: "3x3" },
-    { value: "pow2_2x4", zh: "4x2", en: "4x2" },
-    { value: "pow2_2x4_undo", zh: "4x2", en: "4x2" },
-    { value: "pow2_3x4", zh: "4x3", en: "4x3" },
-    { value: "pow2_3x4_undo", zh: "4x3", en: "4x3" },
-    { value: "pow2_5x5", zh: "5x5", en: "5x5" },
-    { value: "pow2_5x5_undo", zh: "5x5", en: "5x5" },
-    { value: "diag_3x3", zh: "3x3八方向", en: "3x3 Diagonal" },
-    { value: "diag_4x4", zh: "4x4八方向", en: "4x4 Diagonal" },
-    { value: "diag_3x4", zh: "4x3八方向", en: "4x3 Diagonal" },
-    { value: "diag_2x4", zh: "4x2八方向", en: "4x2 Diagonal" },
-    { value: "capped_64", zh: "64封顶", en: "64 Capped" },
-    { value: "capped", zh: "2048封顶", en: "2048 Capped" },
-    { value: "capped_1024", zh: "1024封顶", en: "1024 Capped" },
-    { value: "capped_4096", zh: "4096封顶", en: "4096 Capped" },
-    { value: "obstacle_4x4", zh: "障碍块", en: "Obstacle" },
-    { value: "fib_4x4", zh: "斐波那契4x4", en: "Fibonacci 4x4" },
-    { value: "fib_4x4_undo", zh: "斐波那契4x4", en: "Fibonacci 4x4" },
-    { value: "fib_3x3", zh: "斐波那契3x3", en: "Fibonacci 3x3" },
-    { value: "fib_3x3_undo", zh: "斐波那契3x3", en: "Fibonacci 3x3" },
-    { value: "fib_4x3", zh: "斐波那契4x3", en: "Fibonacci 4x3" },
-    { value: "fib_4x3_undo", zh: "斐波那契4x3", en: "Fibonacci 4x3" },
-    { value: "fib_4x2", zh: "斐波那契4x2", en: "Fibonacci 4x2" },
-    { value: "fib_4x2_undo", zh: "斐波那契4x2", en: "Fibonacci 4x2" }
+    { value: "standard_4x4_pow2_no_undo", family: "pow2", undo: false, zh: "标准 4×4（无撤回）", en: "Standard 4×4 (No Undo)" },
+    { value: "classic_4x4_pow2_undo", family: "pow2", undo: true, zh: "经典 4×4（可撤回）", en: "Classic 4×4 (Undo)" },
+    { value: "board_3x3_pow2_no_undo", family: "pow2", undo: false, zh: "3×3（无撤回）", en: "3×3 (No Undo)" },
+    { value: "board_3x3_pow2_undo", family: "pow2", undo: true, zh: "3×3（可撤回）", en: "3×3 (Undo)" },
+    { value: "board_2x4_pow2_no_undo", family: "pow2", undo: false, zh: "4×2（无撤回）", en: "4×2 (No Undo)" },
+    { value: "board_2x4_pow2_undo", family: "pow2", undo: true, zh: "4×2（可撤回）", en: "4×2 (Undo)" },
+    { value: "board_3x4_pow2_no_undo", family: "pow2", undo: false, zh: "4×3（无撤回）", en: "4×3 (No Undo)" },
+    { value: "board_3x4_pow2_undo", family: "pow2", undo: true, zh: "4×3（可撤回）", en: "4×3 (Undo)" },
+    { value: "board_5x5_pow2_no_undo", family: "pow2", undo: false, zh: "5×5（无撤回）", en: "5×5 (No Undo)" },
+    { value: "board_5x5_pow2_undo", family: "pow2", undo: true, zh: "5×5（可撤回）", en: "5×5 (Undo)" },
+    { value: "diag_3x3_pow2_no_undo", family: "diagonal", undo: false, zh: "3×3 八方向", en: "3×3 8-Direction" },
+    { value: "diag_4x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×4 八方向", en: "4×4 8-Direction" },
+    { value: "diag_3x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×3 八方向", en: "4×3 8-Direction" },
+    { value: "diag_2x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×2 八方向", en: "4×2 8-Direction" },
+    { value: "capped_4x4_pow2_64_no_undo", family: "special", undo: false, zh: "4×4 封顶 64", en: "4×4 Capped 64" },
+    { value: "capped_4x4_pow2_no_undo", family: "special", undo: false, zh: "4×4 封顶 2048", en: "4×4 Capped 2048" },
+    { value: "capped_4x4_pow2_1024_no_undo", family: "special", undo: false, zh: "4×4 封顶 1024", en: "4×4 Capped 1024" },
+    { value: "capped_4x4_pow2_4096_no_undo", family: "special", undo: false, zh: "4×4 封顶 4096", en: "4×4 Capped 4096" },
+    { value: "obstacle_4x4_pow2_no_undo", family: "special", undo: false, zh: "障碍块 4×4", en: "Obstacle 4×4" },
+    { value: "fib_4x4_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×4（无撤回）", en: "Fibonacci 4×4 (No Undo)" },
+    { value: "fib_4x4_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×4（可撤回）", en: "Fibonacci 4×4 (Undo)" },
+    { value: "fib_3x3_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 3×3（无撤回）", en: "Fibonacci 3×3 (No Undo)" },
+    { value: "fib_3x3_undo", family: "fibonacci", undo: true, zh: "斐波那契 3×3（可撤回）", en: "Fibonacci 3×3 (Undo)" },
+    { value: "fib_4x3_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×3（无撤回）", en: "Fibonacci 4×3 (No Undo)" },
+    { value: "fib_4x3_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×3（可撤回）", en: "Fibonacci 4×3 (Undo)" },
+    { value: "fib_4x2_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×2（无撤回）", en: "Fibonacci 4×2 (No Undo)" },
+    { value: "fib_4x2_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×2（可撤回）", en: "Fibonacci 4×2 (Undo)" }
   ];
 
     var COPY = {
@@ -214,6 +216,8 @@
       restoreReplayHint: "已删除记录需恢复后才能查看回放",
       betaRecord: "内测成绩",
       ratingInsufficient: "数据积累中，暂无 Rating",
+      summaryRatingLabel: "等级分",
+      summaryRatingPending: "Rating 系统完善后显示",
       colMode: "模式",
       colScore: "分数",
       colBoardSum: "盘面和",
@@ -311,6 +315,8 @@
       restoreReplayHint: "Restore this deleted record to view its replay.",
       betaRecord: "Beta result",
       ratingInsufficient: "Collecting data — no rating yet.",
+      summaryRatingLabel: "Rating",
+      summaryRatingPending: "Available when the rating system is ready",
       colMode: "Mode",
       colScore: "Score",
       colBoardSum: "Board Sum",
@@ -405,6 +411,37 @@
 
   function byId(id) {
     return global.document.getElementById(id);
+  }
+
+  function emitProfileState() {
+    if (typeof global.CustomEvent !== "function") return;
+    global.dispatchEvent(new global.CustomEvent("userprofilestatechange", {
+      detail: getProfileState()
+    }));
+  }
+
+  function getProfileState() {
+    return {
+      targetUserId: targetUserId,
+      isOwnProfile: isOwnProfile,
+      profile: currentProfileData ? Object.assign({}, currentProfileData) : null,
+      records: Array.isArray(cachedRecords) ? cachedRecords.slice() : [],
+      stats: {
+        totalRecords: summaryTotalRecords,
+        bestScore: summaryBestScore,
+        bestTile: summaryBestTile,
+        lastActive: summaryLastActive,
+        byMode: Array.isArray(summaryModeStats) ? summaryModeStats.slice() : []
+      },
+      filters: {
+        modeKey: getModeFilterValue(),
+        modeFamily: getModeFamilyValue(),
+        undo: getUndoFilterValue(),
+        status: getRecordVisibilityValue(),
+        sortBy: getSortByValue(),
+        order: getOrderValue()
+      }
+    };
   }
 
   function safeGetStorage(key) {
@@ -827,7 +864,9 @@
     var requestedSortBy = toText(opts.sort_by).toLowerCase();
     var sortBy = requestedSortBy === "score" || requestedSortBy === "board_sum" ? requestedSortBy : "time";
     var order = toText(opts.order).toLowerCase() === "asc" ? "asc" : "desc";
-    var mode = toText(opts.mode).trim().toLowerCase();
+    var modeKey = toText(opts.mode_key).trim();
+    var modeFamily = toText(opts.mode_family).trim().toLowerCase();
+    var undo = toText(opts.undo).trim().toLowerCase();
     var status = toText(opts.status).trim().toLowerCase();
 
     var path = "/user/" + encodeURIComponent(String(safeUserId)) + "/records";
@@ -836,9 +875,11 @@
     path += "&page=" + encodeURIComponent(String(safePage));
     path += "&sort_by=" + encodeURIComponent(sortBy);
     path += "&order=" + encodeURIComponent(order);
-    if (mode && mode !== "all") {
-      path += "&mode=" + encodeURIComponent(mode);
+    if (modeKey && modeKey !== "all") path += "&mode_key=" + encodeURIComponent(modeKey);
+    if (["pow2", "fibonacci", "diagonal", "special"].indexOf(modeFamily) >= 0) {
+      path += "&mode_family=" + encodeURIComponent(modeFamily);
     }
+    if (undo === "no_undo" || undo === "undo") path += "&undo=" + encodeURIComponent(undo);
     if (status === "deleted" || status === "all" || status === "active") {
       path += "&status=" + encodeURIComponent(status);
     }
@@ -1127,6 +1168,16 @@
     return resolveModeLabel(modeBucket || modeKey);
   }
 
+  function resolveModeOptionLabel(modeKey, modeBucket) {
+    var key = toText(modeKey).trim();
+    for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
+      if (LEADERBOARD_MODE_OPTIONS[i].value === key) {
+        return currentLang === "en" ? LEADERBOARD_MODE_OPTIONS[i].en : LEADERBOARD_MODE_OPTIONS[i].zh;
+      }
+    }
+    return resolveRecordModeLabel({ mode_key: key, mode_bucket: modeBucket });
+  }
+
   function normalizeModeBucketFromKey(modeKey) {
     var key = toText(modeKey).trim();
     if (key === "standard_4x4_pow2_no_undo" || key === "classic_no_undo") return "standard_no_undo";
@@ -1151,6 +1202,8 @@
         record_count: recordCount,
         best_score: parsePositiveInt(source.best_score || source.max_score),
         best_tile: parsePositiveInt(source.best_tile || source.max_tile),
+        fastest_duration_ms: parsePositiveInt(source.fastest_duration_ms),
+        fewest_steps: parsePositiveInt(source.fewest_steps),
         latest_record_at: toText(source.latest_record_at || source.last_record_at || source.updated_at).trim()
       });
     }
@@ -1162,6 +1215,7 @@
     if (!filter || filter === "all") return null;
     for (var i = 0; i < summaryModeStats.length; i += 1) {
       var item = summaryModeStats[i];
+      if (toText(item && item.mode_key).trim().toLowerCase() === filter) return item;
       if (toText(item && item.mode_bucket).trim().toLowerCase() === filter) return item;
     }
     return null;
@@ -1188,7 +1242,7 @@
   function formatGameCount(count) {
     var safeCount = parsePositiveInt(count);
     if (currentLang === "en") return safeCount === 1 ? "1 game" : String(safeCount) + " games";
-    return String(safeCount) + "\u5c40";
+    return String(safeCount) + " \u5c40";
   }
 
   function escapeHtml(text) {
@@ -1201,12 +1255,18 @@
 
   function getUndoFilterValue() {
     var value = toText(byId("user-record-undo") && byId("user-record-undo").value).trim().toLowerCase();
-    return value === "undo" ? "undo" : "no_undo";
+    return value === "undo" || value === "no_undo" ? value : "all";
+  }
+
+  function getModeFamilyValue() {
+    var selected = global.document.querySelector("[data-user-mode-family][aria-pressed='true']");
+    var value = toText(selected && selected.getAttribute("data-user-mode-family")).trim().toLowerCase();
+    return ["pow2", "fibonacci", "diagonal", "special"].indexOf(value) >= 0 ? value : "all";
   }
 
   function getModeFilterValue() {
     var mode = toText(byId("user-record-mode") && byId("user-record-mode").value).trim().toLowerCase();
-    return mode || "standard_no_undo";
+    return mode || "all";
   }
 
   function getRecordVisibilityValue() {
@@ -1233,15 +1293,19 @@
     if (!modeSelect) return;
 
     var previousValue = getModeFilterValue();
-    var undoEnabled = getUndoFilterValue() === "undo";
+    var undoFilter = getUndoFilterValue();
+    var familyFilter = getModeFamilyValue();
     modeSelect.innerHTML = "";
+
+    var allOption = global.document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = currentLang === "en" ? "All modes" : "全部模式";
+    modeSelect.appendChild(allOption);
 
     for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
       var optionDef = LEADERBOARD_MODE_OPTIONS[i];
-      var optionIsUndo = optionDef.value === "standard_undo" || (
-        optionDef.value !== "standard_no_undo" && optionDef.value.slice(-5) === "_undo"
-      );
-      if (optionIsUndo !== undoEnabled) continue;
+      if (familyFilter !== "all" && optionDef.family !== familyFilter) continue;
+      if (undoFilter !== "all" && optionDef.undo !== (undoFilter === "undo")) continue;
       var optionEl = global.document.createElement("option");
       optionEl.value = optionDef.value;
       optionEl.textContent = currentLang === "en" ? optionDef.en : optionDef.zh;
@@ -1249,7 +1313,7 @@
     }
 
     modeSelect.value = previousValue;
-    if (!modeSelect.value && modeSelect.options.length > 0) modeSelect.selectedIndex = 0;
+    if (!modeSelect.value) modeSelect.value = "all";
   }
 
   function isModeMatched(record, modeFilter) {
@@ -2159,6 +2223,7 @@
       delete recordDetailCache[id];
     }
     applyCurrentSortAndRender();
+    emitProfileState();
   }
 
   function updateCachedRecordAfterRestore(recordId) {
@@ -2178,6 +2243,7 @@
       delete recordDetailCache[id];
     }
     applyCurrentSortAndRender();
+    emitProfileState();
   }
 
   function normalizeUserRecordsFromApi(data) {
@@ -2193,6 +2259,8 @@
         record_era: normalizeRecordEra(item.record_era),
         mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
         mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
+        mode_family: toText(item.mode_family).trim(),
+        undo: item.undo === true,
         board_width: parsePositiveInt(item.board_width || (normalized && normalized.board_width)),
         board_height: parsePositiveInt(item.board_height || (normalized && normalized.board_height)),
         score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
@@ -2230,9 +2298,14 @@
     var createdNode = byId("user-value-created");
 
     resolvedProfileNickname = toText(data.nickname || targetNicknameHint || "").trim();
+    currentProfileData = Object.assign({}, data, {
+      id: parsePositiveInt(data.id || data.user_id) || targetUserId,
+      nickname: resolvedProfileNickname
+    });
     if (nameNode) nameNode.textContent = resolvedProfileNickname || "--";
     if (createdNode) createdNode.textContent = formatDate(data.created_at);
     applyDocumentTitle();
+    emitProfileState();
     return true;
   }
 
@@ -2246,6 +2319,7 @@
       syncRecordDateLabel();
       applyDocumentTitle();
       applyCurrentSortAndRender();
+      emitProfileState();
       return isOwnProfile;
     }
 
@@ -2260,6 +2334,7 @@
     syncRecordDateLabel();
     applyDocumentTitle();
     applyCurrentSortAndRender();
+    emitProfileState();
     return isOwnProfile;
   }
 
@@ -2277,7 +2352,7 @@
       var modeStats = findSummaryModeStats(modeFilter);
       var modeTotal = modeStats ? modeStats.record_count : 0;
       var modeBest = modeStats && modeStats.best_score > 0 ? String(modeStats.best_score) : "--";
-      var selectedModeLabel = resolveModeLabel(modeFilter);
+      var selectedModeLabel = resolveModeOptionLabel(modeFilter, modeStats && modeStats.mode_bucket);
       if (currentLang === "en") {
         return escapeHtml(selectedModeLabel) + " · <strong>" + String(modeTotal) + "</strong> records · Best <strong>" + modeBest + "</strong>";
       }
@@ -2286,7 +2361,7 @@
 
     var mostPlayed = findMostPlayedModeStats();
     if (mostPlayed) {
-      var mostPlayedLabel = resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key);
+      var mostPlayedLabel = resolveModeOptionLabel(mostPlayed.mode_key, mostPlayed.mode_bucket);
       var mostPlayedCount = formatGameCount(mostPlayed.record_count);
       if (currentLang === "en") {
         return "<strong>" + String(summaryTotalRecords) + "</strong> records · Most played <strong>" + escapeHtml(mostPlayedLabel) + "</strong> " + escapeHtml(mostPlayedCount);
@@ -2303,45 +2378,31 @@
 
   function updateSummaryCards() {
     var totalLabelNode = byId("user-summary-total-label");
-    var bestScoreLabelNode = byId("user-summary-best-score-label");
-    var bestTileLabelNode = byId("user-summary-best-tile-label");
+    var mostPlayedLabelNode = byId("user-summary-best-score-label");
+    var ratingLabelNode = byId("user-summary-best-tile-label");
     var lastActiveLabelNode = byId("user-summary-last-active-label");
     var totalNode = byId("user-summary-total-value");
-    var bestScoreNode = byId("user-summary-best-score-value");
-    var bestTileNode = byId("user-summary-best-tile-value");
+    var mostPlayedNode = byId("user-summary-best-score-value");
+    var mostPlayedDetailNode = byId("user-summary-best-score-detail");
+    var ratingNode = byId("user-summary-best-tile-value");
+    var ratingDetailNode = byId("user-summary-best-tile-detail");
     var lastActiveNode = byId("user-summary-last-active-value");
     var previewNode = byId("user-summary-preview");
-    var lastActiveCard = lastActiveNode && lastActiveNode.closest ? lastActiveNode.closest(".user-summary-card") : null;
-    var summaryRow = global.document.querySelector(".user-summary-row");
-    var modeFilter = getModeFilterValue();
-
-    if (modeFilter && modeFilter !== "all") {
-      var modeStats = findSummaryModeStats(modeFilter);
-      if (totalLabelNode) totalLabelNode.textContent = t("summaryRecordCountLabel");
-      if (bestScoreLabelNode) bestScoreLabelNode.textContent = t("summaryBestScoreLabel");
-      if (bestTileLabelNode) bestTileLabelNode.textContent = t("summaryBestTileLabel");
-      if (lastActiveLabelNode) lastActiveLabelNode.textContent = t("summaryLastActiveLabel");
-      if (lastActiveCard) lastActiveCard.style.display = "";
-      if (summaryRow) summaryRow.classList.remove("is-summary-all");
-      if (totalNode) totalNode.textContent = modeStats && modeStats.record_count > 0 ? String(modeStats.record_count) : "--";
-      if (bestScoreNode) bestScoreNode.textContent = modeStats && modeStats.best_score > 0 ? String(modeStats.best_score) : "--";
-      if (bestTileNode) bestTileNode.textContent = modeStats && modeStats.best_tile > 0 ? String(modeStats.best_tile) : "--";
-      if (lastActiveNode) lastActiveNode.textContent = modeStats && modeStats.latest_record_at ? formatDate(modeStats.latest_record_at) : "--";
-      if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
-      return;
-    }
-
     var mostPlayed = findMostPlayedModeStats();
+    var mostPlayedLabel = mostPlayed ? resolveModeOptionLabel(mostPlayed.mode_key, mostPlayed.mode_bucket) : "--";
     if (totalLabelNode) totalLabelNode.textContent = t("summaryTotalLabel");
-    if (bestScoreLabelNode) bestScoreLabelNode.textContent = t("summaryMostPlayedLabel");
-    if (bestTileLabelNode) bestTileLabelNode.textContent = t("summaryLastActiveLabel");
-    if (lastActiveLabelNode) lastActiveLabelNode.textContent = "";
-    if (lastActiveCard) lastActiveCard.style.display = "none";
-    if (summaryRow) summaryRow.classList.add("is-summary-all");
-    if (totalNode) totalNode.textContent = summaryTotalRecords > 0 ? String(summaryTotalRecords) : "--";
-    if (bestScoreNode) bestScoreNode.textContent = mostPlayed ? resolveModeLabel(mostPlayed.mode_bucket || mostPlayed.mode_key) : "--";
-    if (bestTileNode) bestTileNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
-    if (lastActiveNode) lastActiveNode.textContent = "";
+    if (mostPlayedLabelNode) mostPlayedLabelNode.textContent = t("summaryMostPlayedLabel");
+    if (ratingLabelNode) ratingLabelNode.textContent = t("summaryRatingLabel");
+    if (lastActiveLabelNode) lastActiveLabelNode.textContent = t("summaryLastActiveLabel");
+    if (totalNode) totalNode.textContent = String(summaryTotalRecords);
+    if (mostPlayedNode) {
+      mostPlayedNode.textContent = mostPlayedLabel;
+      mostPlayedNode.title = mostPlayedLabel;
+    }
+    if (mostPlayedDetailNode) mostPlayedDetailNode.textContent = mostPlayed ? formatGameCount(mostPlayed.record_count) : "";
+    if (ratingNode) ratingNode.textContent = summaryRatingValue == null ? "--" : formatNumber(summaryRatingValue);
+    if (ratingDetailNode) ratingDetailNode.textContent = summaryRatingValue == null ? t("summaryRatingPending") : "Rating";
+    if (lastActiveNode) lastActiveNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
     if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
   }
 
@@ -2354,6 +2415,11 @@
     var rating = statsData && statsData.rating && typeof statsData.rating === "object"
       ? statsData.rating
       : null;
+    var rawRatingValue = rating ? rating.value : null;
+    var parsedRating = Number(rawRatingValue);
+    summaryRatingValue = rawRatingValue != null && rawRatingValue !== "" && Number.isFinite(parsedRating) && parsedRating >= 0
+      ? Math.floor(parsedRating)
+      : null;
     summaryRatingStatus = toText(rating && rating.status).trim() === "insufficient_data"
       ? "insufficient_data"
       : "";
@@ -2365,6 +2431,7 @@
       summaryBestTile = parsePositiveInt(summary.best_tile);
       summaryLastActive = toText(summary.latest_record_at).trim();
       updateSummaryCards();
+      emitProfileState();
       return;
     }
 
@@ -2373,7 +2440,9 @@
     summaryBestScore = 0;
     summaryBestTile = 0;
     summaryLastActive = "";
+    summaryRatingValue = null;
     updateSummaryCards();
+    emitProfileState();
   }
 
   async function refreshRecords(resetPage) {
@@ -2395,7 +2464,9 @@
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
       page: recordPage,
-      mode: activeModeFilter,
+      mode_key: activeModeFilter,
+      mode_family: getModeFamilyValue(),
+      undo: getUndoFilterValue(),
       status: activeRecordVisibility,
       sort_by: getSortByValue(),
       order: getOrderValue()
@@ -2404,7 +2475,9 @@
       result = await getUserRecords(targetUserId, {
         limit: DEFAULT_RECORD_LIMIT,
         page: recordPage,
-        mode: activeModeFilter,
+        mode_key: activeModeFilter,
+        mode_family: getModeFamilyValue(),
+        undo: getUndoFilterValue(),
         status: activeRecordVisibility,
         sort_by: getSortByValue(),
         order: getOrderValue()
@@ -2421,6 +2494,7 @@
       recordTotalPages = 0;
       syncRecordPagerUi();
       setTip(toText(result && result.error) || t("recordsFail"), "err");
+      emitProfileState();
       return;
     }
 
@@ -2443,6 +2517,7 @@
       if (!exists) expandedRecordId = "";
     }
     applyCurrentSortAndRender();
+    emitProfileState();
 
     if (cachedRecords.length === 0) {
       setTip(t("empty"), "");
@@ -2471,8 +2546,8 @@
       "user-label-name": t("labelName"),
       "user-label-created": t("labelCreated"),
       "user-summary-total-label": t("summaryTotalLabel"),
-      "user-summary-best-score-label": t("summaryBestScoreLabel"),
-      "user-summary-best-tile-label": t("summaryBestTileLabel"),
+      "user-summary-best-score-label": t("summaryMostPlayedLabel"),
+      "user-summary-best-tile-label": t("summaryRatingLabel"),
       "user-summary-last-active-label": t("summaryLastActiveLabel"),
       "user-record-heading": resolveRecordHeadingText(),
       "user-undo-label": t("undoLabel"),
@@ -2501,9 +2576,10 @@
     if (summaryRow) summaryRow.setAttribute("aria-label", t("summaryAriaLabel"));
 
     var undoSelect = byId("user-record-undo");
-    if (undoSelect && undoSelect.options && undoSelect.options.length >= 2) {
-      undoSelect.options[0].textContent = t("undoDisabled");
-      undoSelect.options[1].textContent = t("undoEnabled");
+    if (undoSelect && undoSelect.options && undoSelect.options.length >= 3) {
+      undoSelect.options[0].textContent = currentLang === "en" ? "All" : "全部";
+      undoSelect.options[1].textContent = t("undoDisabled");
+      undoSelect.options[2].textContent = t("undoEnabled");
     }
 
     var sortSelect = byId("user-record-sort");
@@ -2564,6 +2640,7 @@
     var nextBtn = byId("user-record-next");
     var logoutBtn = byId("user-nav-logout");
     var navMenu = global.document.querySelector(".user-nav-menu");
+    var familyButtons = global.document.querySelectorAll("[data-user-mode-family]");
 
     if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
     if (logoutBtn) {
@@ -2581,6 +2658,16 @@
     if (sortSelect) sortSelect.addEventListener("change", function () { refreshRecords(true); });
     if (orderSelect) orderSelect.addEventListener("change", function () { refreshRecords(true); });
     if (visibilitySelect) visibilitySelect.addEventListener("change", function () { refreshRecords(true); });
+    for (var i = 0; i < familyButtons.length; i += 1) {
+      familyButtons[i].addEventListener("click", function (eventLike) {
+        var selected = eventLike.currentTarget;
+        for (var j = 0; j < familyButtons.length; j += 1) {
+          familyButtons[j].setAttribute("aria-pressed", familyButtons[j] === selected ? "true" : "false");
+        }
+        refreshModeSelectOptions();
+        refreshRecords(true);
+      });
+    }
     if (prevBtn) {
       prevBtn.addEventListener("click", function () {
         if (!recordHasPrev) return;
@@ -2632,8 +2719,8 @@
     var orderSelect = byId("user-record-order");
     var modeSelect = byId("user-record-mode");
     var visibilitySelect = byId("user-record-visibility");
-    if (undoSelect && !undoSelect.value) undoSelect.value = "no_undo";
-    if (modeSelect && !modeSelect.value) modeSelect.value = "standard_no_undo";
+    if (undoSelect && !undoSelect.value) undoSelect.value = "all";
+    if (modeSelect && !modeSelect.value) modeSelect.value = "all";
     if (sortSelect && !sortSelect.value) sortSelect.value = "time";
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
     if (visibilitySelect && !visibilitySelect.value) visibilitySelect.value = "active";
@@ -2663,7 +2750,15 @@
   }
 
   global.UserProfilePageRuntime = {
-    refreshRecords: refreshRecords
+    refreshRecords: refreshRecords,
+    refreshProfile: refreshUserInfo,
+    getState: getProfileState,
+    formatModeLabel: resolveModeOptionLabel,
+    formatDate: formatDate,
+    openRecord: function (recordId) {
+      expandedRecordId = toText(recordId).trim();
+      applyCurrentSortAndRender();
+    }
   };
 
   if (global.document.readyState === "loading") {

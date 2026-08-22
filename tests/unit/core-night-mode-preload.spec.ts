@@ -136,6 +136,20 @@ describe("core night mode preload", () => {
     expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
   });
 
+  it("avoids the legacy automatic midnight theme during the initial migration", () => {
+    const result = runNightModePreload("1", false, {
+      storageValues: {
+        settings_night_background_enabled_v1: "1",
+        settings_night_theme_profile_v1: "midnight_nebula",
+        settings_night_theme_auto_applied_v1: "1",
+        settings_day_theme_profile_v1: "mist_cyan",
+        theme_profile_v1: "midnight_nebula"
+      }
+    });
+
+    expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
+  });
+
   it("injects the night-mode style sheet before runtime when the saved flag is enabled", () => {
     const result = runNightModePreload("1");
     const styleNode = result.getStyleNode();

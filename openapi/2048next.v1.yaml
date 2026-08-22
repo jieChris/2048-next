@@ -228,6 +228,66 @@ paths:
         "200":
           $ref: "#/components/responses/UserResponse"
 
+  /user/me/profile:
+    patch:
+      tags: [Users]
+      summary: Update the authenticated user's public profile.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdateRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/UserResponse"
+
+  /user/me/avatar-submission:
+    get:
+      tags: [Users]
+      summary: Read the authenticated user's latest avatar submission state.
+      responses:
+        "200":
+          description: Avatar submission state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - $ref: "#/components/schemas/AvatarSubmission"
+                          - type: "null"
+    post:
+      tags: [Users]
+      summary: Submit a JPEG, PNG, or WebP avatar for review.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Avatar queued for review.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AvatarSubmission"
+
   /user/me/nickname:
     post:
       tags: [Users]
@@ -282,6 +342,27 @@ paths:
         "200":
           $ref: "#/components/responses/UserResponse"
 
+  /user/{userId}/avatar/{submissionId}:
+    get:
+      tags: [Users]
+      summary: Read an approved immutable user avatar.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Approved WebP avatar.
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+
   /user/{userId}/records:
     get:
       tags: [Records]
@@ -294,6 +375,20 @@ paths:
           in: query
           schema:
             type: string
+        - name: mode_key
+          in: query
+          schema:
+            type: string
+        - name: mode_family
+          in: query
+          schema:
+            type: string
+            enum: [all, pow2, fibonacci, diagonal, special]
+        - name: undo
+          in: query
+          schema:
+            type: string
+            enum: [all, no_undo, undo]
         - name: sort_by
           in: query
           schema:
@@ -304,7 +399,7 @@ paths:
           schema:
             type: string
             enum: [asc, desc]
-        - name: visibility
+        - name: status
           in: query
           schema:
             type: string
@@ -993,6 +1088,73 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/ApiEnvelopeResponse"
+
+  /admin/avatar-submissions:
+    get:
+      tags: [Admin, Users]
+      summary: List avatar submissions by review state.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, superseded]
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Avatar review queue.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AvatarSubmission"
+
+  /admin/avatar-submissions/{submissionId}/image:
+    get:
+      tags: [Admin, Users]
+      summary: Read a private processed avatar submission.
+      parameters:
+        - $ref: "#/components/parameters/AvatarSubmissionIdPath"
+      responses:
+        "200":
+          description: Processed WebP avatar.
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+
+  /admin/avatar-submissions/{submissionId}/review:
+    post:
+      tags: [Admin, Users]
+      summary: Approve or reject an avatar submission.
+      parameters:
+        - $ref: "#/components/parameters/AvatarSubmissionIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvatarReviewRequest"
+      responses:
+        "200":
+          description: Reviewed avatar submission.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AvatarSubmission"
 
   /admin/record-delivery-health:
     get:
@@ -1775,6 +1937,12 @@ components:
       required: true
       schema:
         type: string
+    AvatarSubmissionIdPath:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
     UserIdPath:
       name: userId
       in: path
@@ -2032,13 +2200,106 @@ components:
         email:
           type: string
           format: email
+        avatar_url:
+          type: [string, "null"]
+        avatarUrl:
+          type: [string, "null"]
+        profile_bio:
+          type: string
+          maxLength: 80
+        profileBio:
+          type: string
+          maxLength: 80
+        profile_cover:
+          type: string
+          enum: [tide, sunset, midnight, forest, plum]
+        profileCover:
+          type: string
+          enum: [tide, sunset, midnight, forest, plum]
+        featured_mode_keys:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        featuredModeKeys:
+          type: array
+          maxItems: 3
+          items:
+            type: string
         created_at:
+          type: string
+          format: date-time
+        createdAt:
           type: string
           format: date-time
         admin:
           type: boolean
         super_admin:
           type: boolean
+
+    UserProfileUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        profile_bio:
+          type: string
+          maxLength: 80
+        profile_cover:
+          type: string
+          enum: [tide, sunset, midnight, forest, plum]
+        featured_mode_keys:
+          type: array
+          maxItems: 3
+          uniqueItems: true
+          items:
+            type: string
+
+    AvatarSubmission:
+      type: object
+      additionalProperties: true
+      required: [id, status]
+      properties:
+        id:
+          type: string
+        user_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected, superseded]
+        byte_size:
+          type: integer
+          minimum: 1
+        mime_type:
+          type: string
+          enum: [image/webp]
+        width:
+          type: integer
+          enum: [256]
+        height:
+          type: integer
+          enum: [256]
+        review_note:
+          type: [string, "null"]
+          maxLength: 500
+        submitted_at:
+          type: string
+          format: date-time
+        reviewed_at:
+          type: [string, "null"]
+          format: date-time
+
+    AvatarReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: string
+          maxLength: 500
 
     RegisterRequest:
       type: object
@@ -2287,6 +2548,11 @@ components:
           type: string
         mode_bucket:
           type: string
+        mode_family:
+          type: string
+          enum: [pow2, fibonacci, diagonal, special]
+        undo:
+          type: boolean
         record_era:
           type: string
           enum: [beta, official_v1]
@@ -2678,6 +2944,10 @@ components:
           type: string
         event_id:
           type: string
+        showcase_slot:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 3
 
     AchievementShowcase:
       type: object

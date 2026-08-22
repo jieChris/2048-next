@@ -125,7 +125,7 @@ function loadNightModeRuntime(options?: {
 }
 
 describe("core night mode runtime", () => {
-  it("auto-switches to midnight nebula the first time night mode is enabled", () => {
+  it("keeps the active daytime theme when night mode is enabled", () => {
     let currentThemeId = "classic";
     let currentTilePaletteId = "follow-theme";
     const themeManager = {
@@ -143,21 +143,41 @@ describe("core night mode runtime", () => {
     context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
     const snapshot = context.CoreNightModeRuntime.getNightModeRuntimeSnapshot();
 
-    expect(themeManager.applyTheme).toHaveBeenCalledWith("midnight_nebula");
-    expect(currentThemeId).toBe("midnight_nebula");
+    expect(themeManager.applyTheme).not.toHaveBeenCalled();
+    expect(currentThemeId).toBe("classic");
     expect(currentTilePaletteId).toBe("follow-theme");
     expect(storageMap.get("settings_night_background_enabled_v1")).toBe("1");
     expect(storageMap.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(storageMap.get("settings_night_theme_pending_v1")).toBe("0");
     expect(storageMap.get("settings_day_theme_profile_v1")).toBe("classic");
-    expect(storageMap.get("settings_night_theme_profile_v1")).toBe("midnight_nebula");
+    expect(storageMap.get("settings_night_theme_profile_v1")).toBe("classic");
     expect(storageMap.get("settings_day_tile_palette_v1")).toBe("follow-theme");
     expect(storageMap.get("settings_night_tile_palette_v1")).toBe("follow-theme");
     expect(snapshot.autoThemeApplied).toBe(true);
     expect(snapshot.autoThemePending).toBe(false);
   });
 
-  it("keeps a pending auto-switch until a page with ThemeManager is opened", () => {
+  it("keeps mist cyan as the night theme instead of falling back to classic or midnight nebula", () => {
+    let currentThemeId = "mist_cyan";
+    const themeManager = {
+      getCurrentTheme: vi.fn(() => currentThemeId),
+      getActiveTilePaletteId: vi.fn(() => "follow-theme"),
+      applyTheme: vi.fn((themeId: string) => {
+        currentThemeId = themeId;
+      }),
+      setActiveTilePalette: vi.fn()
+    };
+    const { context, storageMap } = loadNightModeRuntime({ themeManager });
+
+    context.CoreNightModeRuntime.setNightBackgroundEnabled(true);
+
+    expect(themeManager.applyTheme).not.toHaveBeenCalledWith("midnight_nebula");
+    expect(currentThemeId).toBe("mist_cyan");
+    expect(storageMap.get("settings_day_theme_profile_v1")).toBe("mist_cyan");
+    expect(storageMap.get("settings_night_theme_profile_v1")).toBe("mist_cyan");
+  });
+
+  it("keeps pending night-theme initialization until a page with ThemeManager is opened", () => {
     const sharedStorage = new Map<string, string>();
     const firstLoad = loadNightModeRuntime({ storageMap: sharedStorage });
 
@@ -166,7 +186,7 @@ describe("core night mode runtime", () => {
     expect(sharedStorage.get("settings_night_background_enabled_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).not.toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).toBe("1");
-    expect(sharedStorage.get("settings_night_theme_profile_v1")).toBe("midnight_nebula");
+    expect(sharedStorage.get("settings_night_theme_profile_v1")).toBe("mist_cyan");
 
     let currentThemeId = "classic";
     let currentTilePaletteId = "follow-theme";
@@ -186,8 +206,8 @@ describe("core night mode runtime", () => {
     });
     const snapshot = secondLoad.context.CoreNightModeRuntime.getNightModeRuntimeSnapshot();
 
-    expect(themeManager.applyTheme).toHaveBeenCalledWith("midnight_nebula");
-    expect(currentThemeId).toBe("midnight_nebula");
+    expect(themeManager.applyTheme).toHaveBeenCalledWith("mist_cyan");
+    expect(currentThemeId).toBe("mist_cyan");
     expect(currentTilePaletteId).toBe("follow-theme");
     expect(sharedStorage.get("settings_night_theme_auto_applied_v1")).toBe("1");
     expect(sharedStorage.get("settings_night_theme_pending_v1")).toBe("0");

@@ -243,7 +243,7 @@ html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-
     0 2px 4px rgba(24, 46, 51, 0.18) !important;
 }
 
-html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-page="user-profile"]):not([data-preview-page="buttons"])
   :is(
     .relay-btn--ghost,
     .stone-button.ghost,
@@ -348,7 +348,7 @@ html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-
   outline-offset: 3px;
 }
 
-html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-preview-page="buttons"])
+html[data-theme="mist_cyan"] body[data-page]:not([data-page="modes"]):not([data-page="beta-login"]):not([data-page="beta-access"]):not([data-page="user-profile"]):not([data-preview-page="buttons"])
   :is(.relay-btn--ghost, .stone-button.ghost, .replay-button.palette-nav-btn, .relay-nav-btn):active,
 .preview-variant--enamel [data-preview-tone="ghost"]:active {
   background: transparent !important;

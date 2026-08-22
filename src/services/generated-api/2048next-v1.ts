@@ -430,6 +430,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/user/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the authenticated user's public profile. */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UserProfileUpdateRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["UserResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/user/me/avatar-submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authenticated user's latest avatar submission state. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Avatar submission state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AvatarSubmission"] | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Submit a JPEG, PNG, or WebP avatar for review. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        avatar: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Avatar queued for review. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AvatarSubmission"];
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/user/me/nickname": {
         parameters: {
             query?: never;
@@ -531,6 +630,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/user/{userId}/avatar/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an approved immutable user avatar. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: components["parameters"]["UserIdPath"];
+                    submissionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Approved WebP avatar. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/webp": string;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/user/{userId}/records": {
         parameters: {
             query?: never;
@@ -545,9 +683,12 @@ export interface paths {
                     page?: components["parameters"]["PageQuery"];
                     limit?: components["parameters"]["LimitQuery"];
                     mode?: string;
+                    mode_key?: string;
+                    mode_family?: "all" | "pow2" | "fibonacci" | "diagonal" | "special";
+                    undo?: "all" | "no_undo" | "undo";
                     sort_by?: "time" | "score" | "board_sum";
                     order?: "asc" | "desc";
-                    visibility?: "active" | "deleted" | "all";
+                    status?: "active" | "deleted" | "all";
                 };
                 header?: never;
                 path: {
@@ -1834,6 +1975,130 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/avatar-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List avatar submissions by review state. */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "approved" | "rejected" | "superseded";
+                    page?: components["parameters"]["PageQuery"];
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Avatar review queue. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AvatarSubmission"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/avatar-submissions/{submissionId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a private processed avatar submission. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    submissionId: components["parameters"]["AvatarSubmissionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Processed WebP avatar. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/webp": string;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/avatar-submissions/{submissionId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject an avatar submission. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    submissionId: components["parameters"]["AvatarSubmissionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AvatarReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Reviewed avatar submission. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AvatarSubmission"];
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3262,12 +3527,55 @@ export interface components {
             nickname?: string;
             /** Format: email */
             email?: string;
+            avatar_url?: string | null;
+            avatarUrl?: string | null;
+            profile_bio?: string;
+            profileBio?: string;
+            /** @enum {string} */
+            profile_cover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
+            /** @enum {string} */
+            profileCover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
+            featured_mode_keys?: string[];
+            featuredModeKeys?: string[];
             /** Format: date-time */
             created_at?: string;
+            /** Format: date-time */
+            createdAt?: string;
             admin?: boolean;
             super_admin?: boolean;
         } & {
             [key: string]: unknown;
+        };
+        UserProfileUpdateRequest: {
+            profile_bio?: string;
+            /** @enum {string} */
+            profile_cover?: "tide" | "sunset" | "midnight" | "forest" | "plum";
+            featured_mode_keys?: string[];
+        };
+        AvatarSubmission: {
+            id: string;
+            user_id?: number;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "superseded";
+            byte_size?: number;
+            /** @enum {string} */
+            mime_type?: "image/webp";
+            /** @enum {integer} */
+            width?: 256;
+            /** @enum {integer} */
+            height?: 256;
+            review_note?: string | null;
+            /** Format: date-time */
+            submitted_at?: string;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        AvatarReviewRequest: {
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            note?: string;
         };
         RegisterRequest: {
             nickname: string;
@@ -3387,6 +3695,9 @@ export interface components {
             mode?: string;
             mode_key?: string;
             mode_bucket?: string;
+            /** @enum {string} */
+            mode_family?: "pow2" | "fibonacci" | "diagonal" | "special";
+            undo?: boolean;
             /** @enum {string} */
             record_era?: "beta" | "official_v1";
             max_tile?: number;
@@ -3589,6 +3900,7 @@ export interface components {
             source?: "record" | "event" | "manual" | "backfill";
             record_id?: string;
             event_id?: string;
+            showcase_slot?: number | null;
         };
         AchievementShowcase: {
             achievements: components["schemas"]["UserAchievement"][];
@@ -3694,6 +4006,7 @@ export interface components {
     parameters: {
         AdminUserIdPath: number;
         AdminRecordIdPath: string;
+        AvatarSubmissionIdPath: string;
         UserIdPath: number;
         RecordIdPath: string;
         RecordUploadTaskIdPath: string;

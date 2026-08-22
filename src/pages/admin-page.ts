@@ -111,6 +111,17 @@ const copy: Record<Language, Record<string, string>> = {
     nickname: "昵称",
     displayName: "显示名",
     avatarUrl: "头像地址",
+    avatarReview: "头像审核",
+    pendingAvatars: "待审核头像",
+    noPendingAvatars: "暂无待审核头像",
+    approveAvatar: "通过",
+    rejectAvatar: "拒绝",
+    avatarSubmittedAt: "提交时间",
+    avatarBytes: "处理后大小",
+    avatarReviewHint: "头像通过前不会对外显示；拒绝时可填写原因。",
+    avatarReviewFailed: "头像审核失败",
+    avatarApproved: "头像已通过",
+    avatarRejected: "头像已拒绝",
     save: "保存",
     cancel: "取消",
     confirm: "确认",
@@ -320,6 +331,17 @@ const copy: Record<Language, Record<string, string>> = {
     nickname: "Nickname",
     displayName: "Display Name",
     avatarUrl: "Avatar URL",
+    avatarReview: "Avatar Review",
+    pendingAvatars: "Pending Avatars",
+    noPendingAvatars: "No avatars awaiting review",
+    approveAvatar: "Approve",
+    rejectAvatar: "Reject",
+    avatarSubmittedAt: "Submitted",
+    avatarBytes: "Processed size",
+    avatarReviewHint: "An avatar stays private until approval; add a reason when rejecting.",
+    avatarReviewFailed: "Avatar review failed",
+    avatarApproved: "Avatar approved",
+    avatarRejected: "Avatar rejected",
     save: "Save",
     cancel: "Cancel",
     confirm: "Confirm",
@@ -544,6 +566,17 @@ function emptyState(message = t("noData")): string {
   return `<div class="admin-empty"><span>◇</span><p>${escapeHtml(message)}</p></div>`;
 }
 
+function avatarReviewCard(items: AdminRecord[]): string {
+  const body = items.length
+    ? `<div class="admin-avatar-review-list">${items.map((item) => {
+      const id = text(item.id);
+      const name = text(item.nickname || item.display_name || `#${item.user_id}`);
+      return `<article class="admin-avatar-review-item"><img class="admin-avatar-review-image" src="/api/admin/avatar-submissions/${encodeURIComponent(id)}/image" alt="${escapeHtml(name)}"><div class="admin-avatar-review-copy"><strong>${escapeHtml(name)}</strong><small>#${escapeHtml(item.user_id)} · ${escapeHtml(item.email)}</small><span>${escapeHtml(t("avatarSubmittedAt"))}：${escapeHtml(formatDate(item.submitted_at))} · ${escapeHtml(t("avatarBytes"))}：${number(item.byte_size).toLocaleString()} B</span><div class="admin-avatar-review-actions"><button class="btn btn-sm btn-primary" type="button" data-avatar-approve="${escapeHtml(id)}">${escapeHtml(t("approveAvatar"))}</button><button class="btn btn-sm btn-outline-danger" type="button" data-avatar-reject="${escapeHtml(id)}">${escapeHtml(t("rejectAvatar"))}</button></div></div></article>`;
+    }).join("")}</div>`
+    : emptyState(t("noPendingAvatars"));
+  return card(t("pendingAvatars"), `<p class="text-secondary mb-3">${escapeHtml(t("avatarReviewHint"))}</p>${body}`, "admin-wide-card");
+}
+
 function table(headers: string[], body: string): string {
   return `<div class="table-responsive"><table class="table table-vcenter card-table admin-table"><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${body || `<tr><td colspan="${headers.length}">${emptyState()}</td></tr>`}</tbody></table></div>`;
 }
@@ -736,15 +769,22 @@ async function renderUsers(): Promise<void> {
     page: url.searchParams.get("page") || "1",
     limit: "50"
   };
-  const response = await request<AdminRecord[]>(adminQuery("/admin/users", params));
+  const [response, avatarResponse] = await Promise.all([
+    request<AdminRecord[]>(adminQuery("/admin/users", params)),
+    api.request<AdminRecord[]>(adminQuery("/admin/avatar-submissions", { status: "pending", limit: 50 }))
+  ]);
   const list = rows(response.data);
+  const pendingAvatars = avatarResponse.success === true ? rows(avatarResponse.data) : [];
   const body = list.map((user) => `<tr><td><button class="admin-user-cell" data-user="${escapeHtml(user.id)}"><span class="avatar avatar-sm">${escapeHtml(text(user.nickname || user.display_name || user.email).slice(0, 1).toUpperCase())}</span><span><strong>${escapeHtml(user.nickname || user.display_name || `#${user.id}`)}</strong><small>${escapeHtml(user.email)}</small></span></button></td><td>${badge(roleLabel(user.role), user.role === "super_admin" ? "purple" : "azure")}</td><td>${badge(user.is_active === false ? t("inactive") : t("active"), user.is_active === false ? "red" : "green")}</td><td>${escapeHtml(formatDate(user.created_at))}</td><td>${escapeHtml(formatDate(user.last_login_at))}</td><td>${escapeHtml(formatDate(user.last_seen_at))}</td><td>${number(user.record_count).toLocaleString()}</td><td><button class="btn btn-sm" data-user="${escapeHtml(user.id)}">${escapeHtml(t("view"))}</button></td></tr>`).join("");
   byId("admin-content").innerHTML = pageHeader(t("users"), t("searchUsers"), `<button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) +
     `<section class="card admin-filter-card"><form class="card-body admin-filter-grid" data-user-filter><label>${escapeHtml(t("search"))}<input class="form-control" name="q" value="${escapeHtml(params.q)}" placeholder="${escapeHtml(t("searchUsers"))}"></label><label>${escapeHtml(t("role"))}<select class="form-select" name="role"><option value="">${escapeHtml(t("allRoles"))}</option>${["player", "board_admin", "super_admin", "guest"].map((role) => `<option value="${role}" ${params.role === role ? "selected" : ""}>${escapeHtml(roleLabel(role))}</option>`).join("")}</select></label><label>${escapeHtml(t("status"))}<select class="form-select" name="status"><option value="">${escapeHtml(t("allStatuses"))}</option><option value="active" ${params.status === "active" ? "selected" : ""}>${escapeHtml(t("active"))}</option><option value="inactive" ${params.status === "inactive" ? "selected" : ""}>${escapeHtml(t("inactive"))}</option></select></label><label>${escapeHtml(t("activityFilter"))}<select class="form-select" name="activity"><option value="">${escapeHtml(t("allActivity"))}</option><option value="7d" ${params.activity === "7d" ? "selected" : ""}>${escapeHtml(t("active7d"))}</option><option value="30d" ${params.activity === "30d" ? "selected" : ""}>${escapeHtml(t("active30d"))}</option><option value="never" ${params.activity === "never" ? "selected" : ""}>${escapeHtml(t("neverActive"))}</option></select></label><label>${escapeHtml(t("sortBy"))}<select class="form-select" name="sort"><option value="newest" ${params.sort === "newest" ? "selected" : ""}>${escapeHtml(t("newest"))}</option><option value="last_active" ${params.sort === "last_active" ? "selected" : ""}>${escapeHtml(t("recentActive"))}</option><option value="records" ${params.sort === "records" ? "selected" : ""}>${escapeHtml(t("mostRecords"))}</option></select></label><button class="btn btn-primary" type="submit">${escapeHtml(t("search"))}</button></form></section>` +
+    avatarReviewCard(pendingAvatars) +
     card(t("users"), table([t("user"), t("role"), t("status"), t("createdAt"), t("lastLogin"), t("lastActive"), t("recordCount"), t("actions")], body)) + pagination("users", response, { q: params.q, role: params.role, status: params.status, activity: params.activity, sort: params.sort });
   byId("admin-content").querySelector<HTMLFormElement>("[data-user-filter]")?.addEventListener("submit", (event) => { event.preventDefault(); navigate("users", Object.fromEntries(new FormData(event.currentTarget as HTMLFormElement).entries())); });
   byId("admin-content").querySelectorAll<HTMLElement>("[data-user]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: node.dataset.user })));
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog());
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-approve]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarApprove || "", "approved")));
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-reject]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarReject || "", "rejected")));
   bindPagination();
 }
 
@@ -801,6 +841,26 @@ function editProfile(user: AdminRecord): void {
     onConfirm: async () => {
       await request(`/admin/users/${user.id}/profile`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: dialogValue("dialog-nickname"), display_name: dialogValue("dialog-display-name"), avatar_url: dialogValue("dialog-avatar") }) });
       toast(t("success"));
+      await renderCurrentView();
+    }
+  });
+}
+
+function reviewAvatar(submissionId: string, decision: "approved" | "rejected"): void {
+  if (!submissionId) return;
+  const rejecting = decision === "rejected";
+  openDialog({
+    title: rejecting ? t("rejectAvatar") : t("approveAvatar"),
+    body: `${rejecting ? `<p>${escapeHtml(t("avatarReviewHint"))}</p><label class="form-label" for="dialog-avatar-review-note">${escapeHtml(t("note"))}</label><textarea id="dialog-avatar-review-note" class="form-control" rows="3" maxlength="500" placeholder="${escapeHtml(t("avatarReviewHint"))}"></textarea>` : `<p>${escapeHtml(t("avatarReviewHint"))}</p>`}`,
+    danger: rejecting,
+    confirmLabel: rejecting ? t("rejectAvatar") : t("approveAvatar"),
+    onConfirm: async () => {
+      await request(`/admin/avatar-submissions/${encodeURIComponent(submissionId)}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, note: rejecting ? dialogValue("dialog-avatar-review-note") : "" })
+      });
+      toast(rejecting ? t("avatarRejected") : t("avatarApproved"));
       await renderCurrentView();
     }
   });

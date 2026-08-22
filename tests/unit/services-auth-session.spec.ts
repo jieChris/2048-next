@@ -23,6 +23,23 @@ describe("durable browser auth session", () => {
     }
   });
 
+  it("keeps a local development bearer across page reloads", async () => {
+    const storage = new MemoryStorage();
+    const previousWindow = (globalThis as { window?: unknown }).window;
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { location: { hostname: "127.0.0.1" } },
+    });
+    try {
+      const auth = await import("../../src/services/auth-session");
+      auth.setAuthSession({ token: "local-token", user: { id: 42, nickname: "Local" } }, { storageLike: storage });
+      expect(storage.getItem("2048_auth_token_v1")).toBe("local-token");
+    } finally {
+      if (previousWindow === undefined) delete (globalThis as { window?: unknown }).window;
+      else Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow });
+    }
+  });
+
   it("restores from the HttpOnly cookie and removes the legacy persisted bearer", async () => {
     const storage = new MemoryStorage();
     storage.setItem("2048_auth_token_v1", "legacy-token");

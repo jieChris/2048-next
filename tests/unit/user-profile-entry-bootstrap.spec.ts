@@ -15,4 +15,35 @@ describe("user-profile entry bootstrap", () => {
     expect(source).toContain('import { bootstrapUserProfilePage } from "../pages/user-profile-page";');
     expect(source).toContain('await bootstrapDirectPage("user-profile", bootstrapUserProfilePage);');
   });
+
+  it("keeps the tide cover as one coherent scene with reduced-motion support", () => {
+    const html = readEntry("user.html");
+    const css = readEntry("style/user_profile_page.css");
+    const page = readEntry("src/pages/user-profile-page.ts");
+
+    expect(html).toContain('class="user-profile-cover-art"');
+    expect(html).toContain('class="user-profile-cover-art-layer user-profile-cover-art-sky"');
+    expect(html).toContain('class="user-profile-cover-art-layer user-profile-cover-art-glow"');
+    expect(html).toContain('class="user-profile-cover-art-layer user-profile-cover-art-city"');
+    expect(html).toContain('class="user-profile-cover-art-layer user-profile-cover-art-foreground"');
+    expect(html).not.toContain('user-profile-cover-character');
+    expect(css).toContain('/images/profile-banner/day-sky-generated-v1-8x1.png');
+    expect(css).toContain('/images/profile-banner/day-city-generated-v1-8x1.png');
+    expect(css).toContain('/images/profile-banner/day-foreground-generated-v1-8x1.png');
+    expect(css).toContain('html[data-night-background="1"] .user-profile-cover-art-sky');
+    expect(css).toContain('html[data-night-background="1"] .user-profile-cover-art-city');
+    expect(css).toContain('html[data-night-background="1"] .user-profile-cover-art-foreground');
+    expect(css).toContain('filter: brightness(0.25)');
+    expect(css).toContain('filter: brightness(0.52)');
+    expect(css).toContain('filter: brightness(0.46)');
+    expect(css).not.toContain('/images/profile-banner/night-sky-8x1.png');
+    expect(css).not.toContain('mask-image');
+    expect(css).not.toContain('/images/profile-banner/night-background.webp');
+    expect(css).not.toContain('/images/profile-banner/night-composite');
+    expect(css).toContain("prefers-reduced-motion: reduce");
+    expect(page).toContain('"--profile-cover-sky-x"');
+    expect(page).toContain('"--profile-cover-city-x"');
+    expect(page).toContain('"--profile-cover-foreground-x"');
+    expect(page).not.toContain('hasAttribute("data-night-background") ? 1 : 0.25');
+  });
 });

@@ -580,6 +580,55 @@ body.admin-console {
   font-size: 11px;
 }
 
+.admin-avatar-review-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-avatar-review-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #e5dfd6;
+  border-radius: 8px;
+  background: #f7f4ed;
+}
+
+.admin-avatar-review-image {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid #d3c9bd;
+  border-radius: 12px;
+  background: #e9e2d8;
+}
+
+.admin-avatar-review-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.admin-avatar-review-copy strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-avatar-review-copy small,
+.admin-avatar-review-copy > span {
+  color: var(--admin-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.admin-avatar-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 4px;
+}
+
 .admin-pagination {
   display: flex;
   align-items: center;
@@ -828,6 +877,11 @@ body.admin-console {
 
   .admin-user-hero .card-body {
     align-items: flex-start;
+  }
+
+  .admin-avatar-review-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-definition {

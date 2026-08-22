@@ -378,7 +378,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
       "href",
-      "style/user_profile_page.css?v=20260723-history-fixes-v11"
+      "style/user_profile_page.css?v=20260822-profile-polish-v2"
     );
 
     await expect(page.locator(".user-record-mode").first()).toHaveText("4x4（不可撤回）");
@@ -559,12 +559,27 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(response?.ok()).toBeTruthy();
 
     await page.waitForSelector(".user-record-item");
-    await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
+    await expect(page.locator("#user-profile-edit")).toBeHidden();
+    await expect(page.locator("#user-featured-edit")).toBeHidden();
+    await page.locator("#user-nav-menu").click();
+    await expect(page.locator("#user-nav-edit-mode")).toBeVisible();
+    await page.locator("#user-nav-edit-mode").click();
+    await expect(page.locator("#user-profile-edit")).toBeVisible();
+    await expect(page.locator("#user-featured-edit")).toBeVisible();
+    await expect(page.locator("#user-showcase-wall-link")).toBeVisible();
+    await page.locator("#user-nav-edit-mode").click();
+    await expect(page.locator("#user-profile-edit")).toBeHidden();
+    await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight span")).toHaveText("最高分");
+    await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight > strong")).toHaveText("8 192");
+    await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("3 局");
+    await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
     await expect(page.locator("#user-summary-total-value")).toHaveText("3");
-    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最高分");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("8192");
-    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
-    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("2048");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
+    await expect(page.locator("#user-summary-best-score-value")).toContainText("斐波那契");
+    await expect(page.locator("#user-summary-best-score-detail")).toHaveText("3 局");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("等级分");
+    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("--");
+    await expect(page.locator("#user-summary-best-tile-detail")).toHaveText("Rating 系统完善后显示");
 
     await expect(page.locator("#user-record-undo")).toHaveValue("no_undo");
     const undoOptionValues = await page.locator("#user-record-undo option").evaluateAll((options) =>
@@ -591,12 +606,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.selectOption("#user-record-mode", "fib_4x2_undo");
     await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
-    await expect(page.locator("#user-summary-total-label")).toHaveText("记录数");
+    await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
     await expect(page.locator("#user-summary-total-value")).toHaveText("3");
-    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最高分");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("3777");
-    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("最大方块");
-    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("987");
+    await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
+    await expect(page.locator("#user-summary-best-score-value")).toContainText("斐波那契");
+    await expect(page.locator("#user-summary-best-score-detail")).toHaveText("3 局");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("等级分");
+    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("--");
+    await expect(page.locator("#user-summary-best-tile-detail")).toHaveText("Rating 系统完善后显示");
 
     const requestsBeforeNoUndo = recordRequests.length;
     await page.selectOption("#user-record-undo", "no_undo");
@@ -1308,7 +1325,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-record-era-badge")).toHaveText("内测成绩");
     await expect(page.locator("#user-summary-preview")).toHaveText("数据积累中，暂无 Rating");
     await expect(page.locator("#user-summary-total-value")).toHaveText("1");
-    await expect(page.locator("#user-summary-best-score-value")).toHaveText("4096");
+    await expect(page.locator("#user-summary-best-score-value")).toContainText("标准 4×4");
+    await expect(page.locator("#user-summary-best-score-detail")).toHaveText("1 局");
+    await expect(page.locator("#user-summary-best-tile-label")).toHaveText("等级分");
+    await expect(page.locator("#user-summary-best-tile-value")).toHaveText("--");
     await expect(page.locator("#user-summary-last-active-value")).toHaveText("2026-07-20 08:00:00");
 
     const betaRecord = page.locator(".user-record-item").first();
