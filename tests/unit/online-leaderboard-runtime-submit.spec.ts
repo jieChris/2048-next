@@ -1608,6 +1608,47 @@ describe("online leaderboard terminal submission", () => {
     });
   });
 
+  it("allows a manual retry to explicitly upload a finalized local record", async () => {
+    let currentRecord: Record<string, unknown> = {
+      id: "local-finalized-1",
+      owner_type: "user",
+      owner_user_id: "7",
+      sync_status: "finalized_local",
+      upload_attempts: 0,
+      mode: "classic_4x4_pow2_undo",
+      mode_key: "classic_4x4_pow2_undo",
+      score: 4096,
+      replay_string: "replay-finalized",
+      client_record_id: "client-finalized-1"
+    };
+    const localHistoryStore = {
+      prepareRecordSubmitAsync: vi.fn(async () => currentRecord),
+      listSyncCandidatesAsync: vi.fn(async () => []),
+      getByIdAsync: vi.fn(async () => currentRecord),
+      updateRecordAsync: vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        currentRecord = Object.assign({}, currentRecord, patch);
+        return currentRecord;
+      })
+    };
+    const runtime = loadOnlineLeaderboardRuntime({
+      manager: createTerminatedManager({ over: false, score: 0 }),
+      localHistoryStore,
+      fetchImpl: async (url) => url.endsWith("/records")
+        ? createJsonResponse({ success: true, data: { id: "server-finalized-1" } })
+        : createJsonResponse({ success: true, data: [] })
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryLocalHistoryRecord(id: string): Promise<unknown>;
+    }).retryLocalHistoryRecord("local-finalized-1");
+
+    expect(runtime.fetchCalls.some((call) => call.url.endsWith("/records"))).toBe(true);
+    expect(currentRecord).toMatchObject({
+      sync_status: "synced",
+      server_record_id: "server-finalized-1"
+    });
+  });
+
   it("does not clear account auth for a ranked-session-specific 401", async () => {
     const record = {
       id: "local-ranked-session-invalid",
@@ -1884,6 +1925,16 @@ describe("online leaderboard terminal submission", () => {
       owner_user_id: "7",
       statuses: ["pending", "retry_wait", "waiting_auth"],
       include_future_retries: false
+    });
+
+    await (runtime.windowLike.OnlineLeaderboardRuntime as {
+      retryAllLocalHistoryRecords(): Promise<unknown>;
+    }).retryAllLocalHistoryRecords();
+
+    expect(listSyncCandidatesAsync).toHaveBeenLastCalledWith({
+      owner_user_id: "7",
+      statuses: ["pending", "retry_wait", "waiting_auth", "needs_action", "finalized_local"],
+      include_future_retries: true
     });
   });
 

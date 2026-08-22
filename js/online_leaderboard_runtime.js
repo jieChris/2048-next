@@ -4521,8 +4521,10 @@ async function refreshLeaderboard(modeLike) {
         if (selected && selected.sync_status !== "synced") {
           var selectedStatus = toText(selected.sync_status).trim();
           var selectedRetryAt = Date.parse(toText(selected.next_retry_at)) || 0;
+          // finalized_local is released only by an explicit history-page retry;
+          // automatic scans must leave it untouched until the player confirms it.
           var selectedStatusAllowed = ["pending", "retry_wait", "waiting_auth"].indexOf(selectedStatus) >= 0 ||
-            (opts.includeNeedsAction === true && selectedStatus === "needs_action");
+            (opts.includeNeedsAction === true && ["needs_action", "finalized_local"].indexOf(selectedStatus) >= 0);
           if (
             selectedStatusAllowed &&
             (opts.forcePendingRetry === true || !selectedRetryAt || selectedRetryAt <= Date.now())
@@ -4532,7 +4534,7 @@ async function refreshLeaderboard(modeLike) {
         records = await store.listSyncCandidatesAsync({
           owner_user_id: toText(getUserId()).trim(),
           statuses: opts.includeNeedsAction === true
-            ? ["pending", "retry_wait", "waiting_auth", "needs_action"]
+            ? ["pending", "retry_wait", "waiting_auth", "needs_action", "finalized_local"]
             : ["pending", "retry_wait", "waiting_auth"],
           include_future_retries: opts.forcePendingRetry === true
         });
