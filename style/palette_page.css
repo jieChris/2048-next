@@ -73,108 +73,138 @@ body[data-page="palette-hub"].palette-swatch-open {
   display: none !important;
 }
 
-.palette-language-switch {
+.palette-settings-controls {
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
-  padding: 3px;
-  border: 1px solid var(--app-border-control);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--app-surface-control) 88%, var(--app-accent));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 5px 12px rgba(31, 54, 58, 0.08);
+  gap: 8px;
 }
 
-.palette-language-btn {
-  min-width: 43px;
-  min-height: 30px;
-  padding: 0 11px;
-  border: 0;
-  border-radius: 999px;
+.palette-settings-menu {
+  position: relative;
+}
+
+.palette-settings-menu > summary {
+  list-style: none;
+}
+
+.palette-settings-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.palette-settings-menu > summary::marker {
+  content: "";
+}
+
+.palette-icon-button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
   background: transparent;
-  color: var(--app-text-muted);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 30px;
-  cursor: pointer;
-  transition: color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
-}
-
-.palette-language-btn.is-active {
-  background: var(--enamel-button-primary);
-  color: var(--enamel-button-primary-text);
-  box-shadow:
-    inset 0 2px 0 var(--enamel-button-teal),
-    inset 0 -2px 0 var(--enamel-button-gold),
-    0 3px 7px rgba(31, 54, 58, 0.14);
-}
-
-.palette-language-btn:not(.is-active):hover {
-  background: color-mix(in srgb, var(--app-accent-soft) 76%, transparent);
   color: var(--app-text-strong);
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
-.palette-language-btn:active {
-  transform: translateY(1px) scale(0.97);
+.palette-icon-button:hover,
+.palette-settings-menu[open] > .palette-icon-button {
+  border-color: var(--app-border-control);
+  background: color-mix(in srgb, var(--app-surface-control) 82%, var(--app-accent));
+  color: var(--app-link-hover);
 }
 
-.palette-language-btn:focus-visible {
+.palette-icon-button:active {
+  transform: scale(0.94);
+}
+
+.palette-icon-button:focus-visible {
   outline: 2px solid var(--enamel-button-teal);
   outline-offset: 3px;
 }
 
-.palette-display-mode-switch {
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 3px;
-  border: 1px solid var(--app-border-control);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--app-surface-control) 88%, var(--app-accent));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 5px 12px rgba(31, 54, 58, 0.08);
+.palette-language-glyph {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.18em;
+  transform: translateX(-1px);
 }
 
-.palette-display-mode-btn {
-  min-width: 44px;
-  min-height: 30px;
+.palette-mode-glyph {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.palette-settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  min-width: 154px;
+  padding: 6px;
+  border: 1px solid var(--app-border-control);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-surface-control) 96%, var(--app-page-bg));
+  box-shadow: 0 18px 38px rgba(11, 24, 28, 0.22), 0 2px 8px rgba(11, 24, 28, 0.12);
+}
+
+.palette-language-switch .palette-settings-popover {
+  right: auto;
+  left: 0;
+}
+
+.palette-menu-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 36px;
   padding: 0 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 9px;
   background: transparent;
-  color: var(--app-text-muted);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 30px;
-  cursor: pointer;
-  transition: color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
-}
-
-.palette-display-mode-btn.is-active {
-  background: var(--enamel-button-primary);
-  color: var(--enamel-button-primary-text);
-  box-shadow:
-    inset 0 2px 0 var(--enamel-button-teal),
-    inset 0 -2px 0 var(--enamel-button-gold),
-    0 3px 7px rgba(31, 54, 58, 0.14);
-}
-
-.palette-display-mode-btn:not(.is-active):hover {
-  background: color-mix(in srgb, var(--app-accent-soft) 76%, transparent);
   color: var(--app-text-strong);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
 }
 
-.palette-display-mode-btn:active {
-  transform: translateY(1px) scale(0.97);
+.palette-menu-option:hover,
+.palette-menu-option:focus-visible {
+  background: var(--app-accent-soft);
+  color: var(--app-link-hover);
 }
 
-.palette-display-mode-btn:focus-visible {
+.palette-menu-option:focus-visible {
   outline: 2px solid var(--enamel-button-teal);
-  outline-offset: 3px;
+  outline-offset: -2px;
+}
+
+.palette-menu-check {
+  color: var(--app-link-hover);
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0;
+}
+
+.palette-menu-option.is-active .palette-menu-check {
+  opacity: 1;
+}
+
+html[data-night-background="1"] body[data-page="palette-hub"] .palette-settings-popover {
+  background: color-mix(in srgb, var(--app-surface-control) 94%, #071016);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
 .settings-workbench {

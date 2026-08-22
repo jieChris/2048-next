@@ -114,18 +114,21 @@ function syncDisplayModeControls(): void {
   const isEn = isEnglishUi();
   const mode = readDisplayModePreference(window);
   const labels: Record<DisplayMode, [string, string]> = {
-    auto: ["自动", "Auto"],
-    day: ["白天", "Day"],
-    night: ["夜晚", "Night"]
+    auto: ["系统", "System"],
+    day: ["浅色", "Light"],
+    night: ["深色", "Dark"]
   };
   const group = document.querySelector<HTMLElement>(".palette-display-mode-switch");
+  const trigger = document.querySelector<HTMLElement>(".palette-display-mode-trigger");
   group?.setAttribute("aria-label", isEn ? "Display mode" : "显示模式");
+  trigger?.setAttribute("aria-label", isEn ? "Display mode" : "显示模式");
   document.querySelectorAll<HTMLButtonElement>("button[data-display-mode]").forEach((button) => {
     const value = button.dataset.displayMode as DisplayMode;
     const active = value === mode;
     button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-    button.textContent = labels[value]?.[isEn ? 1 : 0] || value;
+    button.setAttribute("aria-checked", String(active));
+    const label = button.querySelector<HTMLElement>(".palette-menu-option-label");
+    if (label) label.textContent = labels[value]?.[isEn ? 1 : 0] || value;
   });
 }
 
@@ -148,6 +151,7 @@ function bindDisplayModeControls(): void {
       const resolved = syncDisplayModeAttributes(document, window);
       syncDisplayModeControls();
       window.dispatchEvent(new CustomEvent("displaymodechange", { detail: resolved }));
+      button.closest<HTMLDetailsElement>(".palette-settings-menu")?.removeAttribute("open");
     });
   });
   syncDisplayModeControls();
@@ -574,13 +578,15 @@ function bindSettingsDisclosureLock(): void {
 function bindPaletteLanguageButtons(): void {
   const buttons = document.querySelectorAll<HTMLButtonElement>("[data-ui-language]");
   const switchGroup = document.querySelector<HTMLElement>(".palette-language-switch");
+  const trigger = document.querySelector<HTMLElement>(".palette-language-trigger");
   const sync = (): void => {
     const activeLanguage = isEnglishUi() ? "en" : "zh";
     switchGroup?.setAttribute("aria-label", activeLanguage === "en" ? "Language" : "界面语言");
+    trigger?.setAttribute("aria-label", activeLanguage === "en" ? "Language" : "界面语言");
     buttons.forEach((button) => {
       const active = button.dataset.uiLanguage === activeLanguage;
       button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.setAttribute("aria-checked", active ? "true" : "false");
       button.setAttribute(
         "aria-label",
         activeLanguage === "en"
@@ -595,10 +601,36 @@ function bindPaletteLanguageButtons(): void {
       const language = button.dataset.uiLanguage === "en" ? "en" : "zh";
       globalWindow.UII18N?.setLanguage?.(language);
       sync();
+      button.closest<HTMLDetailsElement>(".palette-settings-menu")?.removeAttribute("open");
     });
   });
   window.addEventListener("uilanguagechange", sync);
   sync();
+}
+
+export function bindPaletteSettingsMenuDismissal(): void {
+  const menus = [...document.querySelectorAll<HTMLDetailsElement>(".palette-settings-menu")];
+  menus.forEach((menu) => {
+    menu.addEventListener("toggle", () => {
+      if (!menu.open) return;
+      menus.forEach((other) => {
+        if (other !== menu) other.removeAttribute("open");
+      });
+    });
+  });
+  document.addEventListener("click", (event) => {
+    const target = event.target as Node | null;
+    menus.forEach((menu) => {
+      if (menu.open && target && !menu.contains(target)) menu.removeAttribute("open");
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const openMenu = menus.find((menu) => menu.open);
+    if (!openMenu) return;
+    openMenu.removeAttribute("open");
+    openMenu.querySelector<HTMLElement>("summary")?.focus();
+  });
 }
 
 function releaseSettingsCategoryScrollLock(): void {
@@ -710,6 +742,7 @@ export function bootstrapPalettePage(): void {
 
   initCustomTimerEditor();
   bindSettingsDisclosureLock();
+  bindPaletteSettingsMenuDismissal();
   bindPaletteLanguageButtons();
   bindDisplayModeControls();
   bindSettingsCategoryNavigation();

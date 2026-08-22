@@ -2,6 +2,8 @@ import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const SETTINGS_HTML = `
+  <details class="palette-settings-menu" id="language-menu"><summary>语言</summary></details>
+  <details class="palette-settings-menu" id="display-menu"><summary>显示模式</summary></details>
   <nav class="settings-category-nav">
     <span class="settings-category-active-bookmark"></span>
     <a class="settings-category-link is-active" href="#appearance-settings" aria-current="location"><strong>外观与配色</strong></a>
@@ -34,6 +36,30 @@ afterEach(() => {
 });
 
 describe("palette settings navigation", () => {
+  it("keeps the quick menus mutually exclusive and dismissible", async () => {
+    const { dom, module } = await loadPalettePageModule("");
+    const language = dom.window.document.getElementById("language-menu") as HTMLDetailsElement;
+    const display = dom.window.document.getElementById("display-menu") as HTMLDetailsElement;
+    const languageTrigger = language.querySelector("summary") as HTMLElement;
+
+    module.bindPaletteSettingsMenuDismissal();
+    language.open = true;
+    language.dispatchEvent(new dom.window.Event("toggle"));
+    display.open = true;
+    display.dispatchEvent(new dom.window.Event("toggle"));
+    expect(language.open).toBe(false);
+
+    dom.window.document.body.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    expect(display.open).toBe(false);
+
+    language.open = true;
+    languageTrigger.focus();
+    dom.window.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(language.open).toBe(false);
+    expect(dom.window.document.activeElement).toBe(languageTrigger);
+    dom.window.close();
+  });
+
   it("keeps localized category labels aligned with their target anchors", async () => {
     const { dom, module } = await loadPalettePageModule("");
 

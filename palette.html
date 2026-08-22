@@ -11,7 +11,7 @@
   <script src="/js/core_night_mode_preload.js?v=20260822-theme-inheritance-v1"></script>
   <script src="/js/beta_access_preload.js?v=20260708-01"></script>
   <link href="style/main.css?v=20260803-operation-feedback-live-lock-v3" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260819-settings-order-v1" rel="stylesheet" type="text/css">
+  <link href="style/palette_page.css?v=20260823-header-menus-v2" rel="stylesheet" type="text/css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
@@ -29,14 +29,38 @@
       <nav class="palette-nav">
         <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
         <a class="replay-button palette-nav-btn palette-touch-entry" href="touch_sensitivity.html">触屏灵敏度</a>
-        <div class="palette-language-switch" role="group" aria-label="界面语言">
-          <button type="button" class="palette-language-btn is-active" data-ui-language="zh" aria-pressed="true">中文</button>
-          <button type="button" class="palette-language-btn" data-ui-language="en" aria-pressed="false">EN</button>
-        </div>
-        <div class="palette-display-mode-switch" role="group" aria-label="显示模式">
-          <button type="button" class="palette-display-mode-btn is-active" data-display-mode="auto" aria-pressed="true">自动</button>
-          <button type="button" class="palette-display-mode-btn" data-display-mode="day" aria-pressed="false">白天</button>
-          <button type="button" class="palette-display-mode-btn" data-display-mode="night" aria-pressed="false">夜晚</button>
+        <div class="palette-settings-controls" aria-label="快捷设置">
+          <details class="palette-settings-menu palette-language-switch">
+            <summary class="palette-icon-button palette-language-trigger" aria-label="界面语言" title="界面语言">
+              <span class="palette-language-glyph" aria-hidden="true">文A</span>
+              <span class="page-title-visually-hidden">界面语言</span>
+            </summary>
+            <div class="palette-settings-popover" role="menu" aria-label="界面语言">
+              <button type="button" class="palette-menu-option is-active" data-ui-language="zh" role="menuitemradio" aria-checked="true">
+                <span class="palette-menu-option-label">简体中文</span><span class="palette-menu-check" aria-hidden="true">✓</span>
+              </button>
+              <button type="button" class="palette-menu-option" data-ui-language="en" role="menuitemradio" aria-checked="false">
+                <span class="palette-menu-option-label">English</span><span class="palette-menu-check" aria-hidden="true">✓</span>
+              </button>
+            </div>
+          </details>
+          <details class="palette-settings-menu palette-display-mode-switch">
+            <summary class="palette-icon-button palette-display-mode-trigger" aria-label="显示模式" title="显示模式">
+              <svg class="palette-mode-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 15.6A8.5 8.5 0 0 1 8.4 3.2 8.5 8.5 0 1 0 20.8 15.6Z"></path></svg>
+              <span class="page-title-visually-hidden">显示模式</span>
+            </summary>
+            <div class="palette-settings-popover" role="menu" aria-label="显示模式">
+              <button type="button" class="palette-menu-option is-active" data-display-mode="auto" role="menuitemradio" aria-checked="true">
+                <span class="palette-menu-option-label">系统</span><span class="palette-menu-check" aria-hidden="true">✓</span>
+              </button>
+              <button type="button" class="palette-menu-option" data-display-mode="day" role="menuitemradio" aria-checked="false">
+                <span class="palette-menu-option-label">浅色</span><span class="palette-menu-check" aria-hidden="true">✓</span>
+              </button>
+              <button type="button" class="palette-menu-option" data-display-mode="night" role="menuitemradio" aria-checked="false">
+                <span class="palette-menu-option-label">深色</span><span class="palette-menu-check" aria-hidden="true">✓</span>
+              </button>
+            </div>
+          </details>
         </div>
       </nav>
     </header>

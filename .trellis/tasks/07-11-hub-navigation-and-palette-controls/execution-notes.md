@@ -3,6 +3,7 @@
 ## Route Deviation
 
 - 仓库缺少 `.trellis/scripts/get_context.py`，无法执行标准包上下文脚本；改为直接读取 `.trellis/spec/index.md`、`frontend-api-boundary.md` 和 `cross-repo-architecture.md`，继续按前端页面与 API 边界实施。
+- 2026-08-23：`npm run dev:local` 因本机 API 未配置 `DATABASE_URL`、`AUTH_TOKEN_SECRET`、`RANKED_SESSION_SECRET` 和 `AUTH_SYNC_SECRET` 无法启动后端。此次仅修改设置页顶部前端控件，保守回退为在内置浏览器连接独立 Vite 服务完成页面交互与视觉验证；未把该验证描述为完整后端联调。
 
 ## 验证记录
 
@@ -15,3 +16,6 @@
 - GREEN：目标单元测试 13/13 通过。
 - GREEN：目标浏览器回归测试 38/38 通过。
 - GREEN：`npm run verify:prepush` 的全部审计、单元测试、关键烟雾测试和构建通过。
+- 2026-08-23：语言与显示模式由分段按钮改为两个图标触发的原生 `details` 下拉菜单；保留现有语言、自动/白天/夜晚状态逻辑，补齐 `menuitemradio`、互斥展开、点击外部关闭与 Esc 返回焦点。
+- 2026-08-23：内置浏览器验证桌面与移动端两个菜单均在视口内、无横向溢出；中英文文案联动正确，显示模式切换正确并自动收起。
+- 2026-08-23：目标单元测试 15/15 通过，`npm run build` 与 `git diff --check` 通过。
