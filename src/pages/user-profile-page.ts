@@ -1,4 +1,3 @@
-import { installUserProfileLegacyRuntime } from "../bootstrap/user-profile-legacy-runtime";
 import { bindDisplayModeSync } from "../bootstrap/display-mode";
 import { resolveStorageByName, safeReadStorageItem } from "../bootstrap/storage";
 import { groupAchievementFamilies } from "../services/achievement-families";
@@ -1268,8 +1267,9 @@ function bootstrapEnhancedProfile(): void {
   if (initial) syncLegacyState(initial);
 }
 
-export function bootstrapUserProfilePage(): void {
+export async function bootstrapUserProfilePage(): Promise<void> {
   if (typeof document === "undefined") return;
+  const { installUserProfileLegacyRuntime } = await import("../bootstrap/user-profile-legacy-runtime");
   installUserProfileLegacyRuntime();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   document.body?.setAttribute("data-page-family", "profile-history-replay");

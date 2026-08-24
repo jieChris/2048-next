@@ -497,6 +497,19 @@
     return toText(safeGetStorage(STORAGE_NICKNAME_KEY)).trim();
   }
 
+  function canonicalizeSessionProfileUrl() {
+    if (targetUserId < 0 || !global.history || typeof global.history.replaceState !== "function") return;
+    try {
+      var locationObj = global.location || {};
+      var params = new global.URLSearchParams(toText(locationObj.search));
+      if (parsePublicUserId(params.get("id")) >= 0) return;
+      params.set("id", String(targetUserId));
+      var nickname = toText(resolvedProfileNickname || targetNicknameHint).trim();
+      if (nickname) params.set("nickname", nickname);
+      global.history.replaceState(null, "", toText(locationObj.pathname) + "?" + params.toString() + toText(locationObj.hash));
+    } catch (_err) {}
+  }
+
   function readLanguage() {
     var raw = toText(safeGetStorage(UI_LANG_STORAGE_KEY)).toLowerCase();
     return raw === "en" ? "en" : "zh";
@@ -860,6 +873,7 @@
       targetUserId = storedPublicProfileId;
       targetNicknameHint = getStoredNickname();
       resolvedProfileNickname = targetNicknameHint;
+      canonicalizeSessionProfileUrl();
       return true;
     }
 
@@ -874,6 +888,7 @@
     if (targetNicknameHint) {
       writeLocalStorageItem(STORAGE_NICKNAME_KEY, targetNicknameHint);
     }
+    canonicalizeSessionProfileUrl();
     return true;
   }
 

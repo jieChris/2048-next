@@ -78,13 +78,26 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("current user profile resolves from the authenticated session without query parameters", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_token_v1", "test-token-session-only");
+      window.localStorage.removeItem("2048_auth_token_v1");
       window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("2048_public_profile_id_v1");
       window.localStorage.removeItem("2048_auth_nickname_v1");
     });
 
     await page.route("**/api/**", async (route) => {
       const url = route.request().url();
+      if (url.endsWith("/api/auth/refresh")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            token: "cookie-restored-token",
+            user: { id: 9027, public_profile_id: 27, nickname: "SessionOwner" }
+          })
+        });
+        return;
+      }
       if (url.includes("/user/me") || url.endsWith("/api/me")) {
         await route.fulfill({
           status: 200,
@@ -139,6 +152,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect
       .poll(() => page.evaluate(() => window.localStorage.getItem("2048_public_profile_id_v1")))
       .toBe("27");
+    await expect(page).toHaveURL(/\/user\.html\?id=27&nickname=SessionOwner#overview$/);
   });
 
   test("user profile logout button clears current account and opens leaderboard", async ({ page }) => {

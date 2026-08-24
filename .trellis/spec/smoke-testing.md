@@ -13,6 +13,7 @@
 - 测试依赖主题、色板、夜间模式、语言或页面分类时，必须在 `page.addInitScript` 或 URL 中显式设置。
 - 中文界面的语言分离审计可精确放行固定品牌词，但页面 title 的完整 SEO 文案应由 SEO 专项用例单独断言，不能继续沿用旧的短标题合同。
 - 页面入口会执行 cookie-first 的 `/api/auth/refresh`；需要自定义 API 路由的 smoke 必须显式模拟该请求（成功返回测试 token 或明确的终态认证码），不得让它落到未启动的本地 API 代理并把页面初始化拖到超时。
+- 会读取登录态的副作用运行时必须在 `restoreAuthSession()` 完成后动态加载；Cookie-only 回归必须从“localStorage 无 token”开始，由 `/api/auth/refresh` 返回 token 与 `public_profile_id`，再断言本人请求和页面初始化成功，不能预塞 token 掩盖启动竞态。
 - 不得依赖项目当前默认值；默认主题或默认页面变化不应破坏无关测试。
 - 全站自动弹层应在 Playwright 共享 `storageState` 中固定为已处理；弹层自身另设用例显式清除该状态，验证首次出现和关闭后的持久状态。
 - 对互斥显示的页面模块，先使用对应锚点或点击入口，再断言模块内元素可见。
@@ -76,6 +77,7 @@ await page.waitForFunction(
 - 所有影响被测控制流的 API 必须路由模拟；无关后台请求可禁用，但不能禁用被测行为本身。
 - 模拟需要登录的 API 时必须校验 `Authorization`，或在缺失凭证时返回 401；无条件返回 200 会掩盖前端漏传 Token。
 - 认证账号 ID 与公开主页 ID 是两个字段：登录态夹具必须同时提供认证 `id` 和 `public_profile_id`，主页链接与本人归属断言只使用后者；不得继续用 `2048_auth_userId_v1` 代替公开主页 ID。
+- 无查询参数打开本人主页时，身份解析成功后 URL 必须规范为包含 `id=<public_profile_id>` 的可分享地址；不得把裸 `user.html#overview` 留作复制给他人的身份地址。
 - `localhost`、`127.*` 和 `::1` 页面默认只能使用同源 `/api`；共享 API base 解析器不得自动追加生产 fallback，否则本地测试会越过代理隔离并被页面 CSP 拦截，或误向生产发送请求。确需跨域时必须显式启用并同步配置 CSP 和路由模拟。
 - 终局记录进入 IndexedDB 发件箱后，Smoke 应通过 `LocalHistoryStore` 的异步 API 断言 `sync_status` 和 `server_record_id`；旧 localStorage pending key 只作为迁移输入，导入成功后应为空，不能继续把它当成待上传证据。
 - 同一本地记录的回放内容未变时，重复终局钩子不得替换已持久化的 `client_record_id`；已有 `server_record_id` 的 `synced` 记录不得重置为 `pending` 或再次发起 POST。该终态保护必须在与写入相同的 IndexedDB 事务内复核，不能只依赖事务外的预读结果。

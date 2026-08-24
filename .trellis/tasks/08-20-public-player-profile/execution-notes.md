@@ -65,6 +65,8 @@
 
 ## Current State
 
+- 2026-08-24：修复生产 Cookie-only 会话打开裸 `user.html#overview` 时的空主页。根因是 `user_profile_page.js` 作为静态导入副作用，在统一入口完成 `/api/auth/refresh` 前已执行无 token 分支；改为在 `bootstrapDirectPage` 等待会话恢复后动态加载旧运行时，并在解析出 `public_profile_id` 后用 `history.replaceState` 规范为带公开主页 ID 与昵称的可分享 URL。API 当前本地实现已让 `/api/auth/refresh`、`/api/me` 与 `/api/user/me` 返回独立 `public_profile_id`，本轮补充刷新响应回归断言；未把账号 `id` 作为回退。
+
 - 2026-08-24：Actions `32719513517` 再次达到页面 Smoke 237/238，暴露同一用例中更早的 7 月筛选合同仍未随 8 月产品改版更新：当前记录筛选默认“全部”，撤回选项包含“全部/无撤回/可撤回”，具体模式使用规范 `mode_key`，跨撤回类型切换后无效模式回退“全部”；旧测试仍假定默认无撤回、旧排行榜别名和旧 `mode=` 参数。仅对齐该连续测试块的现有合同，不改产品筛选或 API；构建和部署继续被门禁跳过。
 
 - 2026-08-24：Actions `32718753206` 的页面 Smoke 已收敛到 237/238，通过项未发现产品回归；唯一失败是同一夹具明确返回 `summary.total_records=6`（两种模式各 3 局），但两处旧断言仍把全账号“总记录数”误写为 3。概览汇总卡按已确认产品定义不随下方模式筛选变化，因此仅把两处断言修正为 6，不改产品逻辑；Release Ready、构建和部署均被门禁跳过，服务器未应用该失败版本。
@@ -102,6 +104,8 @@
 - 2026-08-20：否决首版高封面后，正式页改为桌面 180px、移动端 160px 的横幅；远景天空、城市/装置/4/8、透明 0/2 人物和 CSS 光影使用不同位移幅度。0/2 人物层单独缩放，避免为容纳原始 3:1 插画而抬高页面。
 
 ## Local Verification Notes
+
+- 2026-08-24：Cookie-only 主页目标单测先按旧实现得到预期 RED；最终前端入口/统一启动 18/18、API 账号/设备会话/token 撤销 35/35、两仓 TypeScript、旧运行时语法、前端生产构建（453 modules、794 压缩文件）与两仓 `git diff --check` 通过。仅用 Codex 内置浏览器打开无查询参数的本地 `user.html`，受控刷新响应返回账号 `id=9027`、公开主页 `id=27`；页面最终显示 `SessionOwner`、本人标题“用户主页”，地址规范为 `/user.html?id=27&nickname=SessionOwner#overview`，浏览器日志无 warning/error。临时 Vite、Mock API 和代理创建的标签均已关闭；未连接生产账号、未提交、推送或部署。
 
 - 2026-08-24：Actions `32713867182` 失败诊断采用 CI 日志与 artifact 元数据，未在本机启动 Playwright 或外部浏览器。修正后本地仅运行 TypeScript、Vitest、静态审计、构建与 `git diff --check`；浏览器 Smoke 继续由下一次 GitHub Actions 验证。
 

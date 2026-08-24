@@ -10,10 +10,14 @@ function readEntry(relativePath: string): string {
 describe("user-profile entry bootstrap", () => {
   it("uses the shared unified direct-page bootstrap entry", () => {
     const source = readEntry("src/entries/user-profile.ts");
+    const page = readEntry("src/pages/user-profile-page.ts");
 
     expect(source).toContain('import { bootstrapDirectPage } from "../app/bootstrap-direct-page";');
     expect(source).toContain('import { bootstrapUserProfilePage } from "../pages/user-profile-page";');
     expect(source).toContain('await bootstrapDirectPage("user-profile", bootstrapUserProfilePage);');
+    expect(page).not.toContain('import { installUserProfileLegacyRuntime } from "../bootstrap/user-profile-legacy-runtime";');
+    expect(page).toContain('await import("../bootstrap/user-profile-legacy-runtime")');
+    expect(page).toContain("export async function bootstrapUserProfilePage(): Promise<void>");
   });
 
   it("keeps the open profile synchronized with display-mode changes", () => {
