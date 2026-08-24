@@ -1159,8 +1159,8 @@ body[data-page="user-profile"] .user-record-tools .settings-select {
   white-space: nowrap;
 }
 
-#user-col-mode { text-align: left; }
-#user-col-date { text-align: right; }
+#user-col-mode { padding-left: 10px; text-align: left; }
+#user-col-date { padding-right: 10px; text-align: right; }
 #user-col-score,
 #user-col-board-sum,
 #user-col-best-tile,

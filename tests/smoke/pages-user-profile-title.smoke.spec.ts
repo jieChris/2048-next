@@ -11,10 +11,21 @@ test.describe("Legacy Multi-Page Smoke", () => {
     // cookie-first auth restore on the same mocked boundary so it cannot fall
     // through to the unavailable local API server during page bootstrap.
     await page.route("**/api/auth/refresh", async (route) => {
+      const request = route.request();
+      const authorization = request.headers().authorization || "";
+      let requestBody: { token?: unknown } | null = null;
+      try {
+        requestBody = request.postDataJSON() as { token?: unknown } | null;
+      } catch (_error) {
+        // The refresh endpoint is also probed without a body on guest pages.
+      }
+      const token = (authorization.toLowerCase().startsWith("bearer ")
+        ? authorization.slice(7)
+        : authorization).trim() || String(requestBody?.token || "").trim();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, token: "smoke-restored-token" })
+        body: JSON.stringify(token ? { success: true, token } : { success: true })
       });
     });
   });
@@ -586,11 +597,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-nav-edit-mode")).toBeVisible();
     await page.locator("#user-nav-edit-mode").click();
     await expect(page.locator("#user-profile-edit")).toHaveCount(0);
+    await page.locator("#user-tab-overview").click();
+    await expect(page.locator("#user-panel-overview")).toBeVisible();
     await expect(page.locator("#user-featured-edit")).toBeVisible();
     await expect(page.locator("#user-showcase-wall-link")).toBeHidden();
     await page.locator("#user-nav-edit-mode").click();
     await expect(page.locator("#user-profile-edit")).toHaveCount(0);
     await expect(page.locator("#user-featured-edit")).toBeHidden();
+    await page.locator("#user-tab-records").click();
+    await expect(page.locator("#user-panel-records")).toBeVisible();
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight span")).toHaveText("最高分");
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight > strong")).toHaveText("8 192");
     await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("3 局");
