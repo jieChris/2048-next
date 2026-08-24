@@ -1,13 +1,6 @@
 (function () {
   var STORAGE_KEY = "theme_profile_v1";
   var STYLE_ID = "theme-dynamic-style";
-  var NIGHT_BACKGROUND_STORAGE_KEY = "settings_night_background_enabled_v1";
-  var DISPLAY_MODE_STORAGE_KEY = "settings_display_mode_v2";
-  var DAY_THEME_STORAGE_KEY = "settings_day_theme_profile_v1";
-  var NIGHT_THEME_STORAGE_KEY = "settings_night_theme_profile_v1";
-  var DAY_TILE_PALETTE_STORAGE_KEY = "settings_day_tile_palette_v1";
-  var NIGHT_TILE_PALETTE_STORAGE_KEY = "settings_night_tile_palette_v1";
-  var STORAGE_TRUE_VALUE = "1";
   var POW2_TILE_VALUES = [
     2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536,
     131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864
@@ -126,47 +119,6 @@
     } catch (_err) {
       return false;
     }
-  }
-
-  function isNightBackgroundEnabled() {
-    var mode = String(readLocalStorageItem(DISPLAY_MODE_STORAGE_KEY) || "").trim().toLowerCase();
-    if (mode !== "auto" && mode !== "day" && mode !== "night") {
-      var legacy = readLocalStorageItem(NIGHT_BACKGROUND_STORAGE_KEY);
-      mode = legacy === "1" ? "night" : legacy === "0" ? "day" : "auto";
-      if (legacy === "1" || legacy === "0") writeLocalStorageItem(DISPLAY_MODE_STORAGE_KEY, mode);
-    }
-    if (mode === "night") return true;
-    if (mode === "day") return false;
-    try {
-      return !!window.matchMedia && !!window.matchMedia("(prefers-color-scheme: dark)").matches;
-    } catch (_err) {
-      return false;
-    }
-  }
-
-  function resolveActiveAppearanceStorageKeys() {
-    if (isNightBackgroundEnabled()) {
-      return {
-        themeKey: NIGHT_THEME_STORAGE_KEY,
-        tilePaletteKey: NIGHT_TILE_PALETTE_STORAGE_KEY
-      };
-    }
-    return {
-      themeKey: DAY_THEME_STORAGE_KEY,
-      tilePaletteKey: DAY_TILE_PALETTE_STORAGE_KEY
-    };
-  }
-
-  function syncActiveAppearanceStorage(themeId, paletteId) {
-    var keys = resolveActiveAppearanceStorageKeys();
-    var didWrite = false;
-    if (themeId) {
-      didWrite = writeLocalStorageItem(keys.themeKey, themeId) || didWrite;
-    }
-    if (paletteId) {
-      didWrite = writeLocalStorageItem(keys.tilePaletteKey, paletteId) || didWrite;
-    }
-    return didWrite;
   }
 
   function clamp(num, min, max) {
@@ -2646,7 +2598,6 @@
     document.documentElement.setAttribute("data-theme", id);
     syncTimerLegendStyles();
     var paletteInfo = resolveActiveTilePalette(theme);
-    syncActiveAppearanceStorage(id, paletteInfo.id);
     if (typeof window.CustomEvent === "function") {
       window.dispatchEvent(new CustomEvent("themechange", { detail: { themeId: id, paletteId: paletteInfo.id } }));
     }

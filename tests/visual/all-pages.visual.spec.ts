@@ -25,6 +25,7 @@ const PAGES: VisualPage[] = [
   { key: "account", path: "/account.html", ready: "body[data-page='account-hub']" },
   { key: "achievement-toast-reference", path: "/achievement-toast-reference.html", ready: ".toast-reference-page" },
   { key: "admin", path: "/admin.html?view=dashboard", ready: "body[data-admin-access='granted']" },
+  { key: "admin-avatar-review", path: "/admin.html?view=moderation", ready: "body[data-admin-access='granted']" },
   { key: "api-docs", path: "/api-docs.html", ready: "body[data-page='api-docs']" },
   { key: "beta-access", path: "/beta-access.html", ready: "#beta-notice-section" },
   { key: "beta-login", path: "/beta-login.html", ready: "#beta-login-form", guest: true },
@@ -123,7 +124,15 @@ async function fulfillApi(route: Route, pageKey: string): Promise<void> {
     return;
   }
   if (path === "/api/admin/me") {
-    await route.fulfill({ json: { success: true, data: { user_id: 0, email: "root@example.com", admin: true, rootAdmin: true, canManageSuperAdmins: true } } });
+    await route.fulfill({ json: { success: true, data: { user_id: 0, email: "root@example.com", admin: true, rootAdmin: true, canManageSuperAdmins: true, ...(pageKey === "admin-avatar-review" ? { avatar_review_enabled: true } : {}) } } });
+    return;
+  }
+  if (path === "/api/admin/avatar-submissions") {
+    await route.fulfill({ json: { success: true, data: [{ id: "avatar-visual", account_user_id: 42, game_user_id: 84, nickname: "头像审核样本", status: "pending", moderation_status: "manual_review", reason_code: "model_review", byte_size: 12345, width: 192, height: 192, submitted_at: "2026-08-24T10:00:00Z", updated_at: "2026-08-24T10:01:00Z" }] } });
+    return;
+  }
+  if (path === "/api/admin/avatar-submissions/avatar-visual/image") {
+    await route.fulfill({ path: "/Users/a19/Documents/2048-Next/2048-next/meta/icon-192.png" });
     return;
   }
   if (path === "/api/admin/dashboard") {
@@ -168,13 +177,18 @@ async function installVisualState(page: Page, pageKey: string, theme: Theme, opt
     localStorage.setItem("settings_night_theme_profile_v1", "mist_cyan");
     localStorage.setItem("settings_night_background_enabled_v1", night ? "1" : "0");
     localStorage.setItem("tile_palette_active_v1", "follow-theme");
+    // Visual screenshots must start in a stable, non-blocking state. The
+    // first-visit guides are covered by their own smoke/guide tests; leaving
+    // them unseen here would intercept clicks for modal scenarios.
+    localStorage.setItem("guide_seen_v1:practice-board-v1", "1");
+    localStorage.setItem("guide_seen_v1:replay-controls-v1", "1");
     if (injectedPageKey !== "beta-login" && injectedPageKey !== "beta-access") {
       localStorage.setItem("2048_beta_access_smoke_bypass_v1", "1");
     } else {
       localStorage.setItem("2048_beta_access_force_gate_local_v1", "1");
     }
     if (!guest) {
-      localStorage.setItem("2048_auth_token_v1", injectedPageKey === "admin" || injectedPageKey === "admin-import" ? "visual-admin-token" : "visual-token");
+      localStorage.setItem("2048_auth_token_v1", injectedPageKey === "admin" || injectedPageKey === "admin-import" || injectedPageKey === "admin-avatar-review" ? "visual-admin-token" : "visual-token");
       localStorage.setItem("2048_auth_userId_v1", "42");
       localStorage.setItem("2048_auth_nickname_v1", "视觉测试员");
     }
@@ -221,6 +235,27 @@ async function settle(page: Page, ready = "body"): Promise<void> {
   });
 }
 
+async function settleMobileGameActions(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const body = document.body;
+    if (body?.dataset.page !== "game" || !window.matchMedia("(max-width: 980px)").matches) return true;
+    const host = document.querySelector<HTMLElement>(".top-action-buttons");
+    const expand = document.getElementById("top-actions-expand-toggle");
+    const restart = document.getElementById("top-restart-btn");
+    const timer = document.getElementById("timerbox-toggle-btn");
+    const undo = document.getElementById("top-mobile-undo-btn");
+    if (!host || !expand || !restart) return false;
+    const primary = (node: Element | null) => !!node?.classList.contains("mobile-actions-primary");
+    const collapsed = Array.from(host.querySelectorAll<HTMLElement>(".mobile-actions-collapse-target"))
+      .every((node) => getComputedStyle(node).display === "none");
+    return (body.dataset.mobileActionsExpanded || "0") === "0" &&
+      primary(expand) &&
+      primary(restart) &&
+      (primary(timer) || primary(undo)) &&
+      collapsed;
+  });
+}
+
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const layout = await page.evaluate(() => ({
     overflow: Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth || 0) - window.innerWidth,
@@ -254,6 +289,13 @@ async function prepareVisualPage(page: Page, pageKey: string, theme: Theme): Pro
 
   if (pageKey === "not-found") {
     await expect(page.locator("#tile-playground .play-tile")).toHaveCount(10);
+  }
+
+  if (pageKey === "admin-avatar-review") {
+    await expect(page.locator(".admin-avatar-review-list")).toBeVisible();
+    await expect(page.locator(".admin-avatar-review-item")).toHaveCount(1);
+    await expect(page.locator(".admin-avatar-review-image")).toHaveCount(1);
+    await expect(page.locator("[data-avatar-approve='avatar-visual'], [data-avatar-reject='avatar-visual']")).toHaveCount(2);
   }
 
   if (pageKey === "practice-board") {
@@ -315,6 +357,7 @@ for (const scenario of PAGES) {
         const response = await page.goto(scenario.path, { waitUntil: "domcontentloaded" });
         expect(response?.ok()).toBeTruthy();
         await settle(page, scenario.ready);
+        await settleMobileGameActions(page);
         await prepareVisualPage(page, scenario.key, theme);
         await expectNoHorizontalOverflow(page);
         await expect(page).toHaveScreenshot(`page-${scenario.key}-${viewport.key}-${theme}.png`);

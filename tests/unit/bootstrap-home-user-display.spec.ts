@@ -40,12 +40,14 @@ describe("bootstrap home user display", () => {
     const storageLike = {
       getItem(key: string) {
         if (key === "2048_auth_userId_v1") return "42";
+        if (key === "2048_public_profile_id_v1") return "9";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Smoke User";
         return null;
       }
     };
 
-    expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html?id=42&nickname=Smoke+User");
+    expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html?id=9&nickname=Smoke+User");
   });
 
   it("links authenticated sessions without a cached user id to the current user profile", () => {
@@ -67,7 +69,8 @@ describe("bootstrap home user display", () => {
     };
     const storageLike = {
       getItem(key: string) {
-        if (key === "2048_auth_userId_v1") return "7";
+        if (key === "2048_public_profile_id_v1") return "7";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Alice";
         return null;
       }
@@ -90,7 +93,8 @@ describe("bootstrap home user display", () => {
     };
     const storageLike = {
       getItem(key: string) {
-        if (key === "2048_auth_userId_v1") return "12";
+        if (key === "2048_public_profile_id_v1") return "12";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Codex 测试";
         return null;
       }
@@ -137,7 +141,8 @@ describe("bootstrap home user display", () => {
     };
     const storageLike = {
       getItem(key: string) {
-        if (key === "2048_auth_userId_v1") return "19";
+        if (key === "2048_public_profile_id_v1") return "19";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Jay";
         return null;
       }
@@ -170,7 +175,8 @@ describe("bootstrap home user display", () => {
     };
     const storageLike = {
       getItem(key: string) {
-        if (key === "2048_auth_userId_v1") return "19";
+        if (key === "2048_public_profile_id_v1") return "19";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Jay";
         return null;
       }
@@ -216,7 +222,8 @@ describe("bootstrap home user display", () => {
     };
     const storageLike = {
       getItem(key: string) {
-        if (key === "2048_auth_userId_v1") return "19";
+        if (key === "2048_public_profile_id_v1") return "19";
+        if (key === "2048_auth_token_v1") return "token";
         if (key === "2048_auth_nickname_v1") return "Jay";
         return null;
       }

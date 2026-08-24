@@ -232,6 +232,8 @@ paths:
     patch:
       tags: [Users]
       summary: Update the authenticated user's public profile.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
       requestBody:
         required: true
         content:
@@ -240,7 +242,46 @@ paths:
               $ref: "#/components/schemas/UserProfileUpdateRequest"
       responses:
         "200":
-          $ref: "#/components/responses/UserResponse"
+          $ref: "#/components/responses/UserProfileSnapshotResponse"
+        "400":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "401":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "409":
+          $ref: "#/components/responses/UserProfileUpdateConflictResponse"
+        "429":
+          $ref: "#/components/responses/UserProfileUpdateRateLimitResponse"
+        "503":
+          $ref: "#/components/responses/ApiErrorResponse"
+
+  /user/me/moderation-submissions:
+    get:
+      tags: [Users]
+      summary: List the authenticated user's moderation status metadata without pending content.
+      parameters:
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Moderation status history and current bio block deadline.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ModerationSubmissionSummary"
+                      bio_blocked_until:
+                        type: [string, "null"]
+                        format: date-time
+        "401":
+          $ref: "#/components/responses/ApiErrorResponse"
 
   /user/me/avatar-submission:
     get:
@@ -249,6 +290,9 @@ paths:
       responses:
         "200":
           description: Avatar submission state.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
           content:
             application/json:
               schema:
@@ -263,6 +307,8 @@ paths:
     post:
       tags: [Users]
       summary: Submit a JPEG, PNG, or WebP avatar for review.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
       requestBody:
         required: true
         content:
@@ -276,8 +322,24 @@ paths:
                   type: string
                   format: binary
       responses:
+        "200":
+          description: Idempotent replay of the avatar submission.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AvatarSubmission" }
         "201":
           description: Avatar queued for review.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
           content:
             application/json:
               schema:
@@ -340,7 +402,13 @@ paths:
         - $ref: "#/components/parameters/UserIdPath"
       responses:
         "200":
-          $ref: "#/components/responses/UserResponse"
+          $ref: "#/components/responses/PublicUserProfileResponse"
+        "400":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "401":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "404":
+          $ref: "#/components/responses/ApiErrorResponse"
 
   /user/{userId}/avatar/{submissionId}:
     get:
@@ -354,14 +422,23 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         "200":
           description: Approved WebP avatar.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: "public, max-age=31536000, immutable" }
+            ETag:
+              schema: { type: string }
+            X-Content-Type-Options:
+              schema: { type: string, const: nosniff }
           content:
             image/webp:
               schema:
                 type: string
                 format: binary
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /user/{userId}/records:
     get:
@@ -1073,13 +1150,503 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/ApiEnvelope"
                   - type: object
+                    required: [data]
                     properties:
-                      admin:
-                        type: boolean
-                      super_admin:
-                        type: boolean
-                      user:
-                        $ref: "#/components/schemas/User"
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required: [user_id, admin, rootAdmin, canManageSuperAdmins, avatar_review_enabled]
+                        properties:
+                          user_id: { type: integer, minimum: 0 }
+                          admin: { type: boolean }
+                          rootAdmin: { type: boolean }
+                          canManageSuperAdmins: { type: boolean }
+                          avatar_review_enabled: { type: boolean }
+
+  /admin/moderation/submissions:
+    get:
+      tags: [Admin, Users]
+      summary: List profile-bio submissions awaiting manual review.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [manual_review], default: manual_review }
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Manual moderation queue.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AdminModerationSubmission"
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+
+  /admin/moderation/submissions/{submissionId}/review:
+    post:
+      tags: [Admin, Users]
+      summary: Approve, reject, or requeue a manually reviewed profile bio.
+      parameters:
+        - $ref: "#/components/parameters/ModerationSubmissionIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerationReviewRequest"
+      responses:
+        "200":
+          description: Idempotent moderation decision result.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ModerationReviewResult"
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "404": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "409": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+
+  /admin/moderation/submissions/{submissionId}/retry:
+    post:
+      tags: [Admin, Users]
+      summary: Requeue a failed-retryable moderation submission without consuming player quota.
+      parameters:
+        - $ref: "#/components/parameters/ModerationSubmissionIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              maxProperties: 0
+      responses:
+        "200":
+          description: Idempotent retry result.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ModerationReviewResult"
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "404": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "409": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+
+  /admin/integrations/deepseek:
+    get:
+      tags: [Admin]
+      summary: Read masked DeepSeek integration state.
+      responses:
+        "200":
+          description: Masked integration state; plaintext keys are never returned.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DeepSeekIntegrationState"
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+
+  /admin/integrations/deepseek/key:
+    put:
+      tags: [Admin]
+      summary: Configure or rotate the encrypted DeepSeek API key.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeepSeekKeyUpdateRequest"
+      responses:
+        "200":
+          description: Masked active integration state.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/DeepSeekIntegrationState" }
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "409": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "503": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+    delete:
+      tags: [Admin]
+      summary: Disable and cryptographically erase the active local DeepSeek key material.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntegrationStepUpRequest"
+      responses:
+        "200":
+          description: Disabled DeepSeek integration state.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { $ref: "#/components/schemas/DeepSeekDisableResult" }
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "409": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+
+  /admin/integrations/deepseek/test:
+    post:
+      tags: [Admin]
+      summary: Test DeepSeek using fixed synthetic content only.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntegrationStepUpRequest"
+      responses:
+        "200":
+          description: Successful synthetic DeepSeek connection test.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { $ref: "#/components/schemas/DeepSeekConnectionTestSuccess" }
+        "202":
+          description: An idempotent connection test is already in progress.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data: { $ref: "#/components/schemas/DeepSeekConnectionTestPending" }
+        "400": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "403": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "409": { $ref: "#/components/responses/NoStoreApiErrorResponse" }
+        "503":
+          description: Failed replay result or a fresh connection-test error.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/DeepSeekConnectionTestFailureEnvelope"
+                  - $ref: "#/components/schemas/ApiError"
+
+  /admin/profile-background/variants:
+    get:
+      tags: [Admin, Users]
+      summary: List uploaded day or night three-layer background variants.
+      responses:
+        "200":
+          description: Background variants.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/ProfileBackgroundVariant" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+    post:
+      tags: [Admin, Users]
+      summary: Validate and store one immutable three-layer background variant.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ProfileBackgroundVariantUploadRequest" }
+      responses:
+        "201":
+          description: Validated background variant.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileBackgroundVariant" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/profile-background/scenes:
+    get:
+      tags: [Admin, Users]
+      summary: List complete paired day and night background scenes.
+      responses:
+        "200":
+          description: Background scenes.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: "#/components/schemas/ProfileBackgroundScene" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+    post:
+      tags: [Admin, Users]
+      summary: Pair validated day and night variants into one scene revision.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileBackgroundSceneCreateRequest" }
+      responses:
+        "200":
+          description: Idempotent replay of the paired scene.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileBackgroundScene" }
+        "201":
+          description: Paired scene.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileBackgroundScene" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/profile-background/scenes/{sceneId}/publish:
+    post:
+      tags: [Admin, Users]
+      summary: Publish a complete background scene.
+      parameters:
+        - $ref: "#/components/parameters/ProfileBackgroundSceneIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200": { $ref: "#/components/responses/ProfileBackgroundSceneResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/profile-background/scenes/{sceneId}/archive:
+    post:
+      tags: [Admin, Users]
+      summary: Archive a background scene without deleting its immutable assets.
+      parameters:
+        - $ref: "#/components/parameters/ProfileBackgroundSceneIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      responses:
+        "200": { $ref: "#/components/responses/ProfileBackgroundSceneResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/profile-background/default:
+    put:
+      tags: [Admin, Users]
+      summary: Set a published default scene or restore the built-in default.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileBackgroundDefaultUpdateRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ProfileBackgroundDefaultUpdateResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /profile-backgrounds:
+    get:
+      tags: [Users]
+      summary: List complete published scenes with day previews only.
+      security: []
+      responses:
+        "200":
+          description: Public background catalog.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required: [default_scene_id, scenes]
+                        properties:
+                          default_scene_id:
+                            type: [string, "null"]
+                            format: uuid
+                          scenes:
+                            type: array
+                            items: { $ref: "#/components/schemas/ProfileBackgroundCatalogScene" }
+
+  /profile-backgrounds/{sceneId}/layers:
+    get:
+      tags: [Users]
+      summary: Resolve one scene revision to its day or night immutable layer URLs.
+      security: []
+      parameters:
+        - name: sceneId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: variant
+          in: query
+          required: true
+          schema: { type: string, enum: [day, night] }
+      responses:
+        "200":
+          description: Resolved scene layers, with default fallback metadata when needed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ProfileBackgroundLayers" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /profile-backgrounds/{sceneId}/preview.png:
+    get:
+      tags: [Users]
+      summary: Read the immutable day preview for one published scene revision.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ProfileBackgroundSceneIdPath"
+        - name: revision
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Server-composited day preview PNG.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: "public, max-age=31536000, immutable" }
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /profile-background-assets/{sha256}/{layer}.png:
+    get:
+      tags: [Users]
+      summary: Read an immutable validated profile-background PNG layer.
+      security: []
+      parameters:
+        - name: sha256
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+        - name: layer
+          in: path
+          required: true
+          schema: { type: string, enum: [sky, city, foreground] }
+      responses:
+        "200":
+          description: Immutable PNG layer.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: "public, max-age=31536000, immutable" }
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /admin/dashboard:
     get:
@@ -1096,14 +1663,18 @@ paths:
       parameters:
         - name: status
           in: query
+          required: false
           schema:
             type: string
-            enum: [pending, approved, rejected, superseded]
-        - $ref: "#/components/parameters/PageQuery"
+            enum: [pending]
+            default: pending
         - $ref: "#/components/parameters/LimitQuery"
       responses:
         "200":
           description: Avatar review queue.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
           content:
             application/json:
               schema:
@@ -1115,6 +1686,8 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/AvatarSubmission"
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /admin/avatar-submissions/{submissionId}/image:
     get:
@@ -1125,11 +1698,19 @@ paths:
       responses:
         "200":
           description: Processed WebP avatar.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            X-Content-Type-Options:
+              schema: { type: string, const: nosniff }
           content:
             image/webp:
               schema:
                 type: string
                 format: binary
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /admin/avatar-submissions/{submissionId}/review:
     post:
@@ -1137,6 +1718,7 @@ paths:
       summary: Approve or reject an avatar submission.
       parameters:
         - $ref: "#/components/parameters/AvatarSubmissionIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
       requestBody:
         required: true
         content:
@@ -1146,6 +1728,9 @@ paths:
       responses:
         "200":
           description: Reviewed avatar submission.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
           content:
             application/json:
               schema:
@@ -1154,7 +1739,11 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/AvatarSubmission"
+                        $ref: "#/components/schemas/AvatarReviewResult"
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /admin/record-delivery-health:
     get:
@@ -1558,21 +2147,11 @@ paths:
   /admin/query:
     post:
       tags: [Admin]
-      summary: Execute an admin SQL query.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [sql]
-              properties:
-                sql:
-                  type: string
+      summary: Disabled legacy arbitrary SQL endpoint.
+      deprecated: true
       responses:
-        "200":
-          $ref: "#/components/responses/ApiEnvelopeResponse"
+        "410":
+          $ref: "#/components/responses/ApiErrorResponse"
 
   /admin/rescue-offers:
     get:
@@ -1943,13 +2522,35 @@ components:
       required: true
       schema:
         type: string
+        format: uuid
+    ModerationSubmissionIdPath:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     UserIdPath:
       name: userId
       in: path
       required: true
       schema:
         type: integer
-        minimum: 1
+        minimum: 0
+    ProfileBackgroundSceneIdPath:
+      name: sceneId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$'
     RecordIdPath:
       name: recordId
       in: path
@@ -2032,7 +2633,29 @@ components:
         minLength: 1
         maxLength: 32
 
+  headers:
+    NoStore:
+      description: Sensitive responses must not be stored by clients or intermediaries.
+      schema:
+        type: string
+        const: no-store
+
   responses:
+    ApiErrorResponse:
+      description: Machine-readable API error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NoStoreApiErrorResponse:
+      description: Non-cacheable machine-readable API error.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
     ApiEnvelopeResponse:
       description: Generic API envelope.
       content:
@@ -2069,6 +2692,63 @@ components:
                     $ref: "#/components/schemas/User"
                   data:
                     $ref: "#/components/schemas/User"
+    PublicUserProfileResponse:
+      description: Public allowlisted player profile.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PublicUserProfile"
+    UserProfileSnapshotResponse:
+      description: Updated public profile snapshot.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/UserProfileSnapshot"
+    ProfileBackgroundSceneResponse:
+      description: Background scene mutation result.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ProfileBackgroundScene" }
+    ProfileBackgroundDefaultUpdateResponse:
+      description: Custom or built-in default background selection.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/ApiEnvelope"
+              - type: object
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/ProfileBackgroundScene"
+                      - $ref: "#/components/schemas/ProfileBackgroundBuiltInDefault"
+    UserProfileUpdateConflictResponse:
+      description: Revision, active moderation, or idempotency conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ProfileUpdateConflictError"
+    UserProfileUpdateRateLimitResponse:
+      description: Bio submission quota or temporary block deadline.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ProfileUpdateRateLimitError"
     AchievementResponse:
       description: Achievement definition result.
       content:
@@ -2082,6 +2762,35 @@ components:
                     $ref: "#/components/schemas/Achievement"
 
   schemas:
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code, reason_code]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+        code:
+          type: string
+        reason_code:
+          type: string
+          enum:
+            - unauthorized
+            - forbidden
+            - validation_error
+            - revision_conflict
+            - idempotency_conflict
+            - rate_limited
+            - bio_temporarily_blocked
+            - content_review_pending
+            - content_rejected
+            - provider_unavailable
+            - not_found
+        detail:
+          type: string
+
     ApiEnvelope:
       type: object
       additionalProperties: true
@@ -2091,6 +2800,8 @@ components:
         error:
           type: string
         code:
+          type: string
+        reason_code:
           type: string
         message:
           type: string
@@ -2195,6 +2906,18 @@ components:
           type: integer
         user_id:
           type: integer
+        game_user_id:
+          type: [integer, "null"]
+          minimum: 0
+        gameUserId:
+          type: [integer, "null"]
+          minimum: 0
+        public_profile_id:
+          type: [integer, "null"]
+          minimum: 0
+        publicProfileId:
+          type: [integer, "null"]
+          minimum: 0
         nickname:
           type: string
         email:
@@ -2213,12 +2936,10 @@ components:
           maxLength: 150
           description: Camel-case compatibility alias for profile_bio.
         background_scene_id:
-          type: string
-          enum: [default]
-          description: Published profile background scene. P0a exposes only the built-in default.
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
+          description: Published profile background scene or the built-in default.
         backgroundSceneId:
-          type: string
-          enum: [default]
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
           description: Camel-case compatibility alias for background_scene_id.
         featured_mode_keys:
           type: array
@@ -2247,12 +2968,20 @@ components:
     UserProfileUpdateRequest:
       type: object
       additionalProperties: false
-      minProperties: 1
+      minProperties: 2
+      required: [revision]
+      anyOf:
+        - required: [background_scene_id]
+        - required: [featured_mode_keys]
+        - required: [profile_bio]
       properties:
-        background_scene_id:
+        profile_bio:
           type: string
-          enum: [default]
-          description: P0a accepts only the built-in default scene.
+          maxLength: 150
+          description: Submitted for moderation; the prior approved bio remains public until approval.
+        background_scene_id:
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
+          description: A published complete scene or the built-in default.
         featured_mode_keys:
           type: array
           maxItems: 3
@@ -2263,51 +2992,522 @@ components:
           type: integer
           minimum: 0
 
-    AvatarSubmission:
+    PublicUserProfile:
       type: object
-      additionalProperties: true
-      required: [id, status]
+      additionalProperties: false
+      required: [id, nickname, avatar_url, profile_bio, background_scene_id, featured_mode_keys, revision]
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        nickname:
+          type: string
+        avatar_url:
+          type: string
+        profile_bio:
+          type: string
+          maxLength: 150
+        background_scene_id:
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
+        featured_mode_keys:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        created_at:
+          type: [string, "null"]
+          format: date-time
+          description: Null when no account-registration timestamp is available.
+        revision:
+          type: integer
+          minimum: 0
+
+    UserProfileSnapshot:
+      type: object
+      additionalProperties: false
+      required: [user_id, profile_bio, background_scene_id, featured_mode_keys, revision]
+      properties:
+        user_id:
+          type: integer
+          minimum: 0
+        profile_bio:
+          type: string
+          maxLength: 150
+        background_scene_id:
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
+        featured_mode_keys:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        revision:
+          type: integer
+          minimum: 0
+        moderation_submission:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationSubmissionSummary"
+            - type: "null"
+        moderation_queue:
+          oneOf:
+            - $ref: "#/components/schemas/ModerationQueueStatus"
+            - type: "null"
+
+    UserProfileConflictSnapshot:
+      type: object
+      additionalProperties: false
+      required: [profile_bio, background_scene_id, featured_mode_keys, revision]
+      properties:
+        profile_bio:
+          type: string
+          maxLength: 150
+        background_scene_id:
+          $ref: "#/components/schemas/ProfileBackgroundSceneReference"
+        featured_mode_keys:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        revision:
+          type: integer
+          minimum: 0
+
+    ProfileContentReviewPendingData:
+      type: object
+      additionalProperties: false
+      required: [submission_id, status, same_content]
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [submitted, ai_reviewing, ai_pass, manual_review, failed_retryable]
+        same_content:
+          type: boolean
+
+    ProfileUpdateConflictError:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [success, error, code, reason_code, data]
+          properties:
+            success: { type: boolean, const: false }
+            error: { type: string }
+            code: { type: string, const: PROFILE_REVISION_CONFLICT }
+            reason_code: { type: string, const: revision_conflict }
+            data: { $ref: "#/components/schemas/UserProfileConflictSnapshot" }
+        - type: object
+          additionalProperties: false
+          required: [success, error, code, reason_code, data]
+          properties:
+            success: { type: boolean, const: false }
+            error: { type: string }
+            code: { type: string, const: CONTENT_REVIEW_PENDING }
+            reason_code: { type: string, const: content_review_pending }
+            data: { $ref: "#/components/schemas/ProfileContentReviewPendingData" }
+        - type: object
+          additionalProperties: false
+          required: [success, error, code, reason_code]
+          properties:
+            success: { type: boolean, const: false }
+            error: { type: string }
+            code: { type: string, const: IDEMPOTENCY_KEY_CONFLICT }
+            reason_code: { type: string, const: idempotency_conflict }
+        - type: object
+          additionalProperties: false
+          required: [success, error, code, reason_code]
+          properties:
+            success: { type: boolean, const: false }
+            error: { type: string }
+            code: { type: string, const: GAME_ACCOUNT_MAPPING_UNAVAILABLE }
+            reason_code: { type: string, const: revision_conflict }
+        - type: object
+          additionalProperties: false
+          required: [success, error, code, reason_code]
+          properties:
+            success: { type: boolean, const: false }
+            error: { type: string }
+            code: { type: string, const: GAME_USER_NOT_FOUND }
+            reason_code: { type: string, const: not_found }
+
+    ProfileRateLimitData:
+      type: object
+      additionalProperties: false
+      required: [next_allowed_at]
+      properties:
+        next_allowed_at:
+          type: string
+          format: date-time
+
+    ProfileUpdateRateLimitError:
+      type: object
+      additionalProperties: false
+      required: [success, error, code, reason_code, data]
+      properties:
+        success: { type: boolean, const: false }
+        error: { type: string }
+        code: { type: string }
+        reason_code: { type: string }
+        data: { $ref: "#/components/schemas/ProfileRateLimitData" }
+      oneOf:
+        - required: [code, reason_code]
+          properties:
+            code: { const: BIO_RATE_LIMITED }
+            reason_code: { const: rate_limited }
+        - required: [code, reason_code]
+          properties:
+            code: { const: BIO_TEMPORARILY_BLOCKED }
+            reason_code: { const: bio_temporarily_blocked }
+
+    ModerationSubmissionSummary:
+      type: object
+      additionalProperties: false
+      required: [id, status, reason_code, submitted_at]
       properties:
         id:
           type: string
-        user_id:
+          format: uuid
+        status:
+          type: string
+          enum: [submitted, ai_reviewing, ai_pass, ai_reject, manual_review, failed_retryable, approved, rejected]
+        reason_code:
+          type: [string, "null"]
+        submitted_at:
+          type: string
+          format: date-time
+        content_type:
+          type: string
+          enum: [bio]
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: [string, "null"]
+          format: date-time
+
+    ModerationQueueStatus:
+      type: object
+      additionalProperties: false
+      required: [status, pending_count]
+      properties:
+        status: { type: string, enum: [normal, queued] }
+        pending_count: { type: integer, minimum: 0 }
+
+    AdminModerationSubmission:
+      type: object
+      additionalProperties: false
+      required: [id, content_type, account_user_id, game_user_id, submitted_content, status, reason_code, model_version, submitted_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        content_type: { type: string, enum: [bio] }
+        account_user_id: { type: integer, minimum: 0 }
+        game_user_id: { type: integer, minimum: 0 }
+        submitted_content: { type: string, maxLength: 150 }
+        status: { type: string, enum: [manual_review] }
+        reason_code: { type: [string, "null"] }
+        model_version: { type: string, const: deepseek-v4-flash }
+        submitted_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ModerationReviewRequest:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [decision, reason_code]
+          properties:
+            decision: { type: string, const: approved }
+            reason_code: { type: string, enum: [safe, admin_approved] }
+        - type: object
+          additionalProperties: false
+          required: [decision, reason_code]
+          properties:
+            decision: { type: string, const: rejected }
+            reason_code:
+              type: string
+              enum: [sexual, violence, hate, illegal, self_harm, personal_data, spam, other, admin_rejected]
+        - type: object
+          additionalProperties: false
+          required: [decision, reason_code]
+          properties:
+            decision: { type: string, const: retry }
+            reason_code: { type: string, const: admin_retry }
+
+    ModerationReviewResult:
+      type: object
+      additionalProperties: false
+      required: [id, status, reason_code]
+      properties:
+        id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [failed_retryable, approved, rejected]
+        reason_code: { type: [string, "null"] }
+        retry_queued: { type: boolean }
+
+    IntegrationStepUpRequest:
+      type: object
+      additionalProperties: false
+      required: [current_password]
+      properties:
+        current_password: { type: string, minLength: 1 }
+
+    DeepSeekKeyUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [api_key, current_password]
+      properties:
+        api_key: { type: string, minLength: 8, maxLength: 512 }
+        current_password: { type: string, minLength: 1 }
+
+    DeepSeekIntegrationState:
+      type: object
+      additionalProperties: false
+      required: [configured, status]
+      properties:
+        configured: { type: boolean }
+        key_version: { type: [integer, "null"], minimum: 1 }
+        masked_key:
+          type: string
+          pattern: '^\*\*\*\*.{4}$'
+        status:
+          type: string
+          enum: [active, disabled, retired, unconfigured]
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    DeepSeekDisableResult:
+      type: object
+      additionalProperties: false
+      required: [configured, status, key_version]
+      properties:
+        configured: { type: boolean, const: false }
+        status: { type: string, const: disabled }
+        key_version: { type: [integer, "null"], minimum: 1 }
+
+    DeepSeekConnectionTestSuccess:
+      type: object
+      additionalProperties: false
+      required: [status, key_version]
+      properties:
+        status: { type: string, const: ok }
+        key_version: { type: [integer, "null"], minimum: 1 }
+
+    DeepSeekConnectionTestPending:
+      type: object
+      additionalProperties: false
+      required: [status, key_version]
+      properties:
+        status: { type: string, const: pending }
+        key_version: { type: [integer, "null"], minimum: 1 }
+
+    DeepSeekConnectionTestFailure:
+      type: object
+      additionalProperties: false
+      required: [status, key_version]
+      properties:
+        status: { type: string, minLength: 1 }
+        key_version: { type: [integer, "null"], minimum: 1 }
+
+    DeepSeekConnectionTestFailureEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, error, code, reason_code, data]
+      properties:
+        success: { type: boolean, const: false }
+        error: { type: string }
+        code: { type: string, const: INTEGRATION_TEST_FAILED }
+        reason_code: { type: string, const: provider_unavailable }
+        data: { $ref: "#/components/schemas/DeepSeekConnectionTestFailure" }
+
+    ProfileBackgroundSceneReference:
+      oneOf:
+        - type: string
+          const: default
+        - type: string
+          format: uuid
+
+    ProfileBackgroundLayerMetadata:
+      type: object
+      additionalProperties: false
+      required: [mime_type, byte_size, sha256, width, height, alpha_min, alpha_max]
+      properties:
+        mime_type: { type: string, const: image/png }
+        byte_size: { type: integer, minimum: 1 }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        width: { type: integer, const: 2172 }
+        height: { type: integer, const: 272 }
+        alpha_min: { type: integer, minimum: 0, maximum: 255 }
+        alpha_max: { type: integer, minimum: 0, maximum: 255 }
+
+    ProfileBackgroundVariant:
+      type: object
+      additionalProperties: false
+      required: [id, scene_family_id, name, variant, width, height, layers, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        scene_family_id: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        name: { type: string, maxLength: 80 }
+        variant: { type: string, enum: [day, night] }
+        width: { type: integer, const: 2172 }
+        height: { type: integer, const: 272 }
+        layers:
+          type: object
+          additionalProperties: false
+          required: [sky, city, foreground]
+          properties:
+            sky: { $ref: "#/components/schemas/ProfileBackgroundLayerMetadata" }
+            city: { $ref: "#/components/schemas/ProfileBackgroundLayerMetadata" }
+            foreground: { $ref: "#/components/schemas/ProfileBackgroundLayerMetadata" }
+        status: { type: string, enum: [validated, paired, published, archived] }
+        created_at: { type: string, format: date-time }
+
+    ProfileBackgroundScene:
+      type: object
+      additionalProperties: false
+      required: [id, scene_family_id, name, day_variant_id, night_variant_id, status, revision]
+      properties:
+        id: { type: string, format: uuid }
+        scene_family_id: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        day_variant_id: { type: string, format: uuid }
+        night_variant_id: { type: string, format: uuid }
+        status: { type: string, enum: [paired, published, archived] }
+        revision: { type: integer, minimum: 1 }
+        is_default: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    ProfileBackgroundCatalogScene:
+      type: object
+      additionalProperties: false
+      required: [id, name, scene_family_id, revision, preview_url]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        scene_family_id: { type: string }
+        revision: { type: integer, minimum: 1 }
+        preview_url: { type: string }
+
+    ProfileBackgroundLayers:
+      type: object
+      additionalProperties: false
+      required: [requested_scene_id, scene_id, variant, revision, fallback, layers]
+      properties:
+        requested_scene_id: { type: string }
+        scene_id: { type: string, format: uuid }
+        variant: { type: string, enum: [day, night] }
+        revision: { type: integer, minimum: 1 }
+        fallback: { type: boolean }
+        layers:
+          type: object
+          additionalProperties: false
+          required: [sky, city, foreground]
+          properties:
+            sky: { type: string }
+            city: { type: string }
+            foreground: { type: string }
+
+    ProfileBackgroundVariantUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [scene_family_id, variant, sky, city, foreground]
+      properties:
+        scene_family_id: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        name: { type: string, maxLength: 80 }
+        variant: { type: string, enum: [day, night] }
+        sky: { type: string, format: binary }
+        city: { type: string, format: binary }
+        foreground: { type: string, format: binary }
+
+    ProfileBackgroundSceneCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [scene_family_id, name, day_variant_id, night_variant_id]
+      properties:
+        scene_family_id: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        day_variant_id: { type: string, format: uuid }
+        night_variant_id: { type: string, format: uuid }
+
+    ProfileBackgroundDefaultUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [scene_id]
+      properties:
+        scene_id: { $ref: "#/components/schemas/ProfileBackgroundSceneReference" }
+
+    ProfileBackgroundBuiltInDefault:
+      type: object
+      additionalProperties: false
+      required: [scene_id, using_builtin]
+      properties:
+        scene_id: { type: "null" }
+        using_builtin: { type: boolean, const: true }
+
+    AvatarSubmission:
+      type: object
+      additionalProperties: false
+      required: [id, status, moderation_status, reason_code, byte_size, width, height, submitted_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_user_id:
           type: integer
+        game_user_id:
+          type: integer
+        nickname:
+          type: string
         status:
           type: string
           enum: [pending, approved, rejected, superseded]
+        moderation_status:
+          type: string
+          enum: [submitted, ai_reviewing, ai_pass, ai_reject, manual_review, failed_retryable, approved, rejected]
+        reason_code:
+          type: [string, "null"]
         byte_size:
           type: integer
-          minimum: 1
-        mime_type:
-          type: string
-          enum: [image/webp]
+          minimum: 0
         width:
           type: integer
           enum: [256]
         height:
           type: integer
           enum: [256]
-        review_note:
-          type: [string, "null"]
-          maxLength: 500
         submitted_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-        reviewed_at:
+        updated_at:
           type: [string, "null"]
           format: date-time
 
     AvatarReviewRequest:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [decision, reason_code]
+          properties:
+            decision: { type: string, const: approved }
+            reason_code: { type: string, enum: [safe, admin_approved] }
+        - type: object
+          additionalProperties: false
+          required: [decision, reason_code]
+          properties:
+            decision: { type: string, const: rejected }
+            reason_code:
+              type: string
+              enum: [sexual, violence, hate, illegal, self_harm, personal_data, spam, other, embedded_text, admin_rejected]
+
+    AvatarReviewResult:
       type: object
       additionalProperties: false
-      required: [decision]
+      required: [id, status, reason_code]
       properties:
-        decision:
+        id: { type: string, format: uuid }
+        status:
           type: string
           enum: [approved, rejected]
-        note:
-          type: string
-          maxLength: 500
+        reason_code: { type: [string, "null"] }
 
     RegisterRequest:
       type: object

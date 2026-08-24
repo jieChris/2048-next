@@ -4,6 +4,7 @@ type JsonRecord = Record<string, unknown>;
 
 export const LEGACY_AUTH_TOKEN_KEY = "2048_auth_token_v1";
 export const AUTH_USER_ID_KEY = "2048_auth_userId_v1";
+export const PUBLIC_PROFILE_ID_KEY = "2048_public_profile_id_v1";
 export const AUTH_NICKNAME_KEY = "2048_auth_nickname_v1";
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -112,7 +113,7 @@ async function readResponseJson(response: Response): Promise<JsonRecord | null> 
 
 function resolveFetch(options: AuthSessionOptions): FetchLike | null {
   if (options.fetchLike) return options.fetchLike;
-  return typeof fetch === "function" ? fetch.bind(globalThis) : null;
+  return typeof window !== "undefined" && typeof fetch === "function" ? fetch.bind(globalThis) : null;
 }
 
 function resolveBases(options: AuthSessionOptions): string[] {
@@ -137,6 +138,12 @@ export function setAuthSession(payload: JsonRecord, options: { storageLike?: Sto
   accessTokenExpiresAt = Math.floor(Number(payload.expiresAt || payload.expires_at || 0));
   write(storageLike, LEGACY_AUTH_TOKEN_KEY, isLocalDevelopmentPage() ? accessToken : "");
   write(storageLike, AUTH_USER_ID_KEY, user?.id ?? payload.userId ?? payload.user_id ?? payload.id);
+  write(
+    storageLike,
+    PUBLIC_PROFILE_ID_KEY,
+    user?.public_profile_id ?? user?.publicProfileId ?? user?.game_user_id ?? user?.gameUserId
+      ?? payload.public_profile_id ?? payload.publicProfileId ?? payload.game_user_id ?? payload.gameUserId
+  );
   write(storageLike, AUTH_NICKNAME_KEY, user?.nickname ?? payload.nickname);
   notifyAuthChanged();
 }
@@ -147,6 +154,7 @@ export function clearAuthSession(options: { storageLike?: Storage | null } = {})
   accessTokenExpiresAt = 0;
   write(storageLike, LEGACY_AUTH_TOKEN_KEY, "");
   write(storageLike, AUTH_USER_ID_KEY, "");
+  write(storageLike, PUBLIC_PROFILE_ID_KEY, "");
   write(storageLike, AUTH_NICKNAME_KEY, "");
   notifyAuthChanged();
 }

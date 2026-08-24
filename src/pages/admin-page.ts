@@ -8,8 +8,9 @@ import {
   type AdminReconciliationSnapshot
 } from "../services/admin";
 import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
+import { randomId } from "../utils/crypto-random";
 
-type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "governance" | "audit" | "tools";
+type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "moderation" | "backgrounds" | "governance" | "audit" | "tools";
 type Language = "zh" | "en";
 
 const ADMIN_DENIED_REDIRECT = "/404.html";
@@ -25,6 +26,26 @@ const copy: Record<Language, Record<string, string>> = {
     records: "游戏记录",
     achievements: "成就管理",
     rescue: "恢复单",
+    moderation: "内容审核",
+    backgrounds: "主页背景",
+    backgroundHint: "上传昼夜三层变体，将白天和夜晚配成完整场景后发布给玩家选择。",
+    uploadVariant: "上传三层变体",
+    sceneFamily: "场景族 ID",
+    variant: "昼夜版本",
+    day: "白天",
+    night: "夜晚",
+    skyLayer: "天空 PNG",
+    cityLayer: "建筑 PNG",
+    foregroundLayer: "前景 PNG",
+    variants: "素材变体",
+    completeScenes: "完整昼夜场景",
+    dayVariant: "白天变体",
+    nightVariant: "夜晚变体",
+    publish: "发布",
+    archive: "归档",
+    setDefault: "设为默认",
+    restoreBuiltInDefault: "恢复内置默认",
+    defaultScene: "当前默认",
     governance: "管理员与权限",
     audit: "审计日志",
     tools: "数据工具",
@@ -157,6 +178,33 @@ const copy: Record<Language, Record<string, string>> = {
     expired: "已过期",
     rejected: "已拒绝",
     pending: "待处理",
+    moderationQueue: "待人工审核",
+    moderationHint: "逐条审核用户提交内容；操作会记录原因并刷新当前队列。",
+    accountUserId: "账号 ID",
+    gameUserId: "游戏 ID",
+    account: "账号",
+    game: "游戏",
+    submittedContent: "提交内容",
+    model: "模型",
+    submittedAt: "提交时间",
+    updatedAt: "更新时间",
+    approve: "批准",
+    reject: "拒绝",
+    retryModeration: "要求重试",
+    deepseekIntegration: "DeepSeek 集成",
+    configured: "已配置",
+    maskedKey: "密钥掩码",
+    yes: "是",
+    no: "否",
+    configureKey: "配置 / 轮换",
+    disableIntegration: "停用",
+    testConnection: "连接测试",
+    apiKey: "API Key",
+    currentPassword: "当前密码",
+    secretRequired: "请填写 API Key 和当前密码",
+    passwordRequired: "请填写当前密码",
+    connectionPending: "测试进行中",
+    connectionOk: "连接测试成功",
     hideRecord: "隐藏记录",
     restoreRecord: "恢复记录",
     leaderboardBest: "当前榜首记录",
@@ -215,8 +263,7 @@ const copy: Record<Language, Record<string, string>> = {
     eventType: "事件类型",
     details: "详情",
     tableBrowser: "表浏览",
-    readonlySql: "只读 SQL",
-    readonlyHint: "仅允许单条 SELECT；只读事务、5 秒超时、最多返回受控数据量。",
+    dataToolsHint: "固定发布对账与受控安全表浏览。",
     reconciliation: "固定只读发布对账",
     reconciliationHint: "固定查询当前记录、玩家、各模式榜单、Top 10 与目标速度资格；不会修改或隐藏任何成绩。",
     totalRecords: "总记录",
@@ -225,7 +272,6 @@ const copy: Record<Language, Record<string, string>> = {
     table: "数据表",
     limit: "条数",
     load: "加载",
-    run: "执行",
     export: "导出 JSON",
     success: "操作已完成",
     invalidRulesJson: "规则 JSON 格式无效",
@@ -245,6 +291,26 @@ const copy: Record<Language, Record<string, string>> = {
     records: "Game Records",
     achievements: "Achievements",
     rescue: "Rescue Offers",
+    moderation: "Content Moderation",
+    backgrounds: "Profile Backgrounds",
+    backgroundHint: "Upload day/night three-layer variants, pair them into a complete scene, then publish it for players.",
+    uploadVariant: "Upload Three Layers",
+    sceneFamily: "Scene family ID",
+    variant: "Variant",
+    day: "Day",
+    night: "Night",
+    skyLayer: "Sky PNG",
+    cityLayer: "City PNG",
+    foregroundLayer: "Foreground PNG",
+    variants: "Variants",
+    completeScenes: "Complete Day/Night Scenes",
+    dayVariant: "Day variant",
+    nightVariant: "Night variant",
+    publish: "Publish",
+    archive: "Archive",
+    setDefault: "Set default",
+    restoreBuiltInDefault: "Restore built-in default",
+    defaultScene: "Current default",
     governance: "Admins & Access",
     audit: "Audit Logs",
     tools: "Data Tools",
@@ -377,6 +443,33 @@ const copy: Record<Language, Record<string, string>> = {
     expired: "Expired",
     rejected: "Rejected",
     pending: "Pending",
+    moderationQueue: "Manual Review Queue",
+    moderationHint: "Review each submitted item individually. Decisions record a reason and refresh this queue.",
+    accountUserId: "Account ID",
+    gameUserId: "Game ID",
+    account: "Account",
+    game: "Game",
+    submittedContent: "Submitted Content",
+    model: "Model",
+    submittedAt: "Submitted",
+    updatedAt: "Updated",
+    approve: "Approve",
+    reject: "Reject",
+    retryModeration: "Request Retry",
+    deepseekIntegration: "DeepSeek Integration",
+    configured: "Configured",
+    maskedKey: "Masked Key",
+    yes: "Yes",
+    no: "No",
+    configureKey: "Configure / Rotate",
+    disableIntegration: "Disable",
+    testConnection: "Test Connection",
+    apiKey: "API Key",
+    currentPassword: "Current Password",
+    secretRequired: "API key and current password are required",
+    passwordRequired: "Current password is required",
+    connectionPending: "Connection test pending",
+    connectionOk: "Connection test succeeded",
     hideRecord: "Hide Record",
     restoreRecord: "Restore Record",
     leaderboardBest: "Current Best",
@@ -435,8 +528,7 @@ const copy: Record<Language, Record<string, string>> = {
     eventType: "Event Type",
     details: "Details",
     tableBrowser: "Table Browser",
-    readonlySql: "Read-only SQL",
-    readonlyHint: "One SELECT only, read-only transaction, five-second timeout, and bounded results.",
+    dataToolsHint: "Fixed release reconciliation and controlled safe table browsing.",
     reconciliation: "Fixed Read-only Release Reconciliation",
     reconciliationHint: "Fixed queries cover records, players, leaderboard modes, Top 10, and target speed eligibility without changing or hiding any result.",
     totalRecords: "Total Records",
@@ -445,7 +537,6 @@ const copy: Record<Language, Record<string, string>> = {
     table: "Table",
     limit: "Limit",
     load: "Load",
-    run: "Run",
     export: "Export JSON",
     success: "Action completed",
     invalidRulesJson: "Invalid rules JSON",
@@ -462,7 +553,7 @@ const copy: Record<Language, Record<string, string>> = {
 const navigation: Array<{ group: string; items: Array<{ view: ViewName; label: string; icon: string }> }> = [
   { group: "overview", items: [{ view: "dashboard", label: "dashboard", icon: "▦" }] },
   { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }] },
-  { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }] },
+  { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }, { view: "moderation", label: "moderation", icon: "✓" }, { view: "backgrounds", label: "backgrounds", icon: "▧" }] },
   { group: "governanceGroup", items: [{ view: "governance", label: "governance", icon: "♜" }, { view: "audit", label: "audit", icon: "≡" }] },
   { group: "system", items: [{ view: "tools", label: "tools", icon: "⌘" }] }
 ];
@@ -570,8 +661,8 @@ function avatarReviewCard(items: AdminRecord[]): string {
   const body = items.length
     ? `<div class="admin-avatar-review-list">${items.map((item) => {
       const id = text(item.id);
-      const name = text(item.nickname || item.display_name || `#${item.user_id}`);
-      return `<article class="admin-avatar-review-item"><img class="admin-avatar-review-image" src="/api/admin/avatar-submissions/${encodeURIComponent(id)}/image" alt="${escapeHtml(name)}"><div class="admin-avatar-review-copy"><strong>${escapeHtml(name)}</strong><small>#${escapeHtml(item.user_id)} · ${escapeHtml(item.email)}</small><span>${escapeHtml(t("avatarSubmittedAt"))}：${escapeHtml(formatDate(item.submitted_at))} · ${escapeHtml(t("avatarBytes"))}：${number(item.byte_size).toLocaleString()} B</span><div class="admin-avatar-review-actions"><button class="btn btn-sm btn-primary" type="button" data-avatar-approve="${escapeHtml(id)}">${escapeHtml(t("approveAvatar"))}</button><button class="btn btn-sm btn-outline-danger" type="button" data-avatar-reject="${escapeHtml(id)}">${escapeHtml(t("rejectAvatar"))}</button></div></div></article>`;
+      const name = text(item.nickname || `#${item.game_user_id}`);
+      return `<article class="admin-avatar-review-item"><img class="admin-avatar-review-image" src="/api/admin/avatar-submissions/${encodeURIComponent(id)}/image" alt="${escapeHtml(name)}"><div class="admin-avatar-review-copy"><strong>${escapeHtml(name)}</strong><small>${escapeHtml(t("account"))} #${escapeHtml(item.account_user_id)} · ${escapeHtml(t("game"))} #${escapeHtml(item.game_user_id)}</small><span>${escapeHtml(t("avatarSubmittedAt"))}：${escapeHtml(formatDate(item.submitted_at))} · ${escapeHtml(t("avatarBytes"))}：${number(item.byte_size).toLocaleString()} B</span><div class="admin-avatar-review-actions"><button class="btn btn-sm btn-primary" type="button" data-avatar-approve="${escapeHtml(id)}">${escapeHtml(t("approveAvatar"))}</button><button class="btn btn-sm btn-outline-danger" type="button" data-avatar-reject="${escapeHtml(id)}">${escapeHtml(t("rejectAvatar"))}</button></div></div></article>`;
     }).join("")}</div>`
     : emptyState(t("noPendingAvatars"));
   return card(t("pendingAvatars"), `<p class="text-secondary mb-3">${escapeHtml(t("avatarReviewHint"))}</p>${body}`, "admin-wide-card");
@@ -601,7 +692,13 @@ function toast(message: string, tone: "ok" | "error" = "ok"): void {
 
 function closeDialog(): void {
   const dialog = byId<HTMLDialogElement>("admin-dialog");
-  if (dialog.open) dialog.close();
+  clearDialogSecrets();
+  if (dialog.open && typeof dialog.close === "function") dialog.close();
+  else dialog.removeAttribute("open");
+}
+
+function clearDialogSecrets(): void {
+  byId("admin-dialog-body").querySelectorAll<HTMLInputElement>('input[type="password"]').forEach((input) => { input.value = ""; });
 }
 
 function openDialog(options: {
@@ -769,22 +866,15 @@ async function renderUsers(): Promise<void> {
     page: url.searchParams.get("page") || "1",
     limit: "50"
   };
-  const [response, avatarResponse] = await Promise.all([
-    request<AdminRecord[]>(adminQuery("/admin/users", params)),
-    api.request<AdminRecord[]>(adminQuery("/admin/avatar-submissions", { status: "pending", limit: 50 }))
-  ]);
+  const response = await request<AdminRecord[]>(adminQuery("/admin/users", params));
   const list = rows(response.data);
-  const pendingAvatars = avatarResponse.success === true ? rows(avatarResponse.data) : [];
   const body = list.map((user) => `<tr><td><button class="admin-user-cell" data-user="${escapeHtml(user.id)}"><span class="avatar avatar-sm">${escapeHtml(text(user.nickname || user.display_name || user.email).slice(0, 1).toUpperCase())}</span><span><strong>${escapeHtml(user.nickname || user.display_name || `#${user.id}`)}</strong><small>${escapeHtml(user.email)}</small></span></button></td><td>${badge(roleLabel(user.role), user.role === "super_admin" ? "purple" : "azure")}</td><td>${badge(user.is_active === false ? t("inactive") : t("active"), user.is_active === false ? "red" : "green")}</td><td>${escapeHtml(formatDate(user.created_at))}</td><td>${escapeHtml(formatDate(user.last_login_at))}</td><td>${escapeHtml(formatDate(user.last_seen_at))}</td><td>${number(user.record_count).toLocaleString()}</td><td><button class="btn btn-sm" data-user="${escapeHtml(user.id)}">${escapeHtml(t("view"))}</button></td></tr>`).join("");
   byId("admin-content").innerHTML = pageHeader(t("users"), t("searchUsers"), `<button class="btn btn-primary" data-import>${escapeHtml(t("importRecord"))}</button>`) +
     `<section class="card admin-filter-card"><form class="card-body admin-filter-grid" data-user-filter><label>${escapeHtml(t("search"))}<input class="form-control" name="q" value="${escapeHtml(params.q)}" placeholder="${escapeHtml(t("searchUsers"))}"></label><label>${escapeHtml(t("role"))}<select class="form-select" name="role"><option value="">${escapeHtml(t("allRoles"))}</option>${["player", "board_admin", "super_admin", "guest"].map((role) => `<option value="${role}" ${params.role === role ? "selected" : ""}>${escapeHtml(roleLabel(role))}</option>`).join("")}</select></label><label>${escapeHtml(t("status"))}<select class="form-select" name="status"><option value="">${escapeHtml(t("allStatuses"))}</option><option value="active" ${params.status === "active" ? "selected" : ""}>${escapeHtml(t("active"))}</option><option value="inactive" ${params.status === "inactive" ? "selected" : ""}>${escapeHtml(t("inactive"))}</option></select></label><label>${escapeHtml(t("activityFilter"))}<select class="form-select" name="activity"><option value="">${escapeHtml(t("allActivity"))}</option><option value="7d" ${params.activity === "7d" ? "selected" : ""}>${escapeHtml(t("active7d"))}</option><option value="30d" ${params.activity === "30d" ? "selected" : ""}>${escapeHtml(t("active30d"))}</option><option value="never" ${params.activity === "never" ? "selected" : ""}>${escapeHtml(t("neverActive"))}</option></select></label><label>${escapeHtml(t("sortBy"))}<select class="form-select" name="sort"><option value="newest" ${params.sort === "newest" ? "selected" : ""}>${escapeHtml(t("newest"))}</option><option value="last_active" ${params.sort === "last_active" ? "selected" : ""}>${escapeHtml(t("recentActive"))}</option><option value="records" ${params.sort === "records" ? "selected" : ""}>${escapeHtml(t("mostRecords"))}</option></select></label><button class="btn btn-primary" type="submit">${escapeHtml(t("search"))}</button></form></section>` +
-    avatarReviewCard(pendingAvatars) +
     card(t("users"), table([t("user"), t("role"), t("status"), t("createdAt"), t("lastLogin"), t("lastActive"), t("recordCount"), t("actions")], body)) + pagination("users", response, { q: params.q, role: params.role, status: params.status, activity: params.activity, sort: params.sort });
   byId("admin-content").querySelector<HTMLFormElement>("[data-user-filter]")?.addEventListener("submit", (event) => { event.preventDefault(); navigate("users", Object.fromEntries(new FormData(event.currentTarget as HTMLFormElement).entries())); });
   byId("admin-content").querySelectorAll<HTMLElement>("[data-user]").forEach((node) => node.addEventListener("click", () => navigate("users", { user: node.dataset.user })));
   byId("admin-content").querySelector("[data-import]")?.addEventListener("click", () => openImportDialog());
-  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-approve]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarApprove || "", "approved")));
-  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-reject]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarReject || "", "rejected")));
   bindPagination();
 }
 
@@ -834,12 +924,18 @@ async function renderUserDetail(userId: string): Promise<void> {
 }
 
 function editProfile(user: AdminRecord): void {
+  const legacyAvatarEnabled = adminIdentity.avatar_review_enabled !== true;
   openDialog({
     title: t("editProfile"),
-    body: `<div class="mb-3"><label class="form-label">${escapeHtml(t("nickname"))}</label><input id="dialog-nickname" class="form-control" value="${escapeHtml(user.nickname)}"></div><div class="mb-3"><label class="form-label">${escapeHtml(t("displayName"))}</label><input id="dialog-display-name" class="form-control" value="${escapeHtml(user.display_name)}"></div><div><label class="form-label">${escapeHtml(t("avatarUrl"))}</label><input id="dialog-avatar" class="form-control" type="url" value="${escapeHtml(user.avatar_url)}"></div>`,
+    body: `<div class="mb-3"><label class="form-label">${escapeHtml(t("nickname"))}</label><input id="dialog-nickname" class="form-control" value="${escapeHtml(user.nickname)}"></div><div${legacyAvatarEnabled ? " class=\"mb-3\"" : ""}><label class="form-label">${escapeHtml(t("displayName"))}</label><input id="dialog-display-name" class="form-control" value="${escapeHtml(user.display_name)}"></div>${legacyAvatarEnabled ? `<div><label class="form-label">${escapeHtml(t("avatarUrl"))}</label><input id="dialog-avatar" class="form-control" type="url" value="${escapeHtml(user.avatar_url)}"></div>` : ""}`,
     confirmLabel: t("save"),
     onConfirm: async () => {
-      await request(`/admin/users/${user.id}/profile`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nickname: dialogValue("dialog-nickname"), display_name: dialogValue("dialog-display-name"), avatar_url: dialogValue("dialog-avatar") }) });
+      const payload = {
+        nickname: dialogValue("dialog-nickname"),
+        display_name: dialogValue("dialog-display-name"),
+        ...(legacyAvatarEnabled ? { avatar_url: dialogValue("dialog-avatar") } : {})
+      };
+      await request(`/admin/users/${user.id}/profile`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       toast(t("success"));
       await renderCurrentView();
     }
@@ -849,16 +945,17 @@ function editProfile(user: AdminRecord): void {
 function reviewAvatar(submissionId: string, decision: "approved" | "rejected"): void {
   if (!submissionId) return;
   const rejecting = decision === "rejected";
+  const rejectionReasons = ["sexual", "violence", "hate", "illegal", "self_harm", "personal_data", "spam", "embedded_text", "other", "admin_rejected"];
   openDialog({
     title: rejecting ? t("rejectAvatar") : t("approveAvatar"),
-    body: `${rejecting ? `<p>${escapeHtml(t("avatarReviewHint"))}</p><label class="form-label" for="dialog-avatar-review-note">${escapeHtml(t("note"))}</label><textarea id="dialog-avatar-review-note" class="form-control" rows="3" maxlength="500" placeholder="${escapeHtml(t("avatarReviewHint"))}"></textarea>` : `<p>${escapeHtml(t("avatarReviewHint"))}</p>`}`,
+    body: `${rejecting ? `<p>${escapeHtml(t("avatarReviewHint"))}</p><label class="form-label" for="dialog-avatar-review-reason">${escapeHtml(t("reason"))}</label><select id="dialog-avatar-review-reason" class="form-select">${rejectionReasons.map((reason) => `<option value="${reason}">${reason}</option>`).join("")}</select>` : `<p>${escapeHtml(t("avatarReviewHint"))}</p>`}`,
     danger: rejecting,
     confirmLabel: rejecting ? t("rejectAvatar") : t("approveAvatar"),
     onConfirm: async () => {
       await request(`/admin/avatar-submissions/${encodeURIComponent(submissionId)}/review`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, note: rejecting ? dialogValue("dialog-avatar-review-note") : "" })
+        headers: { "Content-Type": "application/json", "Idempotency-Key": randomId("avatar-review", 16) },
+        body: JSON.stringify({ decision, reason_code: rejecting ? dialogValue("dialog-avatar-review-reason") : "admin_approved" })
       });
       toast(rejecting ? t("avatarRejected") : t("avatarApproved"));
       await renderCurrentView();
@@ -1058,6 +1155,196 @@ function auditTabs(active: string): string {
   return `<div class="admin-tabs"><button data-audit-tab="actions" class="${active === "actions" ? "is-active" : ""}">${escapeHtml(t("managementAudit"))}</button><button data-audit-tab="events" class="${active === "events" ? "is-active" : ""}">${escapeHtml(t("runtimeEvents"))}</button></div>`;
 }
 
+async function renderModeration(): Promise<void> {
+  const [submissionsResponse, integrationResponse, avatarResponse] = await Promise.all([
+    request<AdminRecord[]>(adminQuery("/admin/moderation/submissions", { status: "manual_review", limit: 100 })),
+    request<AdminRecord>("/admin/integrations/deepseek"),
+    adminIdentity.avatar_review_enabled === true
+      ? request<AdminRecord[]>(adminQuery("/admin/avatar-submissions", { status: "pending", limit: 50 }))
+      : Promise.resolve({ success: true, data: [] } as AdminApiResponse<AdminRecord[]>)
+  ]);
+  const submissions = rows(submissionsResponse.data);
+  const pendingAvatars = rows(avatarResponse.data);
+  const integration = record(integrationResponse.data);
+  const integrationDetails = `<dl class="admin-definition"><dt>${escapeHtml(t("configured"))}</dt><dd>${escapeHtml(integration.configured === true ? t("yes") : t("no"))}</dd><dt>${escapeHtml(t("status"))}</dt><dd>${badge(statusLabel(integration.status), integration.status === "active" ? "green" : "secondary")}</dd><dt>${escapeHtml(t("maskedKey"))}</dt><dd>${escapeHtml(integration.masked_key || "—")}</dd><dt>${escapeHtml(t("updatedAt"))}</dt><dd>${escapeHtml(formatDate(integration.updated_at))}</dd></dl><div class="admin-page-actions mt-3"><button class="btn btn-primary" type="button" data-deepseek-configure>${escapeHtml(t("configureKey"))}</button><button class="btn" type="button" data-deepseek-test>${escapeHtml(t("testConnection"))}</button><button class="btn btn-outline-danger" type="button" data-deepseek-disable>${escapeHtml(t("disableIntegration"))}</button></div>`;
+  const queue = submissions.length ? `<div class="admin-moderation-list">${submissions.map((item) => {
+    const id = text(item.id);
+    return `<article class="admin-moderation-item"><div class="admin-moderation-heading"><strong>${escapeHtml(t("accountUserId"))} #${escapeHtml(item.account_user_id)} · ${escapeHtml(t("gameUserId"))} #${escapeHtml(item.game_user_id)}</strong>${badge(statusLabel(item.status), "yellow")}</div><div><span class="text-secondary">${escapeHtml(t("submittedContent"))}</span><p class="admin-moderation-content">${escapeHtml(item.submitted_content)}</p></div><dl class="admin-definition"><dt>${escapeHtml(t("reason"))}</dt><dd>${escapeHtml(item.reason_code || "—")}</dd><dt>${escapeHtml(t("model"))}</dt><dd>${escapeHtml(item.model_version || "—")}</dd><dt>${escapeHtml(t("submittedAt"))}</dt><dd>${escapeHtml(formatDate(item.submitted_at))}</dd><dt>${escapeHtml(t("updatedAt"))}</dt><dd>${escapeHtml(formatDate(item.updated_at))}</dd></dl><div class="admin-page-actions mt-3"><button class="btn btn-primary" type="button" data-moderation-approve="${escapeHtml(id)}">${escapeHtml(t("approve"))}</button><button class="btn btn-outline-danger" type="button" data-moderation-reject="${escapeHtml(id)}">${escapeHtml(t("reject"))}</button><button class="btn" type="button" data-moderation-retry="${escapeHtml(id)}">${escapeHtml(t("retryModeration"))}</button></div></article>`;
+  }).join("")}</div>` : emptyState();
+  byId("admin-content").innerHTML = pageHeader(t("moderation"), t("moderationHint"), `<button class="btn btn-primary" data-refresh>${escapeHtml(t("refresh"))}</button>`) + card(t("deepseekIntegration"), integrationDetails) + (adminIdentity.avatar_review_enabled === true ? avatarReviewCard(pendingAvatars) : "") + card(t("moderationQueue"), queue, "admin-wide-card");
+  byId("admin-content").querySelector("[data-refresh]")?.addEventListener("click", () => void renderCurrentView());
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-moderation-approve]").forEach((button) => button.addEventListener("click", () => void submitModerationReview(button, button.dataset.moderationApprove || "", "approved", "admin_approved")));
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-moderation-retry]").forEach((button) => button.addEventListener("click", () => void submitModerationReview(button, button.dataset.moderationRetry || "", "retry", "admin_retry")));
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-moderation-reject]").forEach((button) => button.addEventListener("click", () => openDialog({
+    title: t("reject"),
+    danger: true,
+    confirmLabel: t("reject"),
+    body: `<label class="form-label" for="dialog-moderation-reason">${escapeHtml(t("reason"))}</label><select class="form-select" id="dialog-moderation-reason">${["sexual", "violence", "hate", "illegal", "self_harm", "personal_data", "spam", "other", "admin_rejected"].map((reason) => `<option value="${reason}">${reason}</option>`).join("")}</select>`,
+    onConfirm: () => submitModerationReview(button, button.dataset.moderationReject || "", "rejected", dialogValue("dialog-moderation-reason"))
+  })));
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-approve]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarApprove || "", "approved")));
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-avatar-reject]").forEach((node) => node.addEventListener("click", () => reviewAvatar(node.dataset.avatarReject || "", "rejected")));
+  byId("admin-content").querySelector<HTMLButtonElement>("[data-deepseek-configure]")?.addEventListener("click", () => openDialog({
+    title: t("configureKey"),
+    confirmLabel: t("save"),
+    body: `<label class="form-label" for="dialog-deepseek-api-key">${escapeHtml(t("apiKey"))}</label><input class="form-control" id="dialog-deepseek-api-key" type="password" autocomplete="off"><label class="form-label mt-3" for="dialog-deepseek-password">${escapeHtml(t("currentPassword"))}</label><input class="form-control" id="dialog-deepseek-password" type="password" autocomplete="current-password">`,
+    onConfirm: async () => {
+      const apiKeyInput = byId<HTMLInputElement>("dialog-deepseek-api-key");
+      const passwordInput = byId<HTMLInputElement>("dialog-deepseek-password");
+      const apiKey = apiKeyInput.value.trim();
+      const currentPassword = passwordInput.value;
+      apiKeyInput.value = "";
+      passwordInput.value = "";
+      if (!apiKey || !currentPassword) throw new Error(t("secretRequired"));
+      await submitDeepSeekWrite("/admin/integrations/deepseek/key", "PUT", { api_key: apiKey, current_password: currentPassword });
+      toast(t("success"));
+      await renderCurrentView();
+    }
+  }));
+  byId("admin-content").querySelector<HTMLButtonElement>("[data-deepseek-test]")?.addEventListener("click", () => openDeepSeekPasswordDialog("test"));
+  byId("admin-content").querySelector<HTMLButtonElement>("[data-deepseek-disable]")?.addEventListener("click", () => openDeepSeekPasswordDialog("disable"));
+}
+
+async function renderBackgrounds(): Promise<void> {
+  const [variantResponse, sceneResponse] = await Promise.all([
+    request<AdminRecord[]>("/admin/profile-background/variants"),
+    request<AdminRecord[]>("/admin/profile-background/scenes")
+  ]);
+  const variants = rows(variantResponse.data);
+  const scenes = rows(sceneResponse.data);
+  const restoreBuiltIn = scenes.some((item) => item.is_default === true)
+    ? `<button class="btn" type="button" data-background-default="default">${escapeHtml(t("restoreBuiltInDefault"))}</button>`
+    : "";
+  const variantOptions = (kind: "day" | "night") => variants
+    .filter((item) => text(item.variant) === kind && text(item.status) === "validated")
+    .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.scene_family_id)} · ${escapeHtml(item.id)}</option>`)
+    .join("");
+  const upload = `<form class="admin-background-upload" data-background-variant-upload>
+    <label>${escapeHtml(t("sceneFamily"))}<input class="form-control" name="scene_family_id" required maxlength="80"></label>
+    <label>${escapeHtml(t("variant"))}<select class="form-select" name="variant"><option value="day">${escapeHtml(t("day"))}</option><option value="night">${escapeHtml(t("night"))}</option></select></label>
+    <label>${escapeHtml(t("skyLayer"))}<input class="form-control" name="sky" type="file" accept="image/png,.png" required></label>
+    <label>${escapeHtml(t("cityLayer"))}<input class="form-control" name="city" type="file" accept="image/png,.png" required></label>
+    <label>${escapeHtml(t("foregroundLayer"))}<input class="form-control" name="foreground" type="file" accept="image/png,.png" required></label>
+    <button class="btn btn-primary" type="submit">${escapeHtml(t("uploadVariant"))}</button>
+  </form>`;
+  const createScene = `<form class="admin-background-scene-form" data-background-scene-create>
+    <label>${escapeHtml(t("sceneFamily"))}<input class="form-control" name="scene_family_id" required maxlength="80"></label>
+    <label>${escapeHtml(t("name"))}<input class="form-control" name="name" required maxlength="80"></label>
+    <label>${escapeHtml(t("dayVariant"))}<select class="form-select" name="day_variant_id" required><option value=""></option>${variantOptions("day")}</select></label>
+    <label>${escapeHtml(t("nightVariant"))}<select class="form-select" name="night_variant_id" required><option value=""></option>${variantOptions("night")}</select></label>
+    <button class="btn btn-primary" type="submit">${escapeHtml(t("create"))}</button>
+  </form>`;
+  const variantTable = table(["ID", t("sceneFamily"), t("variant"), t("status"), "SHA-256", t("createdAt")], variants.map((item) => `<tr><td><code>${escapeHtml(item.id)}</code></td><td>${escapeHtml(item.scene_family_id)}</td><td>${badge(text(item.variant) === "night" ? t("night") : t("day"))}</td><td>${badge(statusLabel(item.status), text(item.status) === "validated" ? "green" : "secondary")}</td><td><code>${escapeHtml(item.content_sha256 || "—")}</code></td><td>${escapeHtml(formatDate(item.created_at))}</td></tr>`).join(""));
+  const sceneTable = table(["ID", t("sceneFamily"), t("dayVariant"), t("nightVariant"), t("status"), t("actions")], scenes.map((item) => {
+    const id = text(item.id);
+    const sceneStatus = text(item.status);
+    const actions = sceneStatus === "published"
+      ? `<button class="btn btn-sm" data-background-default="${escapeHtml(id)}">${escapeHtml(t("setDefault"))}</button><button class="btn btn-sm btn-outline-danger" data-background-archive="${escapeHtml(id)}">${escapeHtml(t("archive"))}</button>`
+      : sceneStatus === "paired"
+        ? `<button class="btn btn-sm btn-primary" data-background-publish="${escapeHtml(id)}">${escapeHtml(t("publish"))}</button>`
+        : "";
+    return `<tr><td><code>${escapeHtml(id)}</code>${item.is_default === true ? ` ${badge(t("defaultScene"), "green")}` : ""}</td><td>${escapeHtml(item.scene_family_id)}</td><td><code>${escapeHtml(item.day_variant_id)}</code></td><td><code>${escapeHtml(item.night_variant_id)}</code></td><td>${badge(statusLabel(item.status), text(item.status) === "published" ? "green" : "secondary")}</td><td><div class="admin-page-actions">${actions}</div></td></tr>`;
+  }).join(""));
+  byId("admin-content").innerHTML = pageHeader(t("backgrounds"), t("backgroundHint"), restoreBuiltIn)
+    + card(t("uploadVariant"), upload)
+    + card(t("completeScenes"), createScene + sceneTable, "admin-wide-card")
+    + card(t("variants"), variantTable, "admin-wide-card");
+
+  byId("admin-content").querySelector<HTMLFormElement>("[data-background-variant-upload]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (button) button.disabled = true;
+    try {
+      await request("/admin/profile-background/variants", { method: "POST", headers: profileBackgroundWriteHeaders(), body: new FormData(form) });
+      toast(t("success"));
+      await renderCurrentView();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), "error");
+      if (button) button.disabled = false;
+    }
+  });
+  byId("admin-content").querySelector<HTMLFormElement>("[data-background-scene-create]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (!button) return;
+    const data = Object.fromEntries(new FormData(form).entries());
+    await runProfileBackgroundWrite(button, () => request("/admin/profile-background/scenes", { method: "POST", headers: profileBackgroundWriteHeaders(true), body: JSON.stringify(data) }));
+  });
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-background-publish]").forEach((button) => button.addEventListener("click", async () => {
+    await runProfileBackgroundWrite(button, () => request(`/admin/profile-background/scenes/${encodeURIComponent(button.dataset.backgroundPublish || "")}/publish`, { method: "POST", headers: profileBackgroundWriteHeaders() }));
+  }));
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-background-archive]").forEach((button) => button.addEventListener("click", async () => {
+    await runProfileBackgroundWrite(button, () => request(`/admin/profile-background/scenes/${encodeURIComponent(button.dataset.backgroundArchive || "")}/archive`, { method: "POST", headers: profileBackgroundWriteHeaders() }));
+  }));
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-background-default]").forEach((button) => button.addEventListener("click", async () => {
+    await runProfileBackgroundWrite(button, () => request("/admin/profile-background/default", { method: "PUT", headers: profileBackgroundWriteHeaders(true), body: JSON.stringify({ scene_id: button.dataset.backgroundDefault }) }));
+  }));
+}
+
+function profileBackgroundWriteHeaders(json = false): HeadersInit {
+  return { ...(json ? { "Content-Type": "application/json" } : {}), "Idempotency-Key": randomId("profile-background", 16) };
+}
+
+async function runProfileBackgroundWrite(button: HTMLButtonElement, action: () => Promise<unknown>): Promise<void> {
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    await action();
+    toast(t("success"));
+    await renderCurrentView();
+  } catch (error) {
+    toast(error instanceof Error ? error.message : String(error), "error");
+    button.disabled = false;
+  }
+}
+
+function openDeepSeekPasswordDialog(action: "test" | "disable"): void {
+  openDialog({
+    title: action === "test" ? t("testConnection") : t("disableIntegration"),
+    danger: action === "disable",
+    confirmLabel: action === "test" ? t("testConnection") : t("disableIntegration"),
+    body: `<label class="form-label" for="dialog-deepseek-password">${escapeHtml(t("currentPassword"))}</label><input class="form-control" id="dialog-deepseek-password" type="password" autocomplete="current-password">`,
+    onConfirm: async () => {
+      const passwordInput = byId<HTMLInputElement>("dialog-deepseek-password");
+      const currentPassword = passwordInput.value;
+      passwordInput.value = "";
+      if (!currentPassword) throw new Error(t("passwordRequired"));
+      const response = await submitDeepSeekWrite(action === "test" ? "/admin/integrations/deepseek/test" : "/admin/integrations/deepseek/key", action === "test" ? "POST" : "DELETE", { current_password: currentPassword });
+      const status = text(record(response.data).status);
+      toast(action === "test" ? (status === "pending" ? t("connectionPending") : t("connectionOk")) : t("success"));
+      await renderCurrentView();
+    }
+  });
+}
+
+function submitDeepSeekWrite(path: string, method: "PUT" | "POST" | "DELETE", body: AdminRecord): Promise<AdminApiResponse<AdminRecord>> {
+  return request<AdminRecord>(path, {
+    method,
+    headers: { "Content-Type": "application/json", "Idempotency-Key": randomId("deepseek", 16) },
+    body: JSON.stringify(body)
+  });
+}
+
+async function submitModerationReview(button: HTMLButtonElement, id: string, decision: "approved" | "rejected" | "retry", reasonCode: string): Promise<void> {
+  if (button.disabled || !id) return;
+  button.disabled = true;
+  try {
+    await request(`/admin/moderation/submissions/${encodeURIComponent(id)}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": randomId("moderation", 16) },
+      body: JSON.stringify({ decision, reason_code: reasonCode })
+    });
+    toast(t("success"));
+    await renderCurrentView();
+  } catch (error) {
+    toast(error instanceof Error ? error.message : String(error), "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function renderTools(): Promise<void> {
   const [tablesResponse, reconciliationResponse] = await Promise.all([
     request<string[]>("/admin/tables"),
@@ -1070,9 +1357,8 @@ async function renderTools(): Promise<void> {
   let tableResult: AdminApiResponse<unknown> | null = null;
   if (selectedTable) tableResult = await request(adminQuery(`/admin/table/${encodeURIComponent(selectedTable)}`, { limit: 50 }));
   latestExport = tableResult?.data || null;
-  byId("admin-content").innerHTML = pageHeader(t("tools"), t("readonlyHint"), `<button class="btn" data-export>${escapeHtml(t("export"))}</button>`) + card(t("reconciliation"), `<div class="alert alert-info">${escapeHtml(t("reconciliationHint"))}</div><div class="admin-stat-list"><div><span>${escapeHtml(t("totalRecords"))}</span><strong>${number(reconciliationTotals.total_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("activeRecords"))}</span><strong>${number(reconciliationTotals.active_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("players"))}</span><strong>${number(reconciliationTotals.players).toLocaleString()}</strong></div><div><span>${escapeHtml(t("createdAt"))}</span><strong>${escapeHtml(formatDate(reconciliation.generated_at))}</strong></div></div><details class="mt-3"><summary>${escapeHtml(t("details"))}</summary><pre class="admin-json">${escapeHtml(prettyJson(reconciliation))}</pre></details><button class="btn mt-3" data-export-reconciliation>${escapeHtml(t("export"))}</button>`, "admin-wide-card") + `<div class="admin-two-column admin-tools-grid">${card(t("tableBrowser"), `<form data-table-form class="admin-inline-filter"><label>${escapeHtml(t("table"))}<select class="form-select" name="table">${tableNames.map((name) => `<option value="${escapeHtml(name)}" ${selectedTable === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-primary">${escapeHtml(t("load"))}</button></form><div class="admin-raw-result">${renderRawRows(tableResult?.data)}</div>`)}${card(t("readonlySql"), `<div class="alert alert-warning">${escapeHtml(t("readonlyHint"))}</div><form data-sql-form><textarea class="form-control admin-sql" name="sql" rows="12" spellcheck="false">SELECT id, email, role, is_active, created_at FROM users ORDER BY id DESC LIMIT 20</textarea><button class="btn btn-primary mt-3" type="submit">${escapeHtml(t("run"))}</button></form><div class="admin-raw-result" data-sql-result></div>`)}</div>`;
+  byId("admin-content").innerHTML = pageHeader(t("tools"), t("dataToolsHint"), `<button class="btn" data-export>${escapeHtml(t("export"))}</button>`) + card(t("reconciliation"), `<div class="alert alert-info">${escapeHtml(t("reconciliationHint"))}</div><div class="admin-stat-list"><div><span>${escapeHtml(t("totalRecords"))}</span><strong>${number(reconciliationTotals.total_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("activeRecords"))}</span><strong>${number(reconciliationTotals.active_records).toLocaleString()}</strong></div><div><span>${escapeHtml(t("players"))}</span><strong>${number(reconciliationTotals.players).toLocaleString()}</strong></div><div><span>${escapeHtml(t("createdAt"))}</span><strong>${escapeHtml(formatDate(reconciliation.generated_at))}</strong></div></div><details class="mt-3"><summary>${escapeHtml(t("details"))}</summary><pre class="admin-json">${escapeHtml(prettyJson(reconciliation))}</pre></details><button class="btn mt-3" data-export-reconciliation>${escapeHtml(t("export"))}</button>`, "admin-wide-card") + card(t("tableBrowser"), `<form data-table-form class="admin-inline-filter"><label>${escapeHtml(t("table"))}<select class="form-select" name="table">${tableNames.map((name) => `<option value="${escapeHtml(name)}" ${selectedTable === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select></label><button class="btn btn-primary">${escapeHtml(t("load"))}</button></form><div class="admin-raw-result">${renderRawRows(tableResult?.data)}</div>`);
   byId("admin-content").querySelector<HTMLFormElement>("[data-table-form]")?.addEventListener("submit", (event) => { event.preventDefault(); navigate("tools", { table: new FormData(event.currentTarget as HTMLFormElement).get("table") }); });
-  byId("admin-content").querySelector<HTMLFormElement>("[data-sql-form]")?.addEventListener("submit", async (event) => { event.preventDefault(); const sql = text(new FormData(event.currentTarget as HTMLFormElement).get("sql")); const result = await request("/admin/query", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sql }) }); latestExport = result.data; const target = byId("admin-content").querySelector<HTMLElement>("[data-sql-result]"); if (target) target.innerHTML = renderRawRows(result.data); });
   byId("admin-content").querySelector("[data-export]")?.addEventListener("click", exportLatest);
   byId("admin-content").querySelector("[data-export-reconciliation]")?.addEventListener("click", () => {
     latestExport = reconciliation;
@@ -1109,6 +1395,8 @@ async function renderCurrentView(): Promise<void> {
       case "records": await renderRecords(); break;
       case "achievements": await renderAchievements(); break;
       case "rescue": await renderRescue(); break;
+      case "moderation": await renderModeration(); break;
+      case "backgrounds": await renderBackgrounds(); break;
       case "governance": await renderGovernance(); break;
       case "audit": await renderAudit(); break;
       case "tools": await renderTools(); break;
@@ -1133,6 +1421,7 @@ export function bootstrapAdminPage(): void {
   language = readStorageValue(createBrowserStorageAccess({ windowLike: window }).local(), UI_LANGUAGE_KEY)?.toLowerCase().startsWith("en") ? "en" : "zh";
   document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
   byId("admin-gate-text").textContent = t("checkingAccess");
+  byId<HTMLDialogElement>("admin-dialog").addEventListener("close", clearDialogSecrets);
   window.addEventListener("popstate", () => void renderCurrentView());
   void authorize().then((allowed) => {
     if (!allowed) {

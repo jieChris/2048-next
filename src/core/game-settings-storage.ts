@@ -430,6 +430,38 @@ export function readStorageFlagFromContext(options: {
   }
 }
 
+export function readStorageTextFromContext(options: {
+  windowLike?: unknown;
+  key?: unknown;
+}): string {
+  const key = typeof options?.key === "string" ? options.key : "";
+  if (!key) return "";
+  const storage = resolveLocalStorage(options?.windowLike);
+  if (!storage || typeof storage.getItem !== "function") return "";
+  try {
+    return String(storage.getItem(key) || "");
+  } catch (_err) {
+    return "";
+  }
+}
+
+export function writeStorageTextFromContext(options: {
+  windowLike?: unknown;
+  key?: unknown;
+  value?: unknown;
+}): boolean {
+  const key = typeof options?.key === "string" ? options.key : "";
+  if (!key) return false;
+  const storage = resolveLocalStorage(options?.windowLike);
+  if (!storage || typeof storage.setItem !== "function") return false;
+  try {
+    storage.setItem(key, String(options?.value || ""));
+    return true;
+  } catch (_err) {
+    return false;
+  }
+}
+
 export function writeStorageFlagFromContext(options: {
   windowLike?: unknown;
   key?: unknown;

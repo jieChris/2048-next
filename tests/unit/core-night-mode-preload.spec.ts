@@ -112,24 +112,24 @@ function runNightModePreload(
 }
 
 describe("core night mode preload", () => {
-  it("sets the active day theme before page styles render", () => {
+  it("sets the active theme before page styles render", () => {
     const result = runNightModePreload("0", false, {
       storageValues: {
         settings_night_background_enabled_v1: "0",
-        settings_day_theme_profile_v1: "mist_cyan",
         theme_profile_v1: "classic"
       }
     });
 
-    expect(result.documentElement.getAttribute("data-theme")).toBe("mist_cyan");
+    expect(result.documentElement.getAttribute("data-theme")).toBe("classic");
   });
 
-  it("sets the active night theme when night mode is enabled", () => {
+  it("ignores stale per-mode theme snapshots when night mode is enabled", () => {
     const result = runNightModePreload("1", false, {
       storageValues: {
         settings_night_background_enabled_v1: "1",
-        settings_night_theme_profile_v1: "mist_cyan",
-        theme_profile_v1: "classic"
+        settings_day_theme_profile_v1: "classic",
+        settings_night_theme_profile_v1: "midnight_nebula",
+        theme_profile_v1: "mist_cyan"
       }
     });
 

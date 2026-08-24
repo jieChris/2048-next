@@ -16,13 +16,15 @@ import {
   shouldUseSavedGameStateFromContext,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
+  readStorageTextFromContext,
   writeUndoEnabledForModeToMap,
   writeSavedPayloadToWindowName,
   writeTimerModuleViewForModeToMap,
   writeSavedPayloadToStorages,
   writeStorageFlagFromContext,
   writeStorageJsonMapFromContext,
-  writeStorageJsonPayloadFromContext
+  writeStorageJsonPayloadFromContext,
+  writeStorageTextFromContext
 } from "../../src/core/game-settings-storage";
 
 describe("core game settings storage", () => {
@@ -58,6 +60,16 @@ describe("core game settings storage", () => {
 
     expect(setItem).toHaveBeenCalledWith("stats_panel_visible_v1", "0");
     expect(result).toBe(true);
+  });
+
+  it("reads and writes text through the shared storage boundary", () => {
+    const getItem = vi.fn(() => "night");
+    const setItem = vi.fn();
+    const windowLike = { localStorage: { getItem, setItem } };
+
+    expect(readStorageTextFromContext({ windowLike, key: "display" })).toBe("night");
+    expect(writeStorageTextFromContext({ windowLike, key: "display", value: "day" })).toBe(true);
+    expect(setItem).toHaveBeenCalledWith("display", "day");
   });
 
   it("reads json map from storage safely", () => {

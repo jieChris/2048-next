@@ -106,7 +106,8 @@ describe("module entry html pages", () => {
     expect(html).not.toContain('href="#language-settings" aria-controls="language-settings"');
     expect(html).not.toContain('id="language-settings" class="palette-settings-section"');
     expect(html).not.toContain('id="ui-language-toggle"');
-    expect(html).toContain('class="palette-language-switch" role="group" aria-label="界面语言"');
+    expect(html).toContain('class="palette-settings-menu palette-language-switch"');
+    expect(html).toContain('class="palette-settings-popover" role="menu" aria-label="界面语言"');
     expect(html).toContain('data-ui-language="zh"');
     expect(html).toContain('data-ui-language="en"');
     expect(html).not.toContain('id="operation-feedback-toggle"');

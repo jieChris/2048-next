@@ -447,7 +447,9 @@ export interface paths {
         patch: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -457,9 +459,58 @@ export interface paths {
                 };
             };
             responses: {
-                200: components["responses"]["UserResponse"];
+                200: components["responses"]["UserProfileSnapshotResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["UserProfileUpdateConflictResponse"];
+                429: components["responses"]["UserProfileUpdateRateLimitResponse"];
+                503: components["responses"]["ApiErrorResponse"];
             };
         };
+        trace?: never;
+    };
+    "/user/me/moderation-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated user's moderation status metadata without pending content. */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Moderation status history and current bio block deadline. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ModerationSubmissionSummary"][];
+                            /** Format: date-time */
+                            bio_blocked_until?: string | null;
+                        };
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/user/me/avatar-submission": {
@@ -482,6 +533,7 @@ export interface paths {
                 /** @description Avatar submission state. */
                 200: {
                     headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -497,7 +549,9 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -510,9 +564,22 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description Idempotent replay of the avatar submission. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AvatarSubmission"];
+                        };
+                    };
+                };
                 /** @description Avatar queued for review. */
                 201: {
                     headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -619,7 +686,10 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                200: components["responses"]["UserResponse"];
+                200: components["responses"]["PublicUserProfileResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
             };
         };
         put?: never;
@@ -653,12 +723,16 @@ export interface paths {
                 /** @description Approved WebP avatar. */
                 200: {
                     headers: {
+                        "Cache-Control"?: "public, max-age=31536000, immutable";
+                        ETag?: string;
+                        "X-Content-Type-Options"?: "nosniff";
                         [name: string]: unknown;
                     };
                     content: {
                         "image/webp": string;
                     };
                 };
+                404: components["responses"]["ApiErrorResponse"];
             };
         };
         put?: never;
@@ -1937,12 +2011,790 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
-                            admin?: boolean;
-                            super_admin?: boolean;
-                            user?: components["schemas"]["User"];
+                            data: {
+                                user_id: number;
+                                admin: boolean;
+                                rootAdmin: boolean;
+                                canManageSuperAdmins: boolean;
+                                avatar_review_enabled: boolean;
+                            };
                         };
                     };
                 };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List profile-bio submissions awaiting manual review. */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "manual_review";
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Manual moderation queue. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["AdminModerationSubmission"][];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/submissions/{submissionId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve, reject, or requeue a manually reviewed profile bio. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path: {
+                    submissionId: components["parameters"]["ModerationSubmissionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ModerationReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent moderation decision result. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ModerationReviewResult"];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+                404: components["responses"]["NoStoreApiErrorResponse"];
+                409: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/moderation/submissions/{submissionId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Requeue a failed-retryable moderation submission without consuming player quota. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path: {
+                    submissionId: components["parameters"]["ModerationSubmissionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description Idempotent retry result. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ModerationReviewResult"];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+                404: components["responses"]["NoStoreApiErrorResponse"];
+                409: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations/deepseek": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read masked DeepSeek integration state. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Masked integration state; plaintext keys are never returned. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["DeepSeekIntegrationState"];
+                        };
+                    };
+                };
+                403: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations/deepseek/key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Configure or rotate the encrypted DeepSeek API key. */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeepSeekKeyUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description Masked active integration state. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["DeepSeekIntegrationState"];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+                409: components["responses"]["NoStoreApiErrorResponse"];
+                503: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        post?: never;
+        /** Disable and cryptographically erase the active local DeepSeek key material. */
+        delete: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IntegrationStepUpRequest"];
+                };
+            };
+            responses: {
+                /** @description Disabled DeepSeek integration state. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data: components["schemas"]["DeepSeekDisableResult"];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+                409: components["responses"]["NoStoreApiErrorResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integrations/deepseek/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test DeepSeek using fixed synthetic content only. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IntegrationStepUpRequest"];
+                };
+            };
+            responses: {
+                /** @description Successful synthetic DeepSeek connection test. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data: components["schemas"]["DeepSeekConnectionTestSuccess"];
+                        };
+                    };
+                };
+                /** @description An idempotent connection test is already in progress. */
+                202: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data: components["schemas"]["DeepSeekConnectionTestPending"];
+                        };
+                    };
+                };
+                400: components["responses"]["NoStoreApiErrorResponse"];
+                403: components["responses"]["NoStoreApiErrorResponse"];
+                409: components["responses"]["NoStoreApiErrorResponse"];
+                /** @description Failed replay result or a fresh connection-test error. */
+                503: {
+                    headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeepSeekConnectionTestFailureEnvelope"] | components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/profile-background/variants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List uploaded day or night three-layer background variants. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Background variants. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundVariant"][];
+                        };
+                    };
+                };
+                403: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        /** Validate and store one immutable three-layer background variant. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["ProfileBackgroundVariantUploadRequest"];
+                };
+            };
+            responses: {
+                /** @description Validated background variant. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundVariant"];
+                        };
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/profile-background/scenes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List complete paired day and night background scenes. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Background scenes. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundScene"][];
+                        };
+                    };
+                };
+                403: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        /** Pair validated day and night variants into one scene revision. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfileBackgroundSceneCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent replay of the paired scene. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundScene"];
+                        };
+                    };
+                };
+                /** @description Paired scene. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundScene"];
+                        };
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/profile-background/scenes/{sceneId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish a complete background scene. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path: {
+                    sceneId: components["parameters"]["ProfileBackgroundSceneIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ProfileBackgroundSceneResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/profile-background/scenes/{sceneId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive a background scene without deleting its immutable assets. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path: {
+                    sceneId: components["parameters"]["ProfileBackgroundSceneIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ProfileBackgroundSceneResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/profile-background/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a published default scene or restore the built-in default. */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfileBackgroundDefaultUpdateRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ProfileBackgroundDefaultUpdateResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile-backgrounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List complete published scenes with day previews only. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public background catalog. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: {
+                                /** Format: uuid */
+                                default_scene_id: string | null;
+                                scenes: components["schemas"]["ProfileBackgroundCatalogScene"][];
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile-backgrounds/{sceneId}/layers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve one scene revision to its day or night immutable layer URLs. */
+        get: {
+            parameters: {
+                query: {
+                    variant: "day" | "night";
+                };
+                header?: never;
+                path: {
+                    sceneId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resolved scene layers, with default fallback metadata when needed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ProfileBackgroundLayers"];
+                        };
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile-backgrounds/{sceneId}/preview.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the immutable day preview for one published scene revision. */
+        get: {
+            parameters: {
+                query: {
+                    revision: number;
+                };
+                header?: never;
+                path: {
+                    sceneId: components["parameters"]["ProfileBackgroundSceneIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Server-composited day preview PNG. */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "public, max-age=31536000, immutable";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/png": string;
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/profile-background-assets/{sha256}/{layer}.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an immutable validated profile-background PNG layer. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sha256: string;
+                    layer: "sky" | "city" | "foreground";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Immutable PNG layer. */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "public, max-age=31536000, immutable";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "image/png": string;
+                    };
+                };
+                404: components["responses"]["ApiErrorResponse"];
             };
         };
         put?: never;
@@ -1992,8 +2844,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    status?: "pending" | "approved" | "rejected" | "superseded";
-                    page?: components["parameters"]["PageQuery"];
+                    status?: "pending";
                     limit?: components["parameters"]["LimitQuery"];
                 };
                 header?: never;
@@ -2005,6 +2856,7 @@ export interface paths {
                 /** @description Avatar review queue. */
                 200: {
                     headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -2013,6 +2865,8 @@ export interface paths {
                         };
                     };
                 };
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
             };
         };
         put?: never;
@@ -2045,12 +2899,17 @@ export interface paths {
                 /** @description Processed WebP avatar. */
                 200: {
                     headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
+                        "X-Content-Type-Options"?: "nosniff";
                         [name: string]: unknown;
                     };
                     content: {
                         "image/webp": string;
                     };
                 };
+                401: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
             };
         };
         put?: never;
@@ -2074,7 +2933,9 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
                 path: {
                     submissionId: components["parameters"]["AvatarSubmissionIdPath"];
                 };
@@ -2089,14 +2950,19 @@ export interface paths {
                 /** @description Reviewed avatar submission. */
                 200: {
                     headers: {
+                        "Cache-Control": components["headers"]["NoStore"];
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": components["schemas"]["ApiEnvelope"] & {
-                            data?: components["schemas"]["AvatarSubmission"];
+                            data?: components["schemas"]["AvatarReviewResult"];
                         };
                     };
                 };
+                400: components["responses"]["ApiErrorResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
             };
         };
         delete?: never;
@@ -2868,7 +3734,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Execute an admin SQL query. */
+        /**
+         * Disabled legacy arbitrary SQL endpoint.
+         * @deprecated
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2876,15 +3745,9 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        sql: string;
-                    };
-                };
-            };
+            requestBody?: never;
             responses: {
-                200: components["responses"]["ApiEnvelopeResponse"];
+                410: components["responses"]["ApiErrorResponse"];
             };
         };
         delete?: never;
@@ -3475,10 +4338,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ApiError: {
+            /** @constant */
+            success: false;
+            error: string;
+            code: string;
+            /** @enum {string} */
+            reason_code: "unauthorized" | "forbidden" | "validation_error" | "revision_conflict" | "idempotency_conflict" | "rate_limited" | "bio_temporarily_blocked" | "content_review_pending" | "content_rejected" | "provider_unavailable" | "not_found";
+            detail?: string;
+        };
         ApiEnvelope: {
             success?: boolean;
             error?: string;
             code?: string;
+            reason_code?: string;
             message?: string;
         } & {
             [key: string]: unknown;
@@ -3524,6 +4397,10 @@ export interface components {
         User: {
             id?: number;
             user_id?: number;
+            game_user_id?: number | null;
+            gameUserId?: number | null;
+            public_profile_id?: number | null;
+            publicProfileId?: number | null;
             nickname?: string;
             /** Format: email */
             email?: string;
@@ -3533,16 +4410,10 @@ export interface components {
             profile_bio?: string;
             /** @description Camel-case compatibility alias for profile_bio. */
             profileBio?: string;
-            /**
-             * @description Published profile background scene. P0a exposes only the built-in default.
-             * @enum {string}
-             */
-            background_scene_id?: "default";
-            /**
-             * @description Camel-case compatibility alias for background_scene_id.
-             * @enum {string}
-             */
-            backgroundSceneId?: "default";
+            /** @description Published profile background scene or the built-in default. */
+            background_scene_id?: components["schemas"]["ProfileBackgroundSceneReference"];
+            /** @description Camel-case compatibility alias for background_scene_id. */
+            backgroundSceneId?: components["schemas"]["ProfileBackgroundSceneReference"];
             featured_mode_keys?: string[];
             featuredModeKeys?: string[];
             /** Format: date-time */
@@ -3556,38 +4427,363 @@ export interface components {
             [key: string]: unknown;
         };
         UserProfileUpdateRequest: {
-            /**
-             * @description P0a accepts only the built-in default scene.
-             * @enum {string}
-             */
-            background_scene_id?: "default";
+            /** @description Submitted for moderation; the prior approved bio remains public until approval. */
+            profile_bio?: string;
+            /** @description A published complete scene or the built-in default. */
+            background_scene_id?: components["schemas"]["ProfileBackgroundSceneReference"];
             featured_mode_keys?: string[];
-            revision?: number;
+            revision: number;
+        } | unknown | unknown | unknown;
+        PublicUserProfile: {
+            id: number;
+            nickname: string;
+            avatar_url: string;
+            profile_bio: string;
+            background_scene_id: components["schemas"]["ProfileBackgroundSceneReference"];
+            featured_mode_keys: string[];
+            /**
+             * Format: date-time
+             * @description Null when no account-registration timestamp is available.
+             */
+            created_at?: string | null;
+            revision: number;
+        };
+        UserProfileSnapshot: {
+            user_id: number;
+            profile_bio: string;
+            background_scene_id: components["schemas"]["ProfileBackgroundSceneReference"];
+            featured_mode_keys: string[];
+            revision: number;
+            moderation_submission?: components["schemas"]["ModerationSubmissionSummary"] | null;
+            moderation_queue?: components["schemas"]["ModerationQueueStatus"] | null;
+        };
+        UserProfileConflictSnapshot: {
+            profile_bio: string;
+            background_scene_id: components["schemas"]["ProfileBackgroundSceneReference"];
+            featured_mode_keys: string[];
+            revision: number;
+        };
+        ProfileContentReviewPendingData: {
+            /** Format: uuid */
+            submission_id: string;
+            /** @enum {string} */
+            status: "submitted" | "ai_reviewing" | "ai_pass" | "manual_review" | "failed_retryable";
+            same_content: boolean;
+        };
+        ProfileUpdateConflictError: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "PROFILE_REVISION_CONFLICT";
+            /** @constant */
+            reason_code: "revision_conflict";
+            data: components["schemas"]["UserProfileConflictSnapshot"];
+        } | {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "CONTENT_REVIEW_PENDING";
+            /** @constant */
+            reason_code: "content_review_pending";
+            data: components["schemas"]["ProfileContentReviewPendingData"];
+        } | {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "IDEMPOTENCY_KEY_CONFLICT";
+            /** @constant */
+            reason_code: "idempotency_conflict";
+        } | {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "GAME_ACCOUNT_MAPPING_UNAVAILABLE";
+            /** @constant */
+            reason_code: "revision_conflict";
+        } | {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "GAME_USER_NOT_FOUND";
+            /** @constant */
+            reason_code: "not_found";
+        };
+        ProfileRateLimitData: {
+            /** Format: date-time */
+            next_allowed_at: string;
+        };
+        ProfileUpdateRateLimitError: {
+            /** @constant */
+            success: false;
+            error: string;
+            code: string;
+            reason_code: string;
+            data: components["schemas"]["ProfileRateLimitData"];
+        } & ({
+            /** @constant */
+            code: "BIO_RATE_LIMITED";
+            /** @constant */
+            reason_code: "rate_limited";
+        } | {
+            /** @constant */
+            code: "BIO_TEMPORARILY_BLOCKED";
+            /** @constant */
+            reason_code: "bio_temporarily_blocked";
+        });
+        ModerationSubmissionSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "submitted" | "ai_reviewing" | "ai_pass" | "ai_reject" | "manual_review" | "failed_retryable" | "approved" | "rejected";
+            reason_code: string | null;
+            /** Format: date-time */
+            submitted_at: string;
+            /** @enum {string} */
+            content_type?: "bio";
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            completed_at?: string | null;
+        };
+        ModerationQueueStatus: {
+            /** @enum {string} */
+            status: "normal" | "queued";
+            pending_count: number;
+        };
+        AdminModerationSubmission: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            content_type: "bio";
+            account_user_id: number;
+            game_user_id: number;
+            submitted_content: string;
+            /** @enum {string} */
+            status: "manual_review";
+            reason_code: string | null;
+            /** @constant */
+            model_version: "deepseek-v4-flash";
+            /** Format: date-time */
+            submitted_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ModerationReviewRequest: {
+            /** @constant */
+            decision: "approved";
+            /** @enum {string} */
+            reason_code: "safe" | "admin_approved";
+        } | {
+            /** @constant */
+            decision: "rejected";
+            /** @enum {string} */
+            reason_code: "sexual" | "violence" | "hate" | "illegal" | "self_harm" | "personal_data" | "spam" | "other" | "admin_rejected";
+        } | {
+            /** @constant */
+            decision: "retry";
+            /** @constant */
+            reason_code: "admin_retry";
+        };
+        ModerationReviewResult: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "failed_retryable" | "approved" | "rejected";
+            reason_code: string | null;
+            retry_queued?: boolean;
+        };
+        IntegrationStepUpRequest: {
+            current_password: string;
+        };
+        DeepSeekKeyUpdateRequest: {
+            api_key: string;
+            current_password: string;
+        };
+        DeepSeekIntegrationState: {
+            configured: boolean;
+            key_version?: number | null;
+            masked_key?: string;
+            /** @enum {string} */
+            status: "active" | "disabled" | "retired" | "unconfigured";
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        DeepSeekDisableResult: {
+            /** @constant */
+            configured: false;
+            /** @constant */
+            status: "disabled";
+            key_version: number | null;
+        };
+        DeepSeekConnectionTestSuccess: {
+            /** @constant */
+            status: "ok";
+            key_version: number | null;
+        };
+        DeepSeekConnectionTestPending: {
+            /** @constant */
+            status: "pending";
+            key_version: number | null;
+        };
+        DeepSeekConnectionTestFailure: {
+            status: string;
+            key_version: number | null;
+        };
+        DeepSeekConnectionTestFailureEnvelope: {
+            /** @constant */
+            success: false;
+            error: string;
+            /** @constant */
+            code: "INTEGRATION_TEST_FAILED";
+            /** @constant */
+            reason_code: "provider_unavailable";
+            data: components["schemas"]["DeepSeekConnectionTestFailure"];
+        };
+        ProfileBackgroundSceneReference: "default" | string;
+        ProfileBackgroundLayerMetadata: {
+            /** @constant */
+            mime_type: "image/png";
+            byte_size: number;
+            sha256: string;
+            /** @constant */
+            width: 2172;
+            /** @constant */
+            height: 272;
+            alpha_min: number;
+            alpha_max: number;
+        };
+        ProfileBackgroundVariant: {
+            /** Format: uuid */
+            id: string;
+            scene_family_id: string;
+            name: string;
+            /** @enum {string} */
+            variant: "day" | "night";
+            /** @constant */
+            width: 2172;
+            /** @constant */
+            height: 272;
+            layers: {
+                sky: components["schemas"]["ProfileBackgroundLayerMetadata"];
+                city: components["schemas"]["ProfileBackgroundLayerMetadata"];
+                foreground: components["schemas"]["ProfileBackgroundLayerMetadata"];
+            };
+            /** @enum {string} */
+            status: "validated" | "paired" | "published" | "archived";
+            /** Format: date-time */
+            created_at: string;
+        };
+        ProfileBackgroundScene: {
+            /** Format: uuid */
+            id: string;
+            scene_family_id: string;
+            name: string;
+            /** Format: uuid */
+            day_variant_id: string;
+            /** Format: uuid */
+            night_variant_id: string;
+            /** @enum {string} */
+            status: "paired" | "published" | "archived";
+            revision: number;
+            is_default?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        ProfileBackgroundCatalogScene: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            scene_family_id: string;
+            revision: number;
+            preview_url: string;
+        };
+        ProfileBackgroundLayers: {
+            requested_scene_id: string;
+            /** Format: uuid */
+            scene_id: string;
+            /** @enum {string} */
+            variant: "day" | "night";
+            revision: number;
+            fallback: boolean;
+            layers: {
+                sky: string;
+                city: string;
+                foreground: string;
+            };
+        };
+        ProfileBackgroundVariantUploadRequest: {
+            scene_family_id: string;
+            name?: string;
+            /** @enum {string} */
+            variant: "day" | "night";
+            /** Format: binary */
+            sky: string;
+            /** Format: binary */
+            city: string;
+            /** Format: binary */
+            foreground: string;
+        };
+        ProfileBackgroundSceneCreateRequest: {
+            scene_family_id: string;
+            name: string;
+            /** Format: uuid */
+            day_variant_id: string;
+            /** Format: uuid */
+            night_variant_id: string;
+        };
+        ProfileBackgroundDefaultUpdateRequest: {
+            scene_id: components["schemas"]["ProfileBackgroundSceneReference"];
+        };
+        ProfileBackgroundBuiltInDefault: {
+            scene_id: null;
+            /** @constant */
+            using_builtin: true;
         };
         AvatarSubmission: {
+            /** Format: uuid */
             id: string;
-            user_id?: number;
+            account_user_id?: number;
+            game_user_id?: number;
+            nickname?: string;
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "superseded";
-            byte_size?: number;
             /** @enum {string} */
-            mime_type?: "image/webp";
+            moderation_status: "submitted" | "ai_reviewing" | "ai_pass" | "ai_reject" | "manual_review" | "failed_retryable" | "approved" | "rejected";
+            reason_code: string | null;
+            byte_size: number;
             /** @enum {integer} */
-            width?: 256;
+            width: 256;
             /** @enum {integer} */
-            height?: 256;
-            review_note?: string | null;
+            height: 256;
             /** Format: date-time */
-            submitted_at?: string;
+            submitted_at: string | null;
             /** Format: date-time */
-            reviewed_at?: string | null;
-        } & {
-            [key: string]: unknown;
+            updated_at: string | null;
         };
         AvatarReviewRequest: {
+            /** @constant */
+            decision: "approved";
             /** @enum {string} */
-            decision: "approved" | "rejected";
-            note?: string;
+            reason_code: "safe" | "admin_approved";
+        } | {
+            /** @constant */
+            decision: "rejected";
+            /** @enum {string} */
+            reason_code: "sexual" | "violence" | "hate" | "illegal" | "self_harm" | "personal_data" | "spam" | "other" | "embedded_text" | "admin_rejected";
+        };
+        AvatarReviewResult: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "approved" | "rejected";
+            reason_code: string | null;
         };
         RegisterRequest: {
             nickname: string;
@@ -3968,6 +5164,25 @@ export interface components {
         };
     };
     responses: {
+        /** @description Machine-readable API error. */
+        ApiErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description Non-cacheable machine-readable API error. */
+        NoStoreApiErrorResponse: {
+            headers: {
+                "Cache-Control": components["headers"]["NoStore"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
         /** @description Generic API envelope. */
         ApiEnvelopeResponse: {
             headers: {
@@ -4003,6 +5218,68 @@ export interface components {
                 };
             };
         };
+        /** @description Public allowlisted player profile. */
+        PublicUserProfileResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiEnvelope"] & {
+                    data?: components["schemas"]["PublicUserProfile"];
+                };
+            };
+        };
+        /** @description Updated public profile snapshot. */
+        UserProfileSnapshotResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiEnvelope"] & {
+                    data?: components["schemas"]["UserProfileSnapshot"];
+                };
+            };
+        };
+        /** @description Background scene mutation result. */
+        ProfileBackgroundSceneResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiEnvelope"] & {
+                    data?: components["schemas"]["ProfileBackgroundScene"];
+                };
+            };
+        };
+        /** @description Custom or built-in default background selection. */
+        ProfileBackgroundDefaultUpdateResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiEnvelope"] & {
+                    data?: components["schemas"]["ProfileBackgroundScene"] | components["schemas"]["ProfileBackgroundBuiltInDefault"];
+                };
+            };
+        };
+        /** @description Revision, active moderation, or idempotency conflict. */
+        UserProfileUpdateConflictResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ProfileUpdateConflictError"];
+            };
+        };
+        /** @description Bio submission quota or temporary block deadline. */
+        UserProfileUpdateRateLimitResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ProfileUpdateRateLimitError"];
+            };
+        };
         /** @description Achievement definition result. */
         AchievementResponse: {
             headers: {
@@ -4019,7 +5296,10 @@ export interface components {
         AdminUserIdPath: number;
         AdminRecordIdPath: string;
         AvatarSubmissionIdPath: string;
+        ModerationSubmissionIdPath: string;
         UserIdPath: number;
+        ProfileBackgroundSceneIdPath: string;
+        IdempotencyKeyHeader: string;
         RecordIdPath: string;
         RecordUploadTaskIdPath: string;
         ClientVersionHeader: string;
@@ -4034,7 +5314,10 @@ export interface components {
         NicknameQuery: string;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Sensitive responses must not be stored by clients or intermediaries. */
+        NoStore: "no-store";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;

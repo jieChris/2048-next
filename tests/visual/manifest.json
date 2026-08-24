@@ -26,9 +26,9 @@
     {
       "baselineId": "all-pages-and-overlays",
       "revision": 1,
-      "pageCount": 33,
+      "pageCount": 34,
       "overlayCount": 18,
-      "snapshotCount": 408,
+      "snapshotCount": 416,
       "pages": [
         "game",
         "not-found",
@@ -36,6 +36,7 @@
         "account",
         "achievement-toast-reference",
         "admin",
+        "admin-avatar-review",
         "api-docs",
         "beta-access",
         "beta-login",
@@ -96,8 +97,8 @@
         "light",
         "night"
       ],
-      "updatedAt": "2026-08-02",
-      "reason": "按维护要求建立全项目页面与弹窗基线；同时修复 API 文档代理冲突及窄屏页面横向溢出，并固定页面状态、API、时间、Web Crypto 随机源、锚点滚动、iframe 主题和弹窗打开能力。",
+      "updatedAt": "2026-08-24",
+      "reason": "在既有全项目页面与弹窗基线中补充管理员头像审核队列，并同步登记已确认的主页、设置、历史、练习板、管理员和调色板弹窗变更；视觉夹具固定新手指引为已查看，覆盖浅色/夜间及四档视口。",
       "baselineEnvironment": "Playwright Chromium on macOS; scale=css",
       "status": "approved"
     }

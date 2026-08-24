@@ -382,6 +382,33 @@
     }
   }
 
+  function readStorageTextFromContext(options) {
+    var opts = options || {};
+    var key = typeof opts.key === "string" ? opts.key : "";
+    if (!key) return "";
+    var storage = resolveLocalStorage(opts.windowLike);
+    if (!storage || typeof storage.getItem !== "function") return "";
+    try {
+      return String(storage.getItem(key) || "");
+    } catch (_err) {
+      return "";
+    }
+  }
+
+  function writeStorageTextFromContext(options) {
+    var opts = options || {};
+    var key = typeof opts.key === "string" ? opts.key : "";
+    if (!key) return false;
+    var storage = resolveLocalStorage(opts.windowLike);
+    if (!storage || typeof storage.setItem !== "function") return false;
+    try {
+      storage.setItem(key, String(opts.value || ""));
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function readStorageJsonMapFromContext(options) {
     var opts = options || {};
     var key = typeof opts.key === "string" ? opts.key : "";
@@ -775,6 +802,8 @@
   global.CoreGameSettingsStorageRuntime = global.CoreGameSettingsStorageRuntime || {};
   global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
+  global.CoreGameSettingsStorageRuntime.readStorageTextFromContext = readStorageTextFromContext;
+  global.CoreGameSettingsStorageRuntime.writeStorageTextFromContext = writeStorageTextFromContext;
   global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey = resolveSavedGameStateStorageKey;
   global.CoreGameSettingsStorageRuntime.shouldUseSavedGameStateFromContext =
     shouldUseSavedGameStateFromContext;

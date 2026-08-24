@@ -8,13 +8,23 @@ const projectRoot = path.resolve(__dirname, "..");
 
 const AUDIT_TARGETS = [
   { rootDir: path.resolve(projectRoot, "src"), relativePrefix: "src" },
-  { rootDir: path.resolve(projectRoot, "js"), relativePrefix: "js" }
+  { rootDir: path.resolve(projectRoot, "js"), relativePrefix: "js" },
+  { rootDir: path.resolve(projectRoot, "public/js"), relativePrefix: "public/js" }
 ];
 
 const DEFAULT_ALLOWED_FILE_SUFFIXES = new Set([".js", ".ts"]);
 const DIRECT_STORAGE_PATTERN = /\b(?:localStorage|sessionStorage)\s*\./gu;
+const DIRECT_DISPLAY_MODE_STORAGE_PATTERN = /(?:\b(?:localStorage|sessionStorage)\s*\.|\.\s*(?:localStorage|sessionStorage)\b)/gu;
 const DIRECT_FETCH_PATTERN = /\bfetch\s*\(/gu;
 const DIRECT_SERVICE_USAGE_ALLOWLIST = new Set();
+const DIRECT_STORAGE_BOUNDARY_FILES = new Set([
+  "js/core_game_settings_storage_runtime.js",
+  "public/js/beta_access_preload.js",
+  "public/js/core_night_mode_preload.js",
+  "src/core/game-settings-storage.ts",
+  "src/storage/browser-storage.ts"
+]);
+const DISPLAY_MODE_STORAGE_CONSUMERS = new Set(["js/core_night_mode_runtime.js"]);
 
 function fail(message) {
   throw new Error(message);
@@ -75,13 +85,23 @@ function collectPatternMatches(content, pattern, label) {
 }
 
 function collectBoundaryViolations(filePath, content) {
-  if (DIRECT_SERVICE_USAGE_ALLOWLIST.has(toProjectRelativePath(filePath))) return [];
+  const projectRelativePath = toProjectRelativePath(filePath);
+  if (DIRECT_SERVICE_USAGE_ALLOWLIST.has(projectRelativePath)) return [];
+  const storageViolations = DIRECT_STORAGE_BOUNDARY_FILES.has(projectRelativePath)
+    ? []
+    : collectPatternMatches(
+        content,
+        DISPLAY_MODE_STORAGE_CONSUMERS.has(projectRelativePath)
+          ? DIRECT_DISPLAY_MODE_STORAGE_PATTERN
+          : DIRECT_STORAGE_PATTERN,
+        "storage"
+      );
   return [
-    ...collectPatternMatches(content, DIRECT_STORAGE_PATTERN, "storage"),
+    ...storageViolations,
     ...collectPatternMatches(content, DIRECT_FETCH_PATTERN, "fetch")
   ].map((entry) => ({
     filePath,
-    projectRelativePath: toProjectRelativePath(filePath),
+    projectRelativePath,
     ...entry
   }));
 }
@@ -154,6 +174,8 @@ export {
   AUDIT_TARGETS,
   DEFAULT_ALLOWED_FILE_SUFFIXES,
   DIRECT_FETCH_PATTERN,
+  DIRECT_DISPLAY_MODE_STORAGE_PATTERN,
+  DIRECT_STORAGE_BOUNDARY_FILES,
   DIRECT_STORAGE_PATTERN,
   DIRECT_SERVICE_USAGE_ALLOWLIST,
   collectBoundaryViolations,

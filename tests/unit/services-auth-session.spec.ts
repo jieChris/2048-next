@@ -16,6 +16,23 @@ beforeEach(() => {
 });
 
 describe("durable browser auth session", () => {
+  it("does not make real network requests outside a browser unless fetch is injected", async () => {
+    const previousWindow = (globalThis as { window?: unknown }).window;
+    const previousFetch = globalThis.fetch;
+    const fetchSpy = vi.fn();
+    delete (globalThis as { window?: unknown }).window;
+    Object.defineProperty(globalThis, "fetch", { configurable: true, writable: true, value: fetchSpy });
+    try {
+      const auth = await import("../../src/services/auth-session");
+      await expect(auth.restoreAuthSession()).resolves.toEqual({ status: "transient_error", code: "FETCH_UNAVAILABLE" });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(globalThis, "fetch", { configurable: true, writable: true, value: previousFetch });
+      if (previousWindow === undefined) delete (globalThis as { window?: unknown }).window;
+      else Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: previousWindow });
+    }
+  });
+
   it("resyncs legacy account screens after cookie restoration", () => {
     for (const file of ["js/account_page.js", "js/account_settings_page.js"]) {
       const source = readFileSync(file, "utf8");
@@ -32,8 +49,9 @@ describe("durable browser auth session", () => {
     });
     try {
       const auth = await import("../../src/services/auth-session");
-      auth.setAuthSession({ token: "local-token", user: { id: 42, nickname: "Local" } }, { storageLike: storage });
+      auth.setAuthSession({ token: "local-token", user: { id: 42, public_profile_id: 9, nickname: "Local" } }, { storageLike: storage });
       expect(storage.getItem("2048_auth_token_v1")).toBe("local-token");
+      expect(storage.getItem("2048_public_profile_id_v1")).toBe("9");
     } finally {
       if (previousWindow === undefined) delete (globalThis as { window?: unknown }).window;
       else Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow });

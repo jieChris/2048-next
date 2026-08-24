@@ -96,7 +96,8 @@ describe("app: bootstrap-direct-page", () => {
       navigator: {},
       localStorage: {
         getItem(key: string) {
-          if (key === "2048_auth_userId_v1") return "19";
+          if (key === "2048_auth_token_v1") return "token";
+          if (key === "2048_public_profile_id_v1") return "19";
           if (key === "2048_auth_nickname_v1") return "Jay";
           return null;
         }

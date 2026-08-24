@@ -580,16 +580,17 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
-    await expect(page.locator("#user-profile-edit")).toBeHidden();
+    await expect(page.locator("#user-profile-edit")).toHaveCount(0);
     await expect(page.locator("#user-featured-edit")).toBeHidden();
     await page.locator("#user-nav-menu").click();
     await expect(page.locator("#user-nav-edit-mode")).toBeVisible();
     await page.locator("#user-nav-edit-mode").click();
-    await expect(page.locator("#user-profile-edit")).toBeVisible();
+    await expect(page.locator("#user-profile-edit")).toHaveCount(0);
     await expect(page.locator("#user-featured-edit")).toBeVisible();
-    await expect(page.locator("#user-showcase-wall-link")).toBeVisible();
+    await expect(page.locator("#user-showcase-wall-link")).toBeHidden();
     await page.locator("#user-nav-edit-mode").click();
-    await expect(page.locator("#user-profile-edit")).toBeHidden();
+    await expect(page.locator("#user-profile-edit")).toHaveCount(0);
+    await expect(page.locator("#user-featured-edit")).toBeHidden();
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight span")).toHaveText("最高分");
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight > strong")).toHaveText("8 192");
     await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("3 局");

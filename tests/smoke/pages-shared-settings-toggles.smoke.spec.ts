@@ -51,7 +51,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.click("label.settings-switch[for='night-bg-toggle']");
     await page.waitForFunction(() => {
-      return window.localStorage.getItem("settings_night_background_enabled_v1") === "1";
+      return window.localStorage.getItem("settings_display_mode_v2") === "auto";
+    });
+    await page.click("label.settings-switch[for='night-bg-toggle']");
+    await page.waitForFunction(() => {
+      return window.localStorage.getItem("settings_display_mode_v2") === "night";
     });
     await expect(page.locator("#night-bg-toggle")).toBeChecked();
     await expect(secondPage.locator("#night-bg-toggle")).toBeChecked();
@@ -113,7 +117,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("label.settings-switch[for='bgm-toggle']")).toBeVisible();
     await expect(page.locator("label.settings-switch[for='night-bg-toggle']")).toBeVisible();
     await expect(page.locator("#night-bg-settings-row .settings-toggle-title")).toHaveText(
-      "夜间模式"
+      "显示模式"
     );
 
     const timerToggleLayout = await page.evaluate(() => {
@@ -143,7 +147,11 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await page.click("label.settings-switch[for='night-bg-toggle']");
     await page.waitForFunction(() => {
-      return window.localStorage.getItem("settings_night_background_enabled_v1") === "1";
+      return window.localStorage.getItem("settings_display_mode_v2") === "auto";
+    });
+    await page.click("label.settings-switch[for='night-bg-toggle']");
+    await page.waitForFunction(() => {
+      return window.localStorage.getItem("settings_display_mode_v2") === "night";
     });
     await expect(page.locator("#night-bg-toggle")).toBeChecked();
 
@@ -160,8 +168,6 @@ test.describe("Legacy Multi-Page Smoke", () => {
             : "",
         savedTheme: window.localStorage.getItem("theme_profile_v1"),
         savedTilePalette: window.localStorage.getItem("tile_palette_active_v1"),
-        autoThemeApplied: window.localStorage.getItem("settings_night_theme_auto_applied_v1"),
-        autoThemePending: window.localStorage.getItem("settings_night_theme_pending_v1"),
         dayTheme: window.localStorage.getItem("settings_day_theme_profile_v1"),
         nightTheme: window.localStorage.getItem("settings_night_theme_profile_v1"),
         dayTilePalette: window.localStorage.getItem("settings_day_tile_palette_v1"),
@@ -176,12 +182,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(afterNightEnable.currentTilePalette).toBe("follow-theme");
     expect(afterNightEnable.savedTheme).toBe("classic");
     expect(afterNightEnable.savedTilePalette).toBe("follow-theme");
-    expect(afterNightEnable.autoThemeApplied).toBe("1");
-    expect(afterNightEnable.autoThemePending).toBe("0");
-    expect(afterNightEnable.dayTheme).toBe("classic");
-    expect(afterNightEnable.nightTheme).toBe("classic");
-    expect(afterNightEnable.dayTilePalette).toBe("follow-theme");
-    expect(afterNightEnable.nightTilePalette).toBe("follow-theme");
+    expect(afterNightEnable.dayTheme).toBeNull();
+    expect(afterNightEnable.nightTheme).toBeNull();
+    expect(afterNightEnable.dayTilePalette).toBeNull();
+    expect(afterNightEnable.nightTilePalette).toBeNull();
 
     const nightBoardSnapshot = await page.evaluate(() => {
       const gameContainer = document.querySelector(".game-container");
@@ -202,9 +206,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.waitForFunction(() => {
       return (
         window.localStorage.getItem("theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("tile_palette_active_v1") === "cold-cyan-steps" &&
-        window.localStorage.getItem("settings_night_theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("settings_night_tile_palette_v1") === "cold-cyan-steps"
+        window.localStorage.getItem("tile_palette_active_v1") === "cold-cyan-steps"
       );
     });
 
@@ -238,14 +240,18 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     expect(finalNightSnapshot.night.enabled).toBe(false);
     expect(finalNightSnapshot.night.dataAttribute).toBe("");
-    expect(finalNightSnapshot.currentTheme).toBe("classic");
-    expect(finalNightSnapshot.currentTilePalette).toBe("follow-theme");
-    expect(finalNightSnapshot.savedTheme).toBe("classic");
-    expect(finalNightSnapshot.savedTilePalette).toBe("follow-theme");
+    expect(finalNightSnapshot.currentTheme).toBe("ocean");
+    expect(finalNightSnapshot.currentTilePalette).toBe("cold-cyan-steps");
+    expect(finalNightSnapshot.savedTheme).toBe("ocean");
+    expect(finalNightSnapshot.savedTilePalette).toBe("cold-cyan-steps");
 
     await page.click("label.settings-switch[for='night-bg-toggle']");
     await page.waitForFunction(() => {
-      return window.localStorage.getItem("settings_night_background_enabled_v1") === "1";
+      return window.localStorage.getItem("settings_display_mode_v2") === "auto";
+    });
+    await page.click("label.settings-switch[for='night-bg-toggle']");
+    await page.waitForFunction(() => {
+      return window.localStorage.getItem("settings_display_mode_v2") === "night";
     });
     await expect(page.locator("#night-bg-toggle")).toBeChecked();
 
@@ -260,8 +266,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
             ? (window as any).ThemeManager.getActiveTilePaletteId()
             : "",
         savedTheme: window.localStorage.getItem("theme_profile_v1"),
-        savedTilePalette: window.localStorage.getItem("tile_palette_active_v1"),
-        autoThemeApplied: window.localStorage.getItem("settings_night_theme_auto_applied_v1")
+        savedTilePalette: window.localStorage.getItem("tile_palette_active_v1")
       };
     });
 
@@ -269,10 +274,9 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(secondNightEnable.currentTilePalette).toBe("cold-cyan-steps");
     expect(secondNightEnable.savedTheme).toBe("ocean");
     expect(secondNightEnable.savedTilePalette).toBe("cold-cyan-steps");
-    expect(secondNightEnable.autoThemeApplied).toBe("1");
   });
 
-  test("palette theme changes persist in night mode after returning to the home page", async ({
+  test("palette theme changes persist across display modes after returning to the home page", async ({
     page
   }) => {
     await page.addInitScript(() => {
@@ -310,6 +314,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         return page.evaluate(() => {
           return {
             currentTheme: (window as any).ThemeManager.getCurrentTheme(),
+            savedTheme: window.localStorage.getItem("theme_profile_v1"),
             nightTheme: window.localStorage.getItem("settings_night_theme_profile_v1"),
             dataNight: document.documentElement.getAttribute("data-night-background") || ""
           };
@@ -317,7 +322,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
       })
       .toEqual({
         currentTheme: "classic",
-        nightTheme: "classic",
+        savedTheme: "classic",
+        nightTheme: "midnight_nebula",
         dataNight: "1"
       });
 
@@ -336,9 +342,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       return (
         typeof (window as any).ThemeManager?.getCurrentTheme === "function" &&
         (window as any).ThemeManager.getCurrentTheme() === "ocean" &&
-        window.localStorage.getItem("theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("settings_night_theme_profile_v1") === "ocean" &&
-        window.localStorage.getItem("settings_day_theme_profile_v1") === "classic"
+        window.localStorage.getItem("theme_profile_v1") === "ocean"
       );
     }, null, { timeout: 15000 });
 
@@ -367,7 +371,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       .toEqual({
         currentTheme: "ocean",
         savedTheme: "ocean",
-        nightTheme: "ocean",
+        nightTheme: "midnight_nebula",
         dayTheme: "classic",
         dataNight: "1"
       });

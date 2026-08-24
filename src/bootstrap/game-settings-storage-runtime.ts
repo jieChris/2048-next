@@ -9,6 +9,7 @@ import {
   readSavedPayloadFromWindowName,
   readStorageFlagFromContext,
   readStorageJsonMapFromContext,
+  readStorageTextFromContext,
   readTimerModuleViewForModeFromMap,
   readUndoEnabledForModeFromMap,
   removeKeysFromStorages,
@@ -19,6 +20,7 @@ import {
   writeStorageFlagFromContext,
   writeStorageJsonMapFromContext,
   writeStorageJsonPayloadFromContext,
+  writeStorageTextFromContext,
   writeTimerModuleViewForModeToMap,
   writeUndoEnabledForModeToMap
 } from "../core/game-settings-storage";
@@ -34,6 +36,7 @@ export interface GameSettingsStorageRuntime {
   readSavedPayloadFromWindowName: typeof readSavedPayloadFromWindowName;
   readStorageFlagFromContext: typeof readStorageFlagFromContext;
   readStorageJsonMapFromContext: typeof readStorageJsonMapFromContext;
+  readStorageTextFromContext: typeof readStorageTextFromContext;
   readTimerModuleViewForModeFromMap: typeof readTimerModuleViewForModeFromMap;
   readUndoEnabledForModeFromMap: typeof readUndoEnabledForModeFromMap;
   removeKeysFromStorages: typeof removeKeysFromStorages;
@@ -44,6 +47,7 @@ export interface GameSettingsStorageRuntime {
   writeStorageFlagFromContext: typeof writeStorageFlagFromContext;
   writeStorageJsonMapFromContext: typeof writeStorageJsonMapFromContext;
   writeStorageJsonPayloadFromContext: typeof writeStorageJsonPayloadFromContext;
+  writeStorageTextFromContext: typeof writeStorageTextFromContext;
   writeTimerModuleViewForModeToMap: typeof writeTimerModuleViewForModeToMap;
   writeUndoEnabledForModeToMap: typeof writeUndoEnabledForModeToMap;
 }
@@ -68,6 +72,7 @@ export function createGameSettingsStorageRuntime(): GameSettingsStorageRuntime {
     readSavedPayloadFromWindowName,
     readStorageFlagFromContext,
     readStorageJsonMapFromContext,
+    readStorageTextFromContext,
     readTimerModuleViewForModeFromMap,
     readUndoEnabledForModeFromMap,
     removeKeysFromStorages,
@@ -78,6 +83,7 @@ export function createGameSettingsStorageRuntime(): GameSettingsStorageRuntime {
     writeStorageFlagFromContext,
     writeStorageJsonMapFromContext,
     writeStorageJsonPayloadFromContext,
+    writeStorageTextFromContext,
     writeTimerModuleViewForModeToMap,
     writeUndoEnabledForModeToMap
   };

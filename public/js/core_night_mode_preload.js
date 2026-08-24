@@ -3,7 +3,6 @@
   var DISPLAY_MODE_STORAGE_KEY = "settings_display_mode_v2";
   var THEME_PROFILE_KEY = "theme_profile_v1";
   var DAY_THEME_KEY = "settings_day_theme_profile_v1";
-  var NIGHT_THEME_KEY = "settings_night_theme_profile_v1";
   var AUTO_THEME_APPLIED_KEY = "settings_night_theme_auto_applied_v1";
   var LEGACY_AUTO_THEME_ID = "midnight_nebula";
   var DEFAULT_THEME_ID = "mist_cyan";
@@ -125,18 +124,18 @@
 
   function syncInitialThemeAttribute() {
     var resolved = resolveDisplayMode();
-    var isNight = resolved.isNight;
     documentElement.setAttribute("data-display-mode", resolved.mode);
-    var modeThemeKey = isNight ? NIGHT_THEME_KEY : DAY_THEME_KEY;
-    var themeId = readStorageItem(modeThemeKey);
+    var themeId = readStorageItem(THEME_PROFILE_KEY);
     if (
-      isNight &&
       themeId === LEGACY_AUTO_THEME_ID &&
       readStorageItem(AUTO_THEME_APPLIED_KEY) === "1"
     ) {
       themeId = readStorageItem(DAY_THEME_KEY);
+      if (themeId && themeId !== LEGACY_AUTO_THEME_ID) {
+        writeStorageItem(THEME_PROFILE_KEY, themeId);
+      }
     }
-    themeId = themeId || readStorageItem(THEME_PROFILE_KEY) || DEFAULT_THEME_ID;
+    themeId = themeId || DEFAULT_THEME_ID;
     documentElement.setAttribute("data-theme", themeId);
   }
 

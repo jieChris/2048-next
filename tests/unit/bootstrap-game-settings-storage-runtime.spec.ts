@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   normalizeHistoryRecordFromContext,
   readStorageFlagFromContext,
+  readStorageTextFromContext,
   resolveSavedGameStateStorageKey,
-  writeStorageFlagFromContext
+  writeStorageFlagFromContext,
+  writeStorageTextFromContext
 } from "../../src/core/game-settings-storage";
 import {
   createGameSettingsStorageRuntime,
@@ -18,6 +20,8 @@ describe("bootstrap game-settings-storage runtime", () => {
 
     expect(runtime.readStorageFlagFromContext).toBe(readStorageFlagFromContext);
     expect(runtime.writeStorageFlagFromContext).toBe(writeStorageFlagFromContext);
+    expect(runtime.readStorageTextFromContext).toBe(readStorageTextFromContext);
+    expect(runtime.writeStorageTextFromContext).toBe(writeStorageTextFromContext);
     expect(runtime.resolveSavedGameStateStorageKey).toBe(resolveSavedGameStateStorageKey);
     expect(runtime.normalizeHistoryRecordFromContext).toBe(normalizeHistoryRecordFromContext);
     expect(Object.keys(runtime).sort()).toEqual([
@@ -31,6 +35,7 @@ describe("bootstrap game-settings-storage runtime", () => {
       "readSavedPayloadFromWindowName",
       "readStorageFlagFromContext",
       "readStorageJsonMapFromContext",
+      "readStorageTextFromContext",
       "readTimerModuleViewForModeFromMap",
       "readUndoEnabledForModeFromMap",
       "removeKeysFromStorages",
@@ -41,6 +46,7 @@ describe("bootstrap game-settings-storage runtime", () => {
       "writeStorageFlagFromContext",
       "writeStorageJsonMapFromContext",
       "writeStorageJsonPayloadFromContext",
+      "writeStorageTextFromContext",
       "writeTimerModuleViewForModeToMap",
       "writeUndoEnabledForModeToMap"
     ]);

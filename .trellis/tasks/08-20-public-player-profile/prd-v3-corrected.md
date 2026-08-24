@@ -133,7 +133,7 @@ SELECT s.user_id,
 
 - 新头像审核系统的**已批准公开头像**由 `profile_current.avatar_revision_id` → `avatar_objects` 解析出不可变公开 URL，记为 `approved_avatar_url`。
 - 公开主页优先返回 `approved_avatar_url`；当其为空时回退到 `game_data.users.avatar_url`（兼容旧数据），再回退到内置默认头像。
-- 头像审核链路只写 `avatar_submissions`/`avatar_objects`/`profile_current.avatar_revision_id`，**不直接改写 `game_data.users.avatar_url`**，避免绕过审核。是否在批准后同步回填 `game_data.users.avatar_url` 作为兼容镜像，为未决决策（§14）。
+- 头像审核链路只写 `avatar_submissions`/`avatar_objects`/`profile_current.avatar_revision_id`，**不回填或改写 `game_data.users.avatar_url`**，避免双写与绕过审核；旧列仅作为没有新头像时的兼容读取回退。
 
 ---
 
@@ -359,10 +359,7 @@ API 类型检查；API 迁移与相关节点测试；前端类型检查；服务
 - **OpenAPI 采用方案 A**：仅本任务端点手写 OpenAPI + 生成类型；不做全量真源（§6.1）。
 - **回滚可见性 = "停写但仍读"**：关 flag 停新写、已写数据仍公开读，优先于完全隐藏（§10.3）。
 - **AI 服务只做一次性审核**：不留存原文/原图、不训练、不作画像或其他二次用途；系统不保存 provider 原始响应（§8.8）。
-
-**仍待拍板：**
-1. **批准头像是否回填 `game_data.users.avatar_url`** 作为兼容镜像（§4.3）。属 P2，不阻塞 P0/P1。
+- **批准头像不回填 `game_data.users.avatar_url`**：新头像唯一权威为 `profile_current.avatar_revision_id → avatar_objects`；旧列只作兼容读取回退（§4.3）。
 
 ## 15. 设计原则（保留）
 一套背景的最小可用单位是"昼间三层 + 夜间三层"，不是三张图；用户选场景、系统选昼夜变体；管理员发布目录、用户选个人背景，默认场景与个人场景不混同；文件更新用新修订不覆盖旧对象，失败时继续用旧修订；后端负责真实性/权限/持久化，前端负责展示与交互；多 agent 用于并行分析与隔离实现，对抗性 agent 用于阻止错误合并，最终由集成门禁决定是否进入 `main`。
-

@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 import {
   collectBoundaryViolations,
   collectPatternMatches,
+  AUDIT_TARGETS,
+  DIRECT_DISPLAY_MODE_STORAGE_PATTERN,
+  DIRECT_STORAGE_BOUNDARY_FILES,
   DIRECT_SERVICE_USAGE_ALLOWLIST,
   ensureNoBoundaryViolations,
   normalizePortablePath,
@@ -37,6 +40,13 @@ describe("service-boundary-audit helpers", () => {
     expect(collectPatternMatches(source, /\bfetch\s*\(/gu, "fetch")).toEqual([
       { label: "fetch", token: "fetch(", line: 3 }
     ]);
+  });
+
+  it("audits public preload scripts and catches display-mode storage syntax variants", () => {
+    expect(AUDIT_TARGETS.some((target) => target.relativePrefix === "public/js")).toBe(true);
+    expect(collectPatternMatches("toRecord(global).localStorage", DIRECT_DISPLAY_MODE_STORAGE_PATTERN, "storage"))
+      .toHaveLength(1);
+    expect(DIRECT_STORAGE_BOUNDARY_FILES.has("public/js/core_night_mode_preload.js")).toBe(true);
   });
 
   it("collects violations per file", () => {

@@ -6,6 +6,7 @@
   var UI_LANG_STORAGE_KEY = "ui_language_v1";
   var STORAGE_TOKEN_KEY = "2048_auth_token_v1";
   var STORAGE_USER_ID_KEY = "2048_auth_userId_v1";
+  var STORAGE_PUBLIC_PROFILE_ID_KEY = "2048_public_profile_id_v1";
   var STORAGE_NICKNAME_KEY = "2048_auth_nickname_v1";
   var DEFAULT_API_TIMEOUT_MS = 12000;
   var AUTH_API_TIMEOUT_MS = 30000;
@@ -102,7 +103,7 @@
   var apiBases = buildApiBaseCandidates();
   var activeApiBase = "";
   var currentLang = readLanguage();
-  var targetUserId = 0;
+  var targetUserId = -1;
   var targetNicknameHint = "";
   var resolvedProfileNickname = "";
   var currentProfileData = null;
@@ -378,6 +379,27 @@
     return parsed > 0 ? parsed : 0;
   }
 
+  function parsePublicUserId(value) {
+    if (value == null || toText(value).trim() === "") return -1;
+    var parsed = Math.floor(Number(value));
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : -1;
+  }
+
+  function publicProfileIdFromUser(user) {
+    var source = user && typeof user === "object" ? user : {};
+    var candidates = [
+      source.public_profile_id,
+      source.publicProfileId,
+      source.game_user_id,
+      source.gameUserId
+    ];
+    for (var index = 0; index < candidates.length; index += 1) {
+      var parsed = parsePublicUserId(candidates[index]);
+      if (parsed >= 0) return parsed;
+    }
+    return -1;
+  }
+
   function normalizeReplayFileVersion(value) {
     var parsed = Math.floor(Number(value) || 0);
     return parsed > 0 ? parsed : 0;
@@ -465,6 +487,10 @@
 
   function getStoredUserId() {
     return parsePositiveInt(safeGetStorage(STORAGE_USER_ID_KEY));
+  }
+
+  function getStoredPublicProfileId() {
+    return parsePublicUserId(safeGetStorage(STORAGE_PUBLIC_PROFILE_ID_KEY));
   }
 
   function getStoredNickname() {
@@ -781,8 +807,8 @@
   }
 
   function getUserInfo(userId) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    var safeUserId = parsePublicUserId(userId);
+    if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
   }
 
@@ -824,28 +850,27 @@
   }
 
   async function resolveTargetUserFromSession() {
-    if (targetUserId) return true;
+    if (targetUserId >= 0) return true;
     if (!getAuthToken()) return false;
 
-    var storedUserId = getStoredUserId();
-    if (storedUserId) {
-      targetUserId = storedUserId;
+    var result = await getMyUserInfo();
+    if (!result || !result.success || !result.data) {
+      var storedPublicProfileId = getStoredPublicProfileId();
+      if (storedPublicProfileId < 0) return false;
+      targetUserId = storedPublicProfileId;
       targetNicknameHint = getStoredNickname();
       resolvedProfileNickname = targetNicknameHint;
       return true;
     }
 
-    var result = await getMyUserInfo();
-    if (!result || !result.success || !result.data) return false;
-
     var me = result.data || {};
-    var resolvedUserId = parsePositiveInt(me.id || me.user_id);
-    if (!resolvedUserId) return false;
+    var resolvedUserId = publicProfileIdFromUser(me);
+    if (resolvedUserId < 0) return false;
 
     targetUserId = resolvedUserId;
     targetNicknameHint = toText(me.nickname).trim();
     resolvedProfileNickname = targetNicknameHint;
-    writeLocalStorageItem(STORAGE_USER_ID_KEY, String(resolvedUserId));
+    writeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY, String(resolvedUserId));
     if (targetNicknameHint) {
       writeLocalStorageItem(STORAGE_NICKNAME_KEY, targetNicknameHint);
     }
@@ -853,8 +878,8 @@
   }
 
   function getUserRecords(userId, options) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    var safeUserId = parsePublicUserId(userId);
+    if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
     var opts = options || {};
     var safeLimit = Math.floor(Number(opts.limit) || DEFAULT_RECORD_LIMIT);
     if (safeLimit <= 0) safeLimit = DEFAULT_RECORD_LIMIT;
@@ -891,8 +916,8 @@
   }
 
   function getUserStats(userId) {
-    var safeUserId = parsePositiveInt(userId);
-    if (!safeUserId) return Promise.resolve({ error: t("invalidUserId") });
+    var safeUserId = parsePublicUserId(userId);
+    if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
     return apiRequest("/user/" + encodeURIComponent(String(safeUserId)) + "/stats", {
       method: "GET",
       timeoutMs: USER_RECORDS_API_TIMEOUT_MS
@@ -2298,8 +2323,9 @@
     var createdNode = byId("user-value-created");
 
     resolvedProfileNickname = toText(data.nickname || targetNicknameHint || "").trim();
+    var responseUserId = publicProfileIdFromUser(data);
     currentProfileData = Object.assign({}, data, {
-      id: parsePositiveInt(data.id || data.user_id) || targetUserId,
+      id: responseUserId >= 0 ? responseUserId : targetUserId,
       nickname: resolvedProfileNickname
     });
     if (nameNode) nameNode.textContent = resolvedProfileNickname || "--";
@@ -2312,9 +2338,7 @@
   async function resolveOwnership() {
     var result = await getMyUserInfo();
     if (!result || !result.success || !result.data) {
-      var localUserId = getStoredUserId();
-      var ownershipFromStorage = !!localUserId && localUserId === targetUserId && !!getAuthToken();
-      isOwnProfile = ownershipFromStorage;
+      isOwnProfile = false;
       updateVisibilityControl();
       syncRecordDateLabel();
       applyDocumentTitle();
@@ -2324,8 +2348,9 @@
     }
 
     var me = result.data || {};
-    var myUserId = parsePositiveInt(me.id || me.user_id);
-    isOwnProfile = !!myUserId && myUserId === targetUserId;
+    var myUserId = publicProfileIdFromUser(me);
+    isOwnProfile = myUserId >= 0 && myUserId === targetUserId;
+    if (myUserId >= 0) writeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY, String(myUserId));
 
     if (isOwnProfile && !resolvedProfileNickname) {
       resolvedProfileNickname = toText(me.nickname).trim();
@@ -2407,7 +2432,7 @@
   }
 
   async function fetchSummaryData() {
-    if (!targetUserId) return;
+    if (targetUserId < 0) return;
     var stats = await getUserStats(targetUserId);
     var statsData = stats && stats.success && stats.data && typeof stats.data === "object"
       ? stats.data
@@ -2446,7 +2471,7 @@
   }
 
   async function refreshRecords(resetPage) {
-    if (!targetUserId) {
+    if (targetUserId < 0) {
       recordsLoading = false;
       renderRecords([]);
       setTip(t("invalidUserId"), "err");
@@ -2620,6 +2645,7 @@
     }
     removeLocalStorageItem(STORAGE_TOKEN_KEY);
     removeLocalStorageItem(STORAGE_USER_ID_KEY);
+    removeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY);
     removeLocalStorageItem(STORAGE_NICKNAME_KEY);
   }
 
@@ -2702,7 +2728,7 @@
 
   function parseQuery() {
     var params = new global.URLSearchParams(toText(global.location && global.location.search));
-    targetUserId = parsePositiveInt(params.get("id"));
+    targetUserId = parsePublicUserId(params.get("id"));
     targetNicknameHint = toText(params.get("nickname")).trim();
     resolvedProfileNickname = targetNicknameHint;
   }
@@ -2727,7 +2753,7 @@
 
     await resolveTargetUserFromSession();
 
-    if (!targetUserId) {
+    if (targetUserId < 0) {
       applyDocumentTitle();
       recordsLoading = false;
       renderRecords([]);
@@ -2737,8 +2763,7 @@
 
     var nameNode = byId("user-value-name");
     if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
-    var initialUserId = getStoredUserId();
-    isOwnProfile = !!initialUserId && initialUserId === targetUserId && !!getAuthToken();
+    isOwnProfile = false;
     updateVisibilityControl();
     applyDocumentTitle();
 

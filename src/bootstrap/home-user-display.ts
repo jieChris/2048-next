@@ -1,6 +1,6 @@
 const AUTH_NICKNAME_STORAGE_KEY = "2048_auth_nickname_v1";
 const AUTH_TOKEN_STORAGE_KEY = "2048_auth_token_v1";
-const AUTH_USER_ID_STORAGE_KEY = "2048_auth_userId_v1";
+const PUBLIC_PROFILE_ID_STORAGE_KEY = "2048_public_profile_id_v1";
 const UI_LANGUAGE_STORAGE_KEY = "ui_language_v1";
 const TOP_USER_PROFILE_BUTTON_ID = "top-user-profile-btn";
 const DEFAULT_GUEST_LABEL_ZH = "游客";
@@ -69,11 +69,11 @@ function readNickname(storageLike: unknown): string {
   }
 }
 
-function readUserId(storageLike: unknown): string {
+function readPublicProfileId(storageLike: unknown): string {
   const storage = toRecord(storageLike) as StorageLike;
   if (typeof storage.getItem !== "function") return "";
   try {
-    return String(storage.getItem(AUTH_USER_ID_STORAGE_KEY) || "").trim();
+    return String(storage.getItem(PUBLIC_PROFILE_ID_STORAGE_KEY) || "").trim();
   } catch {
     return "";
   }
@@ -101,10 +101,11 @@ export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): st
 }
 
 export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
-  const userId = readUserId(input.storageLike);
+  const userId = readPublicProfileId(input.storageLike);
   const nickname = readNickname(input.storageLike);
+  if (!readAuthToken(input.storageLike)) return "account_settings.html";
   if (!userId) {
-    return readAuthToken(input.storageLike) ? "user.html" : "account_settings.html";
+    return "user.html";
   }
   const query = new URLSearchParams({ id: userId });
   if (nickname) query.set("nickname", nickname);
@@ -235,7 +236,7 @@ export function bindHomeUserDisplay(input: {
       !event.key ||
       event.key === AUTH_NICKNAME_STORAGE_KEY ||
       event.key === AUTH_TOKEN_STORAGE_KEY ||
-      event.key === AUTH_USER_ID_STORAGE_KEY
+      event.key === PUBLIC_PROFILE_ID_STORAGE_KEY
     ) {
       syncHomeUserDisplay({
         documentLike: input.documentLike,
