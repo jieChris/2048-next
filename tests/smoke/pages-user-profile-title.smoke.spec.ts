@@ -625,31 +625,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-summary-best-tile-value")).toHaveText("--");
     await expect(page.locator("#user-summary-best-tile-detail")).toHaveText("Rating 系统完善后显示");
 
-    await expect(page.locator("#user-record-undo")).toHaveValue("no_undo");
+    await expect(page.locator("#user-record-undo")).toHaveValue("all");
     const undoOptionValues = await page.locator("#user-record-undo option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
-    expect(undoOptionValues).toEqual(["no_undo", "undo"]);
+    expect(undoOptionValues).toEqual(["all", "no_undo", "undo"]);
     const modeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
-    expect(modeOptionValues).toContain("pow2_5x5");
-    expect(modeOptionValues).toContain("capped_4096");
-    expect(modeOptionValues).toContain("fib_4x2");
-    expect(modeOptionValues).not.toContain("pow2_5x5_undo");
-    expect(modeOptionValues).not.toContain("fib_4x2_undo");
+    expect(modeOptionValues).toContain("all");
+    expect(modeOptionValues).toContain("board_5x5_pow2_no_undo");
+    expect(modeOptionValues).toContain("board_5x5_pow2_undo");
+    expect(modeOptionValues).toContain("capped_4x4_pow2_4096_no_undo");
+    expect(modeOptionValues).toContain("fib_4x2_no_undo");
+    expect(modeOptionValues).toContain("fib_4x2_undo");
 
     await page.selectOption("#user-record-undo", "undo");
     const undoModeOptionValues = await page.locator("#user-record-mode option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
-    expect(undoModeOptionValues).toContain("pow2_5x5_undo");
+    expect(undoModeOptionValues).toContain("board_5x5_pow2_undo");
     expect(undoModeOptionValues).toContain("fib_4x2_undo");
-    expect(undoModeOptionValues).not.toContain("pow2_5x5");
-    expect(undoModeOptionValues).not.toContain("capped_4096");
+    expect(undoModeOptionValues).not.toContain("board_5x5_pow2_no_undo");
+    expect(undoModeOptionValues).not.toContain("capped_4x4_pow2_4096_no_undo");
 
     await page.selectOption("#user-record-mode", "fib_4x2_undo");
-    await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
+    await expect.poll(() => recordRequests.some((url) =>
+      url.includes("mode_key=fib_4x2_undo") && url.includes("undo=undo")
+    )).toBe(true);
     await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
     await expect(page.locator("#user-summary-total-value")).toHaveText("6");
     await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
@@ -661,7 +664,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     const requestsBeforeNoUndo = recordRequests.length;
     await page.selectOption("#user-record-undo", "no_undo");
-    await expect(page.locator("#user-record-mode")).toHaveValue("standard_no_undo");
+    await expect(page.locator("#user-record-mode")).toHaveValue("all");
     await expect.poll(() => recordRequests.length).toBeGreaterThan(requestsBeforeNoUndo);
     await expect(page.locator(".user-record-item")).toHaveCount(1);
 
