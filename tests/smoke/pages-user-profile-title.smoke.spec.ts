@@ -435,15 +435,20 @@ test.describe("Legacy Multi-Page Smoke", () => {
     expect(recordColumnLayout[0].width / recordColumnLayout[1].width).toBeCloseTo(1.35, 1);
     expect(recordColumnLayout.slice(2).every((column) => Math.abs(column.width - recordColumnLayout[1].width) < 1)).toBe(true);
     await expect(page.locator("#user-record-page")).toHaveText("第1/3页");
-    const labelSizes = await page.locator("#user-undo-label, #user-mode-label, #user-sort-label, #user-order-label")
-      .evaluateAll((nodes) => nodes.map((node) => {
-        const rect = node.getBoundingClientRect();
-        return [rect.width, rect.height];
-      }));
-    expect(labelSizes).toEqual([[1, 1], [1, 1], [1, 1], [1, 1]]);
-    const controlWidths = await page.locator("#user-record-undo, #user-record-mode, #user-record-sort, #user-record-order")
-      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width));
-    expect(controlWidths).toEqual([160, 320, 180, 160]);
+    const fieldLayouts = await page.locator(
+      ".user-record-mode-field, .user-record-undo-field, .user-record-sort-field, .user-record-order-field"
+    ).evaluateAll((nodes) => nodes.map((node) => {
+      const label = node.querySelector("label")?.getBoundingClientRect();
+      const select = node.querySelector("select")?.getBoundingClientRect();
+      return {
+        labelWidth: label?.width || 0,
+        labelHeight: label?.height || 0,
+        selectWidth: select?.width || 0
+      };
+    }));
+    expect(fieldLayouts.every((field) => field.labelHeight > 0)).toBe(true);
+    expect(fieldLayouts.every((field) => field.selectWidth >= 112)).toBe(true);
+    expect(fieldLayouts.every((field) => Math.abs(field.labelWidth - field.selectWidth) < 1)).toBe(true);
     const sortOptions = await page.locator("#user-record-sort option").evaluateAll((options) =>
       options.map((option) => (option as HTMLOptionElement).value)
     );
@@ -601,6 +606,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-panel-overview")).toBeVisible();
     await expect(page.locator("#user-featured-edit")).toBeVisible();
     await expect(page.locator("#user-showcase-wall-link")).toBeHidden();
+    await page.locator("#user-nav-menu").click();
+    await expect(page.locator("#user-nav-edit-mode")).toBeVisible();
     await page.locator("#user-nav-edit-mode").click();
     await expect(page.locator("#user-profile-edit")).toHaveCount(0);
     await expect(page.locator("#user-featured-edit")).toBeHidden();
