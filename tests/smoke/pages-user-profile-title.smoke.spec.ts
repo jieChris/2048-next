@@ -617,7 +617,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight > strong")).toHaveText("8 192");
     await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("3 局");
     await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
-    await expect(page.locator("#user-summary-total-value")).toHaveText("3");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
     await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
     await expect(page.locator("#user-summary-best-score-value")).toContainText("斐波那契");
     await expect(page.locator("#user-summary-best-score-detail")).toHaveText("3 局");
@@ -651,7 +651,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.selectOption("#user-record-mode", "fib_4x2_undo");
     await expect.poll(() => recordRequests.some((url) => url.includes("mode=fib_4x2_undo"))).toBe(true);
     await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
-    await expect(page.locator("#user-summary-total-value")).toHaveText("3");
+    await expect(page.locator("#user-summary-total-value")).toHaveText("6");
     await expect(page.locator("#user-summary-best-score-label")).toHaveText("最常玩");
     await expect(page.locator("#user-summary-best-score-value")).toContainText("斐波那契");
     await expect(page.locator("#user-summary-best-score-detail")).toHaveText("3 局");

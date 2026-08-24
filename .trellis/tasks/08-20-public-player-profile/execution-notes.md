@@ -65,6 +65,8 @@
 
 ## Current State
 
+- 2026-08-24：Actions `32718753206` 的页面 Smoke 已收敛到 237/238，通过项未发现产品回归；唯一失败是同一夹具明确返回 `summary.total_records=6`（两种模式各 3 局），但两处旧断言仍把全账号“总记录数”误写为 3。概览汇总卡按已确认产品定义不随下方模式筛选变化，因此仅把两处断言修正为 6，不改产品逻辑；Release Ready、构建和部署均被门禁跳过，服务器未应用该失败版本。
+
 - 2026-08-24：前端 `main@5c662487` 推送触发 GitHub Actions `32713867182`，`Smoke (pages)` 226 通过、12 失败，因此 Release Ready、构建和服务器部署均被正确跳过，线上未切换到失败版本。根因是 Smoke 夹具仍把认证账号 `id` / `2048_auth_userId_v1` 当作公开主页 ID，且 3 处断言仍指向改版前的 `aria-pressed` 与 CSS 版本号；产品双 ID 边界本身没有回退。修正仅更新测试夹具/合同并补充 Smoke 规范，不放宽产品归属校验。
 
 - 2026-08-24：P2 收口修复完成。修正头像迁移正则、孤儿文件首次入队 15 分钟宽限、头像审核窄响应 OpenAPI、管理员旧 `/api/admin/me` 精确断言、bio/avatar 决定—原因组合校验与 `ModerationReviewRequest`/`AvatarReviewRequest` 的 `oneOf` 合同；CI 已配置 `MODERATION_LOCK_TEST_DATABASE_URL`。只读对抗复审确认 P0/P1=0；剩余为 P2 头像审核视觉矩阵登记，未阻断本轮。
