@@ -146,7 +146,7 @@ function applyStaticCopy(): void {
 function currentNext(): string {
   const params = new URLSearchParams(window.location.search);
   const next = toText(params.get("next")).trim();
-  return next && !/^https?:\/\//iu.test(next) ? next : "2048.html";
+  return next && !/^https?:\/\//iu.test(next) ? next : "/";
 }
 
 function setTip(message: string, state: TipState = "idle"): void {

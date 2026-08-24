@@ -9,7 +9,7 @@ function readHtml(path: string): string {
 describe("navigation entry consistency", () => {
   it("keeps core pages reachable without browser-only navigation", () => {
     const replayHtml = readHtml("replay.html");
-    expect(replayHtml).toContain('href="2048.html"');
+    expect(replayHtml).toContain('href="/"');
     expect(replayHtml).toContain('href="history.html"');
 
     const accountHtml = readHtml("account.html");

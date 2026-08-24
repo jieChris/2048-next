@@ -331,7 +331,7 @@ const CONTEXTUAL_GUIDES: readonly ContextualGuideDefinition[] = [
         body: text("新游戏会创建一局新的状态；刷新页面会尝试恢复当前保存状态，恢复结果以本地记录为准。", "New Game creates a new state. Refresh tries to restore the saved current state, using the local record as the source."),
       },
     ],
-    buildTargetUrl: (context) => buildGuidePageUrl(context, "2048.html", "game-basics-v1"),
+    buildTargetUrl: (context) => buildGuidePageUrl(context, "/", "game-basics-v1"),
   },
   {
     id: "mode-selection-v1",

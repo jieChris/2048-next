@@ -26,7 +26,7 @@ const MODES_PAGE_COPY: Record<
     frequentTitle: "常用模式",
     tabListAria: "模式分类",
     priority: {
-      "2048.html": { title: "标准 4×4", subtitle: "不可撤回" },
+      "/": { title: "标准 4×4", subtitle: "不可撤回" },
       "undo_2048.html": { title: "经典 4×4", subtitle: "可撤回" },
       "play.html?mode_key=board_3x3_pow2_no_undo": { title: "3×3", subtitle: "不可撤回" },
       "palette.html": { title: "设置", subtitle: "主题与计时器" }
@@ -49,7 +49,7 @@ const MODES_PAGE_COPY: Record<
       "记录与工具"
     ],
     links: {
-      "2048.html": "4×4",
+      "/": "4×4",
       "undo_2048.html": "4×4",
       "play.html?mode_key=fib_4x4_no_undo": "斐波那契 4×4",
       "play.html?mode_key=fib_3x3_no_undo": "斐波那契 3×3",
@@ -111,7 +111,7 @@ const MODES_PAGE_COPY: Record<
     frequentTitle: "Common Modes",
     tabListAria: "Mode categories",
     priority: {
-      "2048.html": { title: "Standard 4x4", subtitle: "No Undo" },
+      "/": { title: "Standard 4x4", subtitle: "No Undo" },
       "undo_2048.html": { title: "Classic 4x4", subtitle: "Undo" },
       "play.html?mode_key=board_3x3_pow2_no_undo": { title: "3x3", subtitle: "No Undo" },
       "palette.html": { title: "Settings", subtitle: "Themes & Timers" }
@@ -134,7 +134,7 @@ const MODES_PAGE_COPY: Record<
       "Records & Tools"
     ],
     links: {
-      "2048.html": "4x4",
+      "/": "4x4",
       "undo_2048.html": "4x4",
       "play.html?mode_key=fib_4x4_no_undo": "Fibonacci 4x4",
       "play.html?mode_key=fib_3x3_no_undo": "Fibonacci 3x3",

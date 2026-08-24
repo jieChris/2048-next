@@ -31,7 +31,7 @@
   <main>
     <h1>正在修复缓存</h1>
     <p>请稍等，页面会自动返回 2048。</p>
-    <p><a id="fallback-link" href="./2048.html">手动返回首页</a></p>
+    <p><a id="fallback-link" href="/">手动返回首页</a></p>
   </main>
   <script>
     (function () {
@@ -47,7 +47,7 @@
         }
       }
 
-      var target = "./2048.html?cache_reset=" + Date.now();
+      var target = "/?cache_reset=" + Date.now();
       if (shouldClearRankedCheckpointState()) {
         target += "&force_ranked_checkpoint=1";
       }

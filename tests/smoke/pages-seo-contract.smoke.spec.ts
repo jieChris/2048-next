@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const pages = [
   {
     path: "/2048.html",
-    canonical: "https://2048next.cn/2048.html",
+    canonical: "https://2048next.cn/",
     zhTitle: "2048 NEXT — 免费在线 2048 多模式数字合并游戏",
     enTitle: "2048 NEXT — Free Online 2048 Puzzle Game"
   },

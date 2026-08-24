@@ -4,7 +4,7 @@
   "short_name": "2048",
   "description": "2048 Next 多模式版本",
   "lang": "zh-CN",
-  "start_url": "/2048.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "launch_handler": {

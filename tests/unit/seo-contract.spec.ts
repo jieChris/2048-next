@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const CANONICAL_HOME = "https://2048next.cn/2048.html";
+const CANONICAL_HOME = "https://2048next.cn/";
 
 describe("search discovery contract", () => {
   it("keeps one canonical game URL and valid public metadata", () => {
@@ -13,7 +13,7 @@ describe("search discovery contract", () => {
     expect(home).toContain(
       '<meta property="og:image" content="https://2048next.cn/meta/icon-512.png">'
     );
-    expect(home).toMatch(/"url":\s*"https:\/\/2048next\.cn\/2048\.html"/u);
+    expect(home).toMatch(/"url":\s*"https:\/\/2048next\.cn\/"/u);
     expect(home).not.toContain('"@type": "FAQPage"');
     expect(index).toContain(`<link rel="canonical" href="${CANONICAL_HOME}" />`);
   });
@@ -50,10 +50,10 @@ describe("search discovery contract", () => {
     const urls = Array.from(sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu), (match) => match[1]);
 
     expect(urls).toEqual([
-      "https://2048next.cn/2048.html",
+      "https://2048next.cn/",
       "https://2048next.cn/modes.html"
     ]);
-    expect(sitemap).toContain("<lastmod>2026-08-18</lastmod>");
+    expect(sitemap).toContain("<lastmod>2026-08-24</lastmod>");
     expect(sitemap).not.toMatch(/(?:play|history|index)\.html/u);
   });
 
@@ -89,11 +89,13 @@ describe("search discovery contract", () => {
     expect(nginx).toContain('"noindex, follow";');
     expect(nginx).toContain("add_header X-Robots-Tag $search_robots always;");
 
+    expect(nginx).toContain("location = / {\n        try_files /2048.html =404;\n    }");
+
     const redirects = new Map([
-      ["/", "https://2048next.cn/2048.html$is_args$args"],
-      ["/index.html", "https://2048next.cn/2048.html$is_args$args"],
-      ["/beta-login.html", "https://2048next.cn/2048.html"],
-      ["/beta-access.html", "https://2048next.cn/2048.html"]
+      ["/2048.html", "https://2048next.cn/$is_args$args"],
+      ["/index.html", "https://2048next.cn/$is_args$args"],
+      ["/beta-login.html", "https://2048next.cn/"],
+      ["/beta-access.html", "https://2048next.cn/"]
     ]);
     for (const [path, target] of redirects) {
       expect(nginx).toContain(`location = ${path} {\n        return 308 ${target};\n    }`);

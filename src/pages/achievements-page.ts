@@ -611,7 +611,7 @@ function applyStaticCopy(): void {
   document.documentElement.lang = resolveAchievementPageLang() === "en" ? "en" : "zh-CN";
   setText(".achievements-header .palette-title", currentCopy.title);
   setText(".achievements-header .palette-subtitle", currentCopy.subtitle);
-  setText(".achievements-header .palette-nav a[href='2048.html']", currentCopy.navGame);
+  setText(".achievements-header .palette-nav a[href='/']", currentCopy.navGame);
   setText(".achievements-summary-card h2", currentCopy.summaryTitle);
   setText(".achievements-showcase-card h2", currentCopy.showcaseTitle);
   setText(".achievements-showcase-card .panel-head p", currentCopy.showcaseCopy);

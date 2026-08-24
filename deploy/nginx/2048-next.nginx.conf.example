@@ -171,19 +171,23 @@ server {
     }
 
     location = / {
-        return 308 https://2048next.cn/2048.html$is_args$args;
+        try_files /2048.html =404;
+    }
+
+    location = /2048.html {
+        return 308 https://2048next.cn/$is_args$args;
     }
 
     location = /index.html {
-        return 308 https://2048next.cn/2048.html$is_args$args;
+        return 308 https://2048next.cn/$is_args$args;
     }
 
     location = /beta-login.html {
-        return 308 https://2048next.cn/2048.html;
+        return 308 https://2048next.cn/;
     }
 
     location = /beta-access.html {
-        return 308 https://2048next.cn/2048.html;
+        return 308 https://2048next.cn/;
     }
 
     location / {
