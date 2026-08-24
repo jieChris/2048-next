@@ -218,7 +218,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       waitUntil: "domcontentloaded"
     });
     expect(settingsResponse?.ok(), "Settings response should be 2xx").toBeTruthy();
-    await expect(page.locator('[data-ui-language="en"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('[data-ui-language="en"]')).toHaveAttribute("aria-checked", "true");
     await page.locator('[data-ui-language="zh"]').click();
     await page.waitForFunction(() => window.localStorage.getItem("ui_language_v1") === "zh");
 

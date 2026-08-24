@@ -39,7 +39,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -80,7 +80,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 27, nickname: "SessionOwner", created_at: "2026-07-11 08:00:00" }
+            data: { id: 9027, public_profile_id: 27, nickname: "SessionOwner", created_at: "2026-07-11 08:00:00" }
           })
         });
         return;
@@ -126,7 +126,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-value-name")).toHaveText("SessionOwner");
     await expect(page).toHaveTitle("用户主页");
     await expect
-      .poll(() => page.evaluate(() => window.localStorage.getItem("2048_auth_userId_v1")))
+      .poll(() => page.evaluate(() => window.localStorage.getItem("2048_public_profile_id_v1")))
       .toBe("27");
   });
 
@@ -156,7 +156,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
+            data: { id: 9012, public_profile_id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
           })
         });
         return;
@@ -234,7 +234,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
+            data: { id: 9012, public_profile_id: 12, nickname: "Hui", created_at: "2026-03-21 15:45:05" }
           })
         });
         return;
@@ -291,7 +291,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -331,7 +331,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -398,7 +398,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
     await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
       "href",
-      "style/user_profile_page.css?v=20260822-profile-polish-v2"
+      "style/user_profile_page.css?v=20260822-profile-polish-v3"
     );
 
     await expect(page.locator(".user-record-mode").first()).toHaveText("4x4（不可撤回）");
@@ -476,7 +476,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -664,7 +664,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -767,7 +767,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -872,7 +872,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -955,7 +955,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -1026,7 +1026,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -1117,7 +1117,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;
@@ -1238,7 +1238,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
           contentType: "application/json",
           body: JSON.stringify({
             success: true,
-            data: { id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
+            data: { id: 9009, public_profile_id: 9, nickname: "Owner", created_at: "2026-03-15 08:00:00" }
           })
         });
         return;

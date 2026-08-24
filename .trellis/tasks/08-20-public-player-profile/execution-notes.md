@@ -65,6 +65,8 @@
 
 ## Current State
 
+- 2026-08-24：前端 `main@5c662487` 推送触发 GitHub Actions `32713867182`，`Smoke (pages)` 226 通过、12 失败，因此 Release Ready、构建和服务器部署均被正确跳过，线上未切换到失败版本。根因是 Smoke 夹具仍把认证账号 `id` / `2048_auth_userId_v1` 当作公开主页 ID，且 3 处断言仍指向改版前的 `aria-pressed` 与 CSS 版本号；产品双 ID 边界本身没有回退。修正仅更新测试夹具/合同并补充 Smoke 规范，不放宽产品归属校验。
+
 - 2026-08-24：P2 收口修复完成。修正头像迁移正则、孤儿文件首次入队 15 分钟宽限、头像审核窄响应 OpenAPI、管理员旧 `/api/admin/me` 精确断言、bio/avatar 决定—原因组合校验与 `ModerationReviewRequest`/`AvatarReviewRequest` 的 `oneOf` 合同；CI 已配置 `MODERATION_LOCK_TEST_DATABASE_URL`。只读对抗复审确认 P0/P1=0；剩余为 P2 头像审核视觉矩阵登记，未阻断本轮。
 
 - 2026-08-24：补充真实 PostgreSQL 宽限行为回归 `avatar-file-maintenance-expiry-postgres.spec.ts`：确认新 `pending`/`public` 孤儿任务的 `next_attempt_at` 约为当前时间 +15 分钟、未到期 drain 不删除、到期后才删除，并确认 reconcile 入队同样设置宽限。测试复用 CI 已配置的本地专用 PostgreSQL URL；未连接生产、未使用真实 DeepSeek。
@@ -96,6 +98,8 @@
 - 2026-08-20：否决首版高封面后，正式页改为桌面 180px、移动端 160px 的横幅；远景天空、城市/装置/4/8、透明 0/2 人物和 CSS 光影使用不同位移幅度。0/2 人物层单独缩放，避免为容纳原始 3:1 插画而抬高页面。
 
 ## Local Verification Notes
+
+- 2026-08-24：Actions `32713867182` 失败诊断采用 CI 日志与 artifact 元数据，未在本机启动 Playwright 或外部浏览器。修正后本地仅运行 TypeScript、Vitest、静态审计、构建与 `git diff --check`；浏览器 Smoke 继续由下一次 GitHub Actions 验证。
 
 - 2026-08-24：剩余两张夜间视觉失败确认为截图时序问题：移动端顶部按钮的响应式重排由延迟 relayout 完成，断言在按钮分类完成前截取了瞬时展开状态；最终 DOM 快照已是正确布局。视觉夹具新增 `settleMobileGameActions`，等待主按钮分类、折叠状态和计时器/撤回按钮就绪，不把瞬时画面写入基线。仅用 Codex 内置浏览器复核 390px 夜间 play 与 320px 夜间 undo：主按钮均为 6 个、溢出按钮隐藏、undo 模式不显示计时器；随后恢复视口并关闭临时标签。静态门禁新鲜通过：`npx tsc --noEmit`、单测 311/2073、service-boundary 469/0、生产构建 453 modules/792 compressed files、`git diff --check`；未提交、推送或部署。
 

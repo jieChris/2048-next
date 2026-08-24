@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test.describe("Home user display", () => {
   test("shows guest text above the logo when logged out", async ({ page }) => {
     await page.addInitScript(() => {
+      window.localStorage.removeItem("2048_auth_token_v1");
       window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("2048_public_profile_id_v1");
       window.localStorage.removeItem("2048_auth_nickname_v1");
     });
 
@@ -49,7 +51,9 @@ test.describe("Home user display", () => {
 
   test("shows stored nickname on the action row and aligns the logo with scores", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_token_v1", "home-display-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "119");
+      window.localStorage.setItem("2048_public_profile_id_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
     });
 
@@ -109,7 +113,9 @@ test.describe("Home user display", () => {
 
   test("does not show the account badge on hub and mode-selection pages", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_token_v1", "hub-display-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "119");
+      window.localStorage.setItem("2048_public_profile_id_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
@@ -123,7 +129,9 @@ test.describe("Home user display", () => {
 
   test("aligns the account badge with the game header on play pages", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_token_v1", "play-display-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "119");
+      window.localStorage.setItem("2048_public_profile_id_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
@@ -161,7 +169,9 @@ test.describe("Home user display", () => {
 
   test("does not show the account badge on practice pages", async ({ page }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_userId_v1", "19");
+      window.localStorage.setItem("2048_auth_token_v1", "practice-display-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "119");
+      window.localStorage.setItem("2048_public_profile_id_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
