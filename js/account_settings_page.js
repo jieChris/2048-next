@@ -921,7 +921,7 @@
     clearAuth();
     setTip(t("logoutDone"), "ok");
     global.setTimeout(function () {
-      global.location.href = "2048.html";
+      global.location.href = "/";
     }, 120);
   }
 

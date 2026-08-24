@@ -92,14 +92,14 @@ test.describe("Legacy Multi-Page Smoke", () => {
 
   test("secondary pages replace oversized headings with a plain icon-only back control", async ({ page }) => {
     const pages = [
-      ["/account.html", "/2048.html"],
+      ["/account.html", "/"],
       ["/account_settings.html", "/account.html"],
-      ["/history.html", "/2048.html"],
-      ["/medal-wall.html", "/2048.html"],
-      ["/modes.html", "/2048.html"],
-      ["/palette.html", "/2048.html"],
+      ["/history.html", "/"],
+      ["/medal-wall.html", "/"],
+      ["/modes.html", "/"],
+      ["/palette.html", "/"],
       ["/touch_sensitivity.html", "/palette.html"],
-      ["/user.html", "/2048.html"]
+      ["/user.html", "/"]
     ] as const;
 
     await routeI18nAuditApi(page);

@@ -38,7 +38,7 @@ describe("PWA manifest", () => {
     const manifest = JSON.parse(readFileSync("public/site.webmanifest", "utf8"));
 
     expect(manifest.id).toBe("/");
-    expect(manifest.start_url).toBe("/2048.html");
+    expect(manifest.start_url).toBe("/");
     expect(manifest.scope).toBe("/");
     expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
       "/meta/icon-192.png?v=20260704-png-opt",

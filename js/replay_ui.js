@@ -1120,7 +1120,7 @@
 
     if (!suffix) return;
     titleNode.innerHTML =
-      "<a href='2048.html' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> " +
+      "<a href='/' style='text-decoration: none; color: inherit; cursor: pointer;'>2048</a> " +
       "\u56de\u653e - " +
       suffix;
   }

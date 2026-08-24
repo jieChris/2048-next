@@ -598,7 +598,7 @@
     for (var n = 0; n < nav.length; n += 1) {
       var link = nav[n];
       var href = String(link.getAttribute("href") || "").toLowerCase();
-      if (href.indexOf("index.html") >= 0 || href.indexOf("2048.html") >= 0) {
+      if (href === "/" || href.indexOf("index.html") >= 0 || href.indexOf("2048.html") >= 0) {
         setTextIfChanged(link, copy.navHome);
       } else if (href.indexOf("account.html") >= 0) {
         setTextIfChanged(link, copy.navAccount);

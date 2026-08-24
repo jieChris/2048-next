@@ -5,7 +5,7 @@ describe("modes page header CSS", () => {
   it("replaces the old logo heading with the shared icon-only back control", () => {
     const html = readFileSync("modes.html", "utf8");
 
-    expect(html).toContain('<a class="page-back-button" href="2048.html"');
+    expect(html).toContain('<a class="page-back-button" href="/"');
     expect(html).not.toContain('<img class="mode-brand-logo"');
     expect(html).not.toContain(".mode-brand-logo {");
   });
