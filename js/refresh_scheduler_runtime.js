@@ -43,7 +43,8 @@
       consecutiveErrors: 0,
       currentBackoffMs: 0,
       timerId: 0,
-      running: false
+      running: false,
+      wakePending: false
     };
 
     this.tasks[task.name] = task;
@@ -115,7 +116,9 @@
         var multiplier = Math.pow(2, Math.min(task.consecutiveErrors, 4));
         task.currentBackoffMs = Math.min(task.maxBackoffMs, task.intervalMs * multiplier);
       }
-      self.schedule(name, false);
+      var wakePending = task.wakePending;
+      task.wakePending = false;
+      self.schedule(name, wakePending);
     };
 
     try {
@@ -139,12 +142,17 @@
 
   RefreshScheduler.prototype.wake = function (name) {
     if (name) {
+      var task = this.getTask(name);
+      if (task && task.running) {
+        task.wakePending = true;
+        return;
+      }
       this.schedule(name, true);
       return;
     }
     var names = Object.keys(this.tasks);
     for (var i = 0; i < names.length; i += 1) {
-      this.schedule(names[i], true);
+      this.wake(names[i]);
     }
   };
 
