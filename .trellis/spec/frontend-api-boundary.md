@@ -180,11 +180,11 @@ This contract applies whenever an ongoing game that may produce leaderboard metr
 
 ## Scenario: Account Palette Sync And Theme Plaza
 
-- Web account palettes use the typed repository under `src/features/palette/`; pages do not call storage or fetch directly.
-- Web requests format 3 explicitly, tracks account owner, revision, dirty/conflict state, preserves unknown fields, and enforces the shared eight-palette limit.
-- Applying a cloud document may replace the custom palette library but must not silently select a newly saved Theme Plaza copy.
-- `theme_plaza.html` owns list/detail/my-share rendering and uses only structured palette values; it never renders public CSS, HTML, URLs, or scripts from a listing.
-- Public browse works without authentication. Save, vote, report, submit, cancel, and withdraw use explicit `2048-game-api` contracts and server capability flags.
-- The palette-center share button is disabled for built-ins, dirty/conflicted documents, unsupported format, or disabled write capability.
-- Production Theme Plaza capability is gated only by the Web/API format-3 contract, database readiness, moderation policy, and operational rollout flags; Android is outside this workspace and is not a release prerequisite.
+- **Canonical target:** read `.trellis/tasks/08-25-account-palette-sync-v2/prd.md`, `design.md`, and the ticket graph before changing account palettes or Theme Plaza writes.
+- The current `AccountPaletteRepository` and `/api/me/app-palettes` whole-document CAS are legacy migration inputs, not the target synchronization model. New behavior must use per-palette authority, ten active custom palettes, separate selection/order resources, explicit editor Save, and account-bound offline operations.
+- Login bootstrap reads only the account selection and, when required, one selected custom palette. The full private library loads on the settings surface; no background polling is allowed.
+- Theme Plaza share eligibility is per selected palette. Unrelated palette states cannot block a synchronized palette, and built-ins still require creating a private copy.
+- `theme_plaza.html` renders only structured palette values; it never renders public CSS, HTML, URLs, or scripts from a listing.
+- Public browse works without authentication. Reaction/report, save, share/author, and auto-publish are separate fail-closed server capabilities.
+- Production Theme Plaza public read is enabled; writes and automatic publication remain disabled until the V2 migration and rollout gates pass.
 - The existing admin console may render one-version Theme Plaza review actions; it must not add generic SQL access or bulk hide behavior.

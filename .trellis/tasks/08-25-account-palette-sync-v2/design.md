@@ -1,0 +1,127 @@
+# 账号私人色板同步 V2 设计
+
+## 权威边界
+
+- `2048-game-api`：每套色板权威记录、不可变版本、删除标记、容量、三方合并、选择、顺序、幂等、旧接口投影和 Theme Plaza 资格。
+- `2048-next`：设备缓存、登录会话首同步、设置页延迟加载、草稿/保存 UI、离线队列、重复确认和本地待上传展示。
+- Theme Plaza：公开版本仍是不依赖私人色板后续变化的不可变快照。
+
+权威决策见：
+
+- `docs/adr/0001-per-palette-authority.md`
+- `docs/adr/0002-server-merge-maintenance-cutover.md`
+- `CONTEXT.md`
+
+## API 模块建议
+
+- `palette-sync-domain.ts`：稳定 ID、选择引用、规范化、最小编辑单元 diff、三方合并、重复哈希和结果类型。
+- `palette-sync-store.ts`：逐套记录、版本历史、删除标记、偏好、容量锁和幂等事务。
+- `palette-sync-routes.ts`：bootstrap、library、CRUD、selection、order、兼容 GET 和旧 PUT fail-closed。
+- `palette-sync-migration.ts`：旧 JSON 解析、回填、异常报告、影子对账和最终增量迁移。
+- `theme-plaza.ts`：分享/保存改为调用逐套权威 store，不直接读写整库 JSON。
+
+## Web 模块建议
+
+- `account-palette-session.ts`：每登录会话一次 bootstrap，缓存选择与必要的当前自定义色板。
+- `account-palette-library.ts`：设置页延迟加载、正式顺序、单套状态和 duplicate/pending 区域。
+- `account-palette-editor.ts`：草稿、预览、保存按钮和离开保护。
+- `account-palette-outbox.ts`：按账号和稳定 ID 折叠的 IndexedDB 队列、operation ID、重试触发和账号隔离。
+- `account-palette-merge-view.ts`：只呈现自动生成的冲突副本与原因，不让用户选择覆盖任一版本。
+- Theme Plaza client/page：只查询当前 palette ID 的权威状态，不读取整库 dirty/conflict。
+
+## 核心序列
+
+### 登录首同步
+
+```text
+restore auth
+→ GET bootstrap
+→ apply cloud selection
+→ if custom: receive and cache one palette
+→ drain only account-bound current-selection dependency
+→ mark session bootstrap complete
+```
+
+### 设置页加载
+
+```text
+open settings
+→ GET full active library + order + tombstone delta
+→ reconcile device cache by stable ID
+→ expose pending/duplicate areas
+→ retry pending palettes only at this event point
+```
+
+### 保存编辑
+
+```text
+edit local draft
+→ click Save
+→ persist final local snapshot + operation ID
+→ online PUT(base revision, full document)
+   ├─ saved/merged: accept authority
+   ├─ conflict_copy: cache returned new palette
+   ├─ capacity_full: keep local pending
+   └─ transient: queue account-bound operation
+```
+
+### 删除
+
+```text
+DELETE palette(base revision, operation ID)
+→ account lock
+→ permanent tombstone
+→ remove from order
+→ if selected: selection=follow-theme
+→ old devices cannot recreate same ID
+```
+
+### 三方合并
+
+服务器比较 `base/current/incoming` 的规范化字段路径。字段路径覆盖名称、皮肤、规则族、等级、视觉维度、强度和倍率。未知扩展字段按合同归属处理，设备私有字段不进入权威内容。
+
+## 容量锁
+
+创建普通色板、广场副本和冲突副本均使用同一账号级事务锁：
+
+1. 查询 operation 幂等记录。
+2. 检查内容重复和稳定 ID。
+3. 统计 active 色板。
+4. `count < 10` 才创建权威记录。
+5. 写 revision、order 和 operation response 同事务提交。
+
+冲突副本无名额时，服务器返回可识别的 capacity 结果；副本最终内容留在设备待上传区。
+
+## 版本清理
+
+后台清理仅删除同时满足以下条件的历史 revision：
+
+- 不是当前 revision；
+- 不属于最近 100 个；
+- 早于 180 天；
+- 不被正在处理的 operation 或审计引用。
+
+删除标记和 Theme Plaza 快照不由该清理任务删除。
+
+## 兼容与切换
+
+- 扩展期：旧表权威，新表只回填/影子读取。
+- 对账期：旧 GET 与新模型投影比较；不开放新生产写。
+- 维护期：暂停账号色板远端写，执行最终 delta。
+- 切换后：新表权威；旧 GET 从新表投影；旧 PUT 返回升级码。
+- 回滚：关闭新写能力，保留新数据并使用兼容只读路径。
+
+## 能力开关
+
+建议新增：
+
+```text
+ACCOUNT_PALETTE_SYNC_V2_READ_ENABLED
+ACCOUNT_PALETTE_SYNC_V2_WRITE_ENABLED
+ACCOUNT_PALETTE_LEGACY_PUT_ENABLED
+THEME_PLAZA_REACTION_ENABLED
+THEME_PLAZA_SAVE_ENABLED
+THEME_PLAZA_SHARE_ENABLED
+```
+
+现有 `THEME_PLAZA_READ_ENABLED` 和 `THEME_PLAZA_AUTO_PUBLISH_ENABLED` 保留。生产默认 fail-closed，逐阶段开启。
