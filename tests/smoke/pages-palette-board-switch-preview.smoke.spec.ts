@@ -127,6 +127,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
               revision,
               updatedAt: null,
               supportedFormats: [2, 3],
+              sourceFormat: 3,
             },
           }),
         });

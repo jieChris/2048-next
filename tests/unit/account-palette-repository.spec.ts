@@ -67,6 +67,7 @@ function remote(
     revision: 3,
     updatedAt: null,
     supportedFormats: [2, 3],
+    sourceFormat: 3,
     ...overrides,
   };
 }
@@ -271,6 +272,57 @@ describe("account palette repository", () => {
 
     await expect(repository.sync()).resolves.toBe("conflict");
     expect(repository.snapshot().conflict).not.toBeNull();
+  });
+
+  it("rebases a richer local library over a projected legacy cloud revision", async () => {
+    const storage = new MemoryStorage();
+    const local = document();
+    const colorsByTile = local.palettes[0].colors;
+    const legacyPow2 = [
+      ...TILE_VALUES.map((value) => colorsByTile[String(value)]),
+      ...Array.from({ length: 10 }, () => colorsByTile["65536"]),
+    ];
+    const legacyProjection = document([
+      {
+        ...palette(),
+        pow2: legacyPow2,
+        fibonacci: TILE_VALUES.map((value) => colorsByTile[String(value)]),
+        pow2Text: Array.from({ length: 26 }, () => "#F9F6F2"),
+        fibonacciText: Array.from({ length: 16 }, () => "#F9F6F2"),
+        pow2Border: Array.from({ length: 26 }, () => "transparent"),
+        fibonacciBorder: Array.from({ length: 16 }, () => "transparent"),
+        pow2Glow: Array.from({ length: 26 }, () => "transparent"),
+        fibonacciGlow: Array.from({ length: 16 }, () => "transparent"),
+        glowIntensity: 50,
+        glowMultipliers: Array.from({ length: 26 }, () => 100),
+      },
+    ]);
+    const cloud = remote({
+      revision: 1,
+      document: legacyProjection,
+      sourceFormat: 2,
+    });
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({
+        status: "saved",
+        data: remote({ revision: 2, document: local, sourceFormat: 3 }),
+      }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(local);
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).toHaveBeenCalledWith(1, local);
+    expect(repository.snapshot()).toMatchObject({
+      revision: 2,
+      dirty: false,
+      conflict: null,
+    });
   });
 
   it("rebases a first-device local library onto an existing empty cloud revision", async () => {

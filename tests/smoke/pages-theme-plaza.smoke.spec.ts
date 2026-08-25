@@ -205,6 +205,7 @@ test.describe("Theme Plaza", () => {
             revision: 3,
             updatedAt: null,
             supportedFormats: [2, 3],
+            sourceFormat: 3,
           },
         }),
       });
@@ -223,6 +224,7 @@ test.describe("Theme Plaza", () => {
             revision: 4,
             updatedAt: null,
             supportedFormats: [2, 3],
+            sourceFormat: 3,
             palette_id: "saved-copy",
             copy_created: true,
             first_reference: true,

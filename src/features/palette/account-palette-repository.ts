@@ -76,6 +76,7 @@ export interface AccountPaletteRemoteState {
   revision: number;
   updatedAt: string | null;
   supportedFormats: number[];
+  sourceFormat: 2 | 3;
 }
 
 export interface AccountPaletteRepositorySnapshot {
@@ -302,12 +303,14 @@ export function parseAccountPaletteRemote(
   const supportedFormats = Array.isArray(source?.supportedFormats)
     ? source.supportedFormats.map(Number).filter(Number.isSafeInteger)
     : [];
-  if (!document || revision == null) return null;
+  const sourceFormat = integer(source?.sourceFormat, 2, 3);
+  if (!document || revision == null || sourceFormat == null) return null;
   return {
     document,
     revision,
     updatedAt: source?.updatedAt == null ? null : text(source.updatedAt),
     supportedFormats,
+    sourceFormat: sourceFormat as 2 | 3,
   };
 }
 
@@ -384,6 +387,30 @@ function documentsEqual(
   return (
     JSON.stringify(canonicalJson(syncComparableDocument(left))) ===
     JSON.stringify(canonicalJson(syncComparableDocument(right)))
+  );
+}
+
+function legacyBaseDocument(document: AccountPaletteDocument): CanonicalJsonValue {
+  return {
+    schema: 1,
+    activePaletteId: document.activePaletteId,
+    palettes: document.palettes.map((palette) => ({
+      id: palette.id,
+      name: palette.name,
+      baseSkin: palette.baseSkin,
+      colors: canonicalJson(palette.colors),
+    })),
+  };
+}
+
+function matchesProjectedLegacyDocument(
+  local: AccountPaletteDocument,
+  remote: AccountPaletteRemoteState,
+): boolean {
+  return (
+    remote.sourceFormat === 2 &&
+    JSON.stringify(legacyBaseDocument(local)) ===
+      JSON.stringify(legacyBaseDocument(remote.document))
   );
 }
 
@@ -511,7 +538,10 @@ export class AccountPaletteRepository {
               this.#acceptRemote(capability);
               return "synced";
             }
-            if (isEmptyDocument(capability.document)) {
+            if (
+              isEmptyDocument(capability.document) ||
+              matchesProjectedLegacyDocument(this.#state.document, capability)
+            ) {
               this.#state = {
                 ...this.#state,
                 revision: capability.revision,
@@ -549,7 +579,8 @@ export class AccountPaletteRepository {
           if (
             this.#state.revision === 0 &&
             result.data.revision > 0 &&
-            isEmptyDocument(result.data.document)
+            (isEmptyDocument(result.data.document) ||
+              matchesProjectedLegacyDocument(this.#state.document, result.data))
           ) {
             this.#state = {
               ...this.#state,

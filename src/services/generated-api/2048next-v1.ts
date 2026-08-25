@@ -5070,6 +5070,11 @@ export interface components {
             /** Format: date-time */
             updatedAt: string | null;
             supportedFormats: (2 | 3)[];
+            /**
+             * @description Stored document format before response projection; format-3 clients use 2 to safely upgrade matching legacy rows.
+             * @enum {integer}
+             */
+            sourceFormat: 2 | 3;
         };
         AppPalettePutRequest: {
             baseRevision: number;

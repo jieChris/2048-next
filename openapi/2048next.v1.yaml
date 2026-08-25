@@ -3189,7 +3189,7 @@ components:
     AppPaletteRemoteState:
       type: object
       additionalProperties: false
-      required: [document, revision, updatedAt, supportedFormats]
+      required: [document, revision, updatedAt, supportedFormats, sourceFormat]
       properties:
         document: { $ref: "#/components/schemas/AppPaletteDocument" }
         revision: { type: integer, minimum: 0 }
@@ -3198,6 +3198,10 @@ components:
           type: array
           uniqueItems: true
           items: { type: integer, enum: [2, 3] }
+        sourceFormat:
+          type: integer
+          enum: [2, 3]
+          description: Stored document format before response projection; format-3 clients use 2 to safely upgrade matching legacy rows.
 
     AppPalettePutRequest:
       type: object
