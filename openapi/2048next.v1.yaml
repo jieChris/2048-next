@@ -3415,6 +3415,10 @@ components:
 
     PaletteStableId:
       type: string
+      description: Opaque account-scoped stable ID; migrated legacy IDs are preserved.
+      pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'
+    NewPaletteStableId:
+      type: string
       format: uuid
       pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
     PaletteOperationId:
@@ -3528,9 +3532,10 @@ components:
     AccountPaletteCreateRequest:
       type: object
       additionalProperties: false
-      required: [operationId, palette]
+      required: [operationId, paletteId, palette]
       properties:
         operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        paletteId: { $ref: "#/components/schemas/NewPaletteStableId" }
         palette: { $ref: "#/components/schemas/AppPaletteProfile" }
     AccountPaletteSaveRequest:
       type: object

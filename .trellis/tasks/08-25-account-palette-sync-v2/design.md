@@ -89,7 +89,7 @@ DELETE palette(base revision, operation ID)
 
 ## 身份和幂等
 
-- 普通/离线创建由客户端使用小写 UUID v4；服务端生成的冲突副本也使用小写 UUID v4。
+- 普通/离线创建由客户端使用小写 UUID v4；服务端生成的冲突副本也使用小写 UUID v4。所有 ID 在账号内作为 opaque stable ID 保存，旧迁移 ID 原样保留。
 - 稳定 ID 在账号内唯一，永久删除标记继续占用该身份；重复 ID 返回稳定的 ID 冲突码。
 - operation ID 在账号内唯一。第一次网络发送后 operation ID 和请求哈希冻结，后续本地编辑创建新 operation。
 - 完整 operation 响应保留 400 天；过期重试通过资源 ID、revision、内容哈希和 tombstone 约束继续防重，并要求客户端重新对账。

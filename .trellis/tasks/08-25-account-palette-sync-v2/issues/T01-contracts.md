@@ -9,7 +9,7 @@
 
 ## Scope
 
-- 定义 UUID v4 stable/operation ID、账号级唯一性、永久 ID 保留和 400 天 operation 响应保留。
+- 定义 opaque stable ID 的历史兼容模式、新创建 UUID v4、operation UUID、账号级唯一性、永久 ID 保留和 400 天 operation 响应保留。
 - 定义完整规范化色板、权威/服务端/设备私有/命名空间扩展字段归属，以及视觉重复哈希。
 - 定义 bootstrap 只返回当前选择和必要的一套自定义色板。
 - 定义 library cursor/watermark、reset/full-resync、已知 ID tombstone 查询、单套 CRUD、selection、order 和 legacy GET/PUT 行为。

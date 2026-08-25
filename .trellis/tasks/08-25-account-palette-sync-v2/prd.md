@@ -187,7 +187,7 @@ GET/PUT /api/me/palette-order
 ### 6.1 已冻结合同决策
 
 - **Canonical contract**：`2048-next/openapi/2048next.v1.yaml` 是唯一来源；API CI 通过锁文件记录 Web commit、SHA-256 和合同版本，并校验同一摘要。
-- **Stable ID**：普通/离线创建使用客户端生成的小写 UUID v4；服务端冲突副本使用服务端生成的小写 UUID v4。账号内永久唯一，tombstone ID 不可复用。
+- **Stable ID**：所有 ID 都是账号内 opaque stable ID，迁移时原样保留符合历史模式的 ID；新普通/离线创建由客户端使用小写 UUID v4，服务端冲突副本使用小写 UUID v4。tombstone ID 永久保留；重复 ID 返回稳定冲突码。
 - **Operation ID**：账号内唯一 UUID。第一次网络发送后 ID 和请求哈希冻结；后续编辑使用新 operation。完整响应保留 400 天，过期重试必须重新对账。
 - **内容归属**：权威视觉字段由合同明列；服务端字段不可由客户端写；`source`、`locked` 和 UI 状态为设备私有并剥离；扩展只允许命名空间化 `extensions`，每个命名空间原子合并。旧未知字段迁入 `extensions.legacy`。
 - **视觉重复哈希**：排除稳定 ID、名称、时间戳、设备字段和扩展字段；包含基础皮肤与全部背景/文字/边框/发光/强度/倍率。

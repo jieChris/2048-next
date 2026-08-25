@@ -5443,8 +5443,10 @@ export interface components {
             success: boolean;
             data: components["schemas"]["AppPaletteRemoteState"];
         };
-        /** Format: uuid */
+        /** @description Opaque account-scoped stable ID; migrated legacy IDs are preserved. */
         PaletteStableId: string;
+        /** Format: uuid */
+        NewPaletteStableId: string;
         /** Format: uuid */
         PaletteOperationId: string;
         AccountPaletteSyncCapabilities: {
@@ -5521,6 +5523,7 @@ export interface components {
         };
         AccountPaletteCreateRequest: {
             operationId: components["schemas"]["PaletteOperationId"];
+            paletteId: components["schemas"]["NewPaletteStableId"];
             palette: components["schemas"]["AppPaletteProfile"];
         };
         AccountPaletteSaveRequest: {

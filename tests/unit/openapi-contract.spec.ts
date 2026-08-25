@@ -172,6 +172,8 @@ describe("OpenAPI contract", () => {
       "AccountPaletteTombstone:",
     ].forEach((schema) => expect(spec, `${schema} should be documented`).toContain(schema));
 
+    expect(spec).toContain("NewPaletteStableId:");
+    expect(spec).toContain("Opaque account-scoped stable ID; migrated legacy IDs are preserved.");
     expect(spec).toContain("maxActivePalettes: { type: integer, const: 10 }");
     expect(spec).toContain("reactionEnabled: { type: boolean }");
     expect(spec).toContain("saveEnabled: { type: boolean }");
