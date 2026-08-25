@@ -186,5 +186,5 @@ This contract applies whenever an ongoing game that may produce leaderboard metr
 - `theme_plaza.html` owns list/detail/my-share rendering and uses only structured palette values; it never renders public CSS, HTML, URLs, or scripts from a listing.
 - Public browse works without authentication. Save, vote, report, submit, cancel, and withdraw use explicit `2048-game-api` contracts and server capability flags.
 - The palette-center share button is disabled for built-ins, dirty/conflicted documents, unsupported format, or disabled write capability.
-- Production Theme Plaza writes remain disabled until Android format-3 compatibility and the required cross-client contract tests are complete.
+- Production Theme Plaza capability is gated only by the Web/API format-3 contract, database readiness, moderation policy, and operational rollout flags; Android is outside this workspace and is not a release prerequisite.
 - The existing admin console may render one-version Theme Plaza review actions; it must not add generic SQL access or bulk hide behavior.

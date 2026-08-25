@@ -214,6 +214,65 @@ describe("account palette repository", () => {
     });
   });
 
+  it("ignores Web-only palette metadata when reconciling an equivalent cloud library", async () => {
+    const storage = new MemoryStorage();
+    const cloud = remote({
+      revision: 1,
+      document: document([palette()]),
+    });
+    const local = document([
+      {
+        ...palette(),
+        source: "custom",
+        locked: false,
+        createdAt: 100,
+        updatedAt: 200,
+      } as AccountPaletteProfile,
+    ]);
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({ status: "conflict", data: cloud }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(local);
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).not.toHaveBeenCalled();
+    expect(repository.snapshot()).toMatchObject({
+      revision: 1,
+      dirty: false,
+      conflict: null,
+    });
+  });
+
+  it("still reports a conflict when authoritative palette colors differ", async () => {
+    const storage = new MemoryStorage();
+    const cloud = remote({
+      revision: 1,
+      document: document([palette()]),
+    });
+    const localPalette = palette();
+    localPalette.pow2[0] = "#ABCDEF";
+    localPalette.colors["2"] = "#ABCDEF";
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({ status: "conflict", data: cloud }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(document([localPalette]));
+
+    await expect(repository.sync()).resolves.toBe("conflict");
+    expect(repository.snapshot().conflict).not.toBeNull();
+  });
+
   it("rebases a first-device local library onto an existing empty cloud revision", async () => {
     const storage = new MemoryStorage();
     const cloud = remote({

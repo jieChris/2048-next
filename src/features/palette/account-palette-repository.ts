@@ -355,12 +355,35 @@ function canonicalJson(value: unknown): CanonicalJsonValue {
   );
 }
 
+const NON_AUTHORITATIVE_PALETTE_FIELDS = new Set([
+  "source",
+  "locked",
+  "createdAt",
+  "updatedAt",
+]);
+
+function syncComparableDocument(
+  document: AccountPaletteDocument,
+): AccountPaletteDocument {
+  return {
+    ...document,
+    palettes: document.palettes.map((palette) => {
+      const comparable = { ...palette } as JsonRecord;
+      for (const field of NON_AUTHORITATIVE_PALETTE_FIELDS) {
+        delete comparable[field];
+      }
+      return comparable as AccountPaletteProfile;
+    }),
+  };
+}
+
 function documentsEqual(
   left: AccountPaletteDocument,
   right: AccountPaletteDocument,
 ): boolean {
   return (
-    JSON.stringify(canonicalJson(left)) === JSON.stringify(canonicalJson(right))
+    JSON.stringify(canonicalJson(syncComparableDocument(left))) ===
+    JSON.stringify(canonicalJson(syncComparableDocument(right)))
   );
 }
 
