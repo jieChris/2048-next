@@ -35,6 +35,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         await route.abort("failed");
         return;
       }
+      await new Promise((resolve) => setTimeout(resolve, 250));
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -59,7 +60,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.removeItem("online_pending_score_submit_v1");
         window.localStorage.setItem("__smoke_persist_score_seeded__", "1");
       }
-      (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
+      (window as any).GAME_API_REQUEST_TIMEOUT_MS = 1500;
     });
 
     const response = await page.goto("/2048.html", {
