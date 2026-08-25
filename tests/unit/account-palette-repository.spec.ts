@@ -7,6 +7,7 @@ import {
   mergeUnknownAccountPaletteFields,
   parseAccountPaletteDocument,
   type AccountPaletteDocument,
+  type AccountPaletteProfile,
   type AccountPaletteRemoteState,
   type AccountPaletteTransport,
 } from "../../src/features/palette/account-palette-repository";
@@ -23,7 +24,7 @@ function colors(length: number, offset = 0): string[] {
   );
 }
 
-function palette(id = "sunset") {
+function palette(id = "sunset"): AccountPaletteProfile {
   const pow2 = colors(26);
   return {
     id,
@@ -46,7 +47,9 @@ function palette(id = "sunset") {
   };
 }
 
-function document(palettes = [palette()]): AccountPaletteDocument {
+function document(
+  palettes: AccountPaletteProfile[] = [palette()],
+): AccountPaletteDocument {
   return {
     schema: 1,
     format: 3,
@@ -155,6 +158,153 @@ describe("account palette repository", () => {
         ],
       }),
     );
+  });
+
+  it("adopts an existing cloud library instead of reporting a first-device bootstrap conflict", async () => {
+    const storage = new MemoryStorage();
+    const cloud = remote({
+      revision: 1,
+      document: document([{ ...palette(), name: "云端已有色板" }]),
+    });
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({ status: "conflict", data: cloud }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(emptyAccountPaletteDocument());
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).not.toHaveBeenCalled();
+    expect(repository.snapshot()).toMatchObject({
+      revision: 1,
+      dirty: false,
+      conflict: null,
+      document: { palettes: [{ name: "云端已有色板" }] },
+    });
+  });
+
+  it("adopts an equivalent existing cloud library instead of reporting a first-device revision conflict", async () => {
+    const storage = new MemoryStorage();
+    const cloud = remote({
+      revision: 1,
+      document: document([{ ...palette(), createdAt: 100, updatedAt: 200 }]),
+    });
+    const local = document([{ ...palette(), createdAt: 100, updatedAt: 200 }]);
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({ status: "conflict", data: cloud }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(local);
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).not.toHaveBeenCalled();
+    expect(repository.snapshot()).toMatchObject({
+      revision: 1,
+      dirty: false,
+      conflict: null,
+    });
+  });
+
+  it("rebases a first-device local library onto an existing empty cloud revision", async () => {
+    const storage = new MemoryStorage();
+    const cloud = remote({
+      revision: 1,
+      document: emptyAccountPaletteDocument(),
+    });
+    const api = transport({
+      read: cloud,
+      write: Promise.resolve({
+        status: "saved",
+        data: remote({ revision: 2 }),
+      }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(document());
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).toHaveBeenCalledWith(1, document());
+    expect(repository.snapshot()).toMatchObject({
+      revision: 2,
+      dirty: false,
+      conflict: null,
+    });
+  });
+
+  it("accepts an equivalent remote result after a concurrent first-sync CAS conflict", async () => {
+    const storage = new MemoryStorage();
+    const local = document();
+    const api = transport({
+      read: remote({ revision: 0, document: emptyAccountPaletteDocument() }),
+      write: Promise.resolve({
+        status: "conflict",
+        data: remote({ revision: 1, document: local }),
+      }),
+    });
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(local);
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(repository.snapshot()).toMatchObject({
+      revision: 1,
+      dirty: false,
+      conflict: null,
+    });
+  });
+
+  it("retries a concurrent first sync when an empty cloud write wins the initial CAS", async () => {
+    const storage = new MemoryStorage();
+    const local = document();
+    const emptyCloud = remote({
+      revision: 1,
+      document: emptyAccountPaletteDocument(),
+    });
+    const api: AccountPaletteTransport & {
+      read: ReturnType<typeof vi.fn>;
+      write: ReturnType<typeof vi.fn>;
+    } = {
+      read: vi.fn(async () =>
+        remote({ revision: 0, document: emptyAccountPaletteDocument() }),
+      ),
+      write: vi
+        .fn()
+        .mockResolvedValueOnce({ status: "conflict", data: emptyCloud })
+        .mockResolvedValueOnce({
+          status: "saved",
+          data: remote({ revision: 2, document: local }),
+        }),
+    };
+    const repository = new AccountPaletteRepository({
+      storage,
+      ownerKey: "user:42",
+      transport: api,
+    });
+    repository.setDocument(local);
+
+    await expect(repository.sync()).resolves.toBe("synced");
+    expect(api.write).toHaveBeenNthCalledWith(1, 0, local);
+    expect(api.write).toHaveBeenNthCalledWith(2, 1, local);
+    expect(repository.snapshot()).toMatchObject({
+      revision: 2,
+      dirty: false,
+      conflict: null,
+    });
   });
 
   it("returns a conflict without applying either side automatically", async () => {

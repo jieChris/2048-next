@@ -328,6 +328,46 @@ export function mergeUnknownAccountPaletteFields(
   };
 }
 
+type CanonicalJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | CanonicalJsonValue[]
+  | { [key: string]: CanonicalJsonValue };
+
+function canonicalJson(value: unknown): CanonicalJsonValue {
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string"
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  const object = record(value);
+  if (!object) throw new Error("invalid_account_palette_json_value");
+  return Object.fromEntries(
+    Object.keys(object)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => [key, canonicalJson(object[key])]),
+  );
+}
+
+function documentsEqual(
+  left: AccountPaletteDocument,
+  right: AccountPaletteDocument,
+): boolean {
+  return (
+    JSON.stringify(canonicalJson(left)) === JSON.stringify(canonicalJson(right))
+  );
+}
+
+function isEmptyDocument(document: AccountPaletteDocument): boolean {
+  return document.activePaletteId === null && document.palettes.length === 0;
+}
+
 function localKey(ownerKey: AccountPaletteOwnerKey): string {
   return `account_palette_repository_v1:${ownerKey}`;
 }
@@ -436,6 +476,26 @@ export class AccountPaletteRepository {
           this.#format3Supported =
             capability.supportedFormats.includes(APP_PALETTE_FORMAT);
           if (!this.#format3Supported) return "unsupported";
+          if (this.#state.revision === 0 && capability.revision > 0) {
+            const mergedDocument = mergeUnknownAccountPaletteFields(
+              this.#state.document,
+              capability.document,
+            );
+            if (
+              documentsEqual(mergedDocument, capability.document) ||
+              isEmptyDocument(this.#state.document)
+            ) {
+              this.#acceptRemote(capability);
+              return "synced";
+            }
+            if (isEmptyDocument(capability.document)) {
+              this.#state = {
+                ...this.#state,
+                revision: capability.revision,
+                document: mergedDocument,
+              };
+            }
+          }
           this.#state = {
             ...this.#state,
             document: mergeUnknownAccountPaletteFields(
@@ -444,13 +504,55 @@ export class AccountPaletteRepository {
             ),
           };
         }
-        const result = await this.#options.transport.write(
+        let result = await this.#options.transport.write(
           this.#state.revision,
           clone(this.#state.document),
         );
         this.#format3Supported =
           result.data.supportedFormats.includes(APP_PALETTE_FORMAT);
         if (result.status === "conflict") {
+          const mergedDocument = mergeUnknownAccountPaletteFields(
+            this.#state.document,
+            result.data.document,
+          );
+          if (
+            documentsEqual(mergedDocument, result.data.document) ||
+            (this.#state.revision === 0 &&
+              isEmptyDocument(this.#state.document))
+          ) {
+            this.#acceptRemote(result.data);
+            return "synced";
+          }
+          if (
+            this.#state.revision === 0 &&
+            result.data.revision > 0 &&
+            isEmptyDocument(result.data.document)
+          ) {
+            this.#state = {
+              ...this.#state,
+              revision: result.data.revision,
+              document: mergedDocument,
+            };
+            this.#persist();
+            result = await this.#options.transport.write(
+              this.#state.revision,
+              clone(this.#state.document),
+            );
+            this.#format3Supported =
+              result.data.supportedFormats.includes(APP_PALETTE_FORMAT);
+            if (result.status === "saved") {
+              this.#acceptRemote(result.data);
+              return "synced";
+            }
+            const retriedDocument = mergeUnknownAccountPaletteFields(
+              this.#state.document,
+              result.data.document,
+            );
+            if (documentsEqual(retriedDocument, result.data.document)) {
+              this.#acceptRemote(result.data);
+              return "synced";
+            }
+          }
           this.#conflict = result.data;
           return "conflict";
         }
