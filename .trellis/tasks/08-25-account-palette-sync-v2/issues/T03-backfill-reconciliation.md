@@ -5,7 +5,7 @@
 
 ## Goal
 
-把旧 `user_app_palettes.document` 无损回填为逐套记录，并提供可重跑的影子对账和异常清单；迁移期间旧表仍是权威。
+把旧 `user_app_palettes.document` 无损回填为逐套记录，拥有唯一的 `V2 → legacy document` 纯投影器，并提供可重跑的影子对账和异常清单；迁移期间旧表仍是权威。
 
 ## Scope
 
@@ -14,7 +14,8 @@
 - 每套初始 revision 为 1。
 - 旧 active 自定义 ID 迁移为 selection；null 迁移为待建立选择。
 - 重复 ID、非法内容、无效 active、超过十套进入异常报告。
-- 从新模型组装兼容 document，与旧 GET 结果比较。
+- 定义并实现唯一兼容投影器：active ≤8 返回 legacy document，9–10 返回 upgrade-required，绝不截断。
+- 投影器同时供影子对账和 T04 legacy GET 调用，禁止第二套实现。
 
 ## Acceptance
 

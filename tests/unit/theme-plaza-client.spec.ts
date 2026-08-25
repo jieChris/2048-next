@@ -43,14 +43,39 @@ describe("Theme Plaza client model", () => {
       parseThemePlazaCapabilities({
         readEnabled: true,
         writeEnabled: false,
+        reactionEnabled: false,
+        saveEnabled: false,
+        shareEnabled: false,
         autoPublishEnabled: false,
         paletteFormat3Enabled: true,
       }),
     ).toEqual({
       readEnabled: true,
       writeEnabled: false,
+      reactionEnabled: false,
+      saveEnabled: false,
+      shareEnabled: false,
       autoPublishEnabled: false,
       paletteFormat3Enabled: true,
+    });
+  });
+
+  it("parses independently enabled Theme Plaza capabilities without widening legacy writes", () => {
+    expect(
+      parseThemePlazaCapabilities({
+        readEnabled: true,
+        writeEnabled: false,
+        reactionEnabled: true,
+        saveEnabled: false,
+        shareEnabled: false,
+        autoPublishEnabled: false,
+        paletteFormat3Enabled: true,
+      }),
+    ).toMatchObject({
+      writeEnabled: false,
+      reactionEnabled: true,
+      saveEnabled: false,
+      shareEnabled: false,
     });
   });
 

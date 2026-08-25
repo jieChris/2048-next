@@ -15,7 +15,7 @@ status: accepted
 ## Consequences
 
 - 每套色板拥有独立 revision、内容、删除状态和版本历史。
-- 服务器以账号级事务锁原子执行十套容量检查；删除标记不占有效色板名额。
+- 服务器通过每账号唯一、可锁定的 palette-account state 行原子执行十套容量检查；所有创建、删除、顺序、选择和 Theme Plaza 保存事务都先锁账号状态，再按 palette ID、revision、operation 的固定顺序加锁。删除标记不占有效色板名额。
 - 当前色板选择可指向 `follow-theme`、内置色板或自定义色板，并与正式色板顺序分别演进。
 - 首页只读取当前选择及必要的一套自定义色板；完整私人色板库在设置页延迟加载。
 - 旧 `/api/me/app-palettes` GET 仅作为兼容投影保留；旧整库 PUT 在切换后 fail-closed。

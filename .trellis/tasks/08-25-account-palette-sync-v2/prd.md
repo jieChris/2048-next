@@ -182,13 +182,28 @@ GET/PUT /api/me/palette-order
 
 写请求携带 operation ID；保存携带 base revision 和完整色板。响应明确区分：saved、merged、conflict_copy、duplicate_existing、capacity_full、deleted、base_revision_expired。
 
-旧 `GET /api/me/app-palettes` 在切换后从新模型组装只读兼容 document。旧 PUT 在切换完成后返回 `PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED`，不接受整库覆盖。
+旧 `GET /api/me/app-palettes` 在切换后从新模型组装只读兼容 document：active 色板数不超过 8 时返回投影；达到 9–10 时返回 `PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED`，绝不静默截断。旧 PUT 在切换完成后先于请求体解析和 revision 查询返回同一升级码，不接受整库覆盖。
+
+### 6.1 已冻结合同决策
+
+- **Canonical contract**：`2048-next/openapi/2048next.v1.yaml` 是唯一来源；API CI 通过锁文件记录 Web commit、SHA-256 和合同版本，并校验同一摘要。
+- **Stable ID**：普通/离线创建使用客户端生成的小写 UUID v4；服务端冲突副本使用服务端生成的小写 UUID v4。账号内永久唯一，tombstone ID 不可复用。
+- **Operation ID**：账号内唯一 UUID。第一次网络发送后 ID 和请求哈希冻结；后续编辑使用新 operation。完整响应保留 400 天，过期重试必须重新对账。
+- **内容归属**：权威视觉字段由合同明列；服务端字段不可由客户端写；`source`、`locked` 和 UI 状态为设备私有并剥离；扩展只允许命名空间化 `extensions`，每个命名空间原子合并。旧未知字段迁入 `extensions.legacy`。
+- **视觉重复哈希**：排除稳定 ID、名称、时间戳、设备字段和扩展字段；包含基础皮肤与全部背景/文字/边框/发光/强度/倍率。
+- **Selection**：operation-idempotent last-successful-write-wins，不返回用户可见 revision 冲突。内置 ID 作为符合语法的 opaque ID 保存；无法识别时客户端回退 `follow-theme` 并修复云端。
+- **Order**：发送完整期望顺序；服务端过滤重复、无效和删除 ID，并把并发新增但遗漏的 active ID 按创建时间和 ID 追加末尾。
+- **Pending selection**：旧 null 使用原子 compare-and-establish。两客户端竞争时只有第一个有效设备选择成功，失败方接受已建立选择。
+- **Change cursor**：账号 palette state 维护单调 `change_seq`。增量响应包含 changes、nextCursor、hasMore、resetRequired；cursor 缺失/过期时返回 active 全量和新水位，并校验客户端提交的至多十个本地已知 ID 的 tombstone 状态。
+- **Conflict-copy selection**：若当前设备正在使用的本地内容被保存为已上传冲突副本，设备选择切换到新 ID；若副本因满库仅本地待上传，云端选择保持原值。
+- **Theme Plaza duplicate**：发现相同视觉内容时，确认前不写引用。选择使用已有色板时，在同一事务记录首次引用并关联已有 palette ID；选择保留新色板时创建新 ID 并记录引用。
 
 ## 7. 数据模型目标
 
 建议 PostgreSQL 资源：
 
-- `user_custom_palettes`：账号、稳定 ID、当前 revision、active/deleted 状态、时间戳。
+- `user_palette_account_state`：账号级容量锁、迁移状态和单调 `change_seq`。
+- `user_custom_palettes`：账号、稳定 ID、当前 revision、active/deleted 状态、change sequence 和时间戳。
 - `user_custom_palette_revisions`：不可变完整内容、内容哈希、来源 operation、创建时间。
 - `user_palette_selection`：选择 kind/ref、独立 revision。
 - `user_palette_order`：正式 ID 顺序、独立 revision。

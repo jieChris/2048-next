@@ -463,7 +463,7 @@ export interface paths {
                 };
                 400: components["responses"]["ApiErrorResponse"];
                 401: components["responses"]["ApiErrorResponse"];
-                /** @description Palette revision conflict with the latest server document. */
+                /** @description Palette revision conflict or PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED after V2 cutover. */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -472,6 +472,365 @@ export interface paths {
                         "application/json": components["schemas"]["AppPaletteResponse"];
                     };
                 };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/palette-sync/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bootstrap one login session with the account palette selection and at most one selected custom palette. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lightweight account palette bootstrap. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteBootstrapResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/palettes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the active custom palette library, canonical order, selection, and tombstone changes. */
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: components["parameters"]["PaletteChangeCursorQuery"];
+                    known_palette_id?: components["schemas"]["PaletteStableId"][];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Full or incremental private palette library state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteLibraryResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        /** Create one custom palette with account-scoped operation idempotency and ten-palette capacity enforcement. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountPaletteCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description Palette created or an idempotent create result replayed. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteWriteResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                /** @description ID conflict, duplicate confirmation, or capacity result. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteWriteResponse"];
+                    };
+                };
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/palettes/{paletteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paletteId: components["parameters"]["PaletteIdPath"];
+            };
+            cookie?: never;
+        };
+        /** Read one active authoritative custom palette. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    paletteId: components["parameters"]["PaletteIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current custom palette revision. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteRecordResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        /** Save a complete normalized palette and let the server perform authoritative three-way merge. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    paletteId: components["parameters"]["PaletteIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountPaletteSaveRequest"];
+                };
+            };
+            responses: {
+                /** @description Saved, unchanged, merged, or conflict-copy result. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteWriteResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                /** @description Capacity, deleted identity, request-hash, or ID conflict. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteWriteResponse"];
+                    };
+                };
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        post?: never;
+        /** Permanently tombstone one custom palette identity. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    paletteId: components["parameters"]["PaletteIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountPaletteDeleteRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent permanent-delete result. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteWriteResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/palette-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the account current palette selection resource. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current or pending selection state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteSelectionResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        /** Last-successful-write-wins update or one-time pending selection establishment. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountPaletteSelectionPutRequest"];
+                };
+            };
+            responses: {
+                /** @description Authoritative selection after idempotent update or establishment race. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteSelectionResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/palette-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the canonical cross-device custom palette order. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Canonical active palette order. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteOrderResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        /** Canonicalize and save the desired custom palette order with last-successful-write-wins semantics. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AccountPaletteOrderPutRequest"];
+                };
+            };
+            responses: {
+                /** @description Canonical order with omitted concurrent active palettes appended. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPaletteOrderResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
             };
         };
         post?: never;
@@ -5084,9 +5443,150 @@ export interface components {
             success: boolean;
             data: components["schemas"]["AppPaletteRemoteState"];
         };
-        ThemePlazaCapabilities: {
+        /** Format: uuid */
+        PaletteStableId: string;
+        /** Format: uuid */
+        PaletteOperationId: string;
+        AccountPaletteSyncCapabilities: {
             readEnabled: boolean;
             writeEnabled: boolean;
+            legacyPutEnabled: boolean;
+            /** @constant */
+            maxActivePalettes: 10;
+            /** @constant */
+            contractVersion: "account-palette-sync-v2.1";
+        };
+        AccountPaletteRecord: {
+            paletteId: components["schemas"]["PaletteStableId"];
+            revision: number;
+            palette: components["schemas"]["AppPaletteProfile"];
+            contentHash: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AccountPaletteRevision: {
+            paletteId: components["schemas"]["PaletteStableId"];
+            revision: number;
+            palette: components["schemas"]["AppPaletteProfile"];
+            contentHash: string;
+            operationId: components["schemas"]["PaletteOperationId"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AccountPaletteTombstone: {
+            paletteId: components["schemas"]["PaletteStableId"];
+            deletionRevision: number;
+            /** Format: date-time */
+            deletedAt: string;
+            changeSeq: number;
+        };
+        AccountPaletteSelection: {
+            /** @enum {string} */
+            kind: "pending" | "follow_theme" | "builtin" | "custom";
+            paletteId: string | null;
+        };
+        AccountPaletteSelectionInput: {
+            /** @enum {string} */
+            kind: "follow_theme" | "builtin" | "custom";
+            paletteId: string | null;
+        };
+        AccountPaletteSelectionState: {
+            selection: components["schemas"]["AccountPaletteSelection"];
+            revision: number;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        AccountPaletteOrderState: {
+            paletteIds: components["schemas"]["PaletteStableId"][];
+            revision: number;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        AccountPaletteBootstrapData: {
+            selection: components["schemas"]["AccountPaletteSelectionState"];
+            selectedPalette: components["schemas"]["AccountPaletteRecord"] | null;
+            capabilities: components["schemas"]["AccountPaletteSyncCapabilities"];
+        };
+        AccountPaletteLibraryState: {
+            palettes: components["schemas"]["AccountPaletteRecord"][];
+            order: components["schemas"]["AccountPaletteOrderState"];
+            selection: components["schemas"]["AccountPaletteSelectionState"];
+            tombstones: components["schemas"]["AccountPaletteTombstone"][];
+            nextCursor: string;
+            hasMore: boolean;
+            resetRequired: boolean;
+            capabilities: components["schemas"]["AccountPaletteSyncCapabilities"];
+        };
+        AccountPaletteCreateRequest: {
+            operationId: components["schemas"]["PaletteOperationId"];
+            palette: components["schemas"]["AppPaletteProfile"];
+        };
+        AccountPaletteSaveRequest: {
+            operationId: components["schemas"]["PaletteOperationId"];
+            baseRevision: number;
+            palette: components["schemas"]["AppPaletteProfile"];
+        };
+        AccountPaletteDeleteRequest: {
+            operationId: components["schemas"]["PaletteOperationId"];
+            baseRevision: number;
+        };
+        AccountPaletteSelectionPutRequest: {
+            operationId: components["schemas"]["PaletteOperationId"];
+            /** @default false */
+            establishPending: boolean;
+            selection: components["schemas"]["AccountPaletteSelectionInput"];
+        };
+        AccountPaletteOrderPutRequest: {
+            operationId: components["schemas"]["PaletteOperationId"];
+            paletteIds: components["schemas"]["PaletteStableId"][];
+        };
+        AccountPaletteWriteResult: {
+            /** @enum {string} */
+            status: "saved" | "unchanged" | "merged" | "conflict_copy" | "duplicate_existing" | "capacity_full" | "deleted" | "base_revision_expired";
+            operationId: components["schemas"]["PaletteOperationId"];
+            palette: components["schemas"]["AccountPaletteRecord"] | null;
+            paletteId: components["schemas"]["PaletteStableId"] | null;
+            /** @enum {string|null} */
+            reason: null | "base_revision_expired" | "overlapping_edit" | "duplicate_content" | "capacity_full" | "deleted_identity" | "id_conflict";
+            existingPaletteId: components["schemas"]["PaletteStableId"] | null;
+            conflictCopyId: components["schemas"]["PaletteStableId"] | null;
+        };
+        AccountPaletteBootstrapResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteBootstrapData"];
+        };
+        AccountPaletteLibraryResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteLibraryState"];
+        };
+        AccountPaletteRecordResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteRecord"];
+        };
+        AccountPaletteWriteResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteWriteResult"];
+        };
+        AccountPaletteSelectionResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteSelectionState"];
+        };
+        AccountPaletteOrderResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AccountPaletteOrderState"];
+        };
+        ThemePlazaCapabilities: {
+            readEnabled: boolean;
+            /**
+             * @deprecated
+             * @description Conservative legacy aggregate; true only when reaction, save, and share are all enabled.
+             */
+            writeEnabled: boolean;
+            reactionEnabled: boolean;
+            saveEnabled: boolean;
+            shareEnabled: boolean;
             autoPublishEnabled: boolean;
             paletteFormat3Enabled: boolean;
         };
@@ -6092,6 +6592,8 @@ export interface components {
         IdempotencyKeyHeader: string;
         /** @description Request format 3 from compatible clients; omitted clients receive the format-2 projection. */
         AppPaletteFormatHeader: 2 | 3;
+        PaletteIdPath: components["schemas"]["PaletteStableId"];
+        PaletteChangeCursorQuery: string;
         ThemePlazaListingIdPath: number;
         ThemePlazaVersionIdPath: number;
         RecordIdPath: string;

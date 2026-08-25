@@ -78,11 +78,46 @@ DELETE palette(base revision, operation ID)
 
 ### 三方合并
 
-服务器比较 `base/current/incoming` 的规范化字段路径。字段路径覆盖名称、皮肤、规则族、等级、视觉维度、强度和倍率。未知扩展字段按合同归属处理，设备私有字段不进入权威内容。
+服务器比较 `base/current/incoming` 的规范化字段路径。字段路径覆盖名称、皮肤、规则族、等级、视觉维度、强度和倍率。V2 只接受以下内容归属：
+
+- 权威视觉字段：名称、皮肤、颜色、文字、边框、发光、强度和倍率；
+- 服务端字段：稳定 ID、revision、内容哈希、创建/更新时间和删除状态；
+- 设备私有字段：`source`、`locked` 和 UI 状态，上传时剥离；
+- 扩展字段：只能位于命名空间化 `extensions` 对象，每个命名空间作为一个原子合并单元；旧未知字段迁入 `extensions.legacy`。
+
+扩展字段不进入视觉重复哈希或 Theme Plaza 快照，除非后续合同明确提升为权威视觉字段。
+
+## 身份和幂等
+
+- 普通/离线创建由客户端使用小写 UUID v4；服务端生成的冲突副本也使用小写 UUID v4。
+- 稳定 ID 在账号内唯一，永久删除标记继续占用该身份；重复 ID 返回稳定的 ID 冲突码。
+- operation ID 在账号内唯一。第一次网络发送后 operation ID 和请求哈希冻结，后续本地编辑创建新 operation。
+- 完整 operation 响应保留 400 天；过期重试通过资源 ID、revision、内容哈希和 tombstone 约束继续防重，并要求客户端重新对账。
+- 私人重复内容哈希排除稳定 ID、名称、时间戳、设备字段和扩展字段，只覆盖皮肤及全部视觉样式。
+
+## 偏好和变更游标
+
+- 当前选择采用 operation-idempotent last-successful-write-wins，不向用户暴露 revision 冲突。
+- 内置选择 ID 作为符合固定语法的 opaque ID 保存；旧客户端无法识别时回退 `follow-theme` 并定向修复云端选择。
+- 顺序写入发送完整期望顺序；服务端过滤重复/无效/已删除 ID，并把并发新增但遗漏的 active ID 按创建时间和 ID 追加到末尾。
+- palette-account state 维护单调 `change_seq`。library delta 接受 cursor 并返回 changes、nextCursor、hasMore 和 resetRequired。
+- cursor 缺失/过期时返回完整 active snapshot 与新水位；客户端同时提交至多十个本地已知 ID，服务端返回其中的 tombstone 状态，避免返回全部历史删除标记。
 
 ## 容量锁
 
-创建普通色板、广场副本和冲突副本均使用同一账号级事务锁：
+创建普通色板、广场副本和冲突副本均使用同一账号级事务锁。固定锁序为：
+
+```text
+palette-account state
+→ operation row
+→ palette identity（按 palette ID 排序）
+→ palette revision
+→ order
+→ selection
+→ Theme Plaza reference/version
+```
+
+事务步骤：
 
 1. 查询 operation 幂等记录。
 2. 检查内容重复和稳定 ID。
@@ -106,9 +141,9 @@ DELETE palette(base revision, operation ID)
 ## 兼容与切换
 
 - 扩展期：旧表权威，新表只回填/影子读取。
-- 对账期：旧 GET 与新模型投影比较；不开放新生产写。
-- 维护期：暂停账号色板远端写，执行最终 delta。
-- 切换后：新表权威；旧 GET 从新表投影；旧 PUT 返回升级码。
+- 对账期：旧 GET 与新模型投影比较；V2 写 Smoke 只在生产备份恢复出的隔离 PostgreSQL 或已独立切断 legacy PUT 的专用 canary 账号运行。
+- 维护期：暂停账号色板远端写，执行最终 delta；打开 V2 read，关闭并验证 legacy PUT fail-closed，部署新 Web 维护/排队模式。
+- 切换后：确认旧写不可能成功后开启 V2 write；新表成为唯一权威，旧 GET 从新表投影。
 - 回滚：关闭新写能力，保留新数据并使用兼容只读路径。
 
 ## 能力开关

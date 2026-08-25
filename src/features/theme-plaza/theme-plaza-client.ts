@@ -12,6 +12,9 @@ export type ThemePlazaSort = "latest" | "most_referenced" | "most_liked";
 export interface ThemePlazaCapabilities {
   readEnabled: boolean;
   writeEnabled: boolean;
+  reactionEnabled: boolean;
+  saveEnabled: boolean;
+  shareEnabled: boolean;
   autoPublishEnabled: boolean;
   paletteFormat3Enabled: boolean;
 }
@@ -111,6 +114,9 @@ export function parseThemePlazaCapabilities(
   return {
     readEnabled: boolean(source.readEnabled),
     writeEnabled: boolean(source.writeEnabled),
+    reactionEnabled: boolean(source.reactionEnabled),
+    saveEnabled: boolean(source.saveEnabled),
+    shareEnabled: boolean(source.shareEnabled),
     autoPublishEnabled: boolean(source.autoPublishEnabled),
     paletteFormat3Enabled: boolean(source.paletteFormat3Enabled),
   };

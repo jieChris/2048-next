@@ -75,12 +75,34 @@
 4. 打开色板写维护提示。
 5. 执行最终 delta 和校验。
 6. 开启 v2 read，验证 bootstrap/library。
-7. 开启 v2 write，运行测试账号 Smoke。
-8. 关闭 legacy PUT。
-9. 部署新 Web 并验证旧标签页 fail-closed。
+7. 关闭 legacy PUT，并用旧客户端探针确认所有整库写均返回升级错误。
+8. 部署新 Web 的维护/排队模式，验证读取、草稿和本地队列。
+9. 确认旧写不可能成功后开启 v2 write，运行测试账号 Smoke。
 10. 解除私人色板写维护。
 11. 观察错误率、冲突副本、容量拒绝和迁移异常。
 12. 分阶段开放 Theme Plaza 能力。
+
+## 机器可读门禁产物
+
+T10 必须生成版本化 JSON：
+
+```text
+artifacts/palette-v2/reconciliation.json
+artifacts/palette-v2/concurrency.json
+artifacts/palette-v2/performance.json
+artifacts/palette-v2/backup-restore.json
+artifacts/palette-v2/rollback.json
+```
+
+每份至少包含 `schemaVersion`、锁定 commits/migration、`passed`、检查项、预期/实际值和 residual risks。T11 使用 `artifacts/palette-v2/cutover-manifest.json`，记录命令、审批人、开始/结束时间、观察窗口和回滚触发器。
+
+硬阈值：
+
+- 迁移/对账未知差异、未经批准数据减少、十一套 active、tombstone 复活：必须为 0。
+- 隔离 PostgreSQL 并发矩阵：100% 通过。
+- bootstrap 不得返回完整库；相对基线 p95 延迟和首页性能不得退化超过 10%。
+- 开启 V2 write 后至少完成 20 次合成操作矩阵并观察 30 分钟，0 个未解释 5xx/数据不一致，才解除私人写维护。
+- 私人同步稳定观察 24 小时且 0 个 P0/P1 数据问题后才开放 Theme Plaza save；save 再稳定 24 小时后才开放 share。
 
 ## 回滚
 

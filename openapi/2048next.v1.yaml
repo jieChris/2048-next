@@ -6,6 +6,7 @@ info:
   description: >
     Source-controlled API contract for the current game, account, leaderboard,
     ranked session, rescue, admin, and planned achievement endpoints.
+  x-account-palette-contract-version: account-palette-sync-v2.1
 servers:
   - url: /api
     description: Same-origin API proxy.
@@ -262,11 +263,190 @@ paths:
         "401":
           $ref: "#/components/responses/ApiErrorResponse"
         "409":
-          description: Palette revision conflict with the latest server document.
+          description: Palette revision conflict or PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED after V2 cutover.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppPaletteResponse"
+
+
+  /me/palette-sync/bootstrap:
+    get:
+      tags: [Palettes]
+      summary: Bootstrap one login session with the account palette selection and at most one selected custom palette.
+      responses:
+        "200":
+          description: Lightweight account palette bootstrap.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteBootstrapResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /me/palettes:
+    get:
+      tags: [Palettes]
+      summary: Read the active custom palette library, canonical order, selection, and tombstone changes.
+      parameters:
+        - $ref: "#/components/parameters/PaletteChangeCursorQuery"
+        - name: known_palette_id
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            maxItems: 10
+            items: { $ref: "#/components/schemas/PaletteStableId" }
+      responses:
+        "200":
+          description: Full or incremental private palette library state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteLibraryResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+    post:
+      tags: [Palettes]
+      summary: Create one custom palette with account-scoped operation idempotency and ten-palette capacity enforcement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountPaletteCreateRequest" }
+      responses:
+        "201":
+          description: Palette created or an idempotent create result replayed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteWriteResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409":
+          description: ID conflict, duplicate confirmation, or capacity result.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteWriteResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /me/palettes/{paletteId}:
+    parameters:
+      - $ref: "#/components/parameters/PaletteIdPath"
+    get:
+      tags: [Palettes]
+      summary: Read one active authoritative custom palette.
+      responses:
+        "200":
+          description: Current custom palette revision.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteRecordResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+    put:
+      tags: [Palettes]
+      summary: Save a complete normalized palette and let the server perform authoritative three-way merge.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountPaletteSaveRequest" }
+      responses:
+        "200":
+          description: Saved, unchanged, merged, or conflict-copy result.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteWriteResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409":
+          description: Capacity, deleted identity, request-hash, or ID conflict.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteWriteResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+    delete:
+      tags: [Palettes]
+      summary: Permanently tombstone one custom palette identity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountPaletteDeleteRequest" }
+      responses:
+        "200":
+          description: Idempotent permanent-delete result.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteWriteResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /me/palette-selection:
+    get:
+      tags: [Palettes]
+      summary: Read the account current palette selection resource.
+      responses:
+        "200":
+          description: Current or pending selection state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteSelectionResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+    put:
+      tags: [Palettes]
+      summary: Last-successful-write-wins update or one-time pending selection establishment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountPaletteSelectionPutRequest" }
+      responses:
+        "200":
+          description: Authoritative selection after idempotent update or establishment race.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteSelectionResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /me/palette-order:
+    get:
+      tags: [Palettes]
+      summary: Read the canonical cross-device custom palette order.
+      responses:
+        "200":
+          description: Canonical active palette order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteOrderResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+    put:
+      tags: [Palettes]
+      summary: Canonicalize and save the desired custom palette order with last-successful-write-wins semantics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountPaletteOrderPutRequest" }
+      responses:
+        "200":
+          description: Canonical order with omitted concurrent active palettes appended.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountPaletteOrderResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /theme-plaza/capabilities:
     get:
@@ -2829,6 +3009,19 @@ components:
       schema:
         type: integer
         enum: [2, 3]
+    PaletteIdPath:
+      name: paletteId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/PaletteStableId" }
+    PaletteChangeCursorQuery:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
     ThemePlazaListingIdPath:
       name: listingId
       in: path
@@ -3220,13 +3413,249 @@ components:
             success: { type: boolean }
             data: { $ref: "#/components/schemas/AppPaletteRemoteState" }
 
-    ThemePlazaCapabilities:
+    PaletteStableId:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    PaletteOperationId:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    AccountPaletteSyncCapabilities:
       type: object
       additionalProperties: false
-      required: [readEnabled, writeEnabled, autoPublishEnabled, paletteFormat3Enabled]
+      required: [readEnabled, writeEnabled, legacyPutEnabled, maxActivePalettes, contractVersion]
       properties:
         readEnabled: { type: boolean }
         writeEnabled: { type: boolean }
+        legacyPutEnabled: { type: boolean }
+        maxActivePalettes: { type: integer, const: 10 }
+        contractVersion: { type: string, const: account-palette-sync-v2.1 }
+    AccountPaletteRecord:
+      type: object
+      additionalProperties: false
+      required: [paletteId, revision, palette, contentHash, createdAt, updatedAt]
+      properties:
+        paletteId: { $ref: "#/components/schemas/PaletteStableId" }
+        revision: { type: integer, minimum: 1 }
+        palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+        contentHash: { type: string, pattern: '^[0-9a-f]{64}$' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AccountPaletteRevision:
+      type: object
+      additionalProperties: false
+      required: [paletteId, revision, palette, contentHash, operationId, createdAt]
+      properties:
+        paletteId: { $ref: "#/components/schemas/PaletteStableId" }
+        revision: { type: integer, minimum: 1 }
+        palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+        contentHash: { type: string, pattern: '^[0-9a-f]{64}$' }
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        createdAt: { type: string, format: date-time }
+    AccountPaletteTombstone:
+      type: object
+      additionalProperties: false
+      required: [paletteId, deletionRevision, deletedAt, changeSeq]
+      properties:
+        paletteId: { $ref: "#/components/schemas/PaletteStableId" }
+        deletionRevision: { type: integer, minimum: 1 }
+        deletedAt: { type: string, format: date-time }
+        changeSeq: { type: integer, minimum: 1 }
+    AccountPaletteSelection:
+      type: object
+      additionalProperties: false
+      required: [kind, paletteId]
+      properties:
+        kind: { type: string, enum: [pending, follow_theme, builtin, custom] }
+        paletteId: { type: [string, "null"], maxLength: 128 }
+    AccountPaletteSelectionInput:
+      type: object
+      additionalProperties: false
+      required: [kind, paletteId]
+      properties:
+        kind: { type: string, enum: [follow_theme, builtin, custom] }
+        paletteId: { type: [string, "null"], maxLength: 128 }
+    AccountPaletteSelectionState:
+      type: object
+      additionalProperties: false
+      required: [selection, revision, updatedAt]
+      properties:
+        selection: { $ref: "#/components/schemas/AccountPaletteSelection" }
+        revision: { type: integer, minimum: 0 }
+        updatedAt: { type: [string, "null"], format: date-time }
+    AccountPaletteOrderState:
+      type: object
+      additionalProperties: false
+      required: [paletteIds, revision, updatedAt]
+      properties:
+        paletteIds:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/PaletteStableId" }
+        revision: { type: integer, minimum: 0 }
+        updatedAt: { type: [string, "null"], format: date-time }
+    AccountPaletteBootstrapData:
+      type: object
+      additionalProperties: false
+      required: [selection, selectedPalette, capabilities]
+      properties:
+        selection: { $ref: "#/components/schemas/AccountPaletteSelectionState" }
+        selectedPalette:
+          oneOf:
+            - $ref: "#/components/schemas/AccountPaletteRecord"
+            - type: "null"
+        capabilities: { $ref: "#/components/schemas/AccountPaletteSyncCapabilities" }
+    AccountPaletteLibraryState:
+      type: object
+      additionalProperties: false
+      required: [palettes, order, selection, tombstones, nextCursor, hasMore, resetRequired, capabilities]
+      properties:
+        palettes:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/AccountPaletteRecord" }
+        order: { $ref: "#/components/schemas/AccountPaletteOrderState" }
+        selection: { $ref: "#/components/schemas/AccountPaletteSelectionState" }
+        tombstones:
+          type: array
+          items: { $ref: "#/components/schemas/AccountPaletteTombstone" }
+        nextCursor: { type: string, minLength: 1, maxLength: 512 }
+        hasMore: { type: boolean }
+        resetRequired: { type: boolean }
+        capabilities: { $ref: "#/components/schemas/AccountPaletteSyncCapabilities" }
+    AccountPaletteCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [operationId, palette]
+      properties:
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+    AccountPaletteSaveRequest:
+      type: object
+      additionalProperties: false
+      required: [operationId, baseRevision, palette]
+      properties:
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        baseRevision: { type: integer, minimum: 1 }
+        palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+    AccountPaletteDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [operationId, baseRevision]
+      properties:
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        baseRevision: { type: integer, minimum: 1 }
+    AccountPaletteSelectionPutRequest:
+      type: object
+      additionalProperties: false
+      required: [operationId, selection]
+      properties:
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        establishPending: { type: boolean, default: false }
+        selection: { $ref: "#/components/schemas/AccountPaletteSelectionInput" }
+    AccountPaletteOrderPutRequest:
+      type: object
+      additionalProperties: false
+      required: [operationId, paletteIds]
+      properties:
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        paletteIds:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/PaletteStableId" }
+    AccountPaletteWriteResult:
+      type: object
+      additionalProperties: false
+      required: [status, operationId, palette, paletteId, reason, existingPaletteId, conflictCopyId]
+      properties:
+        status:
+          type: string
+          enum: [saved, unchanged, merged, conflict_copy, duplicate_existing, capacity_full, deleted, base_revision_expired]
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        palette:
+          oneOf:
+            - $ref: "#/components/schemas/AccountPaletteRecord"
+            - type: "null"
+        paletteId:
+          oneOf:
+            - $ref: "#/components/schemas/PaletteStableId"
+            - type: "null"
+        reason:
+          type: [string, "null"]
+          enum: [null, base_revision_expired, overlapping_edit, duplicate_content, capacity_full, deleted_identity, id_conflict]
+        existingPaletteId:
+          oneOf:
+            - $ref: "#/components/schemas/PaletteStableId"
+            - type: "null"
+        conflictCopyId:
+          oneOf:
+            - $ref: "#/components/schemas/PaletteStableId"
+            - type: "null"
+    AccountPaletteBootstrapResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteBootstrapData" }
+    AccountPaletteLibraryResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteLibraryState" }
+    AccountPaletteRecordResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteRecord" }
+    AccountPaletteWriteResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteWriteResult" }
+    AccountPaletteSelectionResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteSelectionState" }
+    AccountPaletteOrderResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AccountPaletteOrderState" }
+
+    ThemePlazaCapabilities:
+      type: object
+      additionalProperties: false
+      required: [readEnabled, writeEnabled, reactionEnabled, saveEnabled, shareEnabled, autoPublishEnabled, paletteFormat3Enabled]
+      properties:
+        readEnabled: { type: boolean }
+        writeEnabled:
+          type: boolean
+          deprecated: true
+          description: Conservative legacy aggregate; true only when reaction, save, and share are all enabled.
+        reactionEnabled: { type: boolean }
+        saveEnabled: { type: boolean }
+        shareEnabled: { type: boolean }
         autoPublishEnabled: { type: boolean }
         paletteFormat3Enabled: { type: boolean }
 

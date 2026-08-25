@@ -5,6 +5,8 @@
 ## 接口契约源
 
 - 唯一契约源：`openapi/2048next.v1.yaml`
+- 账号色板 V2 合同版本：OpenAPI `info.x-account-palette-contract-version`
+- API 仓库锁文件：`openapi/account-palette-contract-lock.json`，发布前记录本仓库 commit 与 OpenAPI SHA-256；API CI 校验同一摘要。
 - 生成类型：`src/services/generated-api/2048next-v1.ts`
 - 人工可读文档页：`api-docs.html`
 - 成就系统、ranked 对局、排行榜、记录、账号、救援和管理后台接口都必须进入 OpenAPI 契约后再接入调用代码。

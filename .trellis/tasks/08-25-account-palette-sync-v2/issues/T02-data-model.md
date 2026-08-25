@@ -9,12 +9,14 @@
 
 ## Scope
 
-- active 色板稳定 ID 在账号内唯一。
+- 建立每账号唯一可锁定 state 行和单调 `change_seq`。
+- active 色板稳定 ID 在账号内唯一，UUID/tombstone 身份永久保留。
 - 每套色板指向当前不可变 revision。
-- 选择和顺序拥有独立 revision。
+- selection 支持 pending establishment；order 使用规范化 items/metadata，能够保留并发新增 ID。
 - 删除标记永久保留且不计入十套容量。
-- 建立账号级事务锁/约束，支持并发第十套。
-- 建立版本清理所需索引和引用约束。
+- 建立固定全局锁序：account state → operation → palette IDs → revision → order → selection → Theme Plaza facts。
+- 使用数据库触发器/约束作为第十一套 active 色板的最终 backstop，应用事务使用同一 account state 锁。
+- operation 记录包含账号级 operation ID、请求哈希、完整响应和 400 天保留所需时间索引。
 
 ## Acceptance
 

@@ -151,6 +151,36 @@ describe("OpenAPI contract", () => {
     });
   });
 
+  it("freezes account palette sync V2 resources and granular Theme Plaza capabilities", () => {
+    const spec = readSpec();
+
+    [
+      "/me/palette-sync/bootstrap:",
+      "/me/palettes:",
+      "/me/palettes/{paletteId}:",
+      "/me/palette-selection:",
+      "/me/palette-order:",
+    ].forEach((path) => expect(spec, `${path} should be documented`).toContain(path));
+
+    [
+      "AccountPaletteSyncCapabilities:",
+      "AccountPaletteRecord:",
+      "AccountPaletteRevision:",
+      "AccountPaletteSelectionState:",
+      "AccountPaletteOrderState:",
+      "AccountPaletteWriteResult:",
+      "AccountPaletteTombstone:",
+    ].forEach((schema) => expect(spec, `${schema} should be documented`).toContain(schema));
+
+    expect(spec).toContain("maxActivePalettes: { type: integer, const: 10 }");
+    expect(spec).toContain("reactionEnabled: { type: boolean }");
+    expect(spec).toContain("saveEnabled: { type: boolean }");
+    expect(spec).toContain("shareEnabled: { type: boolean }");
+    expect(spec).toContain("PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED");
+    expect(spec).toContain("base_revision_expired");
+    expect(spec).toContain("conflict_copy");
+  });
+
   it("documents complete day and night profile background scenes", () => {
     const spec = readSpec();
 
