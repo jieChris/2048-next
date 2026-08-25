@@ -18,6 +18,40 @@ test.describe("Home user display", () => {
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account_settings.html");
   });
 
+  test("resyncs the account badge when a cached home page is shown again", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.removeItem("2048_auth_token_v1");
+      window.localStorage.removeItem("2048_auth_userId_v1");
+      window.localStorage.removeItem("2048_public_profile_id_v1");
+      window.localStorage.removeItem("2048_auth_nickname_v1");
+    });
+
+    await page.route("**/api/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#home-user-display")).toHaveText("游客");
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "cached-home-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "9023");
+      window.localStorage.setItem("2048_public_profile_id_v1", "23");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+      window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+    });
+
+    await expect(page.locator("#home-user-display")).toHaveText("Jay");
+    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
+      "href",
+      "user.html?id=23&nickname=Jay"
+    );
+  });
+
   test("switches the profile button between text and icon modes", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("theme_profile_v1", "mist_cyan");

@@ -240,6 +240,47 @@ describe("bootstrap home user display", () => {
     });
   });
 
+  it("resyncs a cached home user display when the page is shown or focused again", () => {
+    const values = new Map<string, string>();
+    const label = { textContent: "", href: "" };
+    const profileButton = { href: "" };
+    const listeners = new Map<string, () => void>();
+    const documentLike = {
+      getElementById(id: string) {
+        if (id === "home-user-display") return label;
+        if (id === "top-user-profile-btn") return profileButton;
+        return null;
+      }
+    };
+    const windowLike = {
+      addEventListener(type: string, listener: () => void) {
+        listeners.set(type, listener);
+      }
+    };
+    const storageLike = {
+      getItem(key: string) {
+        return values.get(key) ?? null;
+      }
+    };
+
+    expect(bindHomeUserDisplay({ documentLike, windowLike, storageLike, pageId: "index" })).toBe(true);
+    expect(label.textContent).toBe("游客");
+
+    values.set("2048_auth_token_v1", "restored-token");
+    values.set("2048_public_profile_id_v1", "23");
+    values.set("2048_auth_nickname_v1", "Jay");
+    listeners.get("pageshow")?.();
+
+    expect(label.textContent).toBe("Jay");
+    expect(label.href).toBe("user.html?id=23&nickname=Jay");
+    expect(profileButton.href).toBe(label.href);
+
+    values.set("2048_auth_nickname_v1", "Alice");
+    listeners.get("focus")?.();
+    expect(label.textContent).toBe("Alice");
+    expect(label.href).toBe("user.html?id=23&nickname=Alice");
+  });
+
   it("does not create a global label on excluded utility pages and hub pages", () => {
     const appended: unknown[] = [];
     const documentLike = {

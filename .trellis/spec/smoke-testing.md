@@ -14,6 +14,7 @@
 - 中文界面的语言分离审计可精确放行固定品牌词，但页面 title 的完整 SEO 文案应由 SEO 专项用例单独断言，不能继续沿用旧的短标题合同。
 - 页面入口会执行 cookie-first 的 `/api/auth/refresh`；需要自定义 API 路由的 smoke 必须显式模拟该请求（成功返回测试 token 或明确的终态认证码），不得让它落到未启动的本地 API 代理并把页面初始化拖到超时。
 - 会读取登录态的副作用运行时必须在 `restoreAuthSession()` 完成后动态加载；Cookie-only 回归必须从“localStorage 无 token”开始，由 `/api/auth/refresh` 返回 token 与 `public_profile_id`，再断言本人请求和页面初始化成功，不能预塞 token 掩盖启动竞态。
+- 可能被浏览器 BFCache 恢复的登录态 UI 必须在 `pageshow` 或重新获得焦点时重读本地会话镜像；Smoke 应先渲染游客态，再更新认证字段并触发持久化 `pageshow`，断言昵称与个人主页链接同步，不能只验证首次加载。
 - 不得依赖项目当前默认值；默认主题或默认页面变化不应破坏无关测试。
 - 全站自动弹层应在 Playwright 共享 `storageState` 中固定为已处理；弹层自身另设用例显式清除该状态，验证首次出现和关闭后的持久状态。
 - 对互斥显示的页面模块，先使用对应锚点或点击入口，再断言模块内元素可见。

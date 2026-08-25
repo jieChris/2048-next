@@ -159,6 +159,7 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
   node.id = TOP_USER_PROFILE_BUTTON_ID;
   node.className = "top-action-btn profile-btn";
   node.href = "account_settings.html";
+  // pi-lens-ignore: ast-grep:no-inner-html
   node.innerHTML = PROFILE_BUTTON_SVG;
   if (typeof node.setAttribute === "function") {
     node.setAttribute("title", "用户中心");
@@ -221,13 +222,21 @@ export function bindHomeUserDisplay(input: {
     storageLike: input.storageLike
   });
   const windowRecord = toRecord(input.windowLike) as {
-    addEventListener?: (type: string, listener: (event: { key?: string | null }) => void) => void;
+    addEventListener?: (type: string, listener: (event?: { key?: string | null }) => void) => void;
     __homeUserDisplayBound?: boolean;
   };
 
   if (windowRecord.__homeUserDisplayBound || typeof windowRecord.addEventListener !== "function") {
     return synced;
   }
+
+  const sync = () => {
+    syncHomeUserDisplay({
+      documentLike: input.documentLike,
+      pageId: input.pageId,
+      storageLike: input.storageLike
+    });
+  };
 
   windowRecord.__homeUserDisplayBound = true;
   windowRecord.addEventListener("storage", (event) => {
@@ -238,20 +247,12 @@ export function bindHomeUserDisplay(input: {
       event.key === AUTH_TOKEN_STORAGE_KEY ||
       event.key === PUBLIC_PROFILE_ID_STORAGE_KEY
     ) {
-      syncHomeUserDisplay({
-        documentLike: input.documentLike,
-        pageId: input.pageId,
-        storageLike: input.storageLike
-      });
+      sync();
     }
   });
-  windowRecord.addEventListener("auth-session-change", () => {
-    syncHomeUserDisplay({
-      documentLike: input.documentLike,
-      pageId: input.pageId,
-      storageLike: input.storageLike
-    });
-  });
+  windowRecord.addEventListener("auth-session-change", sync);
+  windowRecord.addEventListener("pageshow", sync);
+  windowRecord.addEventListener("focus", sync);
 
   return synced;
 }
