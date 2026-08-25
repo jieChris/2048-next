@@ -15,6 +15,7 @@
 - 页面入口会执行 cookie-first 的 `/api/auth/refresh`；需要自定义 API 路由的 smoke 必须显式模拟该请求（成功返回测试 token 或明确的终态认证码），不得让它落到未启动的本地 API 代理并把页面初始化拖到超时。
 - 会读取登录态的副作用运行时必须在 `restoreAuthSession()` 完成后动态加载；Cookie-only 回归必须从“localStorage 无 token”开始，由 `/api/auth/refresh` 返回 token 与 `public_profile_id`，再断言本人请求和页面初始化成功，不能预塞 token 掩盖启动竞态。
 - 可能被浏览器 BFCache 恢复的登录态 UI 必须在 `pageshow` 或重新获得焦点时重读本地会话镜像；Smoke 应先渲染游客态，再更新认证字段并触发持久化 `pageshow`，断言昵称与个人主页链接同步，不能只验证首次加载。
+- 账号色板文档的 `activePaletteId: null` 只表示“没有同步中的自定义色板处于活动状态”，不得把当前本地内置/跟随主题强制重置为默认色板；Smoke 应选中非默认内置色板，再返回空云端自定义仓库并断言选择保持。
 - 不得依赖项目当前默认值；默认主题或默认页面变化不应破坏无关测试。
 - 全站自动弹层应在 Playwright 共享 `storageState` 中固定为已处理；弹层自身另设用例显式清除该状态，验证首次出现和关闭后的持久状态。
 - 对互斥显示的页面模块，先使用对应锚点或点击入口，再断言模块内元素可见。
@@ -113,3 +114,10 @@ expect(new Set(recordBodies.map((body) => body.client_record_id)).size).toBe(1);
 3. 追踪被测函数的全部调用方，判断应修产品根因还是测试假设。
 4. 禁止用增加重试次数、扩大超时或删除有效断言作为默认修复。
 5. 至少运行目标用例、所属 Smoke 分组和 `git diff --check`；涉及发布门禁时再运行 `npm run verify:release`。
+
+## 主题广场夹具必须声明发布能力
+
+- 主题广场 Smoke 必须分别模拟 `/api/theme-plaza/capabilities` 与目标列表/详情接口；不得靠默认 200 空响应判断功能状态。
+- 默认发布夹具应保持 `writeEnabled: false`，并断言保存、评价、举报或分享不会被误开放。
+- 验证写路径时必须显式打开 Mock capability，并同时模拟账号 format-3 色板文档、revision、保存/投票响应；保存后必须断言当前活动色板没有自动切换。
+- 公开预览夹具必须提供背景、文字、边框、发光、整体强度和 26 个倍率，不得用静态截图或不完整颜色数组代替真实渲染合同。

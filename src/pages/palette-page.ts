@@ -8,6 +8,20 @@ import {
   syncDisplayModeAttributes,
   type DisplayMode
 } from "../bootstrap/display-mode";
+import {
+  AccountPaletteRepository,
+  createHttpAccountPaletteTransport,
+  parseAccountPaletteDocument,
+  type AccountPaletteDocument,
+  type AccountPaletteProfile
+} from "../features/palette/account-palette-repository";
+import { createThemePlazaClient } from "../features/theme-plaza/theme-plaza-client";
+import {
+  createThemePlazaSubmissionNotice,
+  type ThemePlazaSubmissionNotice
+} from "../features/theme-plaza/submission-notice";
+import { getAuthToken } from "../services/auth-session";
+import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
 import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
 import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
 import * as themeSettingsRuntimeModule from "../bootstrap/theme-settings";
@@ -43,7 +57,12 @@ let settingsCategoryScrollUnlockTimer: number | undefined;
 let settingsCategoryScrollUnlockListener: (() => void) | undefined;
 
 const globalWindow = window as Window & {
+  AccountPaletteRepository?: AccountPaletteRepository;
+  GameDialog?: {
+    prompt?: (message: string, defaultValue?: string, options?: Record<string, unknown>) => Promise<string | null>;
+  };
   ThemeManager?: Record<string, unknown>;
+  ThemePlazaSubmissionNotice?: ThemePlazaSubmissionNotice;
   UII18N?: {
     getLanguage?: () => string;
     setLanguage?: (language: string) => void;
@@ -92,9 +111,14 @@ function ensureThemeSettingsGlobals(): void {
   }
 }
 
+function storageWindowLike(): Record<string, unknown> {
+  // SAFETY: resolveStorageByName reads only the named Web Storage property from Window.
+  return window as unknown as Record<string, unknown>;
+}
+
 function isEnglishUi(): boolean {
   const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
+    windowLike: storageWindowLike(),
     storageName: "localStorage"
   });
   const lang = typeof globalWindow.UII18N?.getLanguage === "function"
@@ -103,9 +127,9 @@ function isEnglishUi(): boolean {
   return String(lang || "").toLowerCase().startsWith("en");
 }
 
-function localStorageLike(): unknown {
+function localStorageLike(): ReturnType<typeof resolveStorageByName> {
   return resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
+    windowLike: storageWindowLike(),
     storageName: "localStorage"
   });
 }
@@ -120,8 +144,15 @@ function syncDisplayModeControls(): void {
   };
   const group = document.querySelector<HTMLElement>(".palette-display-mode-switch");
   const trigger = document.querySelector<HTMLElement>(".palette-display-mode-trigger");
+  const modeLabel = labels[mode]?.[isEn ? 1 : 0] || mode;
   group?.setAttribute("aria-label", isEn ? "Display mode" : "显示模式");
-  trigger?.setAttribute("aria-label", isEn ? "Display mode" : "显示模式");
+  trigger?.setAttribute("aria-label", isEn ? `Display mode: ${modeLabel}` : `显示模式：${modeLabel}`);
+  trigger?.setAttribute("title", isEn ? `Display mode: ${modeLabel}` : `显示模式：${modeLabel}`);
+  trigger?.setAttribute("data-current-display-mode", mode);
+  const eyebrow = trigger?.querySelector<HTMLElement>(".palette-display-mode-eyebrow");
+  const current = trigger?.querySelector<HTMLElement>(".palette-display-mode-current");
+  if (eyebrow) eyebrow.textContent = isEn ? "Appearance" : "外观";
+  if (current) current.textContent = modeLabel;
   document.querySelectorAll<HTMLButtonElement>("button[data-display-mode]").forEach((button) => {
     const value = button.dataset.displayMode as DisplayMode;
     const active = value === mode;
@@ -134,7 +165,7 @@ function syncDisplayModeControls(): void {
 
 function bindDisplayModeControls(): void {
   const storageLike = resolveStorageByName({
-    windowLike: window as unknown as Record<string, unknown>,
+    windowLike: storageWindowLike(),
     storageName: "localStorage"
   });
   document.querySelectorAll<HTMLButtonElement>("button[data-display-mode]").forEach((button) => {
@@ -391,7 +422,6 @@ export function applyThemePageCopy(): void {
     ? {
         kicker: "2048 Settings",
         navHome: "Home",
-        navPractice: "Practice Board",
         navTouch: "Touch Sensitivity",
         appearanceDisclosureTitle: "Appearance & Palette",
         appearanceDisclosureDesc: "Theme, palettes, and board preview",
@@ -410,6 +440,7 @@ export function applyThemePageCopy(): void {
         generatorHint: "Generated rules replace the editor and remain unsaved until you click Save rules.",
         paletteList: "Palettes",
         paletteMappingNote: "Palette colors map to other board variants by tile level.",
+        themePlaza: "Theme Plaza",
         create: "Create",
         rename: "Rename",
         remove: "Delete",
@@ -426,7 +457,6 @@ export function applyThemePageCopy(): void {
     : {
         kicker: "2048 \u8bbe\u7f6e",
         navHome: "\u56de\u9996\u9875",
-        navPractice: "\u7ec3\u4e60\u677f",
         navTouch: "\u89e6\u5c4f\u7075\u654f\u5ea6",
         appearanceDisclosureTitle: "\u5916\u89c2\u4e0e\u914d\u8272",
         appearanceDisclosureDesc: "\u4e3b\u9898\u3001\u8272\u677f\u4e0e\u68cb\u76d8\u9884\u89c8",
@@ -445,6 +475,7 @@ export function applyThemePageCopy(): void {
         generatorHint: "\u751f\u6210\u7ed3\u679c\u4f1a\u66ff\u6362\u89c4\u5219\u5185\u5bb9\uff1b\u70b9\u51fb\u4fdd\u5b58\u524d\u4e0d\u4f1a\u751f\u6548\u3002",
         paletteList: "\u8272\u677f",
         paletteMappingNote: "\u8272\u677f\u989c\u8272\u4f1a\u6309\u65b9\u5757\u7b49\u7ea7\u6620\u5c04\u5230\u5176\u4ed6\u68cb\u76d8\u53d8\u4f53\u3002",
+        themePlaza: "\u4e3b\u9898\u5e7f\u573a",
         create: "\u65b0\u5efa",
         rename: "\u91cd\u547d\u540d",
         remove: "\u5220\u9664",
@@ -470,6 +501,7 @@ export function applyThemePageCopy(): void {
   const themeSelectLabel = document.querySelector(".theme-selection-col > label");
   const listTitle = document.querySelector(".palette-sidebar .panel-head h2");
   const paletteMappingNote = document.querySelector(".palette-variant-note");
+  const themePlazaLink = document.getElementById("palette-theme-plaza-link");
   const createButton = document.getElementById("palette-create-btn");
   const renameButton = document.getElementById("palette-rename-btn");
   const deleteButton = document.getElementById("palette-delete-btn");
@@ -497,13 +529,13 @@ export function applyThemePageCopy(): void {
   if (pageTitle) pageTitle.textContent = title;
   if (pageSubtitle) pageSubtitle.textContent = subtitle;
   if (navLinks[0]) navLinks[0].textContent = copy.navHome;
-  if (navLinks[1]) navLinks[1].textContent = copy.navPractice;
-  if (navLinks[2]) navLinks[2].textContent = copy.navTouch;
+  if (navLinks[1]) navLinks[1].textContent = copy.navTouch;
   if (appearanceDisclosureTitle) appearanceDisclosureTitle.textContent = copy.appearanceDisclosureTitle;
   if (appearanceDisclosureDesc) appearanceDisclosureDesc.textContent = copy.appearanceDisclosureDesc;
   if (themeSelectLabel) themeSelectLabel.textContent = copy.themeSelectLabel;
   if (listTitle) listTitle.textContent = copy.paletteList;
   if (paletteMappingNote) paletteMappingNote.textContent = copy.paletteMappingNote;
+  if (themePlazaLink) themePlazaLink.textContent = copy.themePlaza;
   if (createButton) createButton.textContent = copy.create;
   if (renameButton) renameButton.textContent = copy.rename;
   if (deleteButton) deleteButton.textContent = copy.remove;
@@ -581,8 +613,26 @@ function bindPaletteLanguageButtons(): void {
   const trigger = document.querySelector<HTMLElement>(".palette-language-trigger");
   const sync = (): void => {
     const activeLanguage = isEnglishUi() ? "en" : "zh";
-    switchGroup?.setAttribute("aria-label", activeLanguage === "en" ? "Language" : "界面语言");
-    trigger?.setAttribute("aria-label", activeLanguage === "en" ? "Language" : "界面语言");
+    const languageLabel = activeLanguage === "en" ? "English" : "中文";
+    switchGroup?.setAttribute(
+      "aria-label",
+      activeLanguage === "en" ? "Language" : "界面语言"
+    );
+    trigger?.setAttribute(
+      "aria-label",
+      activeLanguage === "en" ? `Language: ${languageLabel}` : `界面语言：${languageLabel}`
+    );
+    trigger?.setAttribute(
+      "title",
+      activeLanguage === "en" ? `Language: ${languageLabel}` : `界面语言：${languageLabel}`
+    );
+    trigger?.setAttribute("data-current-language", activeLanguage);
+    const badge = trigger?.querySelector<HTMLElement>(".palette-language-badge");
+    const eyebrow = trigger?.querySelector<HTMLElement>(".palette-language-eyebrow");
+    const current = trigger?.querySelector<HTMLElement>(".palette-language-current");
+    if (badge) badge.textContent = activeLanguage === "en" ? "EN" : "中";
+    if (eyebrow) eyebrow.textContent = activeLanguage === "en" ? "Language" : "语言";
+    if (current) current.textContent = languageLabel;
     buttons.forEach((button) => {
       const active = button.dataset.uiLanguage === activeLanguage;
       button.classList.toggle("is-active", active);
@@ -715,6 +765,209 @@ function observeSettingsCategories(): void {
   }
 }
 
+function resolvePaletteOwnerKey(
+  storageLike: Storage,
+): "guest" | `user:${number}` {
+  const userId = Number(readStorageValue(storageLike, "2048_auth_userId_v1"));
+  return getAuthToken({ storageLike }) &&
+    Number.isSafeInteger(userId) &&
+    userId >= 0
+    ? `user:${userId}`
+    : "guest";
+}
+
+function paletteDocumentFromThemeManager(
+  themeManager: Record<string, unknown>,
+): AccountPaletteDocument | null {
+  const getCustomTilePalettes = themeManager.getCustomTilePalettes;
+  const getActiveTilePaletteId = themeManager.getActiveTilePaletteId;
+  if (
+    typeof getCustomTilePalettes !== "function" ||
+    typeof getActiveTilePaletteId !== "function"
+  )
+    return null;
+  const rawPalettes = getCustomTilePalettes.call(themeManager);
+  if (!Array.isArray(rawPalettes)) return null;
+  const tileValues = [
+    2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
+    65536,
+  ];
+  const palettes = rawPalettes
+    .map((value) => {
+      if (!value || typeof value !== "object") return null;
+      const source = value as Record<string, unknown>;
+      const pow2 = Array.isArray(source.pow2) ? source.pow2 : [];
+      return {
+        ...source,
+        baseSkin: typeof source.baseSkin === "string" ? source.baseSkin : "web",
+        colors: Object.fromEntries(
+          tileValues.map((tile, index) => [String(tile), pow2[index]]),
+        ),
+      };
+    })
+    .filter((value): value is AccountPaletteProfile => value !== null);
+  const activeId = String(getActiveTilePaletteId.call(themeManager) || "");
+  return parseAccountPaletteDocument({
+    schema: 1,
+    format: 3,
+    activePaletteId: palettes.some((palette) => palette.id === activeId)
+      ? activeId
+      : null,
+    palettes,
+  });
+}
+
+function bindAccountPaletteSync(): void {
+  const themeManager = globalWindow.ThemeManager;
+  const replaceCustomTilePalettes = themeManager?.replaceCustomTilePalettes;
+  const storageLike = createBrowserStorageAccess().local();
+  if (
+    !themeManager ||
+    typeof replaceCustomTilePalettes !== "function" ||
+    !storageLike
+  )
+    return;
+  const initialDocument = paletteDocumentFromThemeManager(themeManager);
+  const repository = new AccountPaletteRepository({
+    storage: storageLike,
+    ownerKey: resolvePaletteOwnerKey(storageLike),
+    transport: createHttpAccountPaletteTransport(),
+    applyDocument(document, source) {
+      if (source !== "cloud") return;
+      replaceCustomTilePalettes.call(themeManager, document.palettes, {
+        activePaletteId: document.activePaletteId,
+        source: "account-sync",
+      });
+    },
+  });
+  const plazaClient = createThemePlazaClient();
+  const submissionNotice = createThemePlazaSubmissionNotice({
+    language: () => (isEnglishUi() ? "en" : "zh"),
+  });
+  globalWindow.ThemePlazaSubmissionNotice = submissionNotice;
+  const shareButton = document.getElementById(
+    "palette-share-btn",
+  ) as HTMLButtonElement | null;
+  const syncShareAvailability = async () => {
+    if (!shareButton) return;
+    try {
+      const capabilities = await plazaClient.capabilities();
+      const snapshot = repository.snapshot();
+      const activeId = String(
+        themeManager.getActiveTilePaletteId instanceof Function
+          ? themeManager.getActiveTilePaletteId.call(themeManager) || ""
+          : "",
+      );
+      const activeIsCustom = snapshot.document.palettes.some(
+        (palette) => palette.id === activeId,
+      );
+      shareButton.disabled =
+        !capabilities.writeEnabled ||
+        snapshot.dirty ||
+        !!snapshot.conflict ||
+        !activeIsCustom;
+      if (!capabilities.writeEnabled) {
+        shareButton.textContent = isEnglishUi()
+          ? "Sharing coming soon"
+          : "分享功能准备中";
+        shareButton.title = "";
+      } else if (!activeIsCustom) {
+        shareButton.textContent = isEnglishUi()
+          ? "Create a copy to share"
+          : "请先创建副本后分享";
+        shareButton.title = isEnglishUi()
+          ? "Built-in palettes cannot be shared directly. Create a custom copy first."
+          : "内置色板不能直接分享，请先点击“新建副本”。";
+      } else if (snapshot.conflict) {
+        shareButton.textContent = isEnglishUi()
+          ? "Resolve sync conflict"
+          : "请先解决同步冲突";
+        shareButton.title = isEnglishUi()
+          ? "Resolve the palette sync conflict first."
+          : "请先解决色板同步冲突。";
+      } else if (snapshot.dirty) {
+        shareButton.textContent = isEnglishUi()
+          ? "Syncing palette…"
+          : "正在同步色板…";
+        shareButton.title = "";
+      } else {
+        shareButton.textContent = isEnglishUi()
+          ? "Share to Theme Plaza"
+          : "分享到主题广场";
+        shareButton.title = "";
+      }
+    } catch {
+      shareButton.disabled = true;
+    }
+  };
+  shareButton?.addEventListener("click", async () => {
+    const snapshot = repository.snapshot();
+    const activeId = String(
+      themeManager.getActiveTilePaletteId instanceof Function
+        ? themeManager.getActiveTilePaletteId.call(themeManager) || ""
+        : "",
+    );
+    const active = snapshot.document.palettes.find(
+      (palette) => palette.id === activeId,
+    );
+    if (!active || snapshot.dirty || snapshot.conflict) return;
+    const prompt = globalWindow.GameDialog?.prompt;
+    const title =
+      typeof prompt === "function"
+        ? await prompt(
+            isEnglishUi()
+              ? "Public title (2–20 characters)"
+              : "公开标题（2～20 个字符）",
+            active.name,
+            { kind: "prompt" },
+          )
+        : null;
+    if (!title) return;
+    shareButton.disabled = true;
+    try {
+      await plazaClient.submit({
+        paletteId: active.id,
+        title,
+        revision: snapshot.revision,
+      });
+      submissionNotice.show();
+    } catch (error) {
+      const note = document.getElementById("palette-note");
+      if (note)
+        note.textContent =
+          error instanceof Error ? error.message : String(error);
+    } finally {
+      await syncShareAvailability();
+    }
+  });
+
+  globalWindow.AccountPaletteRepository = repository;
+  if (initialDocument && repository.snapshot().document.palettes.length === 0) {
+    repository.setDocument(initialDocument);
+  }
+  void repository.sync().then(syncShareAvailability);
+
+  window.addEventListener("tile-palette-document-change", (event) => {
+    if (
+      (event as CustomEvent<{ source?: string }>).detail?.source ===
+      "account-sync"
+    )
+      return;
+    const document = paletteDocumentFromThemeManager(themeManager);
+    if (!document) return;
+    repository.setDocument(document);
+    void repository.sync().then(syncShareAvailability);
+  });
+  window.addEventListener(
+    "uilanguagechange",
+    () => void syncShareAvailability(),
+  );
+  window.addEventListener("auth-session-change", () => {
+    repository.switchOwner(resolvePaletteOwnerKey(storageLike), true);
+    void repository.sync().then(syncShareAvailability);
+  });
+}
+
 export function bootstrapPalettePage(): void {
   installPaletteLegacyRuntime();
   bindDisplayModeSync({ documentLike: document, windowLike: window });
@@ -723,6 +976,7 @@ export function bootstrapPalettePage(): void {
     document.body.setAttribute("data-page-family", "palette");
   }
   ensureThemeSettingsGlobals();
+  bindAccountPaletteSync();
 
   if (typeof applyThemeSettingsPageInit === "function") {
     applyThemeSettingsPageInit({

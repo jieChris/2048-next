@@ -23,6 +23,8 @@ tags:
   - name: Rescue
   - name: Admin
   - name: Achievements
+  - name: Palettes
+  - name: Theme Plaza
 paths:
   /register:
     post:
@@ -219,6 +221,274 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/UserResponse"
+
+  /me/app-palettes:
+    get:
+      tags: [Palettes]
+      summary: Read the authenticated account palette document with negotiated format projection.
+      parameters:
+        - $ref: "#/components/parameters/AppPaletteFormatHeader"
+      responses:
+        "200":
+          description: Current palette document, compare-and-swap revision, and supported formats.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppPaletteResponse"
+        "401":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "500":
+          $ref: "#/components/responses/ApiErrorResponse"
+    put:
+      tags: [Palettes]
+      summary: Compare-and-swap the authenticated account palette document.
+      parameters:
+        - $ref: "#/components/parameters/AppPaletteFormatHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppPalettePutRequest"
+      responses:
+        "200":
+          description: Saved palette document and incremented revision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppPaletteResponse"
+        "400":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "401":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "409":
+          description: Palette revision conflict with the latest server document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppPaletteResponse"
+
+  /theme-plaza/capabilities:
+    get:
+      tags: [Theme Plaza]
+      summary: Read Theme Plaza rollout capabilities.
+      security: []
+      responses:
+        "200":
+          description: Feature capability state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiEnvelope"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/ThemePlazaCapabilities" }
+
+  /theme-plaza:
+    get:
+      tags: [Theme Plaza]
+      summary: Browse published palette versions with stable cursor pagination.
+      security: []
+      parameters:
+        - name: sort
+          in: query
+          schema: { type: string, enum: [latest, most_referenced, most_liked], default: latest }
+        - name: query
+          in: query
+          schema: { type: string, maxLength: 50 }
+        - name: cursor
+          in: query
+          schema: { type: string, maxLength: 512 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        "200":
+          description: Published palette listing page.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ThemePlazaListResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/{listingId}:
+    get:
+      tags: [Theme Plaza]
+      summary: Read one published palette listing.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaListingIdPath"
+      responses:
+        "200":
+          description: Published palette detail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ThemePlazaDetailResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/me:
+    get:
+      tags: [Theme Plaza]
+      summary: Read the authenticated author's listing slot and pending candidate.
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/me/submissions:
+    post:
+      tags: [Theme Plaza]
+      summary: Submit a server-owned account palette snapshot for asynchronous review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePlazaSubmissionRequest" }
+      responses:
+        "202": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
+        "401": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/me/submissions/{versionId}:
+    delete:
+      tags: [Theme Plaza]
+      summary: Cancel the authenticated author's pending version.
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaVersionIdPath"
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/me/publication:
+    delete:
+      tags: [Theme Plaza]
+      summary: Withdraw the authenticated author's current publication.
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/versions/{versionId}/vote:
+    put:
+      tags: [Theme Plaza]
+      summary: Like, dislike, or clear the authenticated user's vote.
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaVersionIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePlazaVoteRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/versions/{versionId}/save:
+    post:
+      tags: [Theme Plaza]
+      summary: Atomically save a private copy and record the first account reference.
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaVersionIdPath"
+        - $ref: "#/components/parameters/IdempotencyKeyHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePlazaSaveRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /theme-plaza/versions/{versionId}/reports:
+    post:
+      tags: [Theme Plaza]
+      summary: Create or update one deduplicated report for a published version.
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaVersionIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePlazaReportRequest" }
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+        "503": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/theme-plaza/reviews:
+    get:
+      tags: [Admin, Theme Plaza]
+      summary: List Theme Plaza review, publication, and report states.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "403": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/theme-plaza/reviews/{versionId}:
+    get:
+      tags: [Admin, Theme Plaza]
+      summary: Read one Theme Plaza candidate, reports, and moderation evidence.
+      parameters:
+        - $ref: "#/components/parameters/ThemePlazaVersionIdPath"
+      responses:
+        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "404": { $ref: "#/components/responses/ApiErrorResponse" }
+
+  /admin/theme-plaza/reviews/{versionId}/approve:
+    post:
+      tags: [Admin, Theme Plaza]
+      summary: Approve one reviewed version and atomically publish it.
+      parameters: [{ $ref: "#/components/parameters/ThemePlazaVersionIdPath" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminReasonRequest" } } } }
+      responses: { "200": { $ref: "#/components/responses/ApiEnvelopeResponse" } }
+
+  /admin/theme-plaza/reviews/{versionId}/reject:
+    post:
+      tags: [Admin, Theme Plaza]
+      summary: Reject one reviewed version.
+      parameters: [{ $ref: "#/components/parameters/ThemePlazaVersionIdPath" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminReasonRequest" } } } }
+      responses: { "200": { $ref: "#/components/responses/ApiEnvelopeResponse" } }
+
+  /admin/theme-plaza/reviews/{versionId}/retry-ai:
+    post:
+      tags: [Admin, Theme Plaza]
+      summary: Requeue one version for AI review.
+      parameters: [{ $ref: "#/components/parameters/ThemePlazaVersionIdPath" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminReasonRequest" } } } }
+      responses: { "200": { $ref: "#/components/responses/ApiEnvelopeResponse" } }
+
+  /admin/theme-plaza/versions/{versionId}/hide:
+    post:
+      tags: [Admin, Theme Plaza]
+      summary: Hide one published version without deleting saved copies.
+      parameters: [{ $ref: "#/components/parameters/ThemePlazaVersionIdPath" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminReasonRequest" } } } }
+      responses: { "200": { $ref: "#/components/responses/ApiEnvelopeResponse" } }
+
+  /admin/theme-plaza/versions/{versionId}/restore:
+    post:
+      tags: [Admin, Theme Plaza]
+      summary: Restore one previously reviewed version.
+      parameters: [{ $ref: "#/components/parameters/ThemePlazaVersionIdPath" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminReasonRequest" } } } }
+      responses: { "200": { $ref: "#/components/responses/ApiEnvelopeResponse" } }
 
   /user/me:
     get:
@@ -2551,6 +2821,24 @@ components:
       schema:
         type: string
         pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$'
+    AppPaletteFormatHeader:
+      name: X-2048-Palette-Format
+      in: header
+      required: false
+      description: Request format 3 from compatible clients; omitted clients receive the format-2 projection.
+      schema:
+        type: integer
+        enum: [2, 3]
+    ThemePlazaListingIdPath:
+      name: listingId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    ThemePlazaVersionIdPath:
+      name: versionId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     RecordIdPath:
       name: recordId
       in: path
@@ -2805,6 +3093,228 @@ components:
           type: string
         message:
           type: string
+
+    AppPaletteColor:
+      type: string
+      pattern: '^(?:#[0-9A-Fa-f]{6}|transparent)$'
+
+    AppPaletteProfile:
+      type: object
+      additionalProperties: true
+      required: [id, name, baseSkin, colors]
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        baseSkin:
+          type: string
+          enum: [precision, web, ink, dango]
+        colors:
+          type: object
+          additionalProperties:
+            type: string
+            pattern: '^#[0-9A-Fa-f]{6}$'
+        pow2:
+          type: array
+          minItems: 26
+          maxItems: 26
+          items: { type: string }
+        fibonacci:
+          type: array
+          minItems: 16
+          maxItems: 16
+          items: { type: string }
+        pow2Text:
+          type: array
+          minItems: 26
+          maxItems: 26
+          items: { type: string }
+        fibonacciText:
+          type: array
+          minItems: 16
+          maxItems: 16
+          items: { type: string }
+        pow2Border:
+          type: array
+          minItems: 26
+          maxItems: 26
+          items: { $ref: "#/components/schemas/AppPaletteColor" }
+        fibonacciBorder:
+          type: array
+          minItems: 16
+          maxItems: 16
+          items: { $ref: "#/components/schemas/AppPaletteColor" }
+        pow2Glow:
+          type: array
+          minItems: 26
+          maxItems: 26
+          items: { $ref: "#/components/schemas/AppPaletteColor" }
+        fibonacciGlow:
+          type: array
+          minItems: 16
+          maxItems: 16
+          items: { $ref: "#/components/schemas/AppPaletteColor" }
+        glowIntensity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        glowMultipliers:
+          type: array
+          minItems: 26
+          maxItems: 26
+          items:
+            type: integer
+            minimum: 0
+            maximum: 200
+        createdAt: { type: integer, minimum: 0 }
+        updatedAt: { type: integer, minimum: 0 }
+
+    AppPaletteDocument:
+      type: object
+      additionalProperties: true
+      required: [schema, format, activePaletteId, palettes]
+      properties:
+        schema: { type: integer, const: 1 }
+        format: { type: integer, enum: [2, 3] }
+        activePaletteId: { type: [string, "null"] }
+        palettes:
+          type: array
+          maxItems: 8
+          items: { $ref: "#/components/schemas/AppPaletteProfile" }
+
+    AppPaletteRemoteState:
+      type: object
+      additionalProperties: false
+      required: [document, revision, updatedAt, supportedFormats]
+      properties:
+        document: { $ref: "#/components/schemas/AppPaletteDocument" }
+        revision: { type: integer, minimum: 0 }
+        updatedAt: { type: [string, "null"], format: date-time }
+        supportedFormats:
+          type: array
+          uniqueItems: true
+          items: { type: integer, enum: [2, 3] }
+
+    AppPalettePutRequest:
+      type: object
+      additionalProperties: false
+      required: [baseRevision, document]
+      properties:
+        baseRevision: { type: integer, minimum: 0 }
+        document: { $ref: "#/components/schemas/AppPaletteDocument" }
+
+    AppPaletteResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean }
+            data: { $ref: "#/components/schemas/AppPaletteRemoteState" }
+
+    ThemePlazaCapabilities:
+      type: object
+      additionalProperties: false
+      required: [readEnabled, writeEnabled, autoPublishEnabled, paletteFormat3Enabled]
+      properties:
+        readEnabled: { type: boolean }
+        writeEnabled: { type: boolean }
+        autoPublishEnabled: { type: boolean }
+        paletteFormat3Enabled: { type: boolean }
+
+    ThemePlazaListing:
+      type: object
+      additionalProperties: false
+      required: [id, version, author, stats, viewer]
+      properties:
+        id: { type: integer, minimum: 1 }
+        version:
+          type: object
+          required: [id, revision, title, palette, publishedAt]
+          properties:
+            id: { type: integer, minimum: 1 }
+            revision: { type: integer, minimum: 1 }
+            title: { type: string, minLength: 2, maxLength: 20 }
+            palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+            publishedAt: { type: string, format: date-time }
+        author:
+          type: object
+          required: [nickname, publicProfileId]
+          properties:
+            nickname: { type: string }
+            publicProfileId: { type: [integer, "null"] }
+        stats:
+          type: object
+          required: [likes, dislikes, references]
+          properties:
+            likes: { type: integer, minimum: 0 }
+            dislikes: { type: integer, minimum: 0 }
+            references: { type: integer, minimum: 0 }
+        viewer:
+          type: object
+          required: [vote, saved, owned]
+          properties:
+            vote: { type: integer, enum: [-1, 0, 1] }
+            saved: { type: boolean }
+            owned: { type: boolean }
+
+    ThemePlazaListResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data, nextCursor, capabilities]
+          properties:
+            success: { type: boolean, const: true }
+            data: { type: array, items: { $ref: "#/components/schemas/ThemePlazaListing" } }
+            nextCursor: { type: [string, "null"] }
+            capabilities: { $ref: "#/components/schemas/ThemePlazaCapabilities" }
+
+    ThemePlazaDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data, capabilities]
+          properties:
+            success: { type: boolean, const: true }
+            data: { $ref: "#/components/schemas/ThemePlazaListing" }
+            capabilities: { $ref: "#/components/schemas/ThemePlazaCapabilities" }
+
+    ThemePlazaSubmissionRequest:
+      type: object
+      additionalProperties: false
+      required: [palette_id, title, revision]
+      properties:
+        palette_id: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 2, maxLength: 20 }
+        revision: { type: integer, minimum: 0 }
+
+    ThemePlazaVoteRequest:
+      type: object
+      additionalProperties: false
+      required: [value]
+      properties:
+        value: { type: integer, enum: [-1, 0, 1] }
+
+    ThemePlazaSaveRequest:
+      type: object
+      additionalProperties: false
+      required: [revision]
+      properties:
+        revision: { type: integer, minimum: 0 }
+
+    ThemePlazaReportRequest:
+      type: object
+      additionalProperties: false
+      required: [category]
+      properties:
+        category:
+          type: string
+          enum: [impersonation, advertising, harassment, hate, sexual, violence, illegal, copyright, other]
+        note: { type: string, maxLength: 200 }
 
     AdminReasonRequest:
       type: object

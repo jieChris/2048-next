@@ -76,7 +76,13 @@ body[data-page="palette-hub"].palette-swatch-open {
 .palette-settings-controls {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 3px;
+  border: 1px solid
+    color-mix(in srgb, var(--app-border-control) 72%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--app-surface-control) 76%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 48%, transparent);
 }
 
 .palette-settings-menu {
@@ -95,52 +101,168 @@ body[data-page="palette-hub"].palette-swatch-open {
   content: "";
 }
 
-.palette-icon-button {
-  display: inline-grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
+.palette-icon-button.palette-quick-button {
+  display: grid;
+  grid-template-columns: 32px minmax(42px, auto) 14px;
+  align-items: center;
+  gap: 8px;
+  min-width: 112px;
+  height: 44px;
+  padding: 5px 8px 5px 6px;
+  box-sizing: border-box;
+  border: 1px solid
+    color-mix(in srgb, var(--app-border-control) 78%, transparent);
+  border-radius: 13px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--app-surface-light) 96%, #fff),
+    color-mix(in srgb, var(--app-surface-soft) 90%, var(--app-accent) 10%)
+  );
   color: var(--app-text-strong);
+  box-shadow:
+    0 5px 13px color-mix(in srgb, var(--app-text-strong) 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent);
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+  user-select: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
-.palette-icon-button:hover,
-.palette-settings-menu[open] > .palette-icon-button {
-  border-color: var(--app-border-control);
-  background: color-mix(in srgb, var(--app-surface-control) 82%, var(--app-accent));
+.palette-icon-button.palette-quick-button:hover,
+.palette-settings-menu[open] > .palette-quick-button {
+  border-color: color-mix(
+    in srgb,
+    var(--app-accent) 62%,
+    var(--app-border-control)
+  );
   color: var(--app-link-hover);
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 19px color-mix(in srgb, var(--app-accent) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 76%, transparent);
 }
 
-.palette-icon-button:active {
-  transform: scale(0.94);
+.palette-icon-button.palette-quick-button:active {
+  transform: translateY(0) scale(0.98);
 }
 
-.palette-icon-button:focus-visible {
+.palette-icon-button.palette-quick-button:focus-visible {
   outline: 2px solid var(--enamel-button-teal);
   outline-offset: 3px;
 }
 
-.palette-language-glyph {
-  display: inline-block;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.18em;
-  transform: translateX(-1px);
+.palette-quick-icon {
+  position: relative;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--app-accent) 15%,
+    var(--app-surface-light)
+  );
+  color: var(--app-accent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--app-accent) 20%, transparent);
 }
 
-.palette-mode-glyph {
-  width: 20px;
-  height: 20px;
+.palette-quick-icon > svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.palette-language-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  min-width: 15px;
+  height: 15px;
+  place-items: center;
+  padding: 0 2px;
+  border: 2px solid var(--app-surface-light);
+  border-radius: 7px;
+  background: var(--app-accent);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.palette-quick-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  text-align: left;
+}
+
+.palette-quick-eyebrow {
+  color: var(--app-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.palette-quick-current {
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-quick-chevron {
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+  transition: transform 160ms ease;
+}
+
+.palette-settings-menu[open] .palette-quick-chevron {
+  transform: rotate(180deg);
+}
+
+.palette-mode-glyph [data-mode-icon] {
+  display: none;
+}
+
+.palette-display-mode-trigger[data-current-display-mode="auto"]
+  [data-mode-icon="auto"],
+.palette-display-mode-trigger[data-current-display-mode="day"]
+  [data-mode-icon="day"],
+.palette-display-mode-trigger[data-current-display-mode="night"]
+  [data-mode-icon="night"] {
+  display: block;
+}
+
+.palette-display-mode-trigger[data-current-display-mode="night"]
+  .palette-quick-icon {
+  background: color-mix(in srgb, #6f63d9 18%, var(--app-surface-light));
+  color: color-mix(in srgb, #8a7cf0 80%, var(--app-text-strong));
+}
+
+.palette-display-mode-trigger[data-current-display-mode="day"]
+  .palette-quick-icon {
+  background: color-mix(in srgb, #f1b94b 20%, var(--app-surface-light));
+  color: #b97808;
 }
 
 .palette-settings-popover {
@@ -1778,6 +1900,30 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-nav-btn:h
     align-items: flex-start;
   }
 
+  .palette-settings-controls {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .palette-settings-menu {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .palette-icon-button.palette-quick-button {
+    width: 100%;
+  }
+
+  .palette-language-switch .palette-settings-popover {
+    right: auto;
+    left: 0;
+  }
+
+  .palette-display-mode-switch .palette-settings-popover {
+    right: 0;
+    left: auto;
+  }
+
   .settings-workbench {
     display: block;
   }
@@ -1868,10 +2014,134 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-nav-btn:h
 
 }
 
+.theme-plaza-submission-notice {
+  position: fixed;
+  z-index: 5000;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  width: min(560px, calc(100vw - 24px));
+  transform: translate(-50%, -18px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.theme-plaza-submission-notice.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.theme-plaza-submission-notice-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid
+    color-mix(in srgb, var(--app-success, #27845f) 38%, var(--pp-line));
+  border-radius: 14px;
+  background: color-mix(
+    in srgb,
+    var(--pp-panel) 94%,
+    var(--app-success, #27845f) 6%
+  );
+  color: var(--pp-ink);
+  box-shadow: 0 16px 38px rgba(25, 58, 63, 0.22);
+}
+
+.theme-plaza-submission-notice-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--app-success, #27845f);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.theme-plaza-submission-notice-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.theme-plaza-submission-notice-copy strong {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.theme-plaza-submission-notice-copy span {
+  color: var(--pp-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.theme-plaza-submission-notice-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pp-muted);
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.theme-plaza-submission-notice-close:hover,
+.theme-plaza-submission-notice-close:focus-visible {
+  background: var(--pp-soft);
+  color: var(--pp-ink);
+  outline: 2px solid var(--app-accent, #2f86a0);
+  outline-offset: 1px;
+}
+
 @media (max-width: 520px) {
   :root {
     --pp-preview-board-content-size: 280px;
     --pp-preview-board-total-size: 280px;
+  }
+
+  .palette-settings-controls {
+    gap: 6px;
+    padding: 2px;
+    border-radius: 14px;
+  }
+
+  .palette-icon-button.palette-quick-button {
+    grid-template-columns: 30px minmax(36px, 1fr) 12px;
+    min-width: 0;
+    height: 42px;
+    gap: 6px;
+    padding-right: 6px;
+  }
+
+  .palette-quick-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .palette-quick-eyebrow {
+    font-size: 8px;
+  }
+
+  .palette-quick-current {
+    font-size: 12px;
+  }
+
+  .palette-settings-popover {
+    min-width: min(168px, calc(100vw - 24px));
   }
 
   .palette-board-preview {

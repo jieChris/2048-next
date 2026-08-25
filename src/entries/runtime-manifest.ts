@@ -37,6 +37,7 @@ export type RuntimeCapability =
   | "relay-5x5"
   | "palette"
   | "touch-sensitivity"
+  | "theme-plaza"
   | "stone-2k-monitor"
   | "user-profile"
   | "register"
@@ -149,6 +150,11 @@ export const PAGE_MANIFESTS: readonly PageManifestEntry[] = [
     pageId: "touch-sensitivity",
     htmlFile: "touch_sensitivity.html",
     capabilities: ["touch-sensitivity"]
+  },
+  {
+    pageId: "theme-plaza",
+    htmlFile: "theme_plaza.html",
+    capabilities: ["theme-plaza"]
   },
   {
     pageId: "stone-2k-monitor",

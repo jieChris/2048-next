@@ -402,6 +402,680 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/app-palettes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authenticated account palette document with negotiated format projection. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Request format 3 from compatible clients; omitted clients receive the format-2 projection. */
+                    "X-2048-Palette-Format"?: components["parameters"]["AppPaletteFormatHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current palette document, compare-and-swap revision, and supported formats. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppPaletteResponse"];
+                    };
+                };
+                401: components["responses"]["ApiErrorResponse"];
+                500: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        /** Compare-and-swap the authenticated account palette document. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Request format 3 from compatible clients; omitted clients receive the format-2 projection. */
+                    "X-2048-Palette-Format"?: components["parameters"]["AppPaletteFormatHeader"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AppPalettePutRequest"];
+                };
+            };
+            responses: {
+                /** @description Saved palette document and incremented revision. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppPaletteResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                /** @description Palette revision conflict with the latest server document. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppPaletteResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Theme Plaza rollout capabilities. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Feature capability state. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiEnvelope"] & {
+                            data?: components["schemas"]["ThemePlazaCapabilities"];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Browse published palette versions with stable cursor pagination. */
+        get: {
+            parameters: {
+                query?: {
+                    sort?: "latest" | "most_referenced" | "most_liked";
+                    query?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Published palette listing page. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThemePlazaListResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/{listingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one published palette listing. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    listingId: components["parameters"]["ThemePlazaListingIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Published palette detail. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThemePlazaDetailResponse"];
+                    };
+                };
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authenticated author's listing slot and pending candidate. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/me/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a server-owned account palette snapshot for asynchronous review. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ThemePlazaSubmissionRequest"];
+                };
+            };
+            responses: {
+                202: components["responses"]["ApiEnvelopeResponse"];
+                400: components["responses"]["ApiErrorResponse"];
+                401: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/me/submissions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel the authenticated author's pending version. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/me/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw the authenticated author's current publication. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/versions/{versionId}/vote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Like, dislike, or clear the authenticated user's vote. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ThemePlazaVoteRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/versions/{versionId}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically save a private copy and record the first account reference. */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "Idempotency-Key": components["parameters"]["IdempotencyKeyHeader"];
+                };
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ThemePlazaSaveRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                409: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/theme-plaza/versions/{versionId}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or update one deduplicated report for a published version. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ThemePlazaReportRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Theme Plaza review, publication, and report states. */
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                403: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/reviews/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one Theme Plaza candidate, reports, and moderation evidence. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+                404: components["responses"]["ApiErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/reviews/{versionId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve one reviewed version and atomically publish it. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/reviews/{versionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject one reviewed version. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/reviews/{versionId}/retry-ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Requeue one version for AI review. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/versions/{versionId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide one published version without deleting saved copies. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/theme-plaza/versions/{versionId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore one previously reviewed version. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    versionId: components["parameters"]["ThemePlazaVersionIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AdminReasonRequest"];
+                };
+            };
+            responses: {
+                200: components["responses"]["ApiEnvelopeResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/user/me": {
         parameters: {
             query?: never;
@@ -4356,6 +5030,117 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        AppPaletteColor: string;
+        AppPaletteProfile: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            baseSkin: "precision" | "web" | "ink" | "dango";
+            colors: {
+                [key: string]: string;
+            };
+            pow2?: string[];
+            fibonacci?: string[];
+            pow2Text?: string[];
+            fibonacciText?: string[];
+            pow2Border?: components["schemas"]["AppPaletteColor"][];
+            fibonacciBorder?: components["schemas"]["AppPaletteColor"][];
+            pow2Glow?: components["schemas"]["AppPaletteColor"][];
+            fibonacciGlow?: components["schemas"]["AppPaletteColor"][];
+            glowIntensity?: number;
+            glowMultipliers?: number[];
+            createdAt?: number;
+            updatedAt?: number;
+        } & {
+            [key: string]: unknown;
+        };
+        AppPaletteDocument: {
+            /** @constant */
+            schema: 1;
+            /** @enum {integer} */
+            format: 2 | 3;
+            activePaletteId: string | null;
+            palettes: components["schemas"]["AppPaletteProfile"][];
+        } & {
+            [key: string]: unknown;
+        };
+        AppPaletteRemoteState: {
+            document: components["schemas"]["AppPaletteDocument"];
+            revision: number;
+            /** Format: date-time */
+            updatedAt: string | null;
+            supportedFormats: (2 | 3)[];
+        };
+        AppPalettePutRequest: {
+            baseRevision: number;
+            document: components["schemas"]["AppPaletteDocument"];
+        };
+        AppPaletteResponse: components["schemas"]["ApiEnvelope"] & {
+            success: boolean;
+            data: components["schemas"]["AppPaletteRemoteState"];
+        };
+        ThemePlazaCapabilities: {
+            readEnabled: boolean;
+            writeEnabled: boolean;
+            autoPublishEnabled: boolean;
+            paletteFormat3Enabled: boolean;
+        };
+        ThemePlazaListing: {
+            id: number;
+            version: {
+                id: number;
+                revision: number;
+                title: string;
+                palette: components["schemas"]["AppPaletteProfile"];
+                /** Format: date-time */
+                publishedAt: string;
+            };
+            author: {
+                nickname: string;
+                publicProfileId: number | null;
+            };
+            stats: {
+                likes: number;
+                dislikes: number;
+                references: number;
+            };
+            viewer: {
+                /** @enum {integer} */
+                vote: -1 | 0 | 1;
+                saved: boolean;
+                owned: boolean;
+            };
+        };
+        ThemePlazaListResponse: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["ThemePlazaListing"][];
+            nextCursor: string | null;
+            capabilities: components["schemas"]["ThemePlazaCapabilities"];
+        };
+        ThemePlazaDetailResponse: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["ThemePlazaListing"];
+            capabilities: components["schemas"]["ThemePlazaCapabilities"];
+        };
+        ThemePlazaSubmissionRequest: {
+            palette_id: string;
+            title: string;
+            revision: number;
+        };
+        ThemePlazaVoteRequest: {
+            /** @enum {integer} */
+            value: -1 | 0 | 1;
+        };
+        ThemePlazaSaveRequest: {
+            revision: number;
+        };
+        ThemePlazaReportRequest: {
+            /** @enum {string} */
+            category: "impersonation" | "advertising" | "harassment" | "hate" | "sexual" | "violence" | "illegal" | "copyright" | "other";
+            note?: string;
+        };
         AdminReasonRequest: {
             reason: string;
         };
@@ -5300,6 +6085,10 @@ export interface components {
         UserIdPath: number;
         ProfileBackgroundSceneIdPath: string;
         IdempotencyKeyHeader: string;
+        /** @description Request format 3 from compatible clients; omitted clients receive the format-2 projection. */
+        AppPaletteFormatHeader: 2 | 3;
+        ThemePlazaListingIdPath: number;
+        ThemePlazaVersionIdPath: number;
         RecordIdPath: string;
         RecordUploadTaskIdPath: string;
         ClientVersionHeader: string;

@@ -52,6 +52,7 @@ const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "register",
   "replay",
   "stone-2k-monitor",
+  "theme-plaza",
   "user-profile"
 ]);
 

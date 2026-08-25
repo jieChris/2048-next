@@ -27,13 +27,13 @@
         </div>
       </div>
       <nav class="palette-nav">
-        <a class="replay-button palette-nav-btn" href="Practice_board.html">练习板</a>
         <a class="replay-button palette-nav-btn palette-touch-entry" href="touch_sensitivity.html">触屏灵敏度</a>
         <div class="palette-settings-controls" aria-label="快捷设置">
           <details class="palette-settings-menu palette-language-switch">
-            <summary class="palette-icon-button palette-language-trigger" aria-label="界面语言" title="界面语言">
-              <span class="palette-language-glyph" aria-hidden="true">文A</span>
-              <span class="page-title-visually-hidden">界面语言</span>
+            <summary class="palette-icon-button palette-quick-button palette-language-trigger" aria-label="界面语言" title="界面语言" data-current-language="zh">
+              <span class="palette-quick-icon palette-language-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.8 12h16.4M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5S14.2 18.2 12 20.5M12 3.5C9.8 5.8 8.7 8.6 8.7 12s1.1 6.2 3.3 8.5"></path></svg><span class="palette-language-badge">中</span></span>
+              <span class="palette-quick-copy"><span class="palette-quick-eyebrow palette-language-eyebrow">语言</span><strong class="palette-quick-current palette-language-current">中文</strong></span>
+              <svg class="palette-quick-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m6.5 8 3.5 3.5L13.5 8"></path></svg>
             </summary>
             <div class="palette-settings-popover" role="menu" aria-label="界面语言">
               <button type="button" class="palette-menu-option is-active" data-ui-language="zh" role="menuitemradio" aria-checked="true">
@@ -45,9 +45,10 @@
             </div>
           </details>
           <details class="palette-settings-menu palette-display-mode-switch">
-            <summary class="palette-icon-button palette-display-mode-trigger" aria-label="显示模式" title="显示模式">
-              <svg class="palette-mode-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 15.6A8.5 8.5 0 0 1 8.4 3.2 8.5 8.5 0 1 0 20.8 15.6Z"></path></svg>
-              <span class="page-title-visually-hidden">显示模式</span>
+            <summary class="palette-icon-button palette-quick-button palette-display-mode-trigger" aria-label="显示模式" title="显示模式" data-current-display-mode="auto">
+              <span class="palette-quick-icon palette-display-icon" aria-hidden="true"><svg class="palette-mode-glyph" viewBox="0 0 24 24"><g data-mode-icon="auto"><rect x="4" y="5" width="16" height="12" rx="2.5"></rect><path d="M8.5 20h7M12 17v3"></path></g><g data-mode-icon="day"><circle cx="12" cy="12" r="3.6"></circle><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5l1.4 1.4M17.1 17.1l1.4 1.4M18.5 5.5l-1.4 1.4M6.9 17.1l-1.4 1.4"></path></g><g data-mode-icon="night"><path d="M20 15.2A8.4 8.4 0 0 1 8.8 4a8.4 8.4 0 1 0 11.2 11.2Z"></path></g></svg></span>
+              <span class="palette-quick-copy"><span class="palette-quick-eyebrow palette-display-mode-eyebrow">外观</span><strong class="palette-quick-current palette-display-mode-current">系统</strong></span>
+              <svg class="palette-quick-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m6.5 8 3.5 3.5L13.5 8"></path></svg>
             </summary>
             <div class="palette-settings-popover" role="menu" aria-label="显示模式">
               <button type="button" class="palette-menu-option is-active" data-display-mode="auto" role="menuitemradio" aria-checked="true">
@@ -152,6 +153,7 @@
           </div>
           <select id="theme-select" style="display:none"></select>
           <p class="palette-variant-note">色板颜色会按方块等级映射到其他棋盘变体。</p>
+          <a id="palette-theme-plaza-link" class="replay-button" href="theme_plaza.html">主题广场</a>
           <div id="theme-preview-grid" hidden aria-hidden="true"></div>
         </div>
 
@@ -170,6 +172,7 @@
           <button id="palette-delete-btn" class="replay-button" type="button">删除</button>
           <button id="palette-export-btn" class="replay-button" type="button">导出</button>
           <button id="palette-import-btn" class="replay-button" type="button">导入</button>
+          <button id="palette-share-btn" class="replay-button" type="button" disabled>分享功能准备中</button>
           <input id="palette-import-input" type="file" accept="application/json" hidden>
         </div>
 

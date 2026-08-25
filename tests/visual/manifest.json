@@ -26,9 +26,9 @@
     {
       "baselineId": "all-pages-and-overlays",
       "revision": 1,
-      "pageCount": 34,
-      "overlayCount": 18,
-      "snapshotCount": 416,
+      "pageCount": 36,
+      "overlayCount": 19,
+      "snapshotCount": 440,
       "pages": [
         "game",
         "not-found",
@@ -37,6 +37,7 @@
         "achievement-toast-reference",
         "admin",
         "admin-avatar-review",
+        "admin-theme-plaza-review",
         "api-docs",
         "beta-access",
         "beta-login",
@@ -51,6 +52,7 @@
         "modes",
         "operation-feedback-preview",
         "palette",
+        "theme-plaza",
         "password",
         "play",
         "breakout",
@@ -82,6 +84,7 @@
         "admin-import",
         "operation-feedback-settings",
         "palette-swatch",
+        "theme-plaza-submission-notice",
         "achievement-toast",
         "breakout-easter-egg"
       ],
@@ -97,8 +100,8 @@
         "light",
         "night"
       ],
-      "updatedAt": "2026-08-24",
-      "reason": "在既有全项目页面与弹窗基线中补充管理员头像审核队列，并同步登记已确认的主页、设置、历史、练习板、管理员和调色板弹窗变更；视觉夹具固定新手指引为已查看，覆盖浅色/夜间及四档视口。",
+      "updatedAt": "2026-08-25",
+      "reason": "主题广场与审核通知完成后，重设计设置页语言/外观快捷按钮，并按产品要求移除页头练习板入口；覆盖浅色/夜间及四档视口。",
       "baselineEnvironment": "Playwright Chromium on macOS; scale=css",
       "status": "approved"
     }

@@ -40,6 +40,8 @@ const PAGES: VisualPage[] = [
   { key: "modes", path: "/modes.html", ready: "body[data-page='modes']" },
   { key: "operation-feedback-preview", path: "/operation-feedback-preview.html", ready: "body" },
   { key: "palette", path: "/palette.html#appearance-settings", ready: "body[data-page='palette-hub']" },
+  { key: "theme-plaza", path: "/theme_plaza.html", ready: "body[data-page='theme-plaza']" },
+  { key: "admin-theme-plaza-review", path: "/admin.html?view=themePlaza", ready: ".admin-theme-plaza-list" },
   { key: "password", path: "/password.html", ready: "body[data-page='password-hub']" },
   { key: "play", path: "/play.html?visual_preview=1", ready: "body[data-page='game']" },
   { key: "breakout", path: "/public/easter-eggs/breakout/index.html", ready: ".breakout-modal" },
@@ -135,6 +137,53 @@ async function fulfillApi(route: Route, pageKey: string): Promise<void> {
     await route.fulfill({ path: "/Users/a19/Documents/2048-Next/2048-next/meta/icon-192.png" });
     return;
   }
+  if (path === "/api/admin/theme-plaza/reviews") {
+    const pow2 = Array.from(
+      { length: 26 },
+      (_, index) => `#${String(index + 1).padStart(6, "0")}`,
+    );
+    await route.fulfill({
+      json: {
+        success: true,
+        data: [
+          {
+            id: 12,
+            listing_id: 7,
+            owner_user_id: 42,
+            public_title: "青瓷夜色",
+            palette_snapshot: {
+              id: "public",
+              name: "public",
+              baseSkin: "web",
+              colors: Object.fromEntries(
+                [
+                  2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
+                  16384, 32768, 65536,
+                ].map((value, index) => [String(value), pow2[index]]),
+              ),
+              pow2,
+              fibonacci: pow2.slice(0, 16),
+              pow2Text: Array.from({ length: 26 }, () => "#F9F6F2"),
+              fibonacciText: Array.from({ length: 16 }, () => "#F9F6F2"),
+              pow2Border: Array.from({ length: 26 }, () => "transparent"),
+              fibonacciBorder: Array.from({ length: 16 }, () => "transparent"),
+              pow2Glow: Array.from({ length: 26 }, () => "#00AAFF"),
+              fibonacciGlow: Array.from({ length: 16 }, () => "#00AAFF"),
+              glowIntensity: 50,
+              glowMultipliers: Array.from({ length: 26 }, () => 100),
+            },
+            moderation_status: "manual_review",
+            moderation_reason_code: "NEEDS_MANUAL_REVIEW",
+            model_name: "deepseek-v4-flash",
+            open_reports: 1,
+            author_nickname: "视觉测试员",
+            submitted_at: "2026-08-25T00:00:00Z",
+          },
+        ],
+      },
+    });
+    return;
+  }
   if (path === "/api/admin/dashboard") {
     await route.fulfill({ json: { success: true, data: { metrics: { total_users: 128, active_users: 120, inactive_users: 8, new_users_7d: 9, active_users_7d: 64, pending_rescue_offers: 2 }, recent_users: [VISUAL_USER], recent_audit: [], recent_events: [] } } });
     return;
@@ -157,6 +206,75 @@ async function fulfillApi(route: Route, pageKey: string): Promise<void> {
   }
   if (path === "/api/user/me" || path === "/api/user/42") {
     await route.fulfill({ json: { success: true, data: VISUAL_USER } });
+    return;
+  }
+  if (path === "/api/theme-plaza/capabilities") {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          readEnabled: true,
+          writeEnabled: false,
+          autoPublishEnabled: false,
+          paletteFormat3Enabled: true,
+        },
+      },
+    });
+    return;
+  }
+  if (path === "/api/theme-plaza") {
+    const pow2 = Array.from(
+      { length: 26 },
+      (_, index) => `#${String(index + 1).padStart(6, "0")}`,
+    );
+    const palette = {
+      id: "public",
+      name: "public",
+      baseSkin: "web",
+      colors: Object.fromEntries(
+        [
+          2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384,
+          32768, 65536,
+        ].map((value, index) => [String(value), pow2[index]]),
+      ),
+      pow2,
+      fibonacci: pow2.slice(0, 16),
+      pow2Text: Array.from({ length: 26 }, () => "#F9F6F2"),
+      fibonacciText: Array.from({ length: 16 }, () => "#F9F6F2"),
+      pow2Border: Array.from({ length: 26 }, () => "transparent"),
+      fibonacciBorder: Array.from({ length: 16 }, () => "transparent"),
+      pow2Glow: Array.from({ length: 26 }, () => "#00AAFF"),
+      fibonacciGlow: Array.from({ length: 16 }, () => "#00AAFF"),
+      glowIntensity: 50,
+      glowMultipliers: Array.from({ length: 26 }, () => 100),
+    };
+    await route.fulfill({
+      json: {
+        success: true,
+        data: [
+          {
+            id: 7,
+            version: {
+              id: 12,
+              revision: 2,
+              title: "青瓷夜色",
+              palette,
+              publishedAt: "2026-08-25T00:00:00Z",
+            },
+            author: { nickname: "视觉测试员", publicProfileId: 42 },
+            stats: { likes: 8, dislikes: 2, references: 5 },
+            viewer: { vote: 0, saved: false, owned: false },
+          },
+        ],
+        nextCursor: null,
+        capabilities: {
+          readEnabled: true,
+          writeEnabled: false,
+          autoPublishEnabled: false,
+          paletteFormat3Enabled: true,
+        },
+      },
+    });
     return;
   }
   if (path.includes("ranked-session")) {
@@ -569,6 +687,19 @@ const MODALS: ModalScenario[] = [
       await page.locator("#palette-editor-current .color-target").first().click();
     },
     ready: "#palette-swatch-popover.is-open"
+  },
+  {
+    key: "theme-plaza-submission-notice",
+    page: { key: "palette", path: "/palette.html#appearance-settings" },
+    open: async (page) => {
+      await page.waitForFunction(() =>
+        Boolean((window as any).ThemePlazaSubmissionNotice),
+      );
+      await page.evaluate(() =>
+        (window as any).ThemePlazaSubmissionNotice.show(),
+      );
+    },
+    ready: "#theme-plaza-submission-notice.is-visible",
   },
   {
     key: "achievement-toast",

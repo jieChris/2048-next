@@ -1339,6 +1339,12 @@
     return writeLocalStorageItem(TILE_PALETTE_ACTIVE_KEY, String(value || DEFAULT_TILE_PALETTE_ID));
   }
 
+  function notifyTilePaletteDocumentChange(source) {
+    window.dispatchEvent(new window.CustomEvent("tile-palette-document-change", {
+      detail: { source: String(source || "local") }
+    }));
+  }
+
   function getTilePalettesForTheme(theme) {
     var list = [createFollowThemePalette(theme)].concat(createBuiltinPaletteRecords(theme));
     var custom = readStoredTilePaletteProfiles();
@@ -1704,7 +1710,6 @@
     var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
     var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
     var pow2PaletteColors = pow2PaletteStyles.background;
-    var fibPaletteColors = fibPaletteStyles.background;
     if (uiTheme.id === "classic") {
       // Authentic 2048 looks
       css += "html, body { background: #faf8ef !important; background-image: none !important; color: #776e65 !important; }\n";
@@ -2308,8 +2313,6 @@
 
     if (theme.horse_year) {
         // --- Assets: User Provided Images ---
-        // 1. Center: Calligraphy 'Ma' (Horse)
-        var bgCenter = "images/horse/马.png"; // Needs URL encoding if not handled by browser, but usually safe in quotes. 
         // Actually, let's play it safe and encodeURI component for Chinese chars in URL()
         // But path is relative to the CSS/HTML? No, inline style on page, so relative to index.html.
         // index.html is in root. images/ is in root.
@@ -2517,17 +2520,6 @@
     return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
   }
 
-  function contrastRatio(colorA, colorB) {
-    var a = parseCssColor(colorA);
-    var b = parseCssColor(colorB);
-    if (!a || !b) return 99;
-    var la = relativeLuminance(a);
-    var lb = relativeLuminance(b);
-    var hi = Math.max(la, lb);
-    var lo = Math.min(la, lb);
-    return (hi + 0.05) / (lo + 0.05);
-  }
-
   function buildTimerLegendBoxShadow(visual) {
     if (!visual) return "";
     var backgroundRgb = parseCssColor(visual.backgroundColor);
@@ -2606,7 +2598,7 @@
   function getThemes() {
     var list = [];
     for (var key in themes) {
-      if (themes.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(themes, key)) {
         list.push({ id: themes[key].id, label: themes[key].label });
       }
     }
@@ -2630,9 +2622,6 @@
     var activeTilePalette = resolveActiveTilePalette(theme);
     var pow2PaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "pow2");
     var fibPaletteStyles = resolvePaletteStyleBundle(theme, activeTilePalette, "fibonacci");
-    var pow2PaletteColors = pow2PaletteStyles.background;
-    var fibPaletteColors = fibPaletteStyles.background;
-
     var tilesResetSelector = uniqueSelectors.map(function (sel) {
       return sel + " .theme-preview-tile";
     }).join(",");
@@ -2780,6 +2769,7 @@
     }
     writeActiveTilePaletteId(targetId);
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("active");
     return targetId;
   }
 
@@ -2794,6 +2784,7 @@
       }
     }
     var custom = readStoredTilePaletteProfiles();
+    if (custom.length >= 8) return null;
     var usedNames = all.map(function (item) { return item.name; });
     var finalName = ensureUniquePaletteName(usedNames, name || "自定义色板");
     var now = Date.now();
@@ -2819,6 +2810,7 @@
     writeStoredTilePaletteProfiles(custom);
     writeActiveTilePaletteId(created.id);
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("create");
     return clonePaletteRecord(created);
   }
 
@@ -2835,6 +2827,7 @@
     custom[idx] = current;
     writeStoredTilePaletteProfiles(custom);
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("rename");
     return clonePaletteRecord(current);
   }
 
@@ -2848,6 +2841,7 @@
       writeActiveTilePaletteId(DEFAULT_TILE_PALETTE_ID);
     }
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("delete");
     return true;
   }
 
@@ -2896,6 +2890,7 @@
     custom[idx] = item;
     writeStoredTilePaletteProfiles(custom);
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("color");
     return true;
   }
 
@@ -2907,6 +2902,7 @@
     custom[idx].updatedAt = Date.now();
     if (!writeStoredTilePaletteProfiles(custom)) return false;
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("glow-intensity");
     return true;
   }
 
@@ -2920,6 +2916,7 @@
     custom[idx].updatedAt = Date.now();
     if (!writeStoredTilePaletteProfiles(custom)) return false;
     applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("glow-multiplier");
     return true;
   }
 
@@ -2950,7 +2947,7 @@
     if (typeof payload === "string") {
       try {
         parsed = JSON.parse(payload);
-      } catch (_err) {
+      } catch {
         return { importedCount: 0, renamed: [], error: "invalid_json" };
       }
     }
@@ -2963,10 +2960,14 @@
     }
     var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
     var custom = readStoredTilePaletteProfiles();
+    var remainingCapacity = Math.max(0, 8 - custom.length);
+    if (remainingCapacity === 0) {
+      return { importedCount: 0, renamed: [], error: "palette_limit_reached" };
+    }
     var usedNames = getTilePalettesForTheme(theme).map(function (item) { return item.name; });
     var renamed = [];
     var importedCount = 0;
-    for (var i = 0; i < sourcePalettes.length; i++) {
+    for (var i = 0; i < sourcePalettes.length && importedCount < remainingCapacity; i++) {
       var item = sourcePalettes[i];
       if (!item || typeof item !== "object") continue;
       var rawName = typeof item.name === "string" && item.name.trim() ? item.name.trim() : "导入色板";
@@ -2999,8 +3000,13 @@
     if (importedCount > 0) {
       writeStoredTilePaletteProfiles(custom);
       applyTheme(currentThemeId);
+      notifyTilePaletteDocumentChange("import");
     }
-    return { importedCount: importedCount, renamed: renamed };
+    return {
+      importedCount: importedCount,
+      renamed: renamed,
+      error: importedCount < sourcePalettes.length ? "palette_limit_reached" : undefined
+    };
   }
 
 
@@ -3013,6 +3019,39 @@
     },
     getCurrentTheme: function () { return currentThemeId; },
     getTilePalettes: getTilePalettes,
+    getCustomTilePalettes: function () {
+      return readStoredTilePaletteProfiles().map(clonePaletteRecord);
+    },
+    replaceCustomTilePalettes: function (palettes, options) {
+      var source = Array.isArray(palettes) ? palettes : [];
+      if (source.length > 8) return false;
+      var normalized = [];
+      for (var i = 0; i < source.length; i++) {
+        var item = source[i];
+        if (!item || typeof item !== "object") return false;
+        var cloned = clonePaletteRecord(item);
+        cloned.source = "custom";
+        cloned.locked = false;
+        normalized.push(cloned);
+      }
+      var currentActiveId = readActiveTilePaletteId();
+      var previousCustom = readStoredTilePaletteProfiles();
+      var requestedActiveId = options && Object.prototype.hasOwnProperty.call(options, "activePaletteId")
+        ? String(options.activePaletteId || "")
+        : currentActiveId;
+      if (!writeStoredTilePaletteProfiles(normalized)) return false;
+      if (requestedActiveId && normalized.some(function (item) { return item.id === requestedActiveId; })) {
+        writeActiveTilePaletteId(requestedActiveId);
+      } else if (
+        previousCustom.some(function (item) { return item.id === currentActiveId; }) &&
+        !normalized.some(function (item) { return item.id === currentActiveId; })
+      ) {
+        writeActiveTilePaletteId(DEFAULT_TILE_PALETTE_ID);
+      }
+      applyTheme(currentThemeId);
+      notifyTilePaletteDocumentChange(options && options.source || "replace");
+      return true;
+    },
     getActiveTilePaletteId: getActiveTilePaletteId,
     setActiveTilePalette: setActiveTilePalette,
     createTilePalette: createTilePalette,

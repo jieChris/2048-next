@@ -6,6 +6,29 @@ import { describe, expect, it } from "vitest";
 
 const THEME_MANAGER_SOURCE = readFileSync(resolve("js/theme_manager.js"), "utf8");
 
+function paletteFixture(id: string) {
+  const pow2 = Array.from(
+    { length: 26 },
+    (_, index) => `#${String(index + 1).padStart(6, "0")}`,
+  );
+  return {
+    id,
+    name: id,
+    pow2,
+    fibonacci: pow2.slice(0, 16),
+    pow2Text: Array.from({ length: 26 }, () => "#F9F6F2"),
+    fibonacciText: Array.from({ length: 16 }, () => "#F9F6F2"),
+    pow2Border: Array.from({ length: 26 }, () => "transparent"),
+    fibonacciBorder: Array.from({ length: 16 }, () => "transparent"),
+    pow2Glow: Array.from({ length: 26 }, () => "transparent"),
+    fibonacciGlow: Array.from({ length: 16 }, () => "transparent"),
+    glowIntensity: 50,
+    glowMultipliers: Array.from({ length: 26 }, () => 100),
+    createdAt: 1,
+    updatedAt: 1,
+  };
+}
+
 function tileGlowShadow(dom: JSDOM, value: number) {
   const css = String(dom.window.document.getElementById("theme-dynamic-style")?.textContent || "");
   const match = css.match(new RegExp(
@@ -134,6 +157,85 @@ describe("theme manager palette effects", () => {
     expect(imported.glowIntensity).toBe(73);
     expect(imported.pow2Glow[0]).toBe("transparent");
 
+    dom.window.close();
+  });
+
+  it("enforces the shared eight-palette limit across create and import", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+      {
+        runScripts: "outside-only",
+        url: "https://example.test/palette.html",
+      },
+    );
+    dom.window.eval(THEME_MANAGER_SOURCE);
+    const manager = (dom.window as any).ThemeManager;
+
+    for (let index = 0; index < 8; index += 1) {
+      expect(
+        manager.createTilePalette("follow-theme", `色板 ${index + 1}`),
+      ).toBeTruthy();
+    }
+    expect(manager.getCustomTilePalettes()).toHaveLength(8);
+    expect(manager.createTilePalette("follow-theme", "第九套")).toBeNull();
+
+    const payload = JSON.stringify({
+      version: 5,
+      palettes: [paletteFixture("import-one"), paletteFixture("import-two")],
+    });
+    expect(manager.importTilePalettes(payload)).toMatchObject({
+      importedCount: 0,
+      error: "palette_limit_reached",
+    });
+    expect(manager.getCustomTilePalettes()).toHaveLength(8);
+    dom.window.close();
+  });
+
+  it("exposes an atomic account-sync adapter without applying a replacement implicitly", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+      {
+        runScripts: "outside-only",
+        url: "https://example.test/palette.html",
+      },
+    );
+    dom.window.eval(THEME_MANAGER_SOURCE);
+    const manager = (dom.window as any).ThemeManager;
+    const first = manager.createTilePalette("follow-theme", "本地一");
+    manager.setActiveTilePalette(first.id);
+
+    expect(
+      manager.replaceCustomTilePalettes([paletteFixture("cloud-copy")], {
+        source: "account-sync",
+      }),
+    ).toBe(true);
+    expect(manager.getCustomTilePalettes()).toHaveLength(1);
+    expect(manager.getCustomTilePalettes()[0].id).toBe("cloud-copy");
+    expect(manager.getActiveTilePaletteId()).not.toBe("cloud-copy");
+    dom.window.close();
+  });
+
+  it("preserves a selected built-in palette when cloud custom palettes have no active custom ID", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+      {
+        runScripts: "outside-only",
+        url: "https://example.test/palette.html",
+      },
+    );
+    dom.window.eval(THEME_MANAGER_SOURCE);
+    const manager = (dom.window as any).ThemeManager;
+
+    expect(manager.setActiveTilePalette("warm-glaze-steps")).toBe(
+      "warm-glaze-steps",
+    );
+    expect(
+      manager.replaceCustomTilePalettes([], {
+        activePaletteId: null,
+        source: "account-sync",
+      }),
+    ).toBe(true);
+    expect(manager.getActiveTilePaletteId()).toBe("warm-glaze-steps");
     dom.window.close();
   });
 

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no"
+    />
+    <title>主题广场 · 2048 NEXT</title>
+    <meta
+      name="description"
+      content="浏览 2048 NEXT 玩家公开分享的自定义方块色板，查看真实方块预览与引用统计。"
+    />
+    <meta name="robots" content="noindex, follow" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      sizes="any"
+      href="meta/favicon.svg?v=20260606-fillframe"
+    />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="meta/favicon.ico?v=20260606-fillframe"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="meta/apple-touch-icon.png?v=20260704-png-opt"
+    />
+    <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons" />
+    <script src="/js/core_night_mode_preload.js?v=20260822-theme-inheritance-v1"></script>
+    <script src="/js/beta_access_preload.js?v=20260708-01"></script>
+    <link
+      href="style/main.css?v=20260721-leaderboard-rank-colors-v1"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="style/theme_plaza.css?v=20260825-theme-plaza-v1"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:;"
+    />
+  </head>
+  <body data-page="theme-plaza">
+    <main class="theme-plaza-shell">
+      <header class="theme-plaza-header">
+        <div class="theme-plaza-heading">
+          <p id="theme-plaza-kicker" class="theme-plaza-kicker">2048 NEXT</p>
+          <h1 id="theme-plaza-page-title">主题广场</h1>
+          <p id="theme-plaza-page-subtitle">
+            发现、预览并保存玩家创作的方块色板。
+          </p>
+        </div>
+        <nav class="theme-plaza-nav" aria-label="页面导航">
+          <a
+            id="theme-plaza-mine-link"
+            class="replay-button"
+            href="theme_plaza.html?mine=1"
+            >我的分享</a
+          >
+          <a
+            id="theme-plaza-nav-palette"
+            class="replay-button"
+            href="palette.html#appearance-settings"
+            >色板中心</a
+          >
+          <a id="theme-plaza-nav-home" class="replay-button" href="/">回首页</a>
+        </nav>
+      </header>
+
+      <form
+        id="theme-plaza-search-form"
+        class="theme-plaza-toolbar card-surface"
+        role="search"
+      >
+        <label class="theme-plaza-search-field">
+          <span id="theme-plaza-search-label">搜索</span>
+          <input
+            id="theme-plaza-query"
+            type="search"
+            maxlength="50"
+            autocomplete="off"
+            placeholder="按标题或作者搜索"
+          />
+        </label>
+        <label class="theme-plaza-sort-field">
+          <span class="sr-only">排序</span>
+          <select id="theme-plaza-sort">
+            <option value="latest">最新发布</option>
+            <option value="most_referenced">最多引用</option>
+            <option value="most_liked">最多好评</option>
+          </select>
+        </label>
+        <button id="theme-plaza-search-btn" class="replay-button" type="submit">
+          查找
+        </button>
+      </form>
+
+      <p
+        id="theme-plaza-status"
+        class="theme-plaza-status"
+        aria-live="polite"
+        hidden
+      ></p>
+      <div
+        id="theme-plaza-content"
+        class="theme-plaza-content"
+        aria-live="polite"
+      ></div>
+    </main>
+    <script type="module" src="./src/entries/theme-plaza.ts"></script>
+  </body>
+</html>

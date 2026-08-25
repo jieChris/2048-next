@@ -49,6 +49,11 @@ describe("navigation entry consistency", () => {
       expect(html).toContain('href="account_settings.html"');
     }
 
+    const paletteHtml = readHtml("palette.html");
+    expect(paletteHtml).toContain('href="theme_plaza.html"');
+    expect(paletteHtml).not.toContain('href="Practice_board.html"');
+    expect(readHtml("theme_plaza.html")).toContain('href="palette.html#appearance-settings"');
+
     const modesHtml = readHtml("modes.html");
     const toolEntries = [
       'href="history.html"',

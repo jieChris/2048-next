@@ -177,3 +177,14 @@ This contract applies whenever an ongoing game that may produce leaderboard metr
 - Unit: assert internal restore actions cause no submit, achievement, checkpoint-save, or terminal side effects.
 - Integration: verify public speed leaderboard, personal best, and speed achievements apply the same target-specific exclusion rule while the normal score leaderboard remains unchanged.
 - Built-in browser smoke: refresh an ongoing game, continue it, finish it, and compare the visible timer with server-derived target times.
+
+## Scenario: Account Palette Sync And Theme Plaza
+
+- Web account palettes use the typed repository under `src/features/palette/`; pages do not call storage or fetch directly.
+- Web requests format 3 explicitly, tracks account owner, revision, dirty/conflict state, preserves unknown fields, and enforces the shared eight-palette limit.
+- Applying a cloud document may replace the custom palette library but must not silently select a newly saved Theme Plaza copy.
+- `theme_plaza.html` owns list/detail/my-share rendering and uses only structured palette values; it never renders public CSS, HTML, URLs, or scripts from a listing.
+- Public browse works without authentication. Save, vote, report, submit, cancel, and withdraw use explicit `2048-game-api` contracts and server capability flags.
+- The palette-center share button is disabled for built-ins, dirty/conflicted documents, unsupported format, or disabled write capability.
+- Production Theme Plaza writes remain disabled until Android format-3 compatibility and the required cross-client contract tests are complete.
+- The existing admin console may render one-version Theme Plaza review actions; it must not add generic SQL access or bulk hide behavior.

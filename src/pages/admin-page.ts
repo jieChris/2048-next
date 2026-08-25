@@ -9,8 +9,10 @@ import {
 } from "../services/admin";
 import { createBrowserStorageAccess, readStorageValue, writeStorageValue } from "../storage/browser-storage";
 import { randomId } from "../utils/crypto-random";
+import { parseAccountPaletteDocument } from "../features/palette/account-palette-repository";
+import { renderThemePlazaPalettePreview } from "../features/theme-plaza/palette-preview";
 
-type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "moderation" | "backgrounds" | "governance" | "audit" | "tools";
+type ViewName = "dashboard" | "users" | "records" | "achievements" | "rescue" | "moderation" | "themePlaza" | "backgrounds" | "governance" | "audit" | "tools";
 type Language = "zh" | "en";
 
 const ADMIN_DENIED_REDIRECT = "/404.html";
@@ -27,6 +29,8 @@ const copy: Record<Language, Record<string, string>> = {
     achievements: "成就管理",
     rescue: "恢复单",
     moderation: "内容审核",
+    themePlaza: "主题广场审核",
+    themePlazaHint: "逐项审核色板发布版本、举报与下架状态；所有操作必须填写原因。",
     backgrounds: "主页背景",
     backgroundHint: "上传昼夜三层变体，将白天和夜晚配成完整场景后发布给玩家选择。",
     uploadVariant: "上传三层变体",
@@ -189,6 +193,8 @@ const copy: Record<Language, Record<string, string>> = {
     submittedAt: "提交时间",
     updatedAt: "更新时间",
     approve: "批准",
+    restore: "恢复",
+    reports: "待处理举报",
     reject: "拒绝",
     retryModeration: "要求重试",
     deepseekIntegration: "DeepSeek 集成",
@@ -292,6 +298,8 @@ const copy: Record<Language, Record<string, string>> = {
     achievements: "Achievements",
     rescue: "Rescue Offers",
     moderation: "Content Moderation",
+    themePlaza: "Theme Plaza Reviews",
+    themePlazaHint: "Review palette versions, reports, and visibility one item at a time with a required reason.",
     backgrounds: "Profile Backgrounds",
     backgroundHint: "Upload day/night three-layer variants, pair them into a complete scene, then publish it for players.",
     uploadVariant: "Upload Three Layers",
@@ -454,6 +462,8 @@ const copy: Record<Language, Record<string, string>> = {
     submittedAt: "Submitted",
     updatedAt: "Updated",
     approve: "Approve",
+    restore: "Restore",
+    reports: "Open reports",
     reject: "Reject",
     retryModeration: "Request Retry",
     deepseekIntegration: "DeepSeek Integration",
@@ -553,7 +563,7 @@ const copy: Record<Language, Record<string, string>> = {
 const navigation: Array<{ group: string; items: Array<{ view: ViewName; label: string; icon: string }> }> = [
   { group: "overview", items: [{ view: "dashboard", label: "dashboard", icon: "▦" }] },
   { group: "userGame", items: [{ view: "users", label: "users", icon: "◎" }, { view: "records", label: "records", icon: "▤" }] },
-  { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }, { view: "moderation", label: "moderation", icon: "✓" }, { view: "backgrounds", label: "backgrounds", icon: "▧" }] },
+  { group: "operations", items: [{ view: "achievements", label: "achievements", icon: "◆" }, { view: "rescue", label: "rescue", icon: "↻" }, { view: "moderation", label: "moderation", icon: "✓" }, { view: "themePlaza", label: "themePlaza", icon: "◈" }, { view: "backgrounds", label: "backgrounds", icon: "▧" }] },
   { group: "governanceGroup", items: [{ view: "governance", label: "governance", icon: "♜" }, { view: "audit", label: "audit", icon: "≡" }] },
   { group: "system", items: [{ view: "tools", label: "tools", icon: "⌘" }] }
 ];
@@ -1205,6 +1215,63 @@ async function renderModeration(): Promise<void> {
   byId("admin-content").querySelector<HTMLButtonElement>("[data-deepseek-disable]")?.addEventListener("click", () => openDeepSeekPasswordDialog("disable"));
 }
 
+function themePlazaReviewAction(versionId: string, action: "approve" | "reject" | "hide" | "restore" | "retry-ai"): void {
+  const destructive = action === "reject" || action === "hide";
+  openDialog({
+    title: t("themePlaza"),
+    body: `<label class="form-label">${escapeHtml(t("reason"))}</label><textarea id="dialog-theme-plaza-reason" class="form-control" rows="4" required></textarea>`,
+    danger: destructive,
+    confirmLabel: t("confirm"),
+    onConfirm: async () => {
+      const reason = dialogValue("dialog-theme-plaza-reason");
+      if (!reason) { toast(t("reasonRequired"), "error"); return false; }
+      const path = action === "hide" || action === "restore"
+        ? `/admin/theme-plaza/versions/${encodeURIComponent(versionId)}/${action}`
+        : `/admin/theme-plaza/reviews/${encodeURIComponent(versionId)}/${action}`;
+      await request(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason })
+      });
+      toast(t("success"));
+      await renderCurrentView();
+    }
+  });
+}
+
+async function renderThemePlazaReviews(): Promise<void> {
+  const status = currentUrl().searchParams.get("status") || "";
+  const response = await request<AdminRecord[]>(`/admin/theme-plaza/reviews?limit=100${status ? `&status=${encodeURIComponent(status)}` : ""}`);
+  const list = rows(response.data);
+  const filter = `<form class="admin-inline-filter" data-theme-plaza-filter><label>${escapeHtml(t("status"))}<select class="form-select" name="status"><option value="">${escapeHtml(t("allStatuses"))}</option>${["pending_ai", "manual_review", "published", "rejected", "hidden"].map((value) => `<option value="${value}" ${status === value ? "selected" : ""}>${escapeHtml(statusLabel(value))}</option>`).join("")}</select></label><button class="btn btn-primary">${escapeHtml(t("search"))}</button></form>`;
+  const cards = list.length ? list.map((item) => {
+    const versionId = text(item.id);
+    const statusValue = text(item.moderation_status);
+    const actions = statusValue === "hidden"
+      ? `<button class="btn btn-sm" data-theme-plaza-action="restore" data-version-id="${escapeHtml(versionId)}">${escapeHtml(t("restore"))}</button>`
+      : `${statusValue !== "published" ? `<button class="btn btn-sm btn-success" data-theme-plaza-action="approve" data-version-id="${escapeHtml(versionId)}">${escapeHtml(t("approve"))}</button>` : ""}<button class="btn btn-sm" data-theme-plaza-action="retry-ai" data-version-id="${escapeHtml(versionId)}">${escapeHtml(t("refresh"))}</button><button class="btn btn-sm btn-outline-danger" data-theme-plaza-action="${statusValue === "published" ? "hide" : "reject"}" data-version-id="${escapeHtml(versionId)}">${escapeHtml(statusValue === "published" ? t("hidden") : t("rejected"))}</button>`;
+    return `<article class="card admin-wide-card"><div class="card-body"><div class="row g-3 align-items-start"><div class="col-lg-4"><div data-theme-plaza-preview="${escapeHtml(versionId)}"></div></div><div class="col-lg-8"><h3>${escapeHtml(item.public_title)}</h3><p class="text-secondary">${escapeHtml(item.author_nickname || `#${item.owner_user_id}`)} · ${escapeHtml(formatDate(item.submitted_at))}</p><p>${badge(statusLabel(statusValue), statusValue === "published" ? "green" : statusValue === "hidden" || statusValue === "rejected" ? "red" : "orange")}</p><dl class="admin-definition"><dt>${escapeHtml(t("model"))}</dt><dd>${escapeHtml(item.model_name || "—")}</dd><dt>${escapeHtml(t("reason"))}</dt><dd>${escapeHtml(item.moderation_reason_code || "—")}</dd><dt>${escapeHtml(t("reports"))}</dt><dd>${escapeHtml(item.open_reports || 0)}</dd></dl><div class="d-flex flex-wrap gap-2">${actions}</div><template data-theme-plaza-palette="${escapeHtml(versionId)}">${escapeHtml(prettyJson(item.palette_snapshot))}</template></div></div></div></article>`;
+  }).join("") : emptyState();
+  byId("admin-content").innerHTML = pageHeader(t("themePlaza"), t("themePlazaHint"), `<button class="btn btn-primary" data-refresh>${escapeHtml(t("refresh"))}</button>`) + filter + `<div class="admin-theme-plaza-list">${cards}</div>`;
+  byId("admin-content").querySelector("[data-refresh]")?.addEventListener("click", () => void renderCurrentView());
+  byId("admin-content").querySelector<HTMLFormElement>("[data-theme-plaza-filter]")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    navigate("themePlaza", Object.fromEntries(new FormData(event.currentTarget as HTMLFormElement).entries()));
+  });
+  byId("admin-content").querySelectorAll<HTMLElement>("[data-theme-plaza-preview]").forEach((host) => {
+    const id = host.dataset.themePlazaPreview || "";
+    const source = byId("admin-content").querySelector<HTMLTemplateElement>(`template[data-theme-plaza-palette="${CSS.escape(id)}"]`)?.content.textContent || "";
+    try {
+      const raw = JSON.parse(source);
+      const document = parseAccountPaletteDocument({ schema: 1, format: 3, activePaletteId: "public", palettes: [raw] });
+      if (document?.palettes[0]) host.append(renderThemePlazaPalettePreview({ palette: document.palettes[0], className: "theme-plaza-preview--admin" }));
+    } catch {}
+  });
+  byId("admin-content").querySelectorAll<HTMLButtonElement>("[data-theme-plaza-action]").forEach((button) => button.addEventListener("click", () => {
+    themePlazaReviewAction(button.dataset.versionId || "", button.dataset.themePlazaAction as "approve" | "reject" | "hide" | "restore" | "retry-ai");
+  }));
+}
+
 async function renderBackgrounds(): Promise<void> {
   const [variantResponse, sceneResponse] = await Promise.all([
     request<AdminRecord[]>("/admin/profile-background/variants"),
@@ -1396,6 +1463,7 @@ async function renderCurrentView(): Promise<void> {
       case "achievements": await renderAchievements(); break;
       case "rescue": await renderRescue(); break;
       case "moderation": await renderModeration(); break;
+      case "themePlaza": await renderThemePlazaReviews(); break;
       case "backgrounds": await renderBackgrounds(); break;
       case "governance": await renderGovernance(); break;
       case "audit": await renderAudit(); break;

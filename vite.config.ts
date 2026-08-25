@@ -209,6 +209,7 @@ export default defineConfig(({ mode }) => {
           capped: resolve(__dirname, "capped_2048.html"),
           practice: resolve(__dirname, "Practice_board.html"),
           palette: resolve(__dirname, "palette.html"),
+          theme_plaza: resolve(__dirname, "theme_plaza.html"),
           touch_sensitivity: resolve(__dirname, "touch_sensitivity.html"),
           achievements: resolve(__dirname, "medal-wall.html"),
           beta_login: resolve(__dirname, "beta-login.html"),

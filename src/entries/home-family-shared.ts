@@ -242,6 +242,7 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   "relay-5x5": [],
   palette: [],
   "touch-sensitivity": [],
+  "theme-plaza": [],
   "stone-2k-monitor": [],
   register: [],
   password: []

@@ -47,6 +47,185 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator('#theme-select-options .custom-option[data-value="classic"]')).toHaveText("经典");
   });
 
+  test("account sync keeps a selected built-in palette when cloud activePaletteId is null", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("2048_auth_token_v1", "palette-sync-token");
+      window.localStorage.setItem("2048_auth_userId_v1", "42");
+      window.localStorage.setItem("theme_profile_v1", "mist_cyan");
+      window.localStorage.setItem("tile_palette_active_v1", "cold-cyan-steps");
+    });
+    let cloudDocument = {
+      schema: 1,
+      format: 3,
+      activePaletteId: null,
+      palettes: [] as Array<Record<string, unknown>>,
+    };
+    let revision = 1;
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/api/auth/refresh")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            token: "palette-sync-token",
+            user: { id: 42, public_profile_id: 42, nickname: "PaletteSync" },
+          }),
+        });
+        return;
+      }
+      if (path.endsWith("/api/theme-plaza/capabilities")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              readEnabled: true,
+              writeEnabled: true,
+              autoPublishEnabled: false,
+              paletteFormat3Enabled: true,
+            },
+          }),
+        });
+        return;
+      }
+      if (path.endsWith("/api/theme-plaza/me/submissions")) {
+        await route.fulfill({
+          status: 202,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              listing_id: 7,
+              version_id: 12,
+              revision: 1,
+              status: "pending_ai",
+            },
+          }),
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/app-palettes")) {
+        if (route.request().method() === "PUT") {
+          const body = route.request().postDataJSON() as {
+            document?: typeof cloudDocument;
+          };
+          if (body.document) cloudDocument = body.document;
+          revision += 1;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              document: cloudDocument,
+              revision,
+              updatedAt: null,
+              supportedFormats: [2, 3],
+            },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: null }),
+      });
+    });
+
+    await page.goto("/palette.html#appearance-settings", {
+      waitUntil: "domcontentloaded",
+    });
+    await openAppearanceWorkspace(page);
+    const warm = page.locator(
+      '.palette-item[data-palette-id="warm-glaze-steps"]',
+    );
+    await warm.click();
+
+    await expect(warm).toHaveClass(/is-active/);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          window.localStorage.getItem("tile_palette_active_v1"),
+        ),
+      )
+      .toBe("warm-glaze-steps");
+    await expect(
+      page.locator(
+        '.palette-item.is-active[data-palette-id="cold-cyan-steps"]',
+      ),
+    ).toHaveCount(0);
+
+    const share = page.locator("#palette-share-btn");
+    await expect(share).toBeDisabled();
+    await expect(share).toHaveText("请先创建副本后分享");
+    await page.locator("#palette-create-btn").click();
+    await expect(page.locator(".palette-item.is-active")).toContainText(
+      "自定义",
+    );
+    await expect(share).toBeEnabled();
+    await expect(share).toHaveText("分享到主题广场");
+
+    await share.click();
+    await expect(page.locator("#game-dialog-overlay")).toBeVisible();
+    await page.locator("#game-dialog-input-wrap input").fill("Smoke 审核主题");
+    await page.locator("#game-dialog-confirm").click();
+    const notice = page.locator("#theme-plaza-submission-notice");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("已提交审核");
+    await expect(notice).toContainText("我的分享");
+    await notice.getByRole("button", { name: "关闭提示" }).click();
+    await expect(notice).toBeHidden();
+  });
+
+  test("settings quick buttons expose polished labels and current state", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("ui_language_v1", "zh");
+      window.localStorage.setItem("settings_display_mode_v1", "auto");
+    });
+    await page.goto("/palette.html#appearance-settings", {
+      waitUntil: "domcontentloaded",
+    });
+
+    const language = page.locator(".palette-language-trigger");
+    const display = page.locator(".palette-display-mode-trigger");
+    await expect(language.locator(".palette-language-current")).toHaveText(
+      "中文",
+    );
+    await expect(language.locator(".palette-language-badge")).toHaveText("中");
+    await expect(language).toHaveAttribute("aria-label", "界面语言：中文");
+    await expect(display.locator(".palette-display-mode-current")).toHaveText(
+      "系统",
+    );
+    await expect(display).toHaveAttribute("data-current-display-mode", "auto");
+    await expect(language).toHaveCSS("border-radius", "13px");
+    await expect(display).toHaveCSS("height", "44px");
+
+    await language.click();
+    await page.locator('[data-ui-language="en"]').click();
+    await expect(language.locator(".palette-language-current")).toHaveText(
+      "English",
+    );
+    await expect(language.locator(".palette-language-badge")).toHaveText("EN");
+    await expect(language).toHaveAttribute("aria-label", "Language: English");
+
+    await display.click();
+    await page.locator('button[data-display-mode="night"]').click();
+    await expect(display.locator(".palette-display-mode-current")).toHaveText(
+      "Dark",
+    );
+    await expect(display).toHaveAttribute("data-current-display-mode", "night");
+    await expect(display).toHaveAttribute("aria-label", "Display mode: Dark");
+  });
+
   test("touch sensitivity entry is hidden on desktop and shown on narrow touch devices", async ({ browser, page }) => {
     await page.goto("/palette.html", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".palette-touch-entry")).toBeHidden();
