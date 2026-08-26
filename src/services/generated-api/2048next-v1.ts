@@ -5549,11 +5549,21 @@ export interface components {
             operationId: components["schemas"]["PaletteOperationId"];
             paletteId: components["schemas"]["NewPaletteStableId"];
             palette: components["schemas"]["AppPaletteProfile"];
+            /**
+             * @description Explicitly retain a visually duplicate palette instead of returning duplicate_existing.
+             * @default false
+             */
+            allowDuplicate: boolean;
         };
         AccountPaletteSaveRequest: {
             operationId: components["schemas"]["PaletteOperationId"];
             baseRevision: number;
             palette: components["schemas"]["AppPaletteProfile"];
+            /**
+             * @description Explicitly retain a visually duplicate palette instead of returning duplicate_existing.
+             * @default false
+             */
+            allowDuplicate: boolean;
         };
         AccountPaletteDeleteRequest: {
             operationId: components["schemas"]["PaletteOperationId"];

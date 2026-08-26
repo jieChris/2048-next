@@ -187,6 +187,7 @@ describe("OpenAPI contract", () => {
     );
     expect(legacyPaletteGet).toContain('"409":');
     expect(legacyPaletteGet).toContain("nine- or ten-palette V2 library");
+    expect(spec).toContain("allowDuplicate: { type: boolean, default: false");
     expect(spec).toContain("PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED");
     expect(spec).toContain("base_revision_expired");
     expect(spec).toContain("conflict_copy");

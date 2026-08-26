@@ -3561,6 +3561,7 @@ components:
         operationId: { $ref: "#/components/schemas/PaletteOperationId" }
         paletteId: { $ref: "#/components/schemas/NewPaletteStableId" }
         palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+        allowDuplicate: { type: boolean, default: false, description: Explicitly retain a visually duplicate palette instead of returning duplicate_existing. }
     AccountPaletteSaveRequest:
       type: object
       additionalProperties: false
@@ -3569,6 +3570,7 @@ components:
         operationId: { $ref: "#/components/schemas/PaletteOperationId" }
         baseRevision: { type: integer, minimum: 1 }
         palette: { $ref: "#/components/schemas/AppPaletteProfile" }
+        allowDuplicate: { type: boolean, default: false, description: Explicitly retain a visually duplicate palette instead of returning duplicate_existing. }
     AccountPaletteDeleteRequest:
       type: object
       additionalProperties: false
