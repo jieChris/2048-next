@@ -170,6 +170,7 @@ describe("OpenAPI contract", () => {
       "AccountPaletteOrderState:",
       "AccountPaletteWriteResult:",
       "AccountPaletteTombstone:",
+      "AccountPaletteChange:",
     ].forEach((schema) => expect(spec, `${schema} should be documented`).toContain(schema));
 
     expect(spec).toContain("NewPaletteStableId:");
@@ -178,6 +179,14 @@ describe("OpenAPI contract", () => {
     expect(spec).toContain("reactionEnabled: { type: boolean }");
     expect(spec).toContain("saveEnabled: { type: boolean }");
     expect(spec).toContain("shareEnabled: { type: boolean }");
+    expect(spec).toContain("changes:");
+    expect(spec).toContain("entityKind: { type: string, enum: [palette, selection, order] }");
+    const legacyPaletteGet = spec.slice(
+      spec.indexOf("  /me/app-palettes:"),
+      spec.indexOf("    put:", spec.indexOf("  /me/app-palettes:")),
+    );
+    expect(legacyPaletteGet).toContain('"409":');
+    expect(legacyPaletteGet).toContain("nine- or ten-palette V2 library");
     expect(spec).toContain("PALETTE_SYNC_CLIENT_UPGRADE_REQUIRED");
     expect(spec).toContain("base_revision_expired");
     expect(spec).toContain("conflict_copy");

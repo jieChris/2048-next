@@ -432,7 +432,17 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["ApiErrorResponse"];
+                /** @description Legacy projection would require silently truncating a nine- or ten-palette V2 library; client upgrade required. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
                 500: components["responses"]["ApiErrorResponse"];
+                503: components["responses"]["ApiErrorResponse"];
             };
         };
         /** Compare-and-swap the authenticated account palette document. */
@@ -548,6 +558,7 @@ export interface paths {
                         "application/json": components["schemas"]["AccountPaletteLibraryResponse"];
                     };
                 };
+                400: components["responses"]["ApiErrorResponse"];
                 401: components["responses"]["ApiErrorResponse"];
                 503: components["responses"]["ApiErrorResponse"];
             };
@@ -626,6 +637,7 @@ export interface paths {
                         "application/json": components["schemas"]["AccountPaletteRecordResponse"];
                     };
                 };
+                400: components["responses"]["ApiErrorResponse"];
                 401: components["responses"]["ApiErrorResponse"];
                 404: components["responses"]["ApiErrorResponse"];
                 503: components["responses"]["ApiErrorResponse"];
@@ -5484,6 +5496,17 @@ export interface components {
             deletedAt: string;
             changeSeq: number;
         };
+        AccountPaletteChange: {
+            changeSeq: number;
+            /** @enum {string} */
+            entityKind: "palette" | "selection" | "order";
+            paletteId: string | null;
+            /** Format: uuid */
+            operationId: string | null;
+            changeKind: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
         AccountPaletteSelection: {
             /** @enum {string} */
             kind: "pending" | "follow_theme" | "builtin" | "custom";
@@ -5516,6 +5539,7 @@ export interface components {
             order: components["schemas"]["AccountPaletteOrderState"];
             selection: components["schemas"]["AccountPaletteSelectionState"];
             tombstones: components["schemas"]["AccountPaletteTombstone"][];
+            changes: components["schemas"]["AccountPaletteChange"][];
             nextCursor: string;
             hasMore: boolean;
             resetRequired: boolean;

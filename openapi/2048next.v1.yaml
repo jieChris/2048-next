@@ -236,9 +236,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppPaletteResponse"
+        "409":
+          description: Legacy projection would require silently truncating a nine- or ten-palette V2 library; client upgrade required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "401":
           $ref: "#/components/responses/ApiErrorResponse"
         "500":
+          $ref: "#/components/responses/ApiErrorResponse"
+        "503":
           $ref: "#/components/responses/ApiErrorResponse"
     put:
       tags: [Palettes]
@@ -304,6 +312,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AccountPaletteLibraryResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
         "401": { $ref: "#/components/responses/ApiErrorResponse" }
         "503": { $ref: "#/components/responses/ApiErrorResponse" }
     post:
@@ -341,6 +350,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AccountPaletteRecordResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
         "401": { $ref: "#/components/responses/ApiErrorResponse" }
         "404": { $ref: "#/components/responses/ApiErrorResponse" }
         "503": { $ref: "#/components/responses/ApiErrorResponse" }
@@ -3466,6 +3476,17 @@ components:
         deletionRevision: { type: integer, minimum: 1 }
         deletedAt: { type: string, format: date-time }
         changeSeq: { type: integer, minimum: 1 }
+    AccountPaletteChange:
+      type: object
+      additionalProperties: false
+      required: [changeSeq, entityKind, paletteId, operationId, changeKind, createdAt]
+      properties:
+        changeSeq: { type: integer, minimum: 1 }
+        entityKind: { type: string, enum: [palette, selection, order] }
+        paletteId: { type: [string, "null"], pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$' }
+        operationId: { type: [string, "null"], format: uuid }
+        changeKind: { type: string, minLength: 1, maxLength: 64 }
+        createdAt: { type: string, format: date-time }
     AccountPaletteSelection:
       type: object
       additionalProperties: false
@@ -3514,7 +3535,7 @@ components:
     AccountPaletteLibraryState:
       type: object
       additionalProperties: false
-      required: [palettes, order, selection, tombstones, nextCursor, hasMore, resetRequired, capabilities]
+      required: [palettes, order, selection, tombstones, changes, nextCursor, hasMore, resetRequired, capabilities]
       properties:
         palettes:
           type: array
@@ -3525,6 +3546,9 @@ components:
         tombstones:
           type: array
           items: { $ref: "#/components/schemas/AccountPaletteTombstone" }
+        changes:
+          type: array
+          items: { $ref: "#/components/schemas/AccountPaletteChange" }
         nextCursor: { type: string, minLength: 1, maxLength: 512 }
         hasMore: { type: boolean }
         resetRequired: { type: boolean }
