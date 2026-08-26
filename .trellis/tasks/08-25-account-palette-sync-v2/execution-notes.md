@@ -11,12 +11,14 @@
 - [x] T05 验证：API 全量 Node 测试 `600 passed / 12 skipped`、typecheck、真实 PostgreSQL revision/merge/delete/prune 测试 `12 passed`。
 - [x] T06 普通创建、保存、删除、冲突副本、容量、重复确认和 operation hash replay 外部写事务已提交到 API：`7269aae`。
 - [x] T06 验证：API 全量 Node 测试 `600 passed / 17 skipped`、typecheck、真实 PostgreSQL 外部写/第十套并发/幂等测试 `10 passed`；Web `verify:api` `28 passed`；合同锁通过。
+- [x] T07 Web 登录会话色板 bootstrap、账号缓存、会话/in-flight 去重、账号切换迟到响应丢弃、设置页延迟 library/cursor reset 加载已提交：`336360d9`。
+- [x] T07 验证：Web unit `2108 passed`、`tsc --noEmit`、build、service-boundary audit 通过；相关 Pages Smoke `31 passed`。
 
 ## 当前状态
 
 - 两仓库均只在 `main`，未 push、未 deploy。
 - 当前 API 生产 flags 未改变；V2 read/write 仍保持关闭，Theme Plaza 写入仍保持关闭。
-- 下一步是 T07：实现 Web 登录会话首同步、当前选择缓存和设置页延迟加载。
+- 下一步是 T08：实现草稿、明确保存按钮、离开保护和账号绑定离线操作队列。
 ## 已确认的领域决策
 
 - 每账号最多十套私人自定义色板，内置色板不计入。
