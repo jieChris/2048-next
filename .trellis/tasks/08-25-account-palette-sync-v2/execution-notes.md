@@ -9,12 +9,14 @@
 - [x] T04 验证：API 全量 Node 测试 `591 passed / 9 skipped`、typecheck、真实 PostgreSQL 迁移与 5 项并发/约束测试通过；Web `verify:api` `28 passed`。
 - [x] T05 版本历史、最小编辑单元三方合并、过期基线冲突候选、永久删除与历史清理原语已提交到 API：`67dc960`。
 - [x] T05 验证：API 全量 Node 测试 `600 passed / 12 skipped`、typecheck、真实 PostgreSQL revision/merge/delete/prune 测试 `12 passed`。
+- [x] T06 普通创建、保存、删除、冲突副本、容量、重复确认和 operation hash replay 外部写事务已提交到 API：`7269aae`。
+- [x] T06 验证：API 全量 Node 测试 `600 passed / 17 skipped`、typecheck、真实 PostgreSQL 外部写/第十套并发/幂等测试 `10 passed`；Web `verify:api` `28 passed`；合同锁通过。
 
 ## 当前状态
 
 - 两仓库均只在 `main`，未 push、未 deploy。
 - 当前 API 生产 flags 未改变；V2 read/write 仍保持关闭，Theme Plaza 写入仍保持关闭。
-- 下一步是 T05：只实现内部 revision/diff/merge/delete 原语，不新增可完成的公开写路由。
+- 下一步是 T07：实现 Web 登录会话首同步、当前选择缓存和设置页延迟加载。
 ## 已确认的领域决策
 
 - 每账号最多十套私人自定义色板，内置色板不计入。
