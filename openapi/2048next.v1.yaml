@@ -3455,11 +3455,12 @@ components:
     AccountPaletteSyncCapabilities:
       type: object
       additionalProperties: false
-      required: [readEnabled, writeEnabled, legacyPutEnabled, maxActivePalettes, contractVersion]
+      required: [readEnabled, writeEnabled, legacyPutEnabled, maintenanceEnabled, maxActivePalettes, contractVersion]
       properties:
         readEnabled: { type: boolean }
         writeEnabled: { type: boolean }
         legacyPutEnabled: { type: boolean }
+        maintenanceEnabled: { type: boolean }
         maxActivePalettes: { type: integer, const: 10 }
         contractVersion: { type: string, const: account-palette-sync-v2.1 }
     AccountPaletteRecord:

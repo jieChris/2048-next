@@ -63,7 +63,27 @@
 - 视觉：palette/page/swatch 与 Theme Plaza submission notice 相关矩阵通过；T09 影响的 768/1280 submission notice 基线已更新并记录 manifest reason。
 - Web build、`verify:api` `28 passed`、service-boundary audit、`tsc --noEmit`、API/Web LSP error 级诊断和 `git diff --check` 通过。
 
-## 已确认的领域决策
+## T10 当前实现（本地工作树，待提交）
+
+- 新增 `scripts/palette-v2-gate-artifacts.ts`，统一编译 reconciliation、concurrency、performance、backup-restore、rollback 五份 JSON gate 和 `cutover-manifest.json`；缺失 evidence、失败 gate、未完成 approval 或未显式确认均 fail-closed。
+- 新增 `scripts/run-palette-v2-concurrency-gate.ts`，仅接受本地/测试 PostgreSQL URL，通过 Vitest JSON reporter 执行 V2 store、V2 外部写和 Theme Plaza V2 PostgreSQL 并发套件；跳过或失败场景阻断 gate。最近隔离 PostgreSQL 运行覆盖 `14/14` 场景通过。
+- 新增 `scripts/verify-palette-v2-backup-restore.ts`，在源库与隔离恢复库之间比较 legacy/V2 palettes、revisions、operations、changes、Theme Plaza listing/version/vote/reference/report 计数，并要求 checksum、恢复 smoke 和迁移版本证据。最近同一时间点 dump 恢复到隔离库后计数校验通过；样本为空库，不能替代生产数据演练。
+- 新增 `scripts/palette-v2-performance-gate.mjs`，测量 bootstrap 不拉完整 library、无后台轮询、API 失败不阻塞游戏和 p95/主线程不超过基线 1.10 倍；本地运行结果写入 evidence，不伪装成生产门禁。
+- 新增 `scripts/probe-palette-v2-cutover.ts`，验证 maintenance、cutover-read、rollback 环境的 bootstrap/library/compat GET、legacy PUT fail-closed、V2 write gate 和 Theme Plaza capability；不执行任何 flag 修改。最近本地 maintenance mock probe `6/6` 检查通过。
+- 新增 `scripts/generate-palette-v2-cutover-manifest.ts` 与 `docs/PALETTE_SYNC_V2_GATES.md`，记录锁定 commit、migration、命令、审批、阈值、观察窗口和回滚触发器；工具只生成/验证 manifest，不 deploy、不改生产 flags。已生成 `artifacts/palette-v2/` 五份 gate report 和 `cutover-manifest.json`；由于生产 shadow、审批、备份恢复和线上观察未完成，manifest 明确为 `readyForCutover=false`。
+- 新增 `ACCOUNT_PALETTE_MAINTENANCE_ENABLED`：维护窗口在 request-body 解析前暂停 legacy PUT 和 V2 palette writes，同时保留 bootstrap、library 和 compatibility GET；maintenance unit 与 mock probe 通过。
+- reconciliation/backfill report 增加 schemaVersion、checks、residualRisks、未知差异、数据减少、十一套 active 和 tombstone revival 门禁字段。
+
+## T10 验证
+
+- API `npm run typecheck`：通过。
+- API Node：`80 files passed / 6 skipped`，`612 passed / 18 skipped`。
+- T10 gate/maintenance unit：`4 files / 9 passed`；cutover manifest command：包含 ready/not-ready 两类验证。
+- 隔离 PostgreSQL 17 应用全量 migration 后 Theme Plaza V2 保存：`1 passed`。
+- Web 本地 performance gate：bootstrap/library、无轮询和 API failure smoke 通过，实际 p95 `119.6ms`、主线程 `45ms`（使用显式本地 placeholder baseline，未作为生产性能证明）。
+- T08/T09 Web 全量 unit、Theme Plaza/Palette Smoke、visual matrix、build、verify:api、service-boundary、TypeScript 和 error diagnostics 在 T10 改动前后保持通过；最后一次完整 Web unit 为 `322 files / 2160 tests passed`。
+- 当前未运行生产 shadow reconciliation、真实生产 backup/restore、生产 cutover probe、30 分钟 V2 写观察或线上指标观察，因此 T10 已实现工具和本地验证，但不满足 T11 生产切换条件。
+
 
 
 - 每账号最多十套私人自定义色板，内置色板不计入。

@@ -41,6 +41,7 @@
     "verify:release-ready": "node scripts/release-readiness-check.mjs",
     "verify:release": "npm run verify:refactor:ci && npm run verify:release-ready",
     "verify:api": "npm run api:types:check && vitest run tests/unit/openapi-contract.spec.ts tests/unit/api-docs-page.spec.ts tests/unit/services-typed-api-client.spec.ts tests/unit/services-achievements.spec.ts",
+    "palette-sync-v2:performance-gate": "node scripts/palette-v2-performance-gate.mjs",
     "verify:submit-ready": "npm run report:commit-split-check && npm run verify:release",
     "report:refactor-progress": "node scripts/refactor-progress-report.mjs",
     "report:commit-split-check": "node scripts/commit-split-check.mjs",

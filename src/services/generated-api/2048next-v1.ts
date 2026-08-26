@@ -5491,6 +5491,7 @@ export interface components {
             readEnabled: boolean;
             writeEnabled: boolean;
             legacyPutEnabled: boolean;
+            maintenanceEnabled: boolean;
             /** @constant */
             maxActivePalettes: 10;
             /** @constant */
