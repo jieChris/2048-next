@@ -1,5 +1,18 @@
 # 账号私人色板同步 V2 执行记录
 
+## 已完成
+
+- [x] T02 数据模型与 `0040_account_palette_sync_v2.sql` 已提交：`fafa3fd`。
+- [x] T03 回填、兼容投影和影子对账工具已提交：`85e27c0`。
+- [x] T04 逐套读取、bootstrap、selection/order、cursor/tombstone、legacy GET 投影与 PUT fail-closed 已提交：`49d5e10`。
+- [x] T04 合同增补（changes、legacy GET 409/503）已提交到 Web：`35e4c23a`。
+- [x] T04 验证：API 全量 Node 测试 `591 passed / 9 skipped`、typecheck、真实 PostgreSQL 迁移与 5 项并发/约束测试通过；Web `verify:api` `28 passed`。
+
+## 当前状态
+
+- 两仓库均只在 `main`，未 push、未 deploy。
+- 当前 API 生产 flags 未改变；V2 read/write 仍保持关闭，Theme Plaza 写入仍保持关闭。
+- 下一步是 T05：只实现内部 revision/diff/merge/delete 原语，不新增可完成的公开写路由。
 ## 已确认的领域决策
 
 - 每账号最多十套私人自定义色板，内置色板不计入。
