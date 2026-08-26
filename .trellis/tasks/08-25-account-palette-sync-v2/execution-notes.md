@@ -7,6 +7,8 @@
 - [x] T04 逐套读取、bootstrap、selection/order、cursor/tombstone、legacy GET 投影与 PUT fail-closed 已提交：`49d5e10`。
 - [x] T04 合同增补（changes、legacy GET 409/503）已提交到 Web：`35e4c23a`。
 - [x] T04 验证：API 全量 Node 测试 `591 passed / 9 skipped`、typecheck、真实 PostgreSQL 迁移与 5 项并发/约束测试通过；Web `verify:api` `28 passed`。
+- [x] T05 版本历史、最小编辑单元三方合并、过期基线冲突候选、永久删除与历史清理原语已提交到 API：`67dc960`。
+- [x] T05 验证：API 全量 Node 测试 `600 passed / 12 skipped`、typecheck、真实 PostgreSQL revision/merge/delete/prune 测试 `12 passed`。
 
 ## 当前状态
 
