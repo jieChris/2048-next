@@ -174,4 +174,73 @@ describe("Theme Plaza client model", () => {
     expect(tiles[0].style.boxShadow).toContain("rgba");
     dom.window.close();
   });
+
+  it("saves a public version through V2 operation and palette IDs", async () => {
+    let request: { url: string; headers: Headers; body: Record<string, unknown> } | null = null;
+    const client = createThemePlazaClient({
+      bases: ["https://example.test/api"],
+      fetchLike: (async (input, init) => {
+        request = {
+          url: String(input),
+          headers: new Headers(init?.headers),
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        };
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              status: "saved",
+              operationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              paletteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              existingPaletteId: null,
+              palette: {
+                paletteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                revision: 1,
+                palette: {
+                  ...palette(),
+                  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                  name: "青瓷夜色",
+                },
+                contentHash: "a".repeat(64),
+                createdAt: null,
+                updatedAt: null,
+              },
+              copyCreated: true,
+              firstReference: true,
+              currentSaved: true,
+              reason: null,
+            },
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+
+    await expect(
+      client.save(12, {
+        operationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        paletteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        allowDuplicate: false,
+      }),
+    ).resolves.toMatchObject({
+      status: "saved",
+      paletteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      palette: { revision: 1, palette: { name: "青瓷夜色" } },
+      copyCreated: true,
+      firstReference: true,
+    });
+    expect(request).not.toBeNull();
+    expect(request!.url).toBe(
+      "https://example.test/api/theme-plaza/versions/12/save",
+    );
+    expect(request!.headers.get("Idempotency-Key")).toBe(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    );
+    expect(request!.body).toEqual({
+      operationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      paletteId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      allowDuplicate: false,
+    });
+  });
+
 });

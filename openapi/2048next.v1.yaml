@@ -592,10 +592,27 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ThemePlazaSaveRequest" }
       responses:
-        "200": { $ref: "#/components/responses/ApiEnvelopeResponse" }
+        "200":
+          description: Existing matching palette associated with the public version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ThemePlazaSaveResponse" }
+        "201":
+          description: New V2 private palette created and associated with the public version.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ThemePlazaSaveResponse" }
+        "400": { $ref: "#/components/responses/ApiErrorResponse" }
         "403": { $ref: "#/components/responses/ApiErrorResponse" }
         "404": { $ref: "#/components/responses/ApiErrorResponse" }
-        "409": { $ref: "#/components/responses/ApiErrorResponse" }
+        "409":
+          description: Duplicate/capacity result or a request conflict.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ThemePlazaSaveResponse"
+                  - $ref: "#/components/schemas/ApiError"
         "503": { $ref: "#/components/responses/ApiErrorResponse" }
 
   /theme-plaza/versions/{versionId}/reports:
@@ -3752,9 +3769,9 @@ components:
       additionalProperties: false
       required: [palette_id, title, revision]
       properties:
-        palette_id: { type: string, minLength: 1, maxLength: 64 }
+        palette_id: { $ref: "#/components/schemas/PaletteStableId" }
         title: { type: string, minLength: 2, maxLength: 20 }
-        revision: { type: integer, minimum: 0 }
+        revision: { type: integer, minimum: 1 }
 
     ThemePlazaVoteRequest:
       type: object
@@ -3766,9 +3783,46 @@ components:
     ThemePlazaSaveRequest:
       type: object
       additionalProperties: false
-      required: [revision]
+      required: [operationId]
       properties:
-        revision: { type: integer, minimum: 0 }
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        paletteId: { $ref: "#/components/schemas/NewPaletteStableId" }
+        existingPaletteId: { $ref: "#/components/schemas/PaletteStableId" }
+        allowDuplicate: { type: boolean, default: false }
+      oneOf:
+        - required: [paletteId]
+        - required: [existingPaletteId]
+    ThemePlazaSaveResult:
+      type: object
+      additionalProperties: false
+      required: [status, operationId, paletteId, existingPaletteId, palette, copyCreated, firstReference, currentSaved, reason]
+      properties:
+        status: { type: string, enum: [saved, duplicate_existing, capacity_full] }
+        operationId: { $ref: "#/components/schemas/PaletteOperationId" }
+        paletteId:
+          oneOf:
+            - $ref: "#/components/schemas/PaletteStableId"
+            - type: "null"
+        existingPaletteId:
+          oneOf:
+            - $ref: "#/components/schemas/PaletteStableId"
+            - type: "null"
+        palette:
+          oneOf:
+            - $ref: "#/components/schemas/AccountPaletteRecord"
+            - type: "null"
+        copyCreated: { type: boolean }
+        firstReference: { type: boolean }
+        currentSaved: { type: boolean }
+        reason: { type: [string, "null"], enum: [duplicate_content, capacity_full, id_conflict, null] }
+    ThemePlazaSaveResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          required: [success, data]
+          properties:
+            success: { type: boolean, const: true }
+            data: { $ref: "#/components/schemas/ThemePlazaSaveResult" }
 
     ThemePlazaReportRequest:
       type: object

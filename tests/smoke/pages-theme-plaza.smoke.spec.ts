@@ -33,6 +33,9 @@ function palette() {
 const capabilities = {
   readEnabled: true,
   writeEnabled: false,
+  reactionEnabled: false,
+  saveEnabled: false,
+  shareEnabled: false,
   autoPublishEnabled: false,
   paletteFormat3Enabled: true,
 };
@@ -156,12 +159,6 @@ test.describe("Theme Plaza", () => {
       window.localStorage.setItem("2048_auth_userId_v1", "42");
       window.localStorage.setItem("tile_palette_active_v1", "follow-theme");
     });
-    const accountDocument = {
-      schema: 1,
-      format: 3,
-      activePaletteId: null,
-      palettes: [],
-    };
     await page.route("**/api/auth/refresh", async (route) => {
       await route.fulfill({
         status: 200,
@@ -179,7 +176,7 @@ test.describe("Theme Plaza", () => {
         contentType: "application/json",
         body: JSON.stringify({
           success: true,
-          data: { ...capabilities, writeEnabled: true },
+          data: { ...capabilities, reactionEnabled: true, saveEnabled: true },
         }),
       });
     });
@@ -190,47 +187,39 @@ test.describe("Theme Plaza", () => {
         body: JSON.stringify({
           success: true,
           data: item,
-          capabilities: { ...capabilities, writeEnabled: true },
+          capabilities: { ...capabilities, reactionEnabled: true, saveEnabled: true },
         }),
       });
     });
-    await page.route("**/api/me/app-palettes", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          success: true,
-          data: {
-            document: accountDocument,
-            revision: 3,
-            updatedAt: null,
-            supportedFormats: [2, 3],
-            sourceFormat: 3,
-          },
-        }),
-      });
-    });
+    const saveRequests: Array<Record<string, unknown>> = [];
     await page.route("**/api/theme-plaza/versions/12/save", async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      saveRequests.push(body);
+      const paletteId = String(body.paletteId || "");
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: "application/json",
         body: JSON.stringify({
           success: true,
           data: {
-            document: {
-              ...accountDocument,
-              palettes: [{ ...palette(), id: "saved-copy", name: "青瓷夜色" }],
+            status: "saved",
+            operationId: body.operationId,
+            paletteId,
+            existingPaletteId: null,
+            palette: {
+              paletteId,
+              revision: 1,
+              palette: { ...palette(), id: paletteId, name: "青瓷夜色" },
+              contentHash: "a".repeat(64),
+              createdAt: null,
+              updatedAt: null,
             },
-            revision: 4,
-            updatedAt: null,
-            supportedFormats: [2, 3],
-            sourceFormat: 3,
-            palette_id: "saved-copy",
-            copy_created: true,
-            first_reference: true,
-            current_saved: true,
+            copyCreated: true,
+            firstReference: true,
+            currentSaved: true,
+            reason: null,
           },
-          capabilities: { ...capabilities, writeEnabled: true },
+          capabilities: { ...capabilities, reactionEnabled: true, saveEnabled: true },
         }),
       });
     });
@@ -245,7 +234,7 @@ test.describe("Theme Plaza", () => {
             vote: 1,
             stats: { likes: 9, dislikes: 2, references: 5 },
           },
-          capabilities: { ...capabilities, writeEnabled: true },
+          capabilities: { ...capabilities, reactionEnabled: true, saveEnabled: true },
         }),
       });
     });
@@ -267,18 +256,16 @@ test.describe("Theme Plaza", () => {
         ),
       )
       .toBe("follow-theme");
-    await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const profiles = JSON.parse(
-            window.localStorage.getItem("tile_palette_profiles_v1") || "[]",
-          );
-          return profiles.some(
-            (profile: { id?: string }) => profile.id === "saved-copy",
-          );
-        }),
-      )
-      .toBe(true);
+    expect(saveRequests).toHaveLength(1);
+    expect(saveRequests[0]).toMatchObject({
+      operationId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
+      ),
+      paletteId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
+      ),
+      allowDuplicate: false,
+    });
 
     const like = page.getByRole("button", { name: "点赞" });
     await like.click();

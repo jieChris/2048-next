@@ -11,6 +11,7 @@
 ## 前置状态必须显式
 
 - 测试依赖主题、色板、夜间模式、语言或页面分类时，必须在 `page.addInitScript` 或 URL 中显式设置。
+- `page.addInitScript` 会在同一 Page 的每次文档导航前再次执行；跨页验证 localStorage 持久化时，初始化清理必须用 sessionStorage 一次性标记保护，不能在目标页导航时再次删掉刚保存的数据。
 - 中文界面的语言分离审计可精确放行固定品牌词，但页面 title 的完整 SEO 文案应由 SEO 专项用例单独断言，不能继续沿用旧的短标题合同。
 - 页面入口会执行 cookie-first 的 `/api/auth/refresh`；需要自定义 API 路由的 smoke 必须显式模拟该请求（成功返回测试 token 或明确的终态认证码），不得让它落到未启动的本地 API 代理并把页面初始化拖到超时。
 - 会读取登录态的副作用运行时必须在 `restoreAuthSession()` 完成后动态加载；Cookie-only 回归必须从“localStorage 无 token”开始，由 `/api/auth/refresh` 返回 token 与 `public_profile_id`，再断言本人请求和页面初始化成功，不能预塞 token 掩盖启动竞态。
@@ -101,6 +102,10 @@ expect(recordBodies).toHaveLength(1);
 expect(recordBodies.length).toBeGreaterThanOrEqual(1);
 expect(new Set(recordBodies.map((body) => body.client_record_id)).size).toBe(1);
 ```
+
+- 色板编辑器的 pointer/input 中间态只修改草稿：Smoke 必须先断言编辑期间没有远端写入，再点击明确的 `#palette-save-btn` 后才断言本地持久化、离线队列或刷新结果。本地持久化失败时草稿必须保持 dirty 并阻止导航。
+- 账号色板离线队列的断言必须固定账号 ID 和 stable palette ID；重试复用冻结的 operation ID/request hash，显式保留重复内容时必须创建带 `allowDuplicate: true` 的新 operation。
+- Theme Plaza 的分享资格只读取当前活动 custom palette：Smoke 必须同时放置“其他色板失败/满库”和“当前色板已同步”状态，断言其他色板不阻止分享；当前色板 dirty、pending、paused、duplicate、capacity、base-expired、expired 或 local-only 时分别 fail-closed。互动、保存和分享测试必须使用 `reactionEnabled`、`saveEnabled`、`shareEnabled`，不得继续用 legacy `writeEnabled` 放宽能力。
 
 ## 视觉断言必须绑定场景
 

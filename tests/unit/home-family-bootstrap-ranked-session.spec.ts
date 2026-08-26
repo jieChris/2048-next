@@ -4,6 +4,15 @@ describe("home family bootstrap ranked session ordering", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllGlobals();
+    vi.doMock("../../src/services/auth-session", () => ({
+      restoreAuthSession: vi.fn(async () => ({ status: "guest" })),
+    }));
+    vi.doMock("../../src/features/palette/account-palette-session", () => ({
+      getAccountPaletteSessionController: () => ({
+        bootstrap: vi.fn(async () => ({ status: "guest", snapshot: null })),
+        applyToThemeManager: vi.fn(() => false),
+      }),
+    }));
   });
 
   afterEach(() => {

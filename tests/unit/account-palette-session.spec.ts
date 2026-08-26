@@ -223,4 +223,114 @@ describe("account palette session bootstrap", () => {
     expect(result.code).toBe("STALE_ACCOUNT_PALETTE_RESPONSE");
     expect(controller.snapshot()).toBeNull();
   });
+  it("drains every library page before marking the library loaded", async () => {
+    const calls: string[] = [];
+    const first = libraryBody();
+    const second = {
+      ...libraryBody(),
+      data: {
+        ...libraryBody().data,
+        palettes: [
+          {
+            ...bootstrapBody().data.selectedPalette,
+            paletteId: "p-second",
+            palette: palette("p-second", "第二套"),
+          },
+        ],
+        order: {
+          paletteIds: ["p-cloud", "p-second"],
+          revision: 3,
+          updatedAt: "2026-08-26T00:00:00Z",
+        },
+        nextCursor: "2",
+        hasMore: false,
+      },
+    };
+    first.data.hasMore = true;
+    first.data.nextCursor = "1";
+    const controller = createAccountPaletteSessionController({
+      accountId: 10,
+      storageLike: new MemoryStorage(),
+      sessionStorageLike: new MemoryStorage(),
+      bases: ["https://api.example"],
+      fetchLike: async (input) => {
+        calls.push(String(input));
+        if (calls.length === 1) return response(bootstrapBody("follow_theme"));
+        return response(calls.length === 2 ? first : second);
+      },
+    });
+
+    await expect(controller.loadLibrary()).resolves.toMatchObject({
+      status: "synced",
+    });
+    expect(calls).toEqual([
+      "https://api.example/me/palette-sync/bootstrap",
+      "https://api.example/me/palettes",
+      "https://api.example/me/palettes?cursor=1&known_palette_id=p-cloud",
+    ]);
+    expect(
+      controller.snapshot()?.library?.palettes.map((item) => item.paletteId),
+    ).toEqual(["p-cloud", "p-second"]);
+    expect(controller.snapshot()).toMatchObject({
+      libraryLoaded: true,
+      library: { hasMore: false, nextCursor: "2" },
+    });
+  });
+  it("applies follow-theme selection without converting it into a builtin palette", async () => {
+    let activeId = "";
+    const manager = {
+      setActiveTilePalette: (id: string) => {
+        activeId = id;
+        return id;
+      },
+    };
+    const controller = createAccountPaletteSessionController({
+      accountId: 11,
+      storageLike: new MemoryStorage(),
+      sessionStorageLike: new MemoryStorage(),
+      windowLike: {
+        addEventListener: () => undefined,
+        ThemeManager: manager,
+      },
+      bases: ["https://api.example"],
+      fetchLike: async () => response(bootstrapBody("follow_theme")),
+    });
+
+    await controller.bootstrap();
+    expect(activeId).toBe("follow-theme");
+  });
+  it("clears a stale selected palette when the full library selects follow-theme", async () => {
+    let calls = 0;
+    const followThemeLibrary = libraryBody();
+    followThemeLibrary.data.palettes = [];
+    followThemeLibrary.data.order = {
+      paletteIds: [],
+      revision: 3,
+      updatedAt: "2026-08-26T00:00:00Z",
+    };
+    followThemeLibrary.data.selection = {
+      selection: { kind: "follow_theme", paletteId: null },
+      revision: 5,
+      updatedAt: "2026-08-26T00:00:00Z",
+    };
+    const controller = createAccountPaletteSessionController({
+      accountId: 12,
+      storageLike: new MemoryStorage(),
+      sessionStorageLike: new MemoryStorage(),
+      bases: ["https://api.example"],
+      fetchLike: async () => {
+        calls += 1;
+        return response(
+          calls === 1 ? bootstrapBody("custom") : followThemeLibrary,
+        );
+      },
+    });
+
+    await controller.loadLibrary();
+    expect(controller.snapshot()).toMatchObject({
+      selection: { selection: { kind: "follow_theme", paletteId: null } },
+      selectedPalette: null,
+    });
+  });
+
 });

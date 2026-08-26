@@ -1164,10 +1164,36 @@ export interface paths {
                 };
             };
             responses: {
-                200: components["responses"]["ApiEnvelopeResponse"];
+                /** @description Existing matching palette associated with the public version. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThemePlazaSaveResponse"];
+                    };
+                };
+                /** @description New V2 private palette created and associated with the public version. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThemePlazaSaveResponse"];
+                    };
+                };
+                400: components["responses"]["ApiErrorResponse"];
                 403: components["responses"]["ApiErrorResponse"];
                 404: components["responses"]["ApiErrorResponse"];
-                409: components["responses"]["ApiErrorResponse"];
+                /** @description Duplicate/capacity result or a request conflict. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ThemePlazaSaveResponse"] | components["schemas"]["ApiError"];
+                    };
+                };
                 503: components["responses"]["ApiErrorResponse"];
             };
         };
@@ -5667,7 +5693,7 @@ export interface components {
             capabilities: components["schemas"]["ThemePlazaCapabilities"];
         };
         ThemePlazaSubmissionRequest: {
-            palette_id: string;
+            palette_id: components["schemas"]["PaletteStableId"];
             title: string;
             revision: number;
         };
@@ -5676,7 +5702,29 @@ export interface components {
             value: -1 | 0 | 1;
         };
         ThemePlazaSaveRequest: {
-            revision: number;
+            operationId: components["schemas"]["PaletteOperationId"];
+            paletteId?: components["schemas"]["NewPaletteStableId"];
+            existingPaletteId?: components["schemas"]["PaletteStableId"];
+            /** @default false */
+            allowDuplicate: boolean;
+        } & (unknown | unknown);
+        ThemePlazaSaveResult: {
+            /** @enum {string} */
+            status: "saved" | "duplicate_existing" | "capacity_full";
+            operationId: components["schemas"]["PaletteOperationId"];
+            paletteId: components["schemas"]["PaletteStableId"] | null;
+            existingPaletteId: components["schemas"]["PaletteStableId"] | null;
+            palette: components["schemas"]["AccountPaletteRecord"] | null;
+            copyCreated: boolean;
+            firstReference: boolean;
+            currentSaved: boolean;
+            /** @enum {string|null} */
+            reason: "duplicate_content" | "capacity_full" | "id_conflict" | null;
+        };
+        ThemePlazaSaveResponse: components["schemas"]["ApiEnvelope"] & {
+            /** @constant */
+            success: true;
+            data: components["schemas"]["ThemePlazaSaveResult"];
         };
         ThemePlazaReportRequest: {
             /** @enum {string} */

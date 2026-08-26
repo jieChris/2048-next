@@ -9,17 +9,24 @@ import {
   type DisplayMode
 } from "../bootstrap/display-mode";
 import {
-  AccountPaletteRepository,
-  createHttpAccountPaletteTransport,
-  parseAccountPaletteDocument,
-  type AccountPaletteDocument,
-  type AccountPaletteProfile
-} from "../features/palette/account-palette-repository";
-import { createThemePlazaClient } from "../features/theme-plaza/theme-plaza-client";
+  createAccountPaletteOutbox,
+  createIndexedDbPaletteOutboxStore,
+  type PaletteOutboxOperation,
+} from "../features/palette/account-palette-outbox";
+import { createAccountPaletteV2Client } from "../features/palette/account-palette-v2-client";
+import { createPaletteUuidV4 } from "../features/palette/account-palette-editor";
+import {
+  createThemePlazaClient,
+  type ThemePlazaCapabilities,
+} from "../features/theme-plaza/theme-plaza-client";
 import {
   createThemePlazaSubmissionNotice,
-  type ThemePlazaSubmissionNotice
+  type ThemePlazaSubmissionNotice,
 } from "../features/theme-plaza/submission-notice";
+import {
+  createAccountPalettePageSyncController,
+  type PalettePageThemeManager,
+} from "../features/palette/account-palette-page-sync";
 import { getAuthToken } from "../services/auth-session";
 import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
 import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
@@ -58,8 +65,16 @@ let settingsCategoryScrollUnlockTimer: number | undefined;
 let settingsCategoryScrollUnlockListener: (() => void) | undefined;
 
 const globalWindow = window as Window & {
-  AccountPaletteRepository?: AccountPaletteRepository;
+  AccountPaletteDraftSaveHandler?: (draftState: Record<string, unknown>) => Promise<unknown>;
+  AccountPaletteDuplicateConfirmHandler?: (paletteId: string) => Promise<unknown>;
+  AccountPaletteUseExistingHandler?: (
+    paletteId: string,
+    existingPaletteId: string,
+  ) => Promise<unknown>;
+  AccountPalettePageLeaveHandler?: () => Promise<boolean>;
+  AccountPalettePageSync?: ReturnType<typeof createAccountPalettePageSyncController>;
   GameDialog?: {
+    confirm?: (message: string, options?: Record<string, unknown>) => Promise<boolean>;
     prompt?: (message: string, defaultValue?: string, options?: Record<string, unknown>) => Promise<string | null>;
   };
   ThemeManager?: Record<string, unknown>;
@@ -777,77 +792,29 @@ function resolvePaletteOwnerKey(
     : "guest";
 }
 
-function paletteDocumentFromThemeManager(
-  themeManager: Record<string, unknown>,
-): AccountPaletteDocument | null {
-  const getCustomTilePalettes = themeManager.getCustomTilePalettes;
-  const getActiveTilePaletteId = themeManager.getActiveTilePaletteId;
-  if (
-    typeof getCustomTilePalettes !== "function" ||
-    typeof getActiveTilePaletteId !== "function"
-  )
-    return null;
-  const rawPalettes = getCustomTilePalettes.call(themeManager);
-  if (!Array.isArray(rawPalettes)) return null;
-  const tileValues = [
-    2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
-    65536,
-  ];
-  const palettes = rawPalettes
-    .map((value) => {
-      if (!value || typeof value !== "object") return null;
-      const source = value as Record<string, unknown>;
-      const pow2 = Array.isArray(source.pow2) ? source.pow2 : [];
-      return {
-        ...source,
-        baseSkin: typeof source.baseSkin === "string" ? source.baseSkin : "web",
-        colors: Object.fromEntries(
-          tileValues.map((tile, index) => [String(tile), pow2[index]]),
-        ),
-      };
-    })
-    .filter((value): value is AccountPaletteProfile => value !== null);
-  const activeId = String(getActiveTilePaletteId.call(themeManager) || "");
-  return parseAccountPaletteDocument({
-    schema: 1,
-    format: 3,
-    activePaletteId: palettes.some((palette) => palette.id === activeId)
-      ? activeId
-      : null,
-    palettes,
-  });
+function resolvePaletteAccountId(storageLike: Storage): number | null {
+  const ownerKey = resolvePaletteOwnerKey(storageLike);
+  if (!ownerKey.startsWith("user:")) return null;
+  const accountId = Number(ownerKey.slice("user:".length));
+  return Number.isSafeInteger(accountId) && accountId >= 0 ? accountId : null;
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function bindAccountPaletteSync(): void {
-  const themeManager = globalWindow.ThemeManager;
-  const replaceCustomTilePalettes = themeManager?.replaceCustomTilePalettes;
+  const themeManager = globalWindow.ThemeManager as PalettePageThemeManager;
   const storageLike = createBrowserStorageAccess().local();
-  if (
-    !themeManager ||
-    typeof replaceCustomTilePalettes !== "function" ||
-    !storageLike
-  )
-    return;
-  const initialDocument = paletteDocumentFromThemeManager(themeManager);
-  const accountPaletteSession = getAccountPaletteSessionController();
-  void accountPaletteSession.bootstrap().then(() => {
-    accountPaletteSession.applyToThemeManager(themeManager);
-    return accountPaletteSession.loadLibrary();
-  }).catch(() => {});
+  if (!globalWindow.ThemeManager || !storageLike) return;
+  const accountStorage = storageLike;
 
-  const repository = new AccountPaletteRepository({
-    storage: storageLike,
-    ownerKey: resolvePaletteOwnerKey(storageLike),
-    transport: createHttpAccountPaletteTransport(),
-    applyDocument(document, source) {
-      if (source !== "cloud") return;
-      replaceCustomTilePalettes.call(themeManager, document.palettes, {
-        activePaletteId: document.activePaletteId,
-        source: "account-sync",
-      });
-    },
-  });
+  const session = getAccountPaletteSessionController();
+  const client = createAccountPaletteV2Client({ storageLike: accountStorage });
   const plazaClient = createThemePlazaClient();
+  let shareCapabilities: ThemePlazaCapabilities | null = null;
   const submissionNotice = createThemePlazaSubmissionNotice({
     language: () => (isEnglishUi() ? "en" : "zh"),
   });
@@ -855,69 +822,106 @@ function bindAccountPaletteSync(): void {
   const shareButton = document.getElementById(
     "palette-share-btn",
   ) as HTMLButtonElement | null;
-  const syncShareAvailability = async () => {
+  if (shareButton) {
+    shareButton.disabled = true;
+    shareButton.textContent = isEnglishUi()
+      ? "Checking share availability…"
+      : "正在检查分享资格…";
+  }
+
+  let outbox: ReturnType<typeof createAccountPaletteOutbox> | null = null;
+  let pageSync: ReturnType<
+    typeof createAccountPalettePageSyncController
+  > | null = null;
+  let outboxStore: ReturnType<typeof createIndexedDbPaletteOutboxStore> | null =
+    null;
+
+  try {
+    outboxStore = createIndexedDbPaletteOutboxStore();
+    outbox = createAccountPaletteOutbox({
+      store: outboxStore,
+      ownerId: `palette-page-${createPaletteUuidV4()}`,
+      windowLike: window,
+      sender: (operation) => client.send(operation),
+    });
+  } catch {
+    outbox = null;
+    outboxStore = null;
+  }
+
+  function setShareButtonState(
+    enabled: boolean,
+    zh: string,
+    en: string,
+    title = "",
+  ): void {
     if (!shareButton) return;
+    shareButton.disabled = !enabled;
+    shareButton.textContent = isEnglishUi() ? en : zh;
+    shareButton.title = title;
+  }
+
+  async function syncShareAvailability(
+    refreshCapabilities = false,
+  ): Promise<void> {
+    if (!shareButton) return;
+    shareButton.disabled = true;
     try {
-      const capabilities = await plazaClient.capabilities();
-      const snapshot = repository.snapshot();
-      const activeId = String(
-        themeManager.getActiveTilePaletteId instanceof Function
-          ? themeManager.getActiveTilePaletteId.call(themeManager) || ""
-          : "",
-      );
-      const activeIsCustom = snapshot.document.palettes.some(
-        (palette) => palette.id === activeId,
-      );
-      shareButton.disabled =
-        !capabilities.writeEnabled ||
-        snapshot.dirty ||
-        !!snapshot.conflict ||
-        !activeIsCustom;
-      if (!capabilities.writeEnabled) {
-        shareButton.textContent = isEnglishUi()
-          ? "Sharing coming soon"
-          : "分享功能准备中";
-        shareButton.title = "";
-      } else if (!activeIsCustom) {
-        shareButton.textContent = isEnglishUi()
-          ? "Create a copy to share"
-          : "请先创建副本后分享";
-        shareButton.title = isEnglishUi()
-          ? "Built-in palettes cannot be shared directly. Create a custom copy first."
-          : "内置色板不能直接分享，请先点击“新建副本”。";
-      } else if (snapshot.conflict) {
-        shareButton.textContent = isEnglishUi()
-          ? "Resolve sync conflict"
-          : "请先解决同步冲突";
-        shareButton.title = isEnglishUi()
-          ? "Resolve the palette sync conflict first."
-          : "请先解决色板同步冲突。";
-      } else if (snapshot.dirty) {
-        shareButton.textContent = isEnglishUi()
-          ? "Syncing palette…"
-          : "正在同步色板…";
-        shareButton.title = "";
-      } else {
-        shareButton.textContent = isEnglishUi()
-          ? "Share to Theme Plaza"
-          : "分享到主题广场";
-        shareButton.title = "";
+      if (refreshCapabilities || !shareCapabilities)
+        shareCapabilities = await plazaClient.capabilities();
+      const capabilities = shareCapabilities;
+      if (!capabilities.shareEnabled) {
+        setShareButtonState(
+          false,
+          "分享功能准备中",
+          "Sharing coming soon",
+        );
+        return;
       }
+      if (!pageSync) {
+        setShareButtonState(false, "登录后分享", "Sign in to share");
+        return;
+      }
+      const eligibility = await pageSync.themePlazaEligibility();
+      const states: Record<string, [string, string]> = {
+        guest: ["登录后分享", "Sign in to share"],
+        not_custom: ["请先创建副本后分享", "Create a copy to share"],
+        dirty: ["请先保存当前色板", "Save this palette first"],
+        pending_write: ["当前色板等待同步", "This palette is waiting to sync"],
+        paused_account: ["账号同步已暂停", "Account sync is paused"],
+        duplicate_existing: ["请先处理当前重复色板", "Resolve this duplicate first"],
+        capacity_full: ["当前色板尚未上传", "This palette is not uploaded"],
+        base_revision_expired: ["当前色板需要重新同步", "This palette needs a fresh sync"],
+        expired_operation: ["当前色板需要重新对账", "This palette needs reconciliation"],
+        local_only: ["当前色板仅保存在设备", "This palette is device-only"],
+        deleted: ["当前色板已删除", "This palette was deleted"],
+      };
+      if (!eligibility.eligible) {
+        const label = states[eligibility.status] || ["当前色板不可分享", "This palette cannot be shared"];
+        setShareButtonState(false, label[0], label[1]);
+        return;
+      }
+      setShareButtonState(true, "分享到主题广场", "Share to Theme Plaza");
     } catch {
-      shareButton.disabled = true;
+      setShareButtonState(false, "分享状态不可用", "Share status unavailable");
     }
-  };
-  shareButton?.addEventListener("click", async () => {
-    const snapshot = repository.snapshot();
-    const activeId = String(
-      themeManager.getActiveTilePaletteId instanceof Function
-        ? themeManager.getActiveTilePaletteId.call(themeManager) || ""
-        : "",
-    );
-    const active = snapshot.document.palettes.find(
-      (palette) => palette.id === activeId,
-    );
-    if (!active || snapshot.dirty || snapshot.conflict) return;
+  }
+
+  async function submitActivePalette(): Promise<void> {
+    if (!shareButton || !pageSync) return;
+    const eligibility = await pageSync.themePlazaEligibility();
+    if (
+      !eligibility.eligible ||
+      !eligibility.paletteId ||
+      eligibility.revision == null
+    ) {
+      await syncShareAvailability();
+      return;
+    }
+    const palettes = themeManager.getCustomTilePalettes?.call(themeManager);
+    const active = Array.isArray(palettes)
+      ? palettes.find((item) => record(item)?.id === eligibility.paletteId)
+      : null;
     const prompt = globalWindow.GameDialog?.prompt;
     const title =
       typeof prompt === "function"
@@ -925,7 +929,7 @@ function bindAccountPaletteSync(): void {
             isEnglishUi()
               ? "Public title (2–20 characters)"
               : "公开标题（2～20 个字符）",
-            active.name,
+            String(record(active)?.name || ""),
             { kind: "prompt" },
           )
         : null;
@@ -933,9 +937,9 @@ function bindAccountPaletteSync(): void {
     shareButton.disabled = true;
     try {
       await plazaClient.submit({
-        paletteId: active.id,
+        paletteId: eligibility.paletteId,
         title,
-        revision: snapshot.revision,
+        revision: eligibility.revision,
       });
       submissionNotice.show();
     } catch (error) {
@@ -946,35 +950,448 @@ function bindAccountPaletteSync(): void {
     } finally {
       await syncShareAvailability();
     }
-  });
-
-  globalWindow.AccountPaletteRepository = repository;
-  if (initialDocument && repository.snapshot().document.palettes.length === 0) {
-    repository.setDocument(initialDocument);
   }
-  void repository.sync().then(syncShareAvailability);
 
-  window.addEventListener("tile-palette-document-change", (event) => {
-    if (
-      (event as CustomEvent<{ source?: string }>).detail?.source ===
-      "account-sync"
-    )
+  shareButton?.addEventListener("click", () => void submitActivePalette());
+
+  function emitSyncState(
+    outcome: { status?: string; code?: string; message?: string } | null,
+  ): void {
+    window.dispatchEvent(
+      new CustomEvent("account-palette-sync-state", {
+        detail: outcome || {},
+      }),
+    );
+  }
+
+  function isPaletteContentOperation(
+    operation: PaletteOutboxOperation,
+  ): boolean {
+    return (
+      operation.kind === "create" ||
+      operation.kind === "save" ||
+      operation.kind === "delete"
+    );
+  }
+
+  function operationComesAfter(
+    candidate: PaletteOutboxOperation,
+    reference: PaletteOutboxOperation,
+  ): boolean {
+    return (
+      candidate.createdAt > reference.createdAt ||
+      (candidate.createdAt === reference.createdAt &&
+        candidate.key.localeCompare(reference.key) > 0)
+    );
+  }
+
+  function hasNewerPaletteIntent(
+    operation: PaletteOutboxOperation,
+    operations: PaletteOutboxOperation[],
+  ): boolean {
+    if (!isPaletteContentOperation(operation)) return false;
+    return operations.some(
+      (candidate) =>
+        candidate.accountId === operation.accountId &&
+        candidate.paletteId === operation.paletteId &&
+        isPaletteContentOperation(candidate) &&
+        operationComesAfter(candidate, operation),
+    );
+  }
+
+  function latestOutboxOperations(
+    operations: PaletteOutboxOperation[],
+  ): PaletteOutboxOperation[] {
+    const latest = new Map<string, PaletteOutboxOperation>();
+    for (const operation of operations) {
+      const key = isPaletteContentOperation(operation)
+        ? `palette:${operation.paletteId}`
+        : operation.kind;
+      const previous = latest.get(key);
+      if (!previous || operationComesAfter(operation, previous)) {
+        latest.set(key, operation);
+      }
+    }
+    return Array.from(latest.values());
+  }
+
+  function reconcileOutboxSnapshot(
+    operations: PaletteOutboxOperation[],
+  ): boolean {
+    let rekeyed = false;
+    for (const operation of operations) {
+      const result = pageSync?.reconcileOperation(operation, {
+        applyLocal: !hasNewerPaletteIntent(operation, operations),
+      });
+      if (result?.rekeyedPaletteId) rekeyed = true;
+    }
+    return rekeyed;
+  }
+
+  function emitOperationState(operation: PaletteOutboxOperation): void {
+    if (operation.status === "pending" || operation.status === "retry_wait") {
+      emitSyncState({
+        status: "queued",
+        code: operation.lastError || "PALETTE_SAVED_TO_DEVICE",
+      });
+    } else if (operation.status === "paused_account") {
+      emitSyncState({
+        status: "paused_account",
+        code: operation.lastError || operation.pauseReason || "ACCOUNT_PAUSED",
+      });
+    } else if (
+      operation.status === "duplicate_existing" ||
+      operation.status === "capacity_full" ||
+      operation.status === "base_revision_expired" ||
+      operation.status === "expired_operation"
+    ) {
+      emitSyncState({
+        status: operation.status,
+        code:
+          operation.result?.code || operation.lastError || operation.status,
+      });
+    } else if (
+      operation.status === "saved" ||
+      operation.status === "merged" ||
+      operation.status === "unchanged" ||
+      operation.status === "conflict_copy" ||
+      operation.status === "deleted"
+    ) {
+      emitSyncState({ status: operation.status, code: operation.status });
+    }
+  }
+
+  if (outbox) {
+    outbox.subscribe((change) => {
+      const activeAccountId = resolvePaletteAccountId(accountStorage);
+      if (change.operation.accountId !== activeAccountId) return;
+      void outbox
+        ?.list(change.operation.accountId)
+        .then((operations) => {
+          if (
+            change.operation.accountId !==
+            resolvePaletteAccountId(accountStorage)
+          )
+            return;
+          const superseded = hasNewerPaletteIntent(
+            change.operation,
+            operations,
+          );
+          pageSync?.reconcileOperation(change.operation, {
+            applyLocal: !superseded,
+          });
+          if (!superseded) emitOperationState(change.operation);
+          void syncShareAvailability();
+        })
+        .catch(() => {
+          emitSyncState({
+            status: "failed",
+            code: "PALETTE_OUTBOX_RECONCILE_FAILED",
+          });
+        });
+    });
+  }
+
+  function installPageSync(accountId: number | null): void {
+    pageSync?.dispose();
+
+    const installLeaveHandler = (): void => {
+      globalWindow.AccountPalettePageLeaveHandler = async () => {
+        const draftState = record(
+          themeManager.getTilePaletteDraftState?.call(themeManager),
+        );
+        const syncState = pageSync?.status();
+        const retryRequired = syncState?.status === "failed";
+        if (draftState?.dirty !== true && !retryRequired) return true;
+        const confirm = globalWindow.GameDialog?.confirm;
+        if (typeof confirm !== "function") return false;
+        const save = await confirm(
+          isEnglishUi()
+            ? "Save palette changes before leaving?"
+            : "离开前保存色板修改吗？",
+          {
+            kind: "confirm",
+            confirmText: isEnglishUi() ? "Save and continue" : "保存并继续",
+            cancelText: isEnglishUi() ? "Discard changes" : "放弃修改",
+          },
+        );
+        if (save) {
+          const result =
+            await globalWindow.AccountPaletteDraftSaveHandler?.(draftState || {});
+          const resultRecord = record(result);
+          return (
+            !!resultRecord &&
+            ![
+              "failed",
+              "needs_action",
+              "duplicate_existing",
+              "capacity_full",
+              "base_revision_expired",
+              "expired_operation",
+            ].includes(String(resultRecord.status || ""))
+          );
+        }
+        const discard = await confirm(
+          isEnglishUi()
+            ? "Discard this palette draft and leave?"
+            : "放弃当前色板草稿并离开吗？",
+          {
+            kind: "danger",
+            confirmText: isEnglishUi() ? "Discard changes" : "放弃修改",
+            cancelText: isEnglishUi() ? "Cancel" : "取消",
+          },
+        );
+        if (!discard) return false;
+        themeManager.discardTilePaletteDraft?.call(themeManager);
+        return true;
+      };
+    };
+
+    if (!outbox || accountId == null) {
+      pageSync = null;
+      globalWindow.AccountPalettePageSync = undefined;
+      globalWindow.AccountPaletteDuplicateConfirmHandler = async () => ({
+        status: "failed",
+        code: "PALETTE_ACCOUNT_REQUIRED",
+      });
+      globalWindow.AccountPaletteUseExistingHandler = async () => ({
+        status: "failed",
+        code: "PALETTE_ACCOUNT_REQUIRED",
+      });
+      globalWindow.AccountPaletteDraftSaveHandler = async () => {
+        if (typeof themeManager.saveTilePaletteDraft === "function") {
+          const saved =
+            themeManager.saveTilePaletteDraft.call(themeManager) !== false;
+          if (saved) themeManager.beginTilePaletteDraft?.call(themeManager);
+          let outcome: { status: string; code?: string };
+          if (!saved) {
+            outcome = { status: "failed", code: "LOCAL_PERSIST_FAILED" };
+          } else if (accountId == null) {
+            outcome = { status: "local_only" };
+          } else {
+            outcome = {
+              status: "failed",
+              code: "PALETTE_OUTBOX_UNAVAILABLE",
+            };
+          }
+          emitSyncState(outcome);
+          return outcome;
+        }
+        const outcome = { status: "failed", code: "LOCAL_PERSIST_FAILED" };
+        emitSyncState(outcome);
+        return outcome;
+      };
+      installLeaveHandler();
       return;
-    const document = paletteDocumentFromThemeManager(themeManager);
-    if (!document) return;
-    repository.setDocument(document);
-    void repository.sync().then(syncShareAvailability);
+    }
+    pageSync = createAccountPalettePageSyncController({
+      accountId,
+      themeManager,
+      outbox,
+      sessionSnapshot: () => session.snapshot(),
+      onStateChange: (outcome) => emitSyncState(outcome),
+    });
+    globalWindow.AccountPalettePageSync = pageSync;
+    globalWindow.AccountPaletteDuplicateConfirmHandler = async (paletteId) =>
+      pageSync?.confirmDuplicate(paletteId);
+    globalWindow.AccountPaletteUseExistingHandler = async (
+      paletteId,
+      existingPaletteId,
+    ) => pageSync?.useExistingPalette(paletteId, existingPaletteId);
+    globalWindow.AccountPaletteDraftSaveHandler = async () =>
+      pageSync?.saveDraft();
+    installLeaveHandler();
+  }
+
+  if (!document.documentElement.dataset.paletteLeaveGuardBound) {
+    document.documentElement.dataset.paletteLeaveGuardBound = "1";
+    document.addEventListener(
+      "click",
+      (event) => {
+        const mouseEvent = event as MouseEvent;
+        if (
+          mouseEvent.defaultPrevented ||
+          mouseEvent.button !== 0 ||
+          mouseEvent.metaKey ||
+          mouseEvent.ctrlKey ||
+          mouseEvent.shiftKey ||
+          mouseEvent.altKey
+        )
+          return;
+        const target = mouseEvent.target as Element | null;
+        const anchor = target?.closest<HTMLAnchorElement>("a[href]");
+        if (
+          !anchor ||
+          anchor.target === "_blank" ||
+          anchor.hasAttribute("download")
+        )
+          return;
+        const href = anchor.href;
+        if (!href) return;
+        let destination: URL;
+        try {
+          destination = new URL(href, window.location.href);
+        } catch {
+          return;
+        }
+        if (
+          destination.origin === window.location.origin &&
+          destination.pathname === window.location.pathname &&
+          destination.search === window.location.search &&
+          destination.hash
+        )
+          return;
+        const draftState = record(
+          themeManager.getTilePaletteDraftState?.call(themeManager),
+        );
+        const syncState = pageSync?.status();
+        if (draftState?.dirty !== true && syncState?.status !== "failed")
+          return;
+        const leave = globalWindow.AccountPalettePageLeaveHandler;
+        if (typeof leave !== "function") return;
+        mouseEvent.preventDefault();
+        void leave().then((allowed) => {
+          if (allowed) window.location.assign(href);
+        });
+      },
+      true,
+    );
+  }
+
+  function localPaletteIdentityPresent(paletteId: string): boolean {
+    const getCustom = themeManager.getCustomTilePalettes;
+    const current =
+      typeof getCustom === "function" ? getCustom.call(themeManager) : null;
+    return (
+      Array.isArray(current) &&
+      current.some((item) => record(item)?.id === paletteId)
+    );
+  }
+
+  function blocksCloudApply(operation: PaletteOutboxOperation): boolean {
+    if (
+      (operation.kind === "create" || operation.kind === "save") &&
+      (operation.status === "duplicate_existing" ||
+        operation.status === "capacity_full" ||
+        operation.status === "base_revision_expired" ||
+        operation.status === "expired_operation")
+    ) {
+      return localPaletteIdentityPresent(operation.paletteId);
+    }
+    return ![
+      "saved",
+      "merged",
+      "unchanged",
+      "conflict_copy",
+      "deleted",
+    ].includes(operation.status);
+  }
+
+  async function drainPendingOutbox(
+    accountId: number,
+  ): Promise<"none" | "blocked" | "drained"> {
+    if (!outbox) return "none";
+    let before = await outbox.list(accountId);
+    const rekeyed = reconcileOutboxSnapshot(before);
+    if (rekeyed) {
+      await pageSync?.saveDraft();
+      before = await outbox.list(accountId);
+      reconcileOutboxSnapshot(before);
+    }
+    const effectiveBefore = latestOutboxOperations(before);
+    if (!effectiveBefore.some((operation) => blocksCloudApply(operation)))
+      return "none";
+    await outbox.drain({ force: true });
+    const after = await outbox.list(accountId);
+    reconcileOutboxSnapshot(after);
+    const blocked = latestOutboxOperations(after).filter((operation) =>
+      blocksCloudApply(operation),
+    );
+    if (blocked.length === 0) return "drained";
+    const latest = blocked.sort(
+      (left, right) => right.updatedAt - left.updatedAt,
+    )[0];
+    emitSyncState({
+      status:
+        latest.status === "retry_wait" ||
+        latest.status === "pending" ||
+        latest.status === "sending"
+          ? "queued"
+          : latest.status,
+      code: latest.lastError || latest.result?.code || latest.status,
+    });
+    return "blocked";
+  }
+  function resetDraftBaselineIfSafe(): void {
+    const draftState = record(
+      themeManager.getTilePaletteDraftState?.call(themeManager),
+    );
+    if (draftState?.dirty === true) return;
+    pageSync?.syncBaseline({ resetDraft: true });
+  }
+
+  async function bootstrapPaletteSync(): Promise<void> {
+    const accountId = resolvePaletteAccountId(accountStorage);
+    installPageSync(accountId);
+    if (accountId == null) {
+      await syncShareAvailability(true);
+      return;
+    }
+    const pendingState = await drainPendingOutbox(accountId);
+    if (pendingState === "blocked") {
+      await syncShareAvailability(true);
+      return;
+    }
+    if (pendingState === "drained") session.reset();
+    const result = await session.bootstrap();
+    if (result.status === "failed") {
+      emitSyncState({
+        status: "failed",
+        code: result.code || "ACCOUNT_PALETTE_BOOTSTRAP_FAILED",
+      });
+      return;
+    }
+    await session.loadLibrary();
+    resetDraftBaselineIfSafe();
+    if (outbox) void outbox.drain();
+    await syncShareAvailability(true);
+  }
+
+  void bootstrapPaletteSync().catch((error) => {
+    emitSyncState({
+      status: "failed",
+      code:
+        error instanceof Error
+          ? error.message
+          : "ACCOUNT_PALETTE_BOOTSTRAP_FAILED",
+    });
   });
-  window.addEventListener(
-    "uilanguagechange",
-    () => void syncShareAvailability(),
-  );
+
   window.addEventListener("auth-session-change", () => {
-    repository.switchOwner(resolvePaletteOwnerKey(storageLike), true);
-    void repository.sync().then(syncShareAvailability);
+    void bootstrapPaletteSync().catch((error) => {
+      emitSyncState({
+        status: "failed",
+        code:
+          error instanceof Error
+            ? error.message
+            : "ACCOUNT_PALETTE_BOOTSTRAP_FAILED",
+      });
+    });
+  });
+
+  window.addEventListener("tile-palette-document-change", () => {
+    void syncShareAvailability();
+  });
+  window.addEventListener("uilanguagechange", () => {
+    void syncShareAvailability();
+  });
+
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted) return;
+    pageSync?.dispose();
+    outbox?.dispose();
   });
 }
-
 export function bootstrapPalettePage(): void {
   installPaletteLegacyRuntime();
   bindDisplayModeSync({ documentLike: document, windowLike: window });

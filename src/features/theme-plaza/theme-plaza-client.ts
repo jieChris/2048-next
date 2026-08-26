@@ -2,10 +2,9 @@ import { buildApiBaseCandidates } from "../../services/api-base";
 import { fetchWithAuth } from "../../services/auth-session";
 import {
   parseAccountPaletteDocument,
-  parseAccountPaletteRemote,
   type AccountPaletteProfile,
-  type AccountPaletteRemoteState,
 } from "../palette/account-palette-repository";
+import type { AccountPaletteRecord } from "../palette/account-palette-session";
 
 export type ThemePlazaSort = "latest" | "most_referenced" | "most_liked";
 
@@ -188,12 +187,52 @@ function parseMyShare(value: unknown): ThemePlazaMyShare | null {
   return source ? ({ ...source } as ThemePlazaMyShare) : null;
 }
 
-export interface ThemePlazaSaveResult extends AccountPaletteRemoteState {
-  paletteId: string;
+export interface ThemePlazaSaveResult {
+  status: "saved" | "duplicate_existing" | "capacity_full";
+  operationId: string;
+  paletteId: string | null;
+  existingPaletteId: string | null;
+  palette: AccountPaletteRecord | null;
   copyCreated: boolean;
   firstReference: boolean;
   currentSaved: boolean;
+  reason: "duplicate_content" | "capacity_full" | "id_conflict" | null;
 }
+
+function parseThemePlazaPrivatePaletteRecord(
+  value: unknown,
+): AccountPaletteRecord | null {
+  const source = record(value);
+  const paletteId = text(source?.paletteId ?? source?.palette_id).trim();
+  const revision = safeInteger(source?.revision);
+  const wrapped = parseAccountPaletteDocument({
+    schema: 1,
+    format: 3,
+    activePaletteId: paletteId,
+    palettes: [source?.palette],
+  });
+  const palette = wrapped?.palettes[0] ?? null;
+  if (!paletteId || revision == null || revision < 1 || !palette) return null;
+  return {
+    paletteId,
+    revision,
+    palette: { ...palette },
+    contentHash: text(source?.contentHash ?? source?.content_hash),
+    createdAt: source?.createdAt == null ? null : text(source.createdAt),
+    updatedAt: source?.updatedAt == null ? null : text(source.updatedAt),
+  };
+}
+
+export type ThemePlazaSaveInput =
+  | {
+      operationId: string;
+      paletteId: string;
+      allowDuplicate?: boolean;
+    }
+  | {
+      operationId: string;
+      existingPaletteId: string;
+    };
 
 export interface ThemePlazaClient {
   capabilities(): Promise<ThemePlazaCapabilities>;
@@ -220,7 +259,7 @@ export interface ThemePlazaClient {
   vote(versionId: number, value: -1 | 0 | 1): Promise<JsonRecord>;
   save(
     versionId: number,
-    input: { revision: number; idempotencyKey: string },
+    input: ThemePlazaSaveInput,
   ): Promise<ThemePlazaSaveResult>;
   report(
     versionId: number,
@@ -392,26 +431,51 @@ export function createThemePlazaClient(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Idempotency-Key": input.idempotencyKey,
+            "Idempotency-Key": input.operationId,
           },
-          body: JSON.stringify({ revision: input.revision }),
+          body: JSON.stringify(input),
         },
       );
       const data = record(body.data);
-      const remote = parseAccountPaletteRemote(data);
-      const paletteId = text(data?.palette_id);
-      if (!remote || !paletteId)
+      const status = text(data?.status) as ThemePlazaSaveResult["status"];
+      const operationId = text(data?.operationId ?? data?.operation_id);
+      const paletteId =
+        data?.paletteId == null && data?.palette_id == null
+          ? null
+          : text(data.paletteId ?? data.palette_id);
+      const existingPaletteId =
+        data?.existingPaletteId == null && data?.existing_palette_id == null
+          ? null
+          : text(data.existingPaletteId ?? data.existing_palette_id);
+      const palette =
+        data?.palette == null
+          ? null
+          : parseThemePlazaPrivatePaletteRecord(data.palette);
+      if (
+        !data ||
+        !operationId ||
+        !["saved", "duplicate_existing", "capacity_full"].includes(status) ||
+        (status === "saved" && (!paletteId || !palette)) ||
+        (status === "duplicate_existing" && !existingPaletteId)
+      )
         throw new ThemePlazaClientError(
           "THEME_PLAZA_RESPONSE_INVALID",
           500,
           "invalid save response",
         );
       return {
-        ...remote,
+        status,
+        operationId,
         paletteId,
-        copyCreated: boolean(data?.copy_created),
-        firstReference: boolean(data?.first_reference),
-        currentSaved: boolean(data?.current_saved),
+        existingPaletteId,
+        palette,
+        copyCreated: boolean(data.copyCreated ?? data.copy_created),
+        firstReference: boolean(data.firstReference ?? data.first_reference),
+        currentSaved: boolean(data.currentSaved ?? data.current_saved),
+        reason:
+          data.reason == null
+            ? null
+            : (text(data.reason) as ThemePlazaSaveResult["reason"]),
       };
     },
     async report(versionId, input) {

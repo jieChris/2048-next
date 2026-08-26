@@ -1031,9 +1031,20 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-settings-
 
 .palette-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(5, auto);
+  grid-template-columns: minmax(0, 1fr) repeat(6, auto);
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.palette-save-btn {
+  border-color: var(--enamel-button-teal);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--enamel-button-gold) 72%, transparent), 0 5px 12px color-mix(in srgb, var(--app-accent) 18%, transparent);
+}
+
+.palette-save-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .palette-name-input {
@@ -1749,6 +1760,27 @@ html[data-night-background="1"] body[data-page="palette-hub"] .palette-settings-
   min-height: 20px;
   font-size: 13px;
   color: var(--pp-muted);
+}
+
+.palette-sync-status {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.palette-sync-status.ok {
+  color: var(--app-success);
+}
+
+.palette-sync-status.pending {
+  color: var(--app-accent);
+}
+
+.palette-sync-status.err {
+  color: var(--app-danger);
 }
 
 .palette-note.ok {

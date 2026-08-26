@@ -7,6 +7,17 @@ vi.mock("../../src/bootstrap/access-gate", () => ({
   runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
   shouldRunBetaAccessGate: vi.fn((pageId: string) => !["admin", "beta-login", "beta-access", "cache-reset"].includes(pageId))
 }));
+vi.mock("../../src/services/auth-session", () => ({
+  restoreAuthSession: vi.fn(async () => ({ status: "guest" })),
+  getAuthToken: vi.fn((options?: { storageLike?: Pick<Storage, "getItem"> | null }) =>
+    options?.storageLike?.getItem("2048_auth_token_v1") || null,
+  ),
+}));
+vi.mock("../../src/features/palette/account-palette-session", () => ({
+  getAccountPaletteSessionController: () => ({
+    bootstrap: vi.fn(async () => ({ status: "guest", snapshot: null })),
+  }),
+}));
 
 const originalDocument = globalThis.document;
 const originalWindow = globalThis.window;

@@ -1,10 +1,6 @@
 import { getAuthToken } from "../services/auth-session";
-import {
-  AccountPaletteRepository,
-  createHttpAccountPaletteTransport,
-} from "../features/palette/account-palette-repository";
-import { mirrorAccountPalettesToLegacyWebStorage } from "../features/palette/web-palette-local-mirror";
-import { randomId } from "../utils/crypto-random";
+import { createPaletteUuidV4 } from "../features/palette/account-palette-editor";
+import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
 import {
   createBrowserStorageAccess,
   readStorageValue,
@@ -15,6 +11,8 @@ import {
   type ThemePlazaCapabilities,
   type ThemePlazaListing,
   type ThemePlazaMyShare,
+  type ThemePlazaSaveInput,
+  type ThemePlazaSaveResult,
   type ThemePlazaSort,
 } from "../features/theme-plaza/theme-plaza-client";
 import {
@@ -24,37 +22,8 @@ import {
 
 const client = createThemePlazaClient();
 const browserStorage = createBrowserStorageAccess();
-let accountPaletteRepository: AccountPaletteRepository | null = null;
 const localStorageLike = () => browserStorage.local();
 
-function accountOwnerKey(): "guest" | `user:${number}` {
-  const storage = localStorageLike();
-  const userId = Number(readStorageValue(storage, "2048_auth_userId_v1"));
-  return getAuthToken({ storageLike: storage }) &&
-    Number.isSafeInteger(userId) &&
-    userId >= 0
-    ? `user:${userId}`
-    : "guest";
-}
-
-async function syncedAccountPaletteRepository(): Promise<AccountPaletteRepository> {
-  const storage = localStorageLike();
-  if (!storage || accountOwnerKey() === "guest")
-    throw new Error(copy("请先登录。", "Please sign in first."));
-  if (!accountPaletteRepository) {
-    accountPaletteRepository = new AccountPaletteRepository({
-      storage,
-      ownerKey: accountOwnerKey(),
-      transport: createHttpAccountPaletteTransport(),
-    });
-  } else {
-    accountPaletteRepository.switchOwner(accountOwnerKey());
-  }
-  const result = await accountPaletteRepository.sync();
-  if (result !== "synced")
-    throw new Error(copy("色板同步尚未完成。", "Palette sync is not ready."));
-  return accountPaletteRepository;
-}
 const content = () =>
   document.getElementById("theme-plaza-content") as HTMLElement;
 const statusNode = () =>
@@ -146,30 +115,81 @@ function actionButton(
     "replay-button theme-plaza-save",
     item.viewer.saved
       ? copy("已保存", "Saved")
-      : capabilities.writeEnabled
+      : capabilities.saveEnabled
         ? copy("一键保存", "Save a copy")
         : copy("保存功能准备中", "Saving coming soon"),
   );
   button.type = "button";
-  button.disabled = item.viewer.saved || !capabilities.writeEnabled;
-  if (capabilities.writeEnabled && !item.viewer.saved) {
+  button.disabled = item.viewer.saved || !capabilities.saveEnabled;
+  let pendingRequest: ThemePlazaSaveInput | null = null;
+  const send = async (
+    input?: ThemePlazaSaveInput,
+  ): Promise<ThemePlazaSaveResult> => {
+    if (input) pendingRequest = input;
+    if (!pendingRequest) {
+      pendingRequest = {
+        operationId: createPaletteUuidV4(),
+        paletteId: createPaletteUuidV4(),
+        allowDuplicate: false,
+      };
+    }
+    const result = await client.save(item.version.id, pendingRequest);
+    pendingRequest = null;
+    return result;
+  };
+  if (capabilities.saveEnabled && !item.viewer.saved) {
     button.addEventListener("click", async () => {
       button.disabled = true;
       const original = button.textContent || "";
       button.textContent = copy("保存中…", "Saving…");
       try {
-        const repository = await syncedAccountPaletteRepository();
-        const result = await client.save(item.version.id, {
-          revision: repository.snapshot().revision,
-          idempotencyKey: randomId("theme-save", 20),
-        });
-        repository.acceptRemote(result);
-        const storage = localStorageLike();
-        if (storage)
-          mirrorAccountPalettesToLegacyWebStorage(storage, result.document);
+        let result = await send();
+        if (result.status === "duplicate_existing") {
+          const keepCopy = window.confirm(
+            copy(
+              "已存在视觉内容相同的色板。仍然保留为新色板吗？",
+              "A visually identical palette exists. Keep a new copy anyway?",
+            ),
+          );
+          if (keepCopy && result.paletteId) {
+            result = await send({
+              operationId: createPaletteUuidV4(),
+              paletteId: result.paletteId,
+              allowDuplicate: true,
+            });
+          } else if (result.existingPaletteId) {
+            const useExisting = window.confirm(
+              copy(
+                "改用已有色板并记录本次保存吗？",
+                "Use the existing palette and record this save?",
+              ),
+            );
+            if (!useExisting) {
+              button.disabled = false;
+              button.textContent = original;
+              return;
+            }
+            result = await send({
+              operationId: createPaletteUuidV4(),
+              existingPaletteId: result.existingPaletteId,
+            });
+          }
+        }
+        if (result.status === "capacity_full") {
+          throw new Error(
+            copy(
+              "账号色板已达到十套上限；引用次数没有增加。",
+              "Your account already has ten palettes; the save count was not increased.",
+            ),
+          );
+        }
+        if (result.status !== "saved" || !result.currentSaved) {
+          throw new Error(copy("色板尚未保存。", "Palette was not saved."));
+        }
         item.viewer.saved = true;
         item.stats.references += result.firstReference ? 1 : 0;
         button.textContent = copy("已保存", "Saved");
+        getAccountPaletteSessionController().reset();
         setStatus(
           copy(
             "色板副本已保存；当前使用色板没有改变。",
@@ -178,6 +198,7 @@ function actionButton(
           "success",
         );
       } catch (error) {
+        if (error instanceof ThemePlazaClientError) pendingRequest = null;
         button.disabled = false;
         button.textContent = original;
         setStatus(
@@ -189,7 +210,6 @@ function actionButton(
   }
   return button;
 }
-
 function listingCard(
   item: ThemePlazaListing,
   capabilities: ThemePlazaCapabilities,
@@ -331,7 +351,7 @@ function engagementActions(
 ): HTMLElement {
   const group = element("div", "theme-plaza-engagement");
   const canAct =
-    capabilities.writeEnabled &&
+    capabilities.reactionEnabled &&
     !!getAuthToken({ storageLike: localStorageLike() }) &&
     !item.viewer.owned;
   const voteButtons = new Map<-1 | 1, HTMLButtonElement>();
@@ -548,7 +568,7 @@ async function renderMine(): Promise<void> {
   const note = element(
     "p",
     "",
-    result.capabilities.writeEnabled
+    result.capabilities.shareEnabled
       ? copy(
           "可以从色板中心更新分享。",
           "Update your share from the palette center.",

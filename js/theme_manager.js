@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   var STORAGE_KEY = "theme_profile_v1";
   var STYLE_ID = "theme-dynamic-style";
   var POW2_TILE_VALUES = [
@@ -22,6 +22,12 @@
   var DEFAULT_GLOW_INTENSITY = 50;
   var DEFAULT_GLOW_MULTIPLIER = 100;
   var MAX_GLOW_MULTIPLIER = 200;
+  var tilePaletteDraftMode = false;
+  var tilePaletteDraftProfiles = null;
+  var tilePaletteDraftActiveId = null;
+  var tilePaletteDraftDirty = false;
+  var tilePaletteDraftDirtyIds = {};
+  var tilePaletteDraftBypass = false;
   var TILE_PALETTE_DIMENSION_SUFFIX = {
     background: "",
     text: "Text",
@@ -202,8 +208,6 @@
       neon: !!config.neon,
       blackTiles: !!config.blackTiles,
       flashy: !!config.flashy,
-      flashy: !!config.flashy,
-      cyberpunk: !!config.cyberpunk,
       cyberpunk: !!config.cyberpunk,
       retro: !!config.retro,
       glass: !!config.glass,
@@ -1204,10 +1208,20 @@
     };
   }
 
+  function clonePaletteExtensions(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return undefined;
+    }
+  }
+
   function clonePaletteRecord(record) {
     return {
       id: String(record.id || ""),
       name: String(record.name || ""),
+      baseSkin: typeof record.baseSkin === "string" && record.baseSkin ? record.baseSkin : "web",
       pow2: Array.isArray(record.pow2) ? record.pow2.slice(0, POW2_TILE_VALUES.length) : [],
       fibonacci: Array.isArray(record.fibonacci) ? record.fibonacci.slice(0, FIB_PREVIEW_VALUES.length) : [],
       pow2Text: Array.isArray(record.pow2Text) ? record.pow2Text.slice(0, POW2_TILE_VALUES.length) : [],
@@ -1218,6 +1232,7 @@
       fibonacciGlow: Array.isArray(record.fibonacciGlow) ? record.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
       glowIntensity: normalizeGlowIntensity(record.glowIntensity),
       glowMultipliers: normalizeGlowMultiplierArray(record.glowMultipliers),
+      extensions: clonePaletteExtensions(record.extensions),
       createdAt: Number(record.createdAt) || Date.now(),
       updatedAt: Number(record.updatedAt) || Date.now(),
       source: String(record.source || "custom"),
@@ -1307,6 +1322,7 @@
       result.push({
         id: id,
         name: name,
+        baseSkin: typeof item.baseSkin === "string" && item.baseSkin ? item.baseSkin : "web",
         pow2: normalizePaletteColorArray(item.pow2, pow2Fallback),
         fibonacci: normalizePaletteColorArray(item.fibonacci, fibFallback),
         pow2Text: resolvePaletteDimensionColors(fallbackTheme, item, "pow2", "text"),
@@ -1317,6 +1333,7 @@
         fibonacciGlow: resolvePaletteDimensionColors(fallbackTheme, item, "fibonacci", "glow"),
         glowIntensity: normalizeGlowIntensity(item.glowIntensity),
         glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
+        extensions: clonePaletteExtensions(item.extensions),
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now(),
         source: "custom",
@@ -1324,6 +1341,129 @@
       });
     }
     return result;
+  }
+
+  function markTilePaletteDraftDirty(paletteId) {
+    var id = String(paletteId || "");
+    if (id) tilePaletteDraftDirtyIds[id] = true;
+  }
+
+  function readWorkingTilePaletteProfiles() {
+    if (tilePaletteDraftBypass) return readStoredTilePaletteProfiles();
+    return tilePaletteDraftMode && Array.isArray(tilePaletteDraftProfiles)
+      ? tilePaletteDraftProfiles.map(clonePaletteRecord)
+      : readStoredTilePaletteProfiles();
+  }
+
+  function writeWorkingTilePaletteProfiles(list) {
+    if (tilePaletteDraftBypass || !tilePaletteDraftMode) return writeStoredTilePaletteProfiles(list);
+    if (!Array.isArray(list) || list.length > 10) return false;
+    tilePaletteDraftProfiles = list.map(clonePaletteRecord);
+    tilePaletteDraftDirty = true;
+    return true;
+  }
+
+  function readWorkingActiveTilePaletteId() {
+    if (tilePaletteDraftBypass) return readActiveTilePaletteId();
+    return tilePaletteDraftMode && tilePaletteDraftActiveId
+      ? String(tilePaletteDraftActiveId)
+      : readActiveTilePaletteId();
+  }
+
+  function writeWorkingActiveTilePaletteId(value) {
+    if (tilePaletteDraftBypass || !tilePaletteDraftMode) return writeActiveTilePaletteId(value);
+    tilePaletteDraftActiveId = String(value || DEFAULT_TILE_PALETTE_ID);
+    tilePaletteDraftDirty = true;
+    return true;
+  }
+
+  function beginTilePaletteDraft() {
+    if (!tilePaletteDraftMode) {
+      tilePaletteDraftProfiles = readStoredTilePaletteProfiles();
+      tilePaletteDraftActiveId = readActiveTilePaletteId();
+      tilePaletteDraftDirty = false;
+      tilePaletteDraftDirtyIds = {};
+      tilePaletteDraftMode = true;
+    }
+    return getTilePaletteDraftState();
+  }
+
+  function getTilePaletteDraftState() {
+    return {
+      enabled: tilePaletteDraftMode,
+      dirty: tilePaletteDraftDirty,
+      dirtyPaletteIds: Object.keys(tilePaletteDraftDirtyIds),
+      profiles: tilePaletteDraftMode && Array.isArray(tilePaletteDraftProfiles)
+        ? tilePaletteDraftProfiles.map(clonePaletteRecord)
+        : [],
+      activePaletteId: tilePaletteDraftMode
+        ? String(tilePaletteDraftActiveId || DEFAULT_TILE_PALETTE_ID)
+        : readActiveTilePaletteId()
+    };
+  }
+
+  function runWithStoredTilePaletteWrites(callback) {
+    var previous = tilePaletteDraftBypass;
+    tilePaletteDraftBypass = true;
+    try {
+      return callback();
+    } finally {
+      tilePaletteDraftBypass = previous;
+    }
+  }
+
+  function rekeyTilePaletteDraft(previousId, nextId) {
+    if (!tilePaletteDraftMode || !Array.isArray(tilePaletteDraftProfiles)) return false;
+    var oldId = String(previousId || "");
+    var newId = String(nextId || "");
+    if (!oldId || !newId || oldId === newId) return false;
+    var index = findCustomPaletteIndexById(tilePaletteDraftProfiles, oldId);
+    if (index < 0 || findCustomPaletteIndexById(tilePaletteDraftProfiles, newId) >= 0) return false;
+    var rekeyed = clonePaletteRecord(tilePaletteDraftProfiles[index]);
+    rekeyed.id = newId;
+    tilePaletteDraftProfiles[index] = rekeyed;
+    if (tilePaletteDraftActiveId === oldId) tilePaletteDraftActiveId = newId;
+    if (tilePaletteDraftDirtyIds[oldId]) {
+      delete tilePaletteDraftDirtyIds[oldId];
+      tilePaletteDraftDirtyIds[newId] = true;
+    }
+    applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("draft-rekey");
+    return true;
+  }
+
+  function saveTilePaletteDraft() {
+    if (!tilePaletteDraftMode) return true;
+    var profiles = Array.isArray(tilePaletteDraftProfiles) ? tilePaletteDraftProfiles : [];
+    var previousProfiles = readStoredTilePaletteProfiles();
+    var previousActive = readActiveTilePaletteId();
+    var savedProfiles = writeStoredTilePaletteProfiles(profiles);
+    var savedActive = savedProfiles && writeActiveTilePaletteId(tilePaletteDraftActiveId);
+    if (!savedProfiles || !savedActive) {
+      writeStoredTilePaletteProfiles(previousProfiles);
+      writeActiveTilePaletteId(previousActive);
+      return false;
+    }
+    tilePaletteDraftMode = false;
+    tilePaletteDraftProfiles = null;
+    tilePaletteDraftActiveId = null;
+    tilePaletteDraftDirty = false;
+    tilePaletteDraftDirtyIds = {};
+    applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("draft-save");
+    return true;
+  }
+
+  function discardTilePaletteDraft() {
+    if (!tilePaletteDraftMode) return true;
+    tilePaletteDraftMode = false;
+    tilePaletteDraftProfiles = null;
+    tilePaletteDraftActiveId = null;
+    tilePaletteDraftDirty = false;
+    tilePaletteDraftDirtyIds = {};
+    applyTheme(currentThemeId);
+    notifyTilePaletteDocumentChange("draft-discard");
+    return true;
   }
 
   function writeStoredTilePaletteProfiles(list) {
@@ -1347,14 +1487,14 @@
 
   function getTilePalettesForTheme(theme) {
     var list = [createFollowThemePalette(theme)].concat(createBuiltinPaletteRecords(theme));
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     for (var i = 0; i < custom.length; i++) list.push(custom[i]);
     return list;
   }
 
   function resolveActiveTilePalette(theme) {
     var list = getTilePalettesForTheme(theme);
-    var activeId = readActiveTilePaletteId();
+    var activeId = readWorkingActiveTilePaletteId();
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === activeId) return list[i];
     }
@@ -1383,14 +1523,24 @@
   }
 
   function generateTilePaletteId() {
-    if (
+    var cryptoLike = typeof window === "undefined" ? null : window.crypto;
+    if (cryptoLike && typeof cryptoLike.randomUUID === "function") return cryptoLike.randomUUID().toLowerCase();
+    var bytes = new Uint8Array(16);
+    if (cryptoLike && typeof cryptoLike.getRandomValues === "function") {
+      cryptoLike.getRandomValues(bytes);
+    } else if (
       typeof CoreCryptoRandomRuntime !== "undefined" &&
       CoreCryptoRandomRuntime &&
-      typeof CoreCryptoRandomRuntime.randomId === "function"
+      typeof CoreCryptoRandomRuntime.fillRandomValues === "function"
     ) {
-      return CoreCryptoRandomRuntime.randomId("palette", { length: 6 });
+      CoreCryptoRandomRuntime.fillRandomValues(bytes);
+    } else {
+      for (var i = 0; i < bytes.length; i++) bytes[i] = (Date.now() + i * 31) & 255;
     }
-    return "palette_" + Date.now().toString(36) + "_000000";
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    var hex = Array.prototype.map.call(bytes, function (value) { return value.toString(16).padStart(2, "0"); }).join("");
+    return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
   }
 
   function findCustomPaletteIndexById(list, id) {
@@ -2767,7 +2917,7 @@
         break;
       }
     }
-    writeActiveTilePaletteId(targetId);
+    writeWorkingActiveTilePaletteId(targetId);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("active");
     return targetId;
@@ -2783,7 +2933,7 @@
         break;
       }
     }
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     if (custom.length >= 10) return null;
     var usedNames = all.map(function (item) { return item.name; });
     var finalName = ensureUniquePaletteName(usedNames, name || "自定义色板");
@@ -2791,6 +2941,7 @@
     var created = {
       id: generateTilePaletteId(),
       name: finalName,
+      baseSkin: typeof base.baseSkin === "string" && base.baseSkin ? base.baseSkin : "web",
       pow2: normalizePaletteColorArray(base.pow2, buildThemePaletteColors(theme, "pow2")),
       fibonacci: normalizePaletteColorArray(base.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
       pow2Text: resolvePaletteDimensionColors(theme, base, "pow2", "text"),
@@ -2801,21 +2952,23 @@
       fibonacciGlow: resolvePaletteDimensionColors(theme, base, "fibonacci", "glow"),
       glowIntensity: normalizeGlowIntensity(base.glowIntensity),
       glowMultipliers: normalizeGlowMultiplierArray(base.glowMultipliers),
+      extensions: clonePaletteExtensions(base.extensions),
       createdAt: now,
       updatedAt: now,
       source: "custom",
       locked: false
     };
     custom.push(created);
-    writeStoredTilePaletteProfiles(custom);
-    writeActiveTilePaletteId(created.id);
+    writeWorkingTilePaletteProfiles(custom);
+    markTilePaletteDraftDirty(created.id);
+    writeWorkingActiveTilePaletteId(created.id);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("create");
     return clonePaletteRecord(created);
   }
 
   function renameTilePalette(id, name) {
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return null;
     var current = custom[idx];
@@ -2825,20 +2978,22 @@
     current.name = ensureUniquePaletteName(listNames, name || current.name || "自定义色板");
     current.updatedAt = Date.now();
     custom[idx] = current;
-    writeStoredTilePaletteProfiles(custom);
+    writeWorkingTilePaletteProfiles(custom);
+    markTilePaletteDraftDirty(id);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("rename");
     return clonePaletteRecord(current);
   }
 
   function deleteTilePalette(id) {
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return false;
     custom.splice(idx, 1);
-    writeStoredTilePaletteProfiles(custom);
-    if (readActiveTilePaletteId() === id) {
-      writeActiveTilePaletteId(DEFAULT_TILE_PALETTE_ID);
+    writeWorkingTilePaletteProfiles(custom);
+    markTilePaletteDraftDirty(id);
+    if (readWorkingActiveTilePaletteId() === id) {
+      writeWorkingActiveTilePaletteId(FOLLOW_THEME_TILE_PALETTE_ID);
     }
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("delete");
@@ -2854,7 +3009,7 @@
     var maxIndex = targetRuleset === "fibonacci" ? FIB_PREVIEW_VALUES.length - 1 : POW2_TILE_VALUES.length - 1;
     var targetIndex = Math.max(0, Math.min(maxIndex, Number(hasDimension ? indexOrColor : dimensionOrIndex) || 0));
     var color = hasDimension ? maybeColor : indexOrColor;
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return false;
     var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
@@ -2888,43 +3043,47 @@
     }
     item.updatedAt = Date.now();
     custom[idx] = item;
-    writeStoredTilePaletteProfiles(custom);
+    writeWorkingTilePaletteProfiles(custom);
+    markTilePaletteDraftDirty(id);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("color");
     return true;
   }
 
   function updateTilePaletteGlowIntensity(id, intensity) {
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return false;
     custom[idx].glowIntensity = normalizeGlowIntensity(intensity);
     custom[idx].updatedAt = Date.now();
-    if (!writeStoredTilePaletteProfiles(custom)) return false;
+    if (!writeWorkingTilePaletteProfiles(custom)) return false;
+    markTilePaletteDraftDirty(id);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("glow-intensity");
     return true;
   }
 
   function updateTilePaletteGlowMultiplier(id, index, multiplier) {
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var idx = findCustomPaletteIndexById(custom, id);
     if (idx < 0) return false;
     var targetIndex = Math.max(0, Math.min(POW2_TILE_VALUES.length - 1, Number(index) || 0));
     custom[idx].glowMultipliers = normalizeGlowMultiplierArray(custom[idx].glowMultipliers);
     custom[idx].glowMultipliers[targetIndex] = normalizeGlowMultiplier(multiplier);
     custom[idx].updatedAt = Date.now();
-    if (!writeStoredTilePaletteProfiles(custom)) return false;
+    if (!writeWorkingTilePaletteProfiles(custom)) return false;
+    markTilePaletteDraftDirty(id);
     applyTheme(currentThemeId);
     notifyTilePaletteDocumentChange("glow-multiplier");
     return true;
   }
 
   function exportTilePalettes() {
-    var custom = readStoredTilePaletteProfiles().map(function (item) {
+    var custom = readWorkingTilePaletteProfiles().map(function (item) {
       return {
         id: item.id,
         name: item.name,
+        baseSkin: typeof item.baseSkin === "string" && item.baseSkin ? item.baseSkin : "web",
         pow2: Array.isArray(item.pow2) ? item.pow2.slice(0, POW2_TILE_VALUES.length) : [],
         fibonacci: Array.isArray(item.fibonacci) ? item.fibonacci.slice(0, FIB_PREVIEW_VALUES.length) : [],
         pow2Text: Array.isArray(item.pow2Text) ? item.pow2Text.slice(0, POW2_TILE_VALUES.length) : [],
@@ -2935,6 +3094,7 @@
         fibonacciGlow: Array.isArray(item.fibonacciGlow) ? item.fibonacciGlow.slice(0, FIB_PREVIEW_VALUES.length) : [],
         glowIntensity: normalizeGlowIntensity(item.glowIntensity),
         glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
+        extensions: clonePaletteExtensions(item.extensions),
         createdAt: Number(item.createdAt) || Date.now(),
         updatedAt: Number(item.updatedAt) || Date.now()
       };
@@ -2959,7 +3119,7 @@
       return { importedCount: 0, renamed: [] };
     }
     var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
-    var custom = readStoredTilePaletteProfiles();
+    var custom = readWorkingTilePaletteProfiles();
     var remainingCapacity = Math.max(0, 10 - custom.length);
     if (remainingCapacity === 0) {
       return { importedCount: 0, renamed: [], error: "palette_limit_reached" };
@@ -2977,9 +3137,11 @@
       }
       usedNames.push(finalName);
       var now = Date.now();
+      var importedPaletteId = generateTilePaletteId();
       custom.push({
-        id: generateTilePaletteId(),
+        id: importedPaletteId,
         name: finalName,
+        baseSkin: typeof item.baseSkin === "string" && item.baseSkin ? item.baseSkin : "web",
         pow2: normalizePaletteColorArray(item.pow2, buildThemePaletteColors(theme, "pow2")),
         fibonacci: normalizePaletteColorArray(item.fibonacci, buildThemePaletteColors(theme, "fibonacci")),
         pow2Text: resolvePaletteDimensionColors(theme, item, "pow2", "text"),
@@ -2990,15 +3152,17 @@
         fibonacciGlow: resolvePaletteDimensionColors(theme, item, "fibonacci", "glow"),
         glowIntensity: normalizeGlowIntensity(item.glowIntensity),
         glowMultipliers: normalizeGlowMultiplierArray(item.glowMultipliers),
+        extensions: clonePaletteExtensions(item.extensions),
         createdAt: Number(item.createdAt) || now,
         updatedAt: Number(item.updatedAt) || now,
         source: "custom",
         locked: false
       });
+      markTilePaletteDraftDirty(importedPaletteId);
       importedCount += 1;
     }
     if (importedCount > 0) {
-      writeStoredTilePaletteProfiles(custom);
+      writeWorkingTilePaletteProfiles(custom);
       applyTheme(currentThemeId);
       notifyTilePaletteDocumentChange("import");
     }
@@ -3020,8 +3184,14 @@
     getCurrentTheme: function () { return currentThemeId; },
     getTilePalettes: getTilePalettes,
     getCustomTilePalettes: function () {
-      return readStoredTilePaletteProfiles().map(clonePaletteRecord);
+      return readWorkingTilePaletteProfiles().map(clonePaletteRecord);
     },
+    beginTilePaletteDraft: beginTilePaletteDraft,
+    getTilePaletteDraftState: getTilePaletteDraftState,
+    saveTilePaletteDraft: saveTilePaletteDraft,
+    discardTilePaletteDraft: discardTilePaletteDraft,
+    rekeyTilePaletteDraft: rekeyTilePaletteDraft,
+    runWithStoredTilePaletteWrites: runWithStoredTilePaletteWrites,
     replaceCustomTilePalettes: function (palettes, options) {
       var source = Array.isArray(palettes) ? palettes : [];
       if (source.length > 10) return false;
@@ -3046,7 +3216,7 @@
         previousCustom.some(function (item) { return item.id === currentActiveId; }) &&
         !normalized.some(function (item) { return item.id === currentActiveId; })
       ) {
-        writeActiveTilePaletteId(DEFAULT_TILE_PALETTE_ID);
+        writeActiveTilePaletteId(FOLLOW_THEME_TILE_PALETTE_ID);
       }
       applyTheme(currentThemeId);
       notifyTilePaletteDocumentChange(options && options.source || "replace");

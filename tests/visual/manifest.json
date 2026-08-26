@@ -100,8 +100,8 @@
         "light",
         "night"
       ],
-      "updatedAt": "2026-08-25",
-      "reason": "主题广场与审核通知完成后，重设计设置页语言/外观快捷按钮，并按产品要求移除页头练习板入口；覆盖浅色/夜间及四档视口。",
+      "updatedAt": "2026-08-26",
+      "reason": "T08 增加草稿、明确保存按钮、账号同步状态与离线队列入口；T09 按当前色板权威状态启用细粒度分享资格并恢复审核成功通知，更新 palette 页面、swatch 与 submission notice 在受影响视口的浅色/夜间基线。",
       "baselineEnvironment": "Playwright Chromium on macOS; scale=css",
       "status": "approved"
     }

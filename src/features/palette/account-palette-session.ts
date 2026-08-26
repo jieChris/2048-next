@@ -235,6 +235,47 @@ function parseLibraryResponse(value: unknown): AccountPaletteLibraryState | null
   };
 }
 
+function mergeLibraryPages(
+  base: AccountPaletteLibraryState | null,
+  pages: AccountPaletteLibraryState[],
+): AccountPaletteLibraryState {
+  const paletteMap = new Map<string, AccountPaletteRecord>();
+  const tombstoneMap = new Map<string, Record<string, unknown>>();
+  const changes: Array<Record<string, unknown>> = [];
+  if (base) {
+    base.palettes.forEach((item) => paletteMap.set(item.paletteId, item));
+    base.tombstones.forEach((item) => {
+      const id = text(record(item)?.paletteId);
+      if (id) tombstoneMap.set(id, item);
+    });
+    changes.push(...base.changes);
+  }
+  const latest = pages[pages.length - 1] || base;
+  for (const page of pages) {
+    page.palettes.forEach((item) => {
+      paletteMap.set(item.paletteId, item);
+      tombstoneMap.delete(item.paletteId);
+    });
+    page.tombstones.forEach((item) => {
+      const id = text(record(item)?.paletteId);
+      if (id) {
+        tombstoneMap.set(id, item);
+        paletteMap.delete(id);
+      }
+    });
+    changes.push(...page.changes);
+  }
+  if (!latest) throw new Error("account_palette_library_empty");
+  return {
+    ...latest,
+    palettes: Array.from(paletteMap.values()),
+    tombstones: Array.from(tombstoneMap.values()),
+    changes,
+    hasMore: false,
+    resetRequired: false,
+  };
+}
+
 function readCache(storageLike: StorageLike | null | undefined, accountId: number): AccountPaletteSessionSnapshot | null {
   if (!storageLike) return null;
   try {
@@ -271,28 +312,60 @@ function applySelectionToThemeManager(
   snapshot: AccountPaletteSessionSnapshot,
 ): boolean {
   if (!themeManager) return false;
+  const draftStateReader = themeManager.getTilePaletteDraftState;
+  if (typeof draftStateReader === "function") {
+    const draftState = draftStateReader.call(themeManager);
+    if (
+      draftState &&
+      typeof draftState === "object" &&
+      (draftState as Record<string, unknown>).dirty === true
+    )
+      return false;
+  }
   const setActive = themeManager.setActiveTilePalette;
   const replace = themeManager.replaceCustomTilePalettes;
   const selection = snapshot.selection.selection;
   if (selection.kind === "pending") return false;
+  const runAuthoritative = (callback: () => unknown): boolean => {
+    const bypass = themeManager.runWithStoredTilePaletteWrites;
+    const result =
+      typeof bypass === "function"
+        ? bypass.call(themeManager, callback)
+        : callback();
+    return result !== false;
+  };
   if (selection.kind === "follow_theme") {
     if (typeof setActive !== "function") return false;
-    setActive.call(themeManager, "cold-cyan-steps");
+    runAuthoritative(() => setActive.call(themeManager, "follow-theme"));
     return true;
   }
   if (selection.kind === "builtin") {
     if (typeof setActive !== "function") return false;
-    setActive.call(themeManager, selection.paletteId?.replace(/^builtin:/u, "") || "cold-cyan-steps");
+    runAuthoritative(() =>
+      setActive.call(
+        themeManager,
+        selection.paletteId?.replace(/^builtin:/u, "") || "cold-cyan-steps",
+      ),
+    );
     return true;
   }
   if (!snapshot.selectedPalette || typeof replace !== "function") return false;
   const getCustom = themeManager.getCustomTilePalettes;
-  const existing = typeof getCustom === "function" && Array.isArray(getCustom.call(themeManager))
-    ? getCustom.call(themeManager) as Array<Record<string, unknown>>
-    : [];
-  const merged = existing.filter((item) => text(item.id) !== snapshot.selectedPalette?.paletteId);
+  const existing =
+    typeof getCustom === "function" &&
+    Array.isArray(getCustom.call(themeManager))
+      ? (getCustom.call(themeManager) as Array<Record<string, unknown>>)
+      : [];
+  const merged = existing.filter(
+    (item) => text(item.id) !== snapshot.selectedPalette?.paletteId,
+  );
   merged.push(clone(snapshot.selectedPalette.palette));
-  if (replace.call(themeManager, merged, { activePaletteId: snapshot.selectedPalette.paletteId, source: "account-sync" }) !== false) return true;
+  const apply = () =>
+    replace.call(themeManager, merged, {
+      activePaletteId: snapshot.selectedPalette?.paletteId,
+      source: "account-sync",
+    });
+  if (runAuthoritative(apply) !== false) return true;
   return false;
 }
 
@@ -408,35 +481,105 @@ export function createAccountPaletteSessionController(
 
   async function loadLibrary(): Promise<AccountPaletteSessionResult> {
     const bootstrapped = await bootstrap();
-    if (bootstrapped.status === "guest" || !bootstrapped.snapshot) return bootstrapped;
+    if (bootstrapped.status === "guest" || !bootstrapped.snapshot)
+      return bootstrapped;
     const owner = ensureIdentity();
     if (!owner) return { status: "guest", snapshot: null };
     const key = owner.key;
-    if (libraryLoaded.has(key) && current) return { status: "cached", snapshot: clone(current) };
+    if (libraryLoaded.has(key) && current)
+      return { status: "cached", snapshot: clone(current) };
     const existingPromise = libraryPromises.get(key);
     if (existingPromise) return existingPromise;
     const requestGeneration = generation;
     const promise = (async (): Promise<AccountPaletteSessionResult> => {
       try {
-        const cursor = current?.library?.nextCursor;
-        const knownIds = (current?.library?.palettes || []).map((item) => item.paletteId).slice(0, MAX_KNOWN_PALETTE_IDS);
-        const query = new URLSearchParams();
-        if (cursor) query.set("cursor", cursor);
-        for (const id of knownIds) query.append("known_palette_id", id);
-        let { response, body } = await fetchJson(`/me/palettes${query.toString() ? `?${query.toString()}` : ""}`);
-        let library = parseLibraryResponse(body);
-        if (library?.resetRequired) {
+        const initialCursor = current?.library?.nextCursor || "";
+        const initialKnownIds = (current?.library?.palettes || [])
+          .map((item) => item.paletteId)
+          .slice(0, MAX_KNOWN_PALETTE_IDS);
+        const buildLibraryQuery = (cursorValue: string, knownIds: string[]) => {
+          const query = new URLSearchParams();
+          if (cursorValue) query.set("cursor", cursorValue);
+          for (const id of knownIds) query.append("known_palette_id", id);
+          return query.toString();
+        };
+        let queryString = buildLibraryQuery(initialCursor, initialKnownIds);
+        let { response, body } = await fetchJson(
+          `/me/palettes${queryString ? `?${queryString}` : ""}`,
+        );
+        let firstPage = parseLibraryResponse(body);
+        let baseLibrary = initialCursor ? current?.library || null : null;
+        if (firstPage?.resetRequired) {
           ({ response, body } = await fetchJson("/me/palettes"));
-          library = parseLibraryResponse(body);
+          firstPage = parseLibraryResponse(body);
+          baseLibrary = null;
         }
-        if (!response.ok || body?.success !== true || !library) throw new Error(text(body?.code || body?.error || `HTTP_${response.status}`));
+        if (!response.ok || body?.success !== true || !firstPage)
+          throw new Error(
+            text(body?.code || body?.error || `HTTP_${response.status}`),
+          );
+        const pages: AccountPaletteLibraryState[] = [firstPage];
+        const seenCursors = new Set<string>();
+        let page = firstPage;
+        while (page.hasMore) {
+          if (seenCursors.has(page.nextCursor))
+            throw new Error("ACCOUNT_PALETTE_LIBRARY_CURSOR_LOOP");
+          seenCursors.add(page.nextCursor);
+          const knownIds = page.palettes
+            .map((item) => item.paletteId)
+            .slice(0, MAX_KNOWN_PALETTE_IDS);
+          queryString = buildLibraryQuery(page.nextCursor, knownIds);
+          let nextResponse = await fetchJson(`/me/palettes?${queryString}`);
+          let nextPage = parseLibraryResponse(nextResponse.body);
+          if (nextPage?.resetRequired) {
+            nextResponse = await fetchJson("/me/palettes");
+            nextPage = parseLibraryResponse(nextResponse.body);
+            baseLibrary = null;
+            pages.splice(0, pages.length);
+          }
+          if (
+            !nextResponse.response.ok ||
+            nextResponse.body?.success !== true ||
+            !nextPage
+          ) {
+            throw new Error(
+              text(
+                nextResponse.body?.code ||
+                  nextResponse.body?.error ||
+                  `HTTP_${nextResponse.response.status}`,
+              ),
+            );
+          }
+          pages.push(nextPage);
+          page = nextPage;
+        }
+        const library = mergeLibraryPages(baseLibrary, pages);
         const live = ensureIdentity();
-        if (!live || live.key !== key || requestGeneration !== generation) return { status: "failed", snapshot: failedSnapshot(owner.accountId, "STALE_ACCOUNT_PALETTE_RESPONSE"), code: "STALE_ACCOUNT_PALETTE_RESPONSE" };
+        if (!live || live.key !== key || requestGeneration !== generation)
+          return {
+            status: "failed",
+            snapshot: failedSnapshot(
+              owner.accountId,
+              "STALE_ACCOUNT_PALETTE_RESPONSE",
+            ),
+            code: "STALE_ACCOUNT_PALETTE_RESPONSE",
+          };
+        const selectedPaletteId =
+          library.selection.selection.kind === "custom"
+            ? library.selection.selection.paletteId
+            : null;
         current = {
           accountId: owner.accountId,
           contractVersion: ACCOUNT_PALETTE_SESSION_CONTRACT,
           selection: library.selection,
-          selectedPalette: current?.selectedPalette || library.palettes.find((item) => item.paletteId === library.selection.selection.paletteId) || null,
+          selectedPalette: selectedPaletteId
+            ? library.palettes.find(
+                (item) => item.paletteId === selectedPaletteId,
+              ) ||
+              (current?.selectedPalette?.paletteId === selectedPaletteId
+                ? current.selectedPalette
+                : null)
+            : null,
           library,
           bootstrapCompleted: true,
           libraryLoaded: true,
@@ -447,9 +590,16 @@ export function createAccountPaletteSessionController(
         applySelectionToThemeManager(windowLike?.ThemeManager, current);
         return { status: "synced", snapshot: clone(current) };
       } catch (error) {
-        const code = error instanceof Error ? error.message : "ACCOUNT_PALETTE_LIBRARY_FAILED";
+        const code =
+          error instanceof Error
+            ? error.message
+            : "ACCOUNT_PALETTE_LIBRARY_FAILED";
         if (current) current = { ...current, lastError: code };
-        return { status: "failed", snapshot: current ? clone(current) : bootstrapped.snapshot, code };
+        return {
+          status: "failed",
+          snapshot: current ? clone(current) : bootstrapped.snapshot,
+          code,
+        };
       }
     })().finally(() => libraryPromises.delete(key));
     libraryPromises.set(key, promise);

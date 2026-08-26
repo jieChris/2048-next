@@ -47,24 +47,24 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator('#theme-select-options .custom-option[data-value="classic"]')).toHaveText("经典");
   });
 
-  test("account sync keeps a selected built-in palette when cloud activePaletteId is null", async ({
-    page,
-  }) => {
+  test("account V2 sync preserves a pending cloud selection and explicitly saves a new copy", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "palette-sync-token");
       window.localStorage.setItem("2048_auth_userId_v1", "42");
       window.localStorage.setItem("theme_profile_v1", "mist_cyan");
       window.localStorage.setItem("tile_palette_active_v1", "cold-cyan-steps");
     });
-    let cloudDocument = {
-      schema: 1,
-      format: 3,
-      activePaletteId: null,
-      palettes: [] as Array<Record<string, unknown>>,
+    const writes: Array<Record<string, unknown>> = [];
+    const capability = {
+      readEnabled: true,
+      writeEnabled: true,
+      legacyPutEnabled: false,
+      maxActivePalettes: 10,
+      contractVersion: "account-palette-sync-v2.1"
     };
-    let revision = 1;
     await page.route("**/api/**", async (route) => {
-      const path = new URL(route.request().url()).pathname;
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
       if (path.endsWith("/api/auth/refresh")) {
         await route.fulfill({
           status: 200,
@@ -72,8 +72,94 @@ test.describe("Legacy Multi-Page Smoke", () => {
           body: JSON.stringify({
             success: true,
             token: "palette-sync-token",
-            user: { id: 42, public_profile_id: 42, nickname: "PaletteSync" },
-          }),
+            user: { id: 42, public_profile_id: 42, nickname: "PaletteSync" }
+          })
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/palette-sync/bootstrap")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              selection: { selection: { kind: "pending", paletteId: null }, revision: 0, updatedAt: null },
+              selectedPalette: null,
+              capabilities: capability
+            }
+          })
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/palettes") && request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              palettes: [],
+              order: { paletteIds: [], revision: 0, updatedAt: null },
+              selection: { selection: { kind: "pending", paletteId: null }, revision: 0, updatedAt: null },
+              tombstones: [],
+              changes: [],
+              nextCursor: "0",
+              hasMore: false,
+              resetRequired: false,
+              capabilities: capability
+            }
+          })
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/palettes") && request.method() === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        writes.push(body);
+        const requested = body.palette as Record<string, unknown>;
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: {
+              status: "saved",
+              operationId: body.operationId,
+              paletteId: body.paletteId,
+              palette: {
+                paletteId: body.paletteId,
+                revision: 1,
+                palette: requested,
+                contentHash: "a".repeat(64),
+                createdAt: "2026-08-26T00:00:00Z",
+                updatedAt: "2026-08-26T00:00:00Z"
+              },
+              reason: null,
+              existingPaletteId: null,
+              conflictCopyId: null
+            }
+          })
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/palette-selection") && request.method() === "PUT") {
+        writes.push(request.postDataJSON() as Record<string, unknown>);
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            data: { selection: { kind: "custom", paletteId: "placeholder" }, revision: 1, updatedAt: null }
+          })
+        });
+        return;
+      }
+      if (path.endsWith("/api/me/palette-order") && request.method() === "PUT") {
+        writes.push(request.postDataJSON() as Record<string, unknown>);
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, data: { paletteIds: [], revision: 1, updatedAt: null } })
         });
         return;
       }
@@ -81,108 +167,28 @@ test.describe("Legacy Multi-Page Smoke", () => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({
-            success: true,
-            data: {
-              readEnabled: true,
-              writeEnabled: true,
-              autoPublishEnabled: false,
-              paletteFormat3Enabled: true,
-            },
-          }),
+          body: JSON.stringify({ success: true, data: { readEnabled: true, writeEnabled: false, autoPublishEnabled: false, paletteFormat3Enabled: true } })
         });
         return;
       }
-      if (path.endsWith("/api/theme-plaza/me/submissions")) {
-        await route.fulfill({
-          status: 202,
-          contentType: "application/json",
-          body: JSON.stringify({
-            success: true,
-            data: {
-              listing_id: 7,
-              version_id: 12,
-              revision: 1,
-              status: "pending_ai",
-            },
-          }),
-        });
-        return;
-      }
-      if (path.endsWith("/api/me/app-palettes")) {
-        if (route.request().method() === "PUT") {
-          const body = route.request().postDataJSON() as {
-            document?: typeof cloudDocument;
-          };
-          if (body.document) cloudDocument = body.document;
-          revision += 1;
-        }
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            success: true,
-            data: {
-              document: cloudDocument,
-              revision,
-              updatedAt: null,
-              supportedFormats: [2, 3],
-              sourceFormat: 3,
-            },
-          }),
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ success: true, data: null }),
-      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: null }) });
     });
 
-    await page.goto("/palette.html#appearance-settings", {
-      waitUntil: "domcontentloaded",
-    });
+    await page.goto("/palette.html#appearance-settings", { waitUntil: "domcontentloaded" });
     await openAppearanceWorkspace(page);
-    const warm = page.locator(
-      '.palette-item[data-palette-id="warm-glaze-steps"]',
-    );
+    const warm = page.locator('.palette-item[data-palette-id="warm-glaze-steps"]');
     await warm.click();
-
     await expect(warm).toHaveClass(/is-active/);
-    await expect
-      .poll(() =>
-        page.evaluate(() =>
-          window.localStorage.getItem("tile_palette_active_v1"),
-        ),
-      )
-      .toBe("warm-glaze-steps");
-    await expect(
-      page.locator(
-        '.palette-item.is-active[data-palette-id="cold-cyan-steps"]',
-      ),
-    ).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.localStorage.getItem("tile_palette_active_v1"))).toBe("cold-cyan-steps");
+    await expect(page.evaluate(() => (window as any).ThemeManager.getActiveTilePaletteId())).resolves.toBe("warm-glaze-steps");
 
-    const share = page.locator("#palette-share-btn");
-    await expect(share).toBeDisabled();
-    await expect(share).toHaveText("请先创建副本后分享");
     await page.locator("#palette-create-btn").click();
-    await expect(page.locator(".palette-item.is-active")).toContainText(
-      "自定义",
-    );
-    await expect(share).toBeEnabled();
-    await expect(share).toHaveText("分享到主题广场");
-
-    await share.click();
-    await expect(page.locator("#game-dialog-overlay")).toBeVisible();
-    await page.locator("#game-dialog-input-wrap input").fill("Smoke 审核主题");
-    await page.locator("#game-dialog-confirm").click();
-    const notice = page.locator("#theme-plaza-submission-notice");
-    await expect(notice).toBeVisible();
-    await expect(notice).toContainText("已提交审核");
-    await expect(notice).toContainText("我的分享");
-    await notice.getByRole("button", { name: "关闭提示" }).click();
-    await expect(notice).toBeHidden();
+    await expect(page.locator(".palette-item.is-active")).toContainText("自定义");
+    await expect(page.locator("#palette-save-btn")).toBeEnabled();
+    await page.locator("#palette-save-btn").click();
+    await expect(page.locator("#palette-sync-status")).toContainText("账号");
+    expect(writes.some((item) => item.operationId)).toBe(true);
+    await expect(page.locator("#palette-share-btn")).toBeDisabled();
   });
 
   test("settings quick buttons expose polished labels and current state", async ({
@@ -819,6 +825,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     })).toEqual(["transparent", "transparent"]);
     await expect(page.locator('#palette-preview-board .preview-tile[data-value="2"] .tile-inner'))
       .toHaveCSS("border-top-style", "none");
+    await page.locator("#palette-save-btn").click();
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect.poll(async () => page.evaluate(() => {
@@ -866,9 +873,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
     await slider.fill("12");
-    await expect(slider).toHaveValue("50");
-    await expect(page.locator("#palette-glow-intensity-value")).toHaveText("50%");
-    await expect(page.locator("#palette-note")).toContainText("无法保存发光设置");
+    await expect(slider).toHaveValue("12");
+    await expect(page.locator("#palette-glow-intensity-value")).toHaveText("12%");
+    await page.locator("#palette-save-btn").click();
+    await expect(page.locator("#palette-sync-status")).toContainText("本地保存失败");
     await page.evaluate(() => {
       Object.getPrototypeOf(window.localStorage).setItem = (window as any).__paletteSetItem;
     });
@@ -913,12 +921,15 @@ test.describe("Legacy Multi-Page Smoke", () => {
       };
     });
     await tileSlider.fill("123");
-    await expect(tileSlider).toHaveValue("100");
-    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("100% · 实际 100%");
-    await expect(page.locator("#palette-note")).toContainText("无法保存发光设置");
+    await expect(tileSlider).toHaveValue("123");
+    await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("123% · 实际 100%");
+    await page.locator("#palette-save-btn").click();
+    await expect(page.locator("#palette-sync-status")).toContainText("本地保存失败");
     await page.evaluate(() => {
       Object.getPrototypeOf(window.localStorage).setItem = (window as any).__paletteSetItem;
     });
+    await page.locator('.palette-dimension-tab[data-dimension="glow"]').click();
+    await page.locator('.color-target[data-index="0"]').click();
 
     await tileSlider.fill("0");
     await expect(page.locator("#palette-tile-glow-intensity-value")).toHaveText("0% · 实际 0%");
@@ -947,6 +958,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#palette-tile-glow-intensity-hint")).toContainText("请先设置发光颜色");
     expect(await readPreviewGlow()).toBe("none");
     expect(await readPreviewGlow4()).toBe(tile4StrongShadow);
+    await page.locator("#palette-save-btn").click();
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator("#palette-glow-intensity")).toHaveValue("100");
@@ -1027,6 +1039,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       manager.updateTilePaletteColor(activeId, "pow2", "border", 25, "#654321");
       manager.updateTilePaletteColor(activeId, "pow2", "glow", 25, "#fedcba");
     });
+    await page.locator("#palette-save-btn").click();
 
     await page.reload({ waitUntil: "domcontentloaded" });
     const persisted = await page.evaluate(() => {

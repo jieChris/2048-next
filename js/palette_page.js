@@ -448,6 +448,10 @@
     var createTilePalette = asFunction(themeManager.createTilePalette);
     var renameTilePalette = asFunction(themeManager.renameTilePalette);
     var deleteTilePalette = asFunction(themeManager.deleteTilePalette);
+    var beginTilePaletteDraft = asFunction(themeManager.beginTilePaletteDraft);
+    var getTilePaletteDraftState = asFunction(themeManager.getTilePaletteDraftState);
+    var saveTilePaletteDraft = asFunction(themeManager.saveTilePaletteDraft);
+    var discardTilePaletteDraft = asFunction(themeManager.discardTilePaletteDraft);
     var updateTilePaletteColor = asFunction(themeManager.updateTilePaletteColor);
     var updateTilePaletteGlowIntensity = asFunction(themeManager.updateTilePaletteGlowIntensity);
     var updateTilePaletteGlowMultiplier = asFunction(themeManager.updateTilePaletteGlowMultiplier);
@@ -463,6 +467,9 @@
     var createBtn = byId("palette-create-btn");
     var renameBtn = byId("palette-rename-btn");
     var deleteBtn = byId("palette-delete-btn");
+    var saveBtn = byId("palette-save-btn");
+    var syncStatusEl = byId("palette-sync-status");
+    var syncRetryRequired = false;
     var exportBtn = byId("palette-export-btn");
     var importBtn = byId("palette-import-btn");
     var importInput = byId("palette-import-input");
@@ -511,6 +518,27 @@
       if (!message) return;
       if (type === "ok") noteEl.classList.add("ok");
       if (type === "err") noteEl.classList.add("err");
+    }
+
+    function setSyncStatus(message, type, retryRequired) {
+      syncRetryRequired = retryRequired === true;
+      if (!syncStatusEl) return;
+      syncStatusEl.textContent = resolveText(message);
+      syncStatusEl.classList.remove("ok", "err", "pending");
+      if (type) syncStatusEl.classList.add(type);
+    }
+
+    function resolveSyncFailureMessage(code, message) {
+      var failureCode = resolveText(code);
+      if (failureCode === "LOCAL_PERSIST_FAILED") {
+        return isEnglishUi() ? "Could not save locally" : "本地保存失败";
+      }
+      if (failureCode === "PALETTE_OUTBOX_UNAVAILABLE") {
+        return isEnglishUi()
+          ? "Saved to device, but the sync queue is unavailable"
+          : "已保存到设备，但同步队列不可用";
+      }
+      return resolveText(message) || (isEnglishUi() ? "Action required" : "需要处理");
     }
 
     function readLocalStorageItem(key) {
@@ -572,6 +600,8 @@
       { id: "palette-create-btn", node: createBtn },
       { id: "palette-rename-btn", node: renameBtn },
       { id: "palette-delete-btn", node: deleteBtn },
+      { id: "palette-save-btn", node: saveBtn },
+      { id: "palette-sync-status", node: syncStatusEl },
       { id: "palette-export-btn", node: exportBtn },
       { id: "palette-import-btn", node: importBtn },
       { id: "palette-import-input", node: importInput },
@@ -619,6 +649,7 @@
       return;
     }
     bootCompleted = true;
+    if (beginTilePaletteDraft) beginTilePaletteDraft.call(themeManager);
 
     function getPaletteMap(list) {
       var map = {};
@@ -1274,6 +1305,15 @@
       );
       nameInputEl.value = activeName;
       nameInputEl.disabled = locked;
+      var draftState = getTilePaletteDraftState ? toRecord(getTilePaletteDraftState.call(themeManager)) : {};
+      if (saveBtn) {
+        saveBtn.disabled = !syncRetryRequired && (locked || draftState.dirty !== true);
+        saveBtn.textContent = isEnglishUi() ? "Save palette" : "保存色板";
+        saveBtn.setAttribute("aria-label", isEnglishUi() ? "Save palette draft" : "保存色板草稿");
+      }
+      if (draftState.dirty !== true && draftState.enabled === true && syncStatusEl && !syncStatusEl.textContent) {
+        setSyncStatus(isEnglishUi() ? "No unsaved changes" : "没有未保存修改", "");
+      }
       nameInputEl.title = locked
         ? (isEnglishUi() ? "Built-in palette names cannot be changed. Create a copy first." : "\u5185\u7f6e\u8272\u677f\u540d\u79f0\u4e0d\u53ef\u4fee\u6539\uff0c\u8bf7\u5148\u65b0\u5efa\u526f\u672c\u3002")
         : "";
@@ -1362,6 +1402,134 @@
       }
       setNote(isEnglishUi() ? "Palette renamed." : "\u8272\u677f\u5df2\u91cd\u547d\u540d\u3002", "ok");
       refresh();
+    });
+
+    saveBtn.addEventListener("click", async function () {
+      if (!getTilePaletteDraftState) return;
+      var draftState = toRecord(getTilePaletteDraftState.call(themeManager));
+      if (draftState.dirty !== true && !syncRetryRequired) return;
+      saveBtn.disabled = true;
+      var handler = global.AccountPaletteDraftSaveHandler;
+      if (typeof handler === "function") {
+        try {
+          var outcome = await handler(draftState);
+          if (outcome && outcome.status === "queued") {
+            setSyncStatus(isEnglishUi() ? "Saved to device; waiting to sync" : "已保存到设备，等待同步", "pending");
+          } else if (outcome && (outcome.status === "duplicate_existing" || outcome.status === "capacity_full" || outcome.status === "base_revision_expired" || outcome.status === "expired_operation")) {
+            var actionCode = resolveText(outcome.code);
+            if (actionCode === "duplicate_content" || actionCode === "duplicate_existing") {
+              setSyncStatus(isEnglishUi() ? "A visually identical palette already exists." : "已存在视觉内容相同的色板。", "err", true);
+              var keepCopy = await confirmWithGameDialog(
+                isEnglishUi() ? "Keep this palette as a separate copy?" : "要保留为独立色板吗？",
+                {
+                  kind: "confirm",
+                  confirmText: isEnglishUi() ? "Keep separate" : "保留独立副本",
+                  cancelText: isEnglishUi() ? "Use existing" : "使用已有色板"
+                }
+              );
+              var duplicateHandler = global.AccountPaletteDuplicateConfirmHandler;
+              var useExistingHandler = global.AccountPaletteUseExistingHandler;
+              if (keepCopy && typeof duplicateHandler === "function" && outcome.paletteId) {
+                var confirmed = await duplicateHandler(resolveText(outcome.paletteId));
+                if (confirmed && (confirmed.status === "saved" || confirmed.status === "merged" || confirmed.status === "conflict_copy")) {
+                  setSyncStatus(isEnglishUi() ? "Palette saved as a separate copy" : "色板已作为独立副本保存", "ok");
+                }
+              } else if (
+                !keepCopy &&
+                typeof useExistingHandler === "function" &&
+                outcome.paletteId &&
+                outcome.existingPaletteId
+              ) {
+                var useExisting = await confirmWithGameDialog(
+                  isEnglishUi()
+                    ? "Use the existing palette and discard this duplicate identity?"
+                    : "改用已有色板并放弃当前重复身份吗？",
+                  {
+                    kind: "danger",
+                    confirmText: isEnglishUi() ? "Use existing" : "使用已有色板",
+                    cancelText: isEnglishUi() ? "Cancel" : "取消"
+                  }
+                );
+                if (useExisting) {
+                  var usedExisting = await useExistingHandler(
+                    resolveText(outcome.paletteId),
+                    resolveText(outcome.existingPaletteId)
+                  );
+                  if (usedExisting && usedExisting.status !== "failed") {
+                    setSyncStatus(isEnglishUi() ? "Using the existing palette" : "已改用已有色板", "ok");
+                  } else {
+                    setSyncStatus(isEnglishUi() ? "The existing palette is unavailable" : "已有色板暂不可用", "err", true);
+                  }
+                }
+              }
+            } else {
+              setSyncStatus(isEnglishUi() ? "Action required before sync can finish" : "同步需要进一步处理", "err", true);
+            }
+          } else if (outcome && outcome.status === "paused_account") {
+            setSyncStatus(isEnglishUi() ? "Sync paused until this account is active" : "账号恢复有效前已暂停同步", "pending");
+          } else if (outcome && outcome.status === "merged") {
+            setSyncStatus(isEnglishUi() ? "Palette merged with account changes" : "色板已与账号修改合并", "ok");
+          } else if (outcome && outcome.status === "conflict_copy") {
+            setSyncStatus(isEnglishUi() ? "Saved as a conflict copy" : "已保存为冲突副本", "ok");
+          } else if (outcome && outcome.status === "deleted") {
+            setSyncStatus(isEnglishUi() ? "Palette deleted" : "色板已删除", "ok");
+          } else if (outcome && outcome.status === "failed") {
+            setSyncStatus(resolveSyncFailureMessage(outcome.code, outcome.message), "err", true);
+          } else if (outcome && outcome.status === "local_only") {
+            setSyncStatus(isEnglishUi() ? "Palette saved to this device" : "色板已保存到此设备", "ok");
+          } else {
+            setSyncStatus(isEnglishUi() ? "Palette saved to account" : "色板已同步到账号", "ok");
+          }
+          refresh();
+          return;
+        } catch {
+          setSyncStatus(isEnglishUi() ? "Could not save palette" : "色板保存失败", "err", true);
+          saveBtn.disabled = false;
+          return;
+        }
+      }
+      if (!saveTilePaletteDraft || !saveTilePaletteDraft.call(themeManager)) {
+        setSyncStatus(isEnglishUi() ? "Could not save locally" : "本地保存失败", "err", true);
+        saveBtn.disabled = false;
+        return;
+      }
+      setSyncStatus(isEnglishUi() ? "Palette saved to this device" : "色板已保存到此设备", "ok");
+      refresh();
+    });
+
+    global.addEventListener("account-palette-draft-discard", function () {
+      if (!discardTilePaletteDraft) return;
+      discardTilePaletteDraft.call(themeManager);
+      setSyncStatus(isEnglishUi() ? "Draft discarded" : "已放弃草稿", "ok");
+      refresh();
+    });
+
+    global.addEventListener("account-palette-sync-state", function (eventLike) {
+      var detail = toRecord(eventLike && eventLike.detail);
+      var status = resolveText(detail.status);
+      if (status === "queued") setSyncStatus(isEnglishUi() ? "Saved to device; waiting to sync" : "已保存到设备，等待同步", "pending");
+      if (status === "paused_account") setSyncStatus(isEnglishUi() ? "Sync paused until this account is active" : "账号恢复有效前已暂停同步", "pending");
+      if (status === "merged") setSyncStatus(isEnglishUi() ? "Palette merged with account changes" : "色板已与账号修改合并", "ok");
+      if (status === "conflict_copy") setSyncStatus(isEnglishUi() ? "Saved as a conflict copy" : "已保存为冲突副本", "ok");
+      if (status === "duplicate_existing") setSyncStatus(isEnglishUi() ? "A visually identical palette already exists." : "已存在视觉内容相同的色板。", "err", true);
+      if (status === "capacity_full") setSyncStatus(isEnglishUi() ? "Palette capacity is full." : "色板数量已达到上限。", "err", true);
+      if (status === "base_revision_expired") setSyncStatus(isEnglishUi() ? "This palette needs a fresh sync." : "该色板需要重新同步。", "err", true);
+      if (status === "expired_operation") setSyncStatus(isEnglishUi() ? "This saved operation needs to be reconciled again." : "该保存操作需要重新对账。", "err", true);
+      if (status === "saved" || status === "local_only") setSyncStatus(isEnglishUi() ? "Palette saved" : "色板已保存", "ok");
+      if (status === "failed") {
+        setSyncStatus(resolveSyncFailureMessage(detail.code, detail.message), "err", true);
+      }
+      refresh();
+    });
+
+    global.addEventListener("beforeunload", function (eventLike) {
+      var draftState = getTilePaletteDraftState ? toRecord(getTilePaletteDraftState.call(themeManager)) : {};
+      var syncController = toRecord(global.AccountPalettePageSync);
+      var syncStatus = asFunction(syncController.status);
+      var syncState = syncStatus ? toRecord(syncStatus.call(syncController)) : {};
+      if (draftState.dirty !== true && syncState.status !== "failed") return;
+      eventLike.preventDefault();
+      eventLike.returnValue = "";
     });
 
     deleteBtn.addEventListener("click", async function () {

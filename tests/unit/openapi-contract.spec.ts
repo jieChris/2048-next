@@ -179,6 +179,10 @@ describe("OpenAPI contract", () => {
     expect(spec).toContain("reactionEnabled: { type: boolean }");
     expect(spec).toContain("saveEnabled: { type: boolean }");
     expect(spec).toContain("shareEnabled: { type: boolean }");
+    expect(spec).toContain("ThemePlazaSaveResult:");
+    expect(spec).toContain("required: [operationId]");
+    expect(spec).toContain("- required: [existingPaletteId]");
+    expect(spec).toContain("status: { type: string, enum: [saved, duplicate_existing, capacity_full] }");
     expect(spec).toContain("changes:");
     expect(spec).toContain("entityKind: { type: string, enum: [palette, selection, order] }");
     const legacyPaletteGet = spec.slice(
