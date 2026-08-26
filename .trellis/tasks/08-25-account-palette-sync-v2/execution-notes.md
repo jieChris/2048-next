@@ -18,7 +18,7 @@
 
 - 两仓库均只在 `main`，未 push、未 deploy。
 - 当前 API 生产 flags 未改变；V2 read/write 仍保持关闭，Theme Plaza 写入仍保持关闭。
-- T08/T09 Web 实现与验收已完成并纳入本地 commit；canonical OpenAPI digest 已冻结，API contract lock 将 pin 到本提交。两个仓库均未 push、未 deploy。
+- T08/T09 Web 实现与验收已完成并纳入本地 commit；T10 工具与本地证据已完成并分别提交。两个仓库均未 push、未 deploy。
 
 ## T08 当前实现（已本地提交）
 
@@ -63,7 +63,9 @@
 - 视觉：palette/page/swatch 与 Theme Plaza submission notice 相关矩阵通过；T09 影响的 768/1280 submission notice 基线已更新并记录 manifest reason。
 - Web build、`verify:api` `28 passed`、service-boundary audit、`tsc --noEmit`、API/Web LSP error 级诊断和 `git diff --check` 通过。
 
-## T10 当前实现（本地工作树，待提交）
+## T10 当前实现（已本地提交）
+
+- Web 性能 gate 工具提交于 Web `464dedf6b50fadf4deafb1bffadaaeae9b062363`；API T10 工具提交于 API `94824b53555f1e5e40a14332b29350755e8756cf`；本地 gate 证据提交于 API `4c41e8f3074aa27fd21823b674a47128136c01d5`。
 
 - 新增 `scripts/palette-v2-gate-artifacts.ts`，统一编译 reconciliation、concurrency、performance、backup-restore、rollback 五份 JSON gate 和 `cutover-manifest.json`；缺失 evidence、失败 gate、未完成 approval 或未显式确认均 fail-closed。
 - 新增 `scripts/run-palette-v2-concurrency-gate.ts`，仅接受本地/测试 PostgreSQL URL，通过 Vitest JSON reporter 执行 V2 store、V2 外部写和 Theme Plaza V2 PostgreSQL 并发套件；跳过或失败场景阻断 gate。最近隔离 PostgreSQL 运行覆盖 `14/14` 场景通过。
@@ -82,7 +84,7 @@
 - 隔离 PostgreSQL 17 应用全量 migration 后 Theme Plaza V2 保存：`1 passed`。
 - Web 本地 performance gate：bootstrap/library、无轮询和 API failure smoke 通过，实际 p95 `119.6ms`、主线程 `45ms`（使用显式本地 placeholder baseline，未作为生产性能证明）。
 - T08/T09 Web 全量 unit、Theme Plaza/Palette Smoke、visual matrix、build、verify:api、service-boundary、TypeScript 和 error diagnostics 在 T10 改动前后保持通过；最后一次完整 Web unit 为 `322 files / 2160 tests passed`。
-- 当前未运行生产 shadow reconciliation、真实生产 backup/restore、生产 cutover probe、30 分钟 V2 写观察或线上指标观察，因此 T10 已实现工具和本地验证，但不满足 T11 生产切换条件。
+- 当前未运行生产 shadow reconciliation、真实生产 backup/restore、生产 cutover probe、30 分钟 V2 写观察或线上指标观察；`artifacts/palette-v2/cutover-manifest.json` 明确 `readyForCutover=false`，因此不满足 T11 生产切换条件。
 
 
 
