@@ -65,7 +65,7 @@
 
 ## T10 当前实现（已本地提交）
 
-- Web 性能 gate 工具提交于 Web `464dedf6b50fadf4deafb1bffadaaeae9b062363`；API T10 工具提交于 API `94824b53555f1e5e40a14332b29350755e8756cf`；本地 gate 证据提交于 API `4c41e8f3074aa27fd21823b674a47128136c01d5`。
+- Web 性能 gate 工具提交于 Web `464dedf6b50fadf4deafb1bffadaaeae9b062363`；API T10 工具提交于 API `5548b853218ff87c2cf2a1c2c446bff64fd67bb0`；本地 gate 证据提交于 API `00936331108238d1f141c51b998630c0c433f1a6`。
 
 - 新增 `scripts/palette-v2-gate-artifacts.ts`，统一编译 reconciliation、concurrency、performance、backup-restore、rollback 五份 JSON gate 和 `cutover-manifest.json`；缺失 evidence、失败 gate、未完成 approval 或未显式确认均 fail-closed。
 - 新增 `scripts/run-palette-v2-concurrency-gate.ts`，仅接受本地/测试 PostgreSQL URL，通过 Vitest JSON reporter 执行 V2 store、V2 外部写和 Theme Plaza V2 PostgreSQL 并发套件；跳过或失败场景阻断 gate。最近隔离 PostgreSQL 运行覆盖 `14/14` 场景通过。
@@ -125,6 +125,6 @@ THEME_PLAZA_AUTO_PUBLISH_ENABLED=false
 ## 尚未执行
 
 - 未应用生产数据库迁移。
-- 未开启生产 V2 read/write；T08/T09 代码仅完成本地 commit，尚未 push/deploy。
+- 未开启生产 V2 read/write；T08/T09/T10 代码与工具仅完成本地 commit，尚未 push/deploy。
 - 未执行色板写维护切换。
 - 未重新开放 Theme Plaza 写能力。
