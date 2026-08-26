@@ -245,6 +245,12 @@ test.describe("Account palette draft outbox", () => {
       localStorage.setItem("2048_auth_token_v1", "palette-token-42");
       localStorage.setItem("2048_auth_userId_v1", "42");
       localStorage.setItem("theme_profile_v1", "classic");
+      localStorage.removeItem("tile_palette_profiles_v1");
+      localStorage.removeItem("tile_palette_active_v1");
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("account_palette_session_v2:"))
+          localStorage.removeItem(key);
+      }
     });
     await installRoutes(page, state);
     await page.goto("/palette.html#appearance-settings", {
@@ -316,6 +322,12 @@ test.describe("Account palette draft outbox", () => {
     await page.addInitScript(() => {
       localStorage.setItem("2048_auth_token_v1", "palette-token-42");
       localStorage.setItem("2048_auth_userId_v1", "42");
+      localStorage.removeItem("tile_palette_profiles_v1");
+      localStorage.removeItem("tile_palette_active_v1");
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("account_palette_session_v2:"))
+          localStorage.removeItem(key);
+      }
     });
     await installRoutes(page, state);
     await page.goto("/palette.html#appearance-settings", {
