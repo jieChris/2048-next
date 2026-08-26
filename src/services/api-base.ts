@@ -24,8 +24,9 @@ function isLocalDevelopmentOrigin(origin: string): boolean {
 
 export function buildApiBaseCandidates(options: BuildApiBaseCandidatesOptions = {}): string[] {
   const remoteApiBase = normalizeApiBase(options.remoteApiBase || DEFAULT_REMOTE_API_BASE);
+  const browserOrigin = typeof window !== "undefined" && window.location ? window.location.origin : "";
   const origin = String(
-    options.locationLike?.origin || (typeof window !== "undefined" ? window.location.origin : "")
+    options.locationLike?.origin || browserOrigin
   ).replace(/\/+$/u, "");
   const bases = origin ? [`${origin}/api`] : [];
   if (!origin || !isLocalDevelopmentOrigin(origin)) bases.push(remoteApiBase);

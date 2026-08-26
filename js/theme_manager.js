@@ -2784,7 +2784,7 @@
       }
     }
     var custom = readStoredTilePaletteProfiles();
-    if (custom.length >= 8) return null;
+    if (custom.length >= 10) return null;
     var usedNames = all.map(function (item) { return item.name; });
     var finalName = ensureUniquePaletteName(usedNames, name || "自定义色板");
     var now = Date.now();
@@ -2960,7 +2960,7 @@
     }
     var theme = themes[currentThemeId] || themes[DEFAULT_THEME];
     var custom = readStoredTilePaletteProfiles();
-    var remainingCapacity = Math.max(0, 8 - custom.length);
+    var remainingCapacity = Math.max(0, 10 - custom.length);
     if (remainingCapacity === 0) {
       return { importedCount: 0, renamed: [], error: "palette_limit_reached" };
     }
@@ -3024,7 +3024,7 @@
     },
     replaceCustomTilePalettes: function (palettes, options) {
       var source = Array.isArray(palettes) ? palettes : [];
-      if (source.length > 8) return false;
+      if (source.length > 10) return false;
       var normalized = [];
       for (var i = 0; i < source.length; i++) {
         var item = source[i];

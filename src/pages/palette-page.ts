@@ -21,6 +21,7 @@ import {
   type ThemePlazaSubmissionNotice
 } from "../features/theme-plaza/submission-notice";
 import { getAuthToken } from "../services/auth-session";
+import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
 import { createBrowserStorageAccess, readStorageValue } from "../storage/browser-storage";
 import { applyThemeSettingsUi } from "../bootstrap/theme-settings-host";
 import { applyThemeSettingsPageInit } from "../bootstrap/theme-settings-page-host";
@@ -828,6 +829,12 @@ function bindAccountPaletteSync(): void {
   )
     return;
   const initialDocument = paletteDocumentFromThemeManager(themeManager);
+  const accountPaletteSession = getAccountPaletteSessionController();
+  void accountPaletteSession.bootstrap().then(() => {
+    accountPaletteSession.applyToThemeManager(themeManager);
+    return accountPaletteSession.loadLibrary();
+  }).catch(() => {});
+
   const repository = new AccountPaletteRepository({
     storage: storageLike,
     ownerKey: resolvePaletteOwnerKey(storageLike),

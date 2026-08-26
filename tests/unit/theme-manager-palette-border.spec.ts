@@ -160,7 +160,7 @@ describe("theme manager palette effects", () => {
     dom.window.close();
   });
 
-  it("enforces the shared eight-palette limit across create and import", () => {
+  it("enforces the shared ten-palette limit across create and import", () => {
     const dom = new JSDOM(
       "<!doctype html><html><head></head><body></body></html>",
       {
@@ -171,13 +171,13 @@ describe("theme manager palette effects", () => {
     dom.window.eval(THEME_MANAGER_SOURCE);
     const manager = (dom.window as any).ThemeManager;
 
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       expect(
         manager.createTilePalette("follow-theme", `色板 ${index + 1}`),
       ).toBeTruthy();
     }
-    expect(manager.getCustomTilePalettes()).toHaveLength(8);
-    expect(manager.createTilePalette("follow-theme", "第九套")).toBeNull();
+    expect(manager.getCustomTilePalettes()).toHaveLength(10);
+    expect(manager.createTilePalette("follow-theme", "第十一套")).toBeNull();
 
     const payload = JSON.stringify({
       version: 5,
@@ -187,7 +187,7 @@ describe("theme manager palette effects", () => {
       importedCount: 0,
       error: "palette_limit_reached",
     });
-    expect(manager.getCustomTilePalettes()).toHaveLength(8);
+    expect(manager.getCustomTilePalettes()).toHaveLength(10);
     dom.window.close();
   });
 

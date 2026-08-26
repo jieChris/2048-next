@@ -3,6 +3,7 @@ import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/
 import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { restoreAuthSession } from "../services/auth-session";
+import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
 import { bindHomeUserDisplay } from "../bootstrap/home-user-display";
 import { resolveStorageByName } from "../bootstrap/storage";
 import { installAdminRescueClientServiceBoundary } from "../bootstrap/admin-rescue-client-service-boundary";
@@ -295,6 +296,10 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
 
   await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
+  const accountPaletteSession = getAccountPaletteSessionController();
+  if (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function") {
+    void accountPaletteSession.bootstrap().catch(() => {});
+  }
   bindNightBackgroundSync();
   if (shouldRunBetaAccessGate(pageId)) {
     const access = await runBetaAccessGate(pageId);
@@ -307,6 +312,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
       pageId,
       windowLike: window,
       storageLike: resolveStorageByName({
+        // SAFETY: the helper only reads the named Web Storage property from Window.
         windowLike: window as unknown as Record<string, unknown>,
         storageName: "localStorage"
       })
@@ -315,7 +321,10 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   await runBootstrapPipeline(pageId);
   await bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
   registerEngineFacade(
-    typeof window === "undefined" ? undefined : (window as unknown as EngineFacadeWindowLike)
+    typeof window === "undefined" ? undefined : (
+      // SAFETY: the facade adapter reads the browser's registered legacy engine globals.
+      window as unknown as EngineFacadeWindowLike
+    )
   );
   installCryptoRandomRuntime();
   installGameManagerClientRecordIdRuntime();
@@ -419,6 +428,9 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   }
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
+    accountPaletteSession.applyToThemeManager(
+      typeof window === "undefined" ? undefined : (window as Window & { ThemeManager?: Record<string, unknown> }).ThemeManager
+    );
     if (manifest.capabilities.includes("announcement")) {
       await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement"]));
     }
@@ -426,4 +438,7 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     return;
   }
   await loadHomeFamilyRuntimeScripts(manifest.capabilities);
+  accountPaletteSession.applyToThemeManager(
+    typeof window === "undefined" ? undefined : (window as Window & { ThemeManager?: Record<string, unknown> }).ThemeManager
+  );
 }

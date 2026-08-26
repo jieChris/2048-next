@@ -5,6 +5,7 @@ import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-
 import { getPageManifest } from "../entries/runtime-manifest";
 import { bindStandaloneInternalNavigation } from "./standalone-navigation";
 import { restoreAuthSession } from "../services/auth-session";
+import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
 
 export interface DirectPageBootstrapResult {
   pageId: string;
@@ -64,6 +65,9 @@ export async function bootstrapDirectPage(
     await hook.run();
   }
   await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
+  if (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function") {
+    void getAccountPaletteSessionController().bootstrap().catch(() => {});
+  }
 
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-page-entry-architecture", "manifest-bootstrap");
