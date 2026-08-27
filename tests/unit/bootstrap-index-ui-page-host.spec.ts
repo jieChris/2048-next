@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyIndexUiPageBootstrap,
   createIndexUiBootstrapResolvers,
-  createIndexUiTryUndoHandler
+  createIndexUiTryUndoHandler,
 } from "../../src/bootstrap/index-ui-page-host";
 
 describe("bootstrap index ui page host", () => {
@@ -11,22 +11,22 @@ describe("bootstrap index ui page host", () => {
     const tryTriggerUndoFromContext = vi.fn(() => ({ didTrigger: true }));
     const tryUndoFromUi = createIndexUiTryUndoHandler({
       undoActionRuntime: {
-        tryTriggerUndoFromContext
+        tryTriggerUndoFromContext,
       },
       windowLike: { id: "window" },
-      direction: -1
+      direction: -1,
     });
 
     expect(tryUndoFromUi()).toBe(true);
     expect(tryTriggerUndoFromContext).toHaveBeenCalledWith({
       windowLike: { id: "window" },
-      direction: -1
+      direction: -1,
     });
   });
 
   it("returns false when undo runtime contract is unavailable", () => {
     const tryUndoFromUi = createIndexUiTryUndoHandler({
-      undoActionRuntime: {}
+      undoActionRuntime: {},
     });
 
     expect(tryUndoFromUi()).toBe(false);
@@ -45,7 +45,7 @@ describe("bootstrap index ui page host", () => {
       alert: () => {},
       console: { id: "console" },
       setTimeout: fallbackSetTimeout,
-      clearTimeout: fallbackClearTimeout
+      clearTimeout: fallbackClearTimeout,
     };
 
     const result = createIndexUiBootstrapResolvers({
@@ -78,9 +78,9 @@ describe("bootstrap index ui page host", () => {
             },
             requestResponsiveGameRelayout() {
               trace.push("mobile:relayout");
-            }
+            },
           };
-        }
+        },
       },
       indexUiPageActionsHostRuntime: {
         createIndexUiPageActionResolvers(payload: unknown) {
@@ -110,9 +110,9 @@ describe("bootstrap index ui page host", () => {
             },
             closeSettingsModal() {
               trace.push("actions:close-settings");
-            }
+            },
           };
-        }
+        },
       },
       coreContracts: {
         mobileViewportPageHostRuntime: { id: "viewport-page" },
@@ -147,20 +147,20 @@ describe("bootstrap index ui page host", () => {
         timerModuleRuntime: { id: "timer-runtime" },
         practiceTransferPageHostRuntime: { id: "practice-transfer-page" },
         practiceTransferHostRuntime: { id: "practice-transfer-host" },
-        practiceTransferRuntime: { id: "practice-transfer-runtime" }
+        practiceTransferRuntime: { id: "practice-transfer-runtime" },
       },
       modalContracts: {
         settingsModalPageHostRuntime: { id: "settings-modal-page" },
         settingsModalHostRuntime: { id: "settings-modal-host" },
         replayModalRuntime: { id: "replay-modal-runtime" },
         replayPageHostRuntime: { id: "replay-page-host" },
-        replayExportRuntime: { id: "replay-export-runtime" }
+        replayExportRuntime: { id: "replay-export-runtime" },
       },
       documentLike: { body: { id: "body" } },
       windowLike,
       tryUndoFromUi() {
         trace.push("undo:try");
-      }
+      },
     });
 
     expect(typeof result.isCompactGameViewport).toBe("function");
@@ -168,9 +168,17 @@ describe("bootstrap index ui page host", () => {
     expect(typeof result.syncMobileTimerboxUI).toBe("function");
     expect(trace).toContain("mobile:create");
     expect(trace).toContain("actions:create");
-    const mobilePayloadRecord = (mobilePayload ?? {}) as Record<string, unknown>;
-    const actionPayloadRecord = (actionPayload ?? {}) as Record<string, unknown>;
-    expect(mobilePayloadRecord.timerboxStorageKey).toBe("ui_timerbox_collapsed_mobile_v1");
+    const mobilePayloadRecord = (mobilePayload ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const actionPayloadRecord = (actionPayload ?? {}) as Record<
+      string,
+      unknown
+    >;
+    expect(mobilePayloadRecord.timerboxStorageKey).toBe(
+      "ui_timerbox_collapsed_mobile_v1",
+    );
     expect(mobilePayloadRecord.navigatorLike).toEqual(windowLike.navigator);
     expect(mobilePayloadRecord.setTimeoutLike).toBe(fallbackSetTimeout);
     expect(mobilePayloadRecord.clearTimeoutLike).toBe(fallbackClearTimeout);
@@ -197,7 +205,7 @@ describe("bootstrap index ui page host", () => {
     const windowLike: Record<string, unknown> = {};
     const documentLike = {
       addEventListener,
-      getElementById
+      getElementById,
     };
 
     const exportReplay = vi.fn();
@@ -207,7 +215,7 @@ describe("bootstrap index ui page host", () => {
 
     const result = applyIndexUiPageBootstrap({
       indexUiStartupHostRuntime: {
-        applyIndexUiStartup
+        applyIndexUiStartup,
       },
       topActionBindingsHostRuntime: { id: "top-actions-host" },
       gameOverUndoHostRuntime: { id: "game-over-host" },
@@ -234,8 +242,8 @@ describe("bootstrap index ui page host", () => {
       prettyTimeRuntime: {
         formatPrettyTime(value: unknown) {
           return `pretty:${String(value)}`;
-        }
-      }
+        },
+      },
     });
 
     expect(result.appliedGlobalBindings).toBe(true);
@@ -247,10 +255,12 @@ describe("bootstrap index ui page host", () => {
     expect(typeof windowLike.openSettingsModal).toBe("function");
     expect(typeof windowLike.closeSettingsModal).toBe("function");
     expect(typeof windowLike.pretty).toBe("function");
-    expect((windowLike.pretty as (input: number) => string)(30)).toBe("pretty:30");
+    expect((windowLike.pretty as (input: number) => string)(30)).toBe(
+      "pretty:30",
+    );
 
     expect(domReadyHandler).not.toBeNull();
-    domReadyHandler?.();
+    if (domReadyHandler) domReadyHandler();
 
     expect(applyIndexUiStartup).toHaveBeenCalledTimes(1);
     expect(applyIndexUiStartup).toHaveBeenCalledWith(
@@ -264,19 +274,42 @@ describe("bootstrap index ui page host", () => {
         closeSettingsModal,
         nowMs,
         touchGuardWindowMs: 450,
-        getElementById: expect.any(Function)
-      })
+        getElementById: expect.any(Function),
+      }),
     );
 
     const second = applyIndexUiPageBootstrap({
       indexUiStartupHostRuntime: {
-        applyIndexUiStartup
+        applyIndexUiStartup,
       },
       documentLike,
-      windowLike
+      windowLike,
     });
 
     expect(second.boundDomContentLoaded).toBe(false);
     expect(addEventListener).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts immediately when deferred bootstrap runs after DOMContentLoaded", () => {
+    const applyIndexUiStartup = vi.fn();
+    const documentLike = {
+      readyState: "complete",
+      addEventListener: vi.fn(),
+      getElementById: vi.fn(),
+    };
+    const windowLike: Record<string, unknown> = {};
+
+    const result = applyIndexUiPageBootstrap({
+      indexUiStartupHostRuntime: { applyIndexUiStartup },
+      documentLike,
+      windowLike,
+      openSettingsModal: vi.fn(),
+      closeSettingsModal: vi.fn(),
+    });
+
+    expect(result.boundDomContentLoaded).toBe(false);
+    expect(result.startupInvoked).toBe(true);
+    expect(applyIndexUiStartup).toHaveBeenCalledTimes(1);
+    expect(documentLike.addEventListener).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,9 @@ function toRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
-function asFunction<T extends (...args: never[]) => unknown>(value: unknown): T | null {
+function asFunction<T extends (...args: never[]) => unknown>(
+  value: unknown,
+): T | null {
   return typeof value === "function" ? (value as T) : null;
 }
 
@@ -43,18 +45,19 @@ export function createIndexUiTryUndoHandler(input: {
   const source = toRecord(input);
   const undoActionRuntime = toRecord(source.undoActionRuntime);
   const windowLike = source.windowLike || null;
-  const direction = typeof source.direction === "number" ? source.direction : -1;
+  const direction =
+    typeof source.direction === "number" ? source.direction : -1;
 
   return function tryUndoFromUi(): boolean {
     const tryTriggerUndoFromContext = asFunction<(payload: unknown) => unknown>(
-      toRecord(undoActionRuntime).tryTriggerUndoFromContext
+      toRecord(undoActionRuntime).tryTriggerUndoFromContext,
     );
     if (!tryTriggerUndoFromContext) return false;
     const result = toRecord(
       tryTriggerUndoFromContext({
         windowLike,
-        direction
-      })
+        direction,
+      }),
     );
     return !!result.didTrigger;
   };
@@ -63,7 +66,7 @@ export function createIndexUiTryUndoHandler(input: {
 function bindGlobalFunction(
   windowRecord: Record<string, unknown>,
   key: string,
-  callback: unknown
+  callback: unknown,
 ): boolean {
   const fn = asFunction<(...args: never[]) => unknown>(callback);
   if (!fn) return false;
@@ -71,9 +74,13 @@ function bindGlobalFunction(
   return true;
 }
 
-function pickExplicitValue(source: Record<string, unknown>, key: string, fallback: unknown): unknown {
-  if (Object.prototype.hasOwnProperty.call(source, key)) {
-    return source[key];
+function pickExplicitValue<T>(
+  source: Record<string, unknown>,
+  key: string,
+  fallback: T,
+): T {
+  if (Object.hasOwn(source, key)) {
+    return source[key] as T;
   }
   return fallback;
 }
@@ -87,31 +94,40 @@ function resolveIndexUiBootstrapEnvironment(source: Record<string, unknown>): {
   clearTimeoutLike: unknown;
 } {
   const windowRecord = toRecord(source.windowLike);
-  const globalRecord = typeof globalThis !== "undefined" ? toRecord(globalThis as unknown) : {};
+  const globalRecord =
+    typeof globalThis === "undefined" ? {} : toRecord(globalThis as unknown);
 
   return {
-    locationLike: pickExplicitValue(source, "locationLike", windowRecord.location || null),
+    locationLike: pickExplicitValue(
+      source,
+      "locationLike",
+      windowRecord.location || null,
+    ),
     navigatorLike: pickExplicitValue(
       source,
       "navigatorLike",
-      windowRecord.navigator || globalRecord.navigator || null
+      windowRecord.navigator || globalRecord.navigator || null,
     ),
-    alertLike: pickExplicitValue(source, "alertLike", windowRecord.alert || globalRecord.alert || null),
+    alertLike: pickExplicitValue(
+      source,
+      "alertLike",
+      windowRecord.alert || globalRecord.alert || null,
+    ),
     consoleLike: pickExplicitValue(
       source,
       "consoleLike",
-      windowRecord.console || globalRecord.console || null
+      windowRecord.console || globalRecord.console || null,
     ),
     setTimeoutLike: pickExplicitValue(
       source,
       "setTimeoutLike",
-      windowRecord.setTimeout || globalRecord.setTimeout || null
+      windowRecord.setTimeout || globalRecord.setTimeout || null,
     ),
     clearTimeoutLike: pickExplicitValue(
       source,
       "clearTimeoutLike",
-      windowRecord.clearTimeout || globalRecord.clearTimeout || null
-    )
+      windowRecord.clearTimeout || globalRecord.clearTimeout || null,
+    ),
   };
 }
 
@@ -141,15 +157,19 @@ export function createIndexUiBootstrapResolvers(input: {
   const modalContracts = toRecord(source.modalContracts);
   const environment = resolveIndexUiBootstrapEnvironment(source);
 
-  const createIndexUiMobileResolvers = asFunction<(payload: unknown) => unknown>(
-    toRecord(source.indexUiPageResolversHostRuntime).createIndexUiMobileResolvers
+  const createIndexUiMobileResolvers = asFunction<
+    (payload: unknown) => unknown
+  >(
+    toRecord(source.indexUiPageResolversHostRuntime)
+      .createIndexUiMobileResolvers,
   );
   if (!createIndexUiMobileResolvers) {
     throw new Error("CoreIndexUiPageResolversHostRuntime is required");
   }
 
   const mobileUiMaxWidth =
-    typeof source.mobileUiMaxWidth === "number" && Number.isFinite(source.mobileUiMaxWidth)
+    typeof source.mobileUiMaxWidth === "number" &&
+    Number.isFinite(source.mobileUiMaxWidth)
       ? source.mobileUiMaxWidth
       : 760;
   const compactGameViewportMaxWidth =
@@ -163,17 +183,21 @@ export function createIndexUiBootstrapResolvers(input: {
       ? source.timerboxCollapseMaxWidth
       : 980;
   const mobileTimerboxCollapsedKey =
-    typeof source.mobileTimerboxCollapsedKey === "string" && source.mobileTimerboxCollapsedKey
+    typeof source.mobileTimerboxCollapsedKey === "string" &&
+    source.mobileTimerboxCollapsedKey
       ? source.mobileTimerboxCollapsedKey
       : "ui_timerbox_collapsed_mobile_v1";
 
   const mobileResolvers = toRecord(
     createIndexUiMobileResolvers({
-      mobileViewportPageHostRuntime: coreContracts.mobileViewportPageHostRuntime,
+      mobileViewportPageHostRuntime:
+        coreContracts.mobileViewportPageHostRuntime,
       mobileViewportRuntime: coreContracts.mobileViewportRuntime,
-      mobileTopButtonsPageHostRuntime: coreContracts.mobileTopButtonsPageHostRuntime,
+      mobileTopButtonsPageHostRuntime:
+        coreContracts.mobileTopButtonsPageHostRuntime,
       mobileTopButtonsRuntime: coreContracts.mobileTopButtonsRuntime,
-      mobileUndoTopAvailabilityHostRuntime: coreContracts.mobileUndoTopAvailabilityHostRuntime,
+      mobileUndoTopAvailabilityHostRuntime:
+        coreContracts.mobileUndoTopAvailabilityHostRuntime,
       mobileUndoTopHostRuntime: coreContracts.mobileUndoTopHostRuntime,
       mobileUndoTopRuntime: coreContracts.mobileUndoTopRuntime,
       undoActionRuntime: coreContracts.undoActionRuntime,
@@ -187,10 +211,12 @@ export function createIndexUiBootstrapResolvers(input: {
       mobileHintHostRuntime: coreContracts.mobileHintHostRuntime,
       mobileHintRuntime: coreContracts.mobileHintRuntime,
       mobileHintUiRuntime: coreContracts.mobileHintUiRuntime,
-      mobileTimerboxPageHostRuntime: coreContracts.mobileTimerboxPageHostRuntime,
+      mobileTimerboxPageHostRuntime:
+        coreContracts.mobileTimerboxPageHostRuntime,
       mobileTimerboxHostRuntime: coreContracts.mobileTimerboxHostRuntime,
       mobileTimerboxRuntime: coreContracts.mobileTimerboxRuntime,
-      responsiveRelayoutHostRuntime: coreContracts.responsiveRelayoutHostRuntime,
+      responsiveRelayoutHostRuntime:
+        coreContracts.responsiveRelayoutHostRuntime,
       responsiveRelayoutRuntime: coreContracts.responsiveRelayoutRuntime,
       documentLike: source.documentLike,
       bodyLike: toRecord(source.documentLike).body || null,
@@ -219,12 +245,15 @@ export function createIndexUiBootstrapResolvers(input: {
       timerboxFallbackHiddenAriaExpanded: "false",
       timerboxFallbackExpandLabel: "展开计时器",
       timerboxFallbackCollapseLabel: "收起计时器",
-      timerboxRelayoutDelayMs: 120
-    })
+      timerboxRelayoutDelayMs: 120,
+    }),
   );
 
-  const createIndexUiPageActionResolvers = asFunction<(payload: unknown) => unknown>(
-    toRecord(source.indexUiPageActionsHostRuntime).createIndexUiPageActionResolvers
+  const createIndexUiPageActionResolvers = asFunction<
+    (payload: unknown) => unknown
+  >(
+    toRecord(source.indexUiPageActionsHostRuntime)
+      .createIndexUiPageActionResolvers,
   );
   if (!createIndexUiPageActionResolvers) {
     throw new Error("CoreIndexUiPageActionsHostRuntime is required");
@@ -235,7 +264,8 @@ export function createIndexUiBootstrapResolvers(input: {
       ? source.practiceTransferKey
       : "practice_board_transfer_v1";
   const practiceTransferSessionKey =
-    typeof source.practiceTransferSessionKey === "string" && source.practiceTransferSessionKey
+    typeof source.practiceTransferSessionKey === "string" &&
+    source.practiceTransferSessionKey
       ? source.practiceTransferSessionKey
       : "practice_board_transfer_session_v1";
   const pageActionResolvers = toRecord(
@@ -246,10 +276,13 @@ export function createIndexUiBootstrapResolvers(input: {
       themeSettingsPageHostRuntime: coreContracts.themeSettingsPageHostRuntime,
       themeSettingsHostRuntime: coreContracts.themeSettingsHostRuntime,
       themeSettingsRuntime: coreContracts.themeSettingsRuntime,
-      timerModuleSettingsHostRuntime: coreContracts.timerModuleSettingsHostRuntime,
-      timerModuleSettingsPageHostRuntime: coreContracts.timerModuleSettingsPageHostRuntime,
+      timerModuleSettingsHostRuntime:
+        coreContracts.timerModuleSettingsHostRuntime,
+      timerModuleSettingsPageHostRuntime:
+        coreContracts.timerModuleSettingsPageHostRuntime,
       timerModuleRuntime: coreContracts.timerModuleRuntime,
-      practiceTransferPageHostRuntime: coreContracts.practiceTransferPageHostRuntime,
+      practiceTransferPageHostRuntime:
+        coreContracts.practiceTransferPageHostRuntime,
       practiceTransferHostRuntime: coreContracts.practiceTransferHostRuntime,
       practiceTransferRuntime: coreContracts.practiceTransferRuntime,
       storageRuntime: coreContracts.storageRuntime,
@@ -266,27 +299,30 @@ export function createIndexUiBootstrapResolvers(input: {
       setTimeoutLike: environment.setTimeoutLike,
       clearTimeoutLike: environment.clearTimeoutLike,
       localStorageKey: practiceTransferKey,
-      sessionStorageKey: practiceTransferSessionKey
-    })
+      sessionStorageKey: practiceTransferSessionKey,
+    }),
   );
 
   return {
     isCompactGameViewport: mobileResolvers.isCompactGameViewport,
-    syncMobileUndoTopButtonAvailability: mobileResolvers.syncMobileUndoTopButtonAvailability,
+    syncMobileUndoTopButtonAvailability:
+      mobileResolvers.syncMobileUndoTopButtonAvailability,
     initMobileUndoTopButton: mobileResolvers.initMobileUndoTopButton,
     syncMobileHintUI: mobileResolvers.syncMobileHintUI,
     initMobileHintToggle: mobileResolvers.initMobileHintToggle,
     syncMobileTimerboxUI: mobileResolvers.syncMobileTimerboxUI,
     initMobileTimerboxToggle: mobileResolvers.initMobileTimerboxToggle,
-    requestResponsiveGameRelayout: mobileResolvers.requestResponsiveGameRelayout,
+    requestResponsiveGameRelayout:
+      mobileResolvers.requestResponsiveGameRelayout,
     initThemeSettingsUI: pageActionResolvers.initThemeSettingsUI,
     removeLegacyUndoSettingsUI: pageActionResolvers.removeLegacyUndoSettingsUI,
     initTimerModuleSettingsUI: pageActionResolvers.initTimerModuleSettingsUI,
-    openPracticeBoardFromCurrent: pageActionResolvers.openPracticeBoardFromCurrent,
+    openPracticeBoardFromCurrent:
+      pageActionResolvers.openPracticeBoardFromCurrent,
     closeReplayModal: pageActionResolvers.closeReplayModal,
     exportReplay: pageActionResolvers.exportReplay,
     openSettingsModal: pageActionResolvers.openSettingsModal,
-    closeSettingsModal: pageActionResolvers.closeSettingsModal
+    closeSettingsModal: pageActionResolvers.closeSettingsModal,
   };
 }
 
@@ -321,71 +357,111 @@ export function applyIndexUiPageBootstrap(input: {
   const documentRecord = toRecord(source.documentLike);
   const indexUiStartupHostRuntime = toRecord(source.indexUiStartupHostRuntime);
   const applyIndexUiStartup = asFunction<(payload: unknown) => unknown>(
-    indexUiStartupHostRuntime.applyIndexUiStartup
+    indexUiStartupHostRuntime.applyIndexUiStartup,
   );
-  const getElementByIdRaw = asFunction<(id: string) => unknown>(documentRecord.getElementById);
+  const getElementByIdRaw = asFunction<(id: string) => unknown>(
+    documentRecord.getElementById,
+  );
   const getElementById = getElementByIdRaw
-    ? function (id: string): unknown {
-        return getElementByIdRaw.call(documentRecord, id);
-      }
+    ? (id: string): Record<string, unknown> | null =>
+        getElementByIdRaw.call(documentRecord, id) as Record<
+          string,
+          unknown
+        > | null
     : null;
   const addEventListener = asFunction<
     (name: string, listener: (...args: never[]) => unknown) => unknown
   >(documentRecord.addEventListener);
   const formatPrettyTime = asFunction<(value: unknown) => unknown>(
-    toRecord(source.prettyTimeRuntime).formatPrettyTime
+    toRecord(source.prettyTimeRuntime).formatPrettyTime,
   );
   const nowMs = asFunction<() => number>(source.nowMs);
   const touchGuardWindowMs =
-    typeof source.touchGuardWindowMs === "number" && Number.isFinite(source.touchGuardWindowMs)
+    typeof source.touchGuardWindowMs === "number" &&
+    Number.isFinite(source.touchGuardWindowMs)
       ? source.touchGuardWindowMs
       : 450;
 
   let appliedGlobalBindings = false;
-  if (bindGlobalFunction(windowRecord, "syncMobileTimerboxUI", source.syncMobileTimerboxUI)) {
+  if (
+    bindGlobalFunction(
+      windowRecord,
+      "syncMobileTimerboxUI",
+      source.syncMobileTimerboxUI,
+    )
+  ) {
     appliedGlobalBindings = true;
   }
-  if (bindGlobalFunction(windowRecord, "syncMobileHintUI", source.syncMobileHintUI)) {
+  if (
+    bindGlobalFunction(
+      windowRecord,
+      "syncMobileHintUI",
+      source.syncMobileHintUI,
+    )
+  ) {
     appliedGlobalBindings = true;
   }
   if (
     bindGlobalFunction(
       windowRecord,
       "syncMobileUndoTopButtonAvailability",
-      source.syncMobileUndoTopButtonAvailability
+      source.syncMobileUndoTopButtonAvailability,
     )
   ) {
     appliedGlobalBindings = true;
   }
   if (
-    bindGlobalFunction(windowRecord, "openPracticeBoardFromCurrent", source.openPracticeBoardFromCurrent)
+    bindGlobalFunction(
+      windowRecord,
+      "openPracticeBoardFromCurrent",
+      source.openPracticeBoardFromCurrent,
+    )
   ) {
     appliedGlobalBindings = true;
   }
-  if (bindGlobalFunction(windowRecord, "closeReplayModal", source.closeReplayModal)) {
+  if (
+    bindGlobalFunction(
+      windowRecord,
+      "closeReplayModal",
+      source.closeReplayModal,
+    )
+  ) {
     appliedGlobalBindings = true;
   }
   if (bindGlobalFunction(windowRecord, "exportReplay", source.exportReplay)) {
     appliedGlobalBindings = true;
   }
-  if (bindGlobalFunction(windowRecord, "openSettingsModal", source.openSettingsModal)) {
+  if (
+    bindGlobalFunction(
+      windowRecord,
+      "openSettingsModal",
+      source.openSettingsModal,
+    )
+  ) {
     appliedGlobalBindings = true;
   }
-  if (bindGlobalFunction(windowRecord, "closeSettingsModal", source.closeSettingsModal)) {
+  if (
+    bindGlobalFunction(
+      windowRecord,
+      "closeSettingsModal",
+      source.closeSettingsModal,
+    )
+  ) {
     appliedGlobalBindings = true;
   }
   if (formatPrettyTime) {
-    windowRecord.pretty = function (time: unknown): unknown {
-      return formatPrettyTime(time);
-    };
+    windowRecord.pretty = (time: unknown): string =>
+      String(formatPrettyTime(time));
     appliedGlobalBindings = true;
   }
 
   let startupInvoked = false;
-  const startupHandler = function (): unknown {
-    if (!applyIndexUiStartup || !getElementById) return null;
+  let startupCompleted = false;
+  const startupHandler = (): void => {
+    if (startupCompleted || !applyIndexUiStartup || !getElementById) return;
+    startupCompleted = true;
     startupInvoked = true;
-    return applyIndexUiStartup({
+    applyIndexUiStartup({
       topActionBindingsHostRuntime: source.topActionBindingsHostRuntime,
       gameOverUndoHostRuntime: source.gameOverUndoHostRuntime,
       getElementById,
@@ -402,25 +478,28 @@ export function applyIndexUiPageBootstrap(input: {
       initMobileUndoTopButton: source.initMobileUndoTopButton,
       initMobileTimerboxToggle: source.initMobileTimerboxToggle,
       requestResponsiveGameRelayout: source.requestResponsiveGameRelayout,
-      nowMs: nowMs
-        ? nowMs
-        : function (): number {
-            return Date.now();
-          },
-      touchGuardWindowMs
+      nowMs: nowMs ? nowMs : (): number => Date.now(),
+      touchGuardWindowMs,
     });
   };
 
   let boundDomContentLoaded = false;
-  if (!documentRecord.__indexUiPageBootstrapBound && addEventListener) {
-    addEventListener.call(documentRecord, "DOMContentLoaded", startupHandler);
-    documentRecord.__indexUiPageBootstrapBound = true;
-    boundDomContentLoaded = true;
+  const readyState = String(
+    (documentRecord as { readyState?: unknown }).readyState || "",
+  );
+  if (!readyState || readyState === "loading") {
+    if (!documentRecord.__indexUiPageBootstrapBound && addEventListener) {
+      addEventListener.call(documentRecord, "DOMContentLoaded", startupHandler);
+      documentRecord.__indexUiPageBootstrapBound = true;
+      boundDomContentLoaded = true;
+    }
+  } else {
+    startupHandler();
   }
 
   return {
     appliedGlobalBindings,
     boundDomContentLoaded,
-    startupInvoked
+    startupInvoked,
   };
 }
