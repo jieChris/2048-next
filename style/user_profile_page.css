@@ -12,10 +12,13 @@ body[data-page="user-profile"] {
   --user-muted: #697b7b;
   --user-accent: #2f8691;
   --user-accent-dark: #245f68;
+  width: 100%;
+  min-width: 100%;
   min-height: 100vh;
   margin: 0;
   color: var(--user-ink);
   background: var(--user-paper);
+  overflow-x: hidden;
   font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
@@ -23,11 +26,13 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
   visibility: hidden;
 }
 
-.user-page-shell {
+body[data-page="user-profile"] .user-page-shell {
   display: flex;
+  box-sizing: border-box;
   min-height: 100vh;
   flex-direction: column;
   width: 100%;
+  max-width: none;
   margin: 0;
   background: var(--user-paper);
 }
@@ -43,6 +48,7 @@ body[data-page="user-profile"][data-i18n-ready="0"] {
 }
 
 .user-profile-page {
+  min-width: 0;
   flex: 1 0 auto;
   overflow: hidden;
   border: 0;
@@ -720,6 +726,7 @@ body:not([data-user-edit-mode]) .user-profile-background-editor {
 }
 
 .user-profile-main-panel {
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -757,6 +764,7 @@ body:not([data-user-edit-mode]) .user-profile-background-editor {
 }
 
 .user-profile-section {
+  min-width: 0;
   padding: 15px;
 }
 
@@ -982,6 +990,8 @@ body:not([data-user-edit-mode]) .user-profile-background-editor {
 /* Records keep the existing replay/delete/restore runtime and DOM contract. */
 .user-record-card {
   --user-record-columns: minmax(150px, 1.35fr) repeat(5, minmax(74px, 1fr));
+  box-sizing: border-box;
+  min-width: 0;
   padding: 14px;
 }
 
@@ -1099,6 +1109,7 @@ body[data-page="user-profile"] .user-record-tools .settings-select {
 
 .user-record-row {
   align-items: center;
+  box-sizing: border-box;
   width: 100%;
   padding: 10px;
   border: 0;
@@ -1501,6 +1512,11 @@ html[data-night-background="1"] body[data-page="user-profile"] .user-nav-menu-pa
 }
 
 @media (max-width: 560px) {
+  body[data-page="user-profile"] {
+    width: auto;
+    min-width: 0;
+  }
+
   .user-profile-avatar-editor,
   .user-profile-bio-editor {
     margin: 11px 11px 0;

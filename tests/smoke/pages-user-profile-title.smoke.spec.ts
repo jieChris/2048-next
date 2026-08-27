@@ -37,6 +37,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page).toHaveTitle("2048 NEXT — 免费在线 2048 多模式数字合并游戏");
   });
 
+  test("user profile fills the viewport without inherited side gutters", async ({ page }) => {
+    await page.route("**/api/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("/user/12/records")) {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: [] }) });
+        return;
+      }
+      if (url.includes("/user/12/stats")) {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { summary: { total_records: 0 }, by_mode: [] } }) });
+        return;
+      }
+      if (url.includes("/user/12")) {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: { id: 12, nickname: "Wide", created_at: "2026-03-21 15:45:05" } }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true, data: [] }) });
+    });
+
+    await page.goto("/user.html?id=12&nickname=Wide", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#user-value-name")).toHaveText("Wide");
+    const geometry = await page.locator(".user-page-shell").evaluate((shell) => {
+      const rect = shell.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+    });
+    expect(Math.abs(geometry.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.viewport - geometry.right)).toBeLessThanOrEqual(1);
+  });
+
   test("own user profile title is 用户主页", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "test-token-own");
@@ -421,10 +449,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await openRecordsTab(page);
     await page.waitForSelector(".user-record-item");
 
-    await expect(page.locator('link[href^="style/user_profile_page.css"]')).toHaveAttribute(
-      "href",
-      "style/user_profile_page.css?v=20260822-profile-polish-v3"
-    );
+    await expect(page.locator(".user-page-shell")).toHaveCSS("max-width", "none");
 
     await expect(page.locator(".user-record-mode").first()).toHaveText("4x4（不可撤回）");
     await expect(page.locator("#user-col-board-sum")).toHaveText("盘面和");

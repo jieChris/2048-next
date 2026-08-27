@@ -17,7 +17,30 @@ describe("user-profile entry bootstrap", () => {
     expect(source).toContain('await bootstrapDirectPage("user-profile", bootstrapUserProfilePage);');
     expect(page).not.toContain('import { installUserProfileLegacyRuntime } from "../bootstrap/user-profile-legacy-runtime";');
     expect(page).toContain('await import("../bootstrap/user-profile-legacy-runtime")');
-    expect(page).toContain("export async function bootstrapUserProfilePage(): Promise<void>");
+    expect(page).toContain("await installUserProfileLegacyRuntime();");
+  });
+
+  it("loads the legacy profile data runtime as real scripts in production builds", () => {
+    const runtime = readEntry("src/bootstrap/user-profile-legacy-runtime.ts");
+
+    expect(runtime).toContain('import coreGameSettingsStorageRuntimeUrl from "../../js/core_game_settings_storage_runtime.js?url";');
+    expect(runtime).toContain('import apiSharedUtilsUrl from "../../js/api_shared_utils.js?url";');
+    expect(runtime).toContain('import userProfilePageUrl from "../../js/user_profile_page.js?url";');
+    expect(runtime).toContain("loadLegacyScriptsSequentially");
+    expect(runtime).not.toContain('import "../../js/user_profile_page.js";');
+    expect(runtime).toContain("coreGameSettingsStorageRuntimeUrl");
+    expect(runtime).toContain("apiSharedUtilsUrl");
+    expect(runtime).toContain("userProfilePageUrl");
+  });
+
+  it("keeps the profile shell viewport-wide instead of inheriting the centered page width", () => {
+    const css = readEntry("style/user_profile_page.css");
+
+    expect(css).toContain('body[data-page="user-profile"]');
+    expect(css).toContain("width: 100%;");
+    expect(css).toContain("min-width: 100%;");
+    expect(css).toContain('body[data-page="user-profile"] .user-page-shell');
+    expect(css).toContain("max-width: none;");
   });
 
   it("keeps the open profile synchronized with display-mode changes", () => {

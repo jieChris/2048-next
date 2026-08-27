@@ -43,6 +43,8 @@ interface EarnedAchievement {
   showcaseSlot: 1 | 2 | 3 | null;
 }
 
+type ProfileValue = string | number | boolean | JsonRecord | JsonRecord[] | null | undefined;
+
 type UserProfileWindow = Window & { UserProfilePageRuntime?: LegacyProfileRuntime };
 
 const PROFILE_COVERS = new Set(["tide", "sunset", "midnight", "forest", "plum"]);
@@ -139,6 +141,7 @@ function integer(value: unknown): number {
 
 function language(): "zh" | "en" {
   const storageLike = resolveStorageByName({
+    // SAFETY: the helper only reads the named Web Storage property from Window.
     windowLike: window as unknown as Record<string, unknown>,
     storageName: "localStorage"
   });
@@ -151,8 +154,8 @@ function localized(source: JsonRecord, key: "name" | "description"): string {
   return text(localizedValues[lang]) || text(source[key]);
 }
 
-function profileValue(profile: JsonRecord, snake: string, camel: string): unknown {
-  return profile[snake] ?? profile[camel];
+function profileValue(profile: JsonRecord, snake: string, camel: string): ProfileValue {
+  return (profile[snake] as ProfileValue | undefined) ?? (profile[camel] as ProfileValue | undefined);
 }
 
 function legacyRuntime(): LegacyProfileRuntime {
@@ -516,8 +519,13 @@ async function loadAchievements(userId: number): Promise<void> {
 function renderAchievementIcon(host: HTMLElement, achievement: JsonRecord): void {
   const markup = achievementIconMarkupFor(achievement);
   if (markup) {
-    host.innerHTML = markup;
-    return;
+    // SAFETY: achievementIconMarkupFor returns allowlisted static SVG markup; parse it as XML before attaching it.
+    const parsed = new DOMParser().parseFromString(markup, "image/svg+xml");
+    const svg = parsed.documentElement;
+    if (svg?.localName === "svg") {
+      host.replaceChildren(document.importNode(svg, true));
+      return;
+    }
   }
   const fallback = document.createElement("span");
   fallback.className = "user-showcase-empty";
@@ -723,9 +731,7 @@ function renderModerationHistory(): void {
     emptyMessage(host, language() === "en" ? "Loading review history…" : "正在读取审核记录…");
   } else if (moderationHistoryState === "error") {
     emptyMessage(host, language() === "en" ? "Review history could not be loaded." : "审核记录加载失败，请稍后重试。");
-  } else if (!moderationHistory.length) {
-    emptyMessage(host, language() === "en" ? "No bio review submissions yet." : "还没有简介审核记录。");
-  } else {
+  } else if (moderationHistory.length) {
     host.replaceChildren(...moderationHistory.map((item) => {
       const row = document.createElement("article");
       row.className = "user-profile-moderation-item";
@@ -746,6 +752,8 @@ function renderModerationHistory(): void {
       }
       return row;
     }));
+  } else {
+    emptyMessage(host, language() === "en" ? "No bio review submissions yet." : "还没有简介审核记录。");
   }
   syncBioInputState();
 }
@@ -842,9 +850,7 @@ function renderAvatarSubmission(): void {
     emptyMessage(host, language() === "en" ? "Loading avatar review…" : "正在读取头像审核状态…");
   } else if (avatarSubmissionState === "error") {
     emptyMessage(host, language() === "en" ? "Avatar review state could not be loaded." : "头像审核状态加载失败。");
-  } else if (!avatarSubmission) {
-    emptyMessage(host, language() === "en" ? "No avatar submissions yet." : "还没有头像审核记录。");
-  } else {
+  } else if (avatarSubmission) {
     const row = document.createElement("article");
     row.className = "user-profile-moderation-item";
     const heading = document.createElement("div");
@@ -863,6 +869,8 @@ function renderAvatarSubmission(): void {
       row.appendChild(reason);
     }
     host.replaceChildren(row);
+  } else {
+    emptyMessage(host, language() === "en" ? "No avatar submissions yet." : "还没有头像审核记录。");
   }
   if (avatarQuotaActive()) {
     const quota = document.createElement("p");
@@ -882,12 +890,12 @@ async function loadAvatarSubmission(): Promise<void> {
   renderAvatarSubmission();
   const result = await apiClient.request("/user/me/avatar-submission", { method: "GET" });
   if (!state.isOwnProfile) return;
-  if (!result.success) {
-    avatarSubmissionState = "error";
-  } else {
+  if (result.success) {
     avatarSubmission = Object.keys(record(result.data)).length ? record(result.data) : null;
     avatarNextAllowedAt = text(result.next_allowed_at);
     avatarSubmissionState = "ready";
+  } else {
+    avatarSubmissionState = "error";
   }
   renderAvatarSubmission();
 }
@@ -985,9 +993,7 @@ function prepareFeaturedDialog(): void {
   if (!host) return;
   const selected = new Set(featuredModeKeys());
   const modes = availableFeaturedModes();
-  if (!modes.length) {
-    emptyMessage(host, language() === "en" ? "Play a mode before featuring it." : "游玩并保存记录后，才能选择代表模式。");
-  } else {
+  if (modes.length) {
     host.replaceChildren(...modes.map((item) => {
       const label = document.createElement("label");
       label.className = "user-featured-choice";
@@ -1001,6 +1007,8 @@ function prepareFeaturedDialog(): void {
       label.append(input, copy);
       return label;
     }));
+  } else {
+    emptyMessage(host, language() === "en" ? "Play a mode before featuring it." : "游玩并保存记录后，才能选择代表模式。");
   }
   setDialogStatus("user-featured-save-status", "");
   syncFeaturedChoiceLimit();
@@ -1249,6 +1257,7 @@ function bindEnhancedEvents(): void {
 
 function bootstrapEnhancedProfile(): void {
   const storageLike = resolveStorageByName({
+    // SAFETY: the helper only reads the named Web Storage property from Window.
     windowLike: window as unknown as Record<string, unknown>,
     storageName: "localStorage"
   });
@@ -1270,7 +1279,7 @@ function bootstrapEnhancedProfile(): void {
 export async function bootstrapUserProfilePage(): Promise<void> {
   if (typeof document === "undefined") return;
   const { installUserProfileLegacyRuntime } = await import("../bootstrap/user-profile-legacy-runtime");
-  installUserProfileLegacyRuntime();
+  await installUserProfileLegacyRuntime();
   document.documentElement.setAttribute("data-page-system", "unified-page-system");
   document.body?.setAttribute("data-page-family", "profile-history-replay");
   bootstrapEnhancedProfile();
