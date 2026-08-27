@@ -18,6 +18,51 @@ test.describe("Home user display", () => {
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account_settings.html");
   });
 
+  test("keeps the cached signed-in identity while cookie auth refresh is pending", async ({ page }) => {
+    let releaseRefresh = (): void => {};
+    const refreshReleased = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.removeItem("2048_auth_token_v1");
+      window.localStorage.setItem("2048_auth_userId_v1", "9023");
+      window.localStorage.setItem("2048_public_profile_id_v1", "23");
+      window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
+    });
+    await page.route("**/api/**", async (route) => {
+      if (route.request().url().endsWith("/api/auth/refresh")) {
+        await refreshReleased;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            token: "restored-cookie-token",
+            user: { id: 9023, public_profile_id: 23, nickname: "Jay" }
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: [] })
+      });
+    });
+
+    await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#home-user-display")).toHaveText("Jay", { timeout: 500 });
+    await expect(page.locator("#home-user-display")).toHaveAttribute(
+      "href",
+      "user.html?id=23&nickname=Jay",
+      { timeout: 500 }
+    );
+
+    releaseRefresh();
+    await expect(page.locator("#home-user-display")).toHaveText("Jay");
+  });
+
   test("resyncs the account badge when a cached home page is shown again", async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.removeItem("2048_auth_token_v1");

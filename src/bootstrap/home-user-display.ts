@@ -15,6 +15,7 @@ type DocumentLike = {
     appendChild?: <T>(node: T) => T;
   } | null;
   createElement?: (tagName: string) => HomeUserDisplayNodeLike;
+  createElementNS?: (namespace: string, tagName: string) => HomeUserDisplayNodeLike;
   getElementById?: (id: string) => HomeUserDisplayNodeLike | null;
   querySelector?: (selector: string) => HomeUserDisplayParentLike | null;
 };
@@ -26,6 +27,7 @@ type HomeUserDisplayParentLike = {
 };
 
 type HomeUserDisplayNodeLike = {
+  appendChild?: <T>(node: T) => T;
   className?: string;
   href?: string;
   id?: string;
@@ -34,8 +36,13 @@ type HomeUserDisplayNodeLike = {
   textContent?: string | null;
 };
 
-const PROFILE_BUTTON_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="profile-line profile-head-left" pathLength="1" d="M12 12A4 4 0 0 1 12 4"></path><path class="profile-line profile-head-right" pathLength="1" d="M12 12A4 4 0 0 0 12 4"></path><path class="profile-line profile-shoulder-left" pathLength="1" d="M12 12A8 8 0 0 0 4 20"></path><path class="profile-line profile-shoulder-right" pathLength="1" d="M12 12A8 8 0 0 1 20 20"></path><circle class="profile-origin" cx="12" cy="12" r="1" fill="currentColor" stroke="none"></circle></svg>';
+const PROFILE_SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+const PROFILE_PATHS = [
+  ["profile-line profile-head-left", "M12 12A4 4 0 0 1 12 4"],
+  ["profile-line profile-head-right", "M12 12A4 4 0 0 0 12 4"],
+  ["profile-line profile-shoulder-left", "M12 12A8 8 0 0 0 4 20"],
+  ["profile-line profile-shoulder-right", "M12 12A8 8 0 0 1 20 20"]
+] as const;
 
 const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "account",
@@ -104,13 +111,13 @@ export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): st
 export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
   const userId = readPublicProfileId(input.storageLike);
   const nickname = readNickname(input.storageLike);
-  if (!readAuthToken(input.storageLike)) return "account_settings.html";
-  if (!userId) {
-    return "user.html";
+  if (userId) {
+    const query = new URLSearchParams({ id: userId });
+    if (nickname) query.set("nickname", nickname);
+    return `user.html?${query.toString()}`;
   }
-  const query = new URLSearchParams({ id: userId });
-  if (nickname) query.set("nickname", nickname);
-  return `user.html?${query.toString()}`;
+  if (!readAuthToken(input.storageLike)) return "account_settings.html";
+  return "user.html";
 }
 
 export function shouldShowHomeUserDisplayForPage(pageId?: string | null): boolean {
@@ -148,6 +155,35 @@ function createGlobalHomeUserDisplay(input: {
   return parent.appendChild(node);
 }
 
+function appendProfileButtonIcon(documentLike: DocumentLike, button: HomeUserDisplayNodeLike): void {
+  if (typeof documentLike.createElementNS !== "function" || typeof button.appendChild !== "function") return;
+  const svg = documentLike.createElementNS(PROFILE_SVG_NAMESPACE, "svg");
+  svg.setAttribute?.("width", "34");
+  svg.setAttribute?.("height", "34");
+  svg.setAttribute?.("viewBox", "0 0 24 24");
+  svg.setAttribute?.("fill", "none");
+  svg.setAttribute?.("stroke", "currentColor");
+  svg.setAttribute?.("stroke-width", "2");
+  svg.setAttribute?.("stroke-linecap", "round");
+  svg.setAttribute?.("stroke-linejoin", "round");
+  for (const [className, pathData] of PROFILE_PATHS) {
+    const path = documentLike.createElementNS(PROFILE_SVG_NAMESPACE, "path");
+    path.setAttribute?.("class", className);
+    path.setAttribute?.("pathLength", "1");
+    path.setAttribute?.("d", pathData);
+    svg.appendChild?.(path);
+  }
+  const origin = documentLike.createElementNS(PROFILE_SVG_NAMESPACE, "circle");
+  origin.setAttribute?.("class", "profile-origin");
+  origin.setAttribute?.("cx", "12");
+  origin.setAttribute?.("cy", "12");
+  origin.setAttribute?.("r", "1");
+  origin.setAttribute?.("fill", "currentColor");
+  origin.setAttribute?.("stroke", "none");
+  svg.appendChild?.(origin);
+  button.appendChild(svg);
+}
+
 function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplayNodeLike | null {
   if (typeof documentLike.createElement !== "function" || typeof documentLike.querySelector !== "function") {
     return null;
@@ -160,8 +196,7 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
   node.id = TOP_USER_PROFILE_BUTTON_ID;
   node.className = "top-action-btn profile-btn";
   node.href = "account_settings.html";
-  // pi-lens-ignore: ast-grep:no-inner-html
-  node.innerHTML = PROFILE_BUTTON_SVG;
+  appendProfileButtonIcon(documentLike, node);
   if (typeof node.setAttribute === "function") {
     node.setAttribute("title", "用户中心");
     node.setAttribute("aria-label", "用户中心");

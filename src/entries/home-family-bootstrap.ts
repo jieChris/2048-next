@@ -295,8 +295,22 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     throw new Error(`Unknown page manifest: ${pageId}`);
   }
 
-  await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
   const accountPaletteSession = getAccountPaletteSessionController();
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    const storageLike = resolveStorageByName({
+      // SAFETY: the helper only reads the named Web Storage property from Window.
+      windowLike: window as unknown as Record<string, unknown>,
+      storageName: "localStorage"
+    });
+    bindHomeUserDisplay({
+      documentLike: document,
+      pageId,
+      windowLike: window,
+      storageLike
+    });
+  }
+
+  await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
   if (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function") {
     void accountPaletteSession.bootstrap().catch(() => {});
   }
@@ -306,18 +320,6 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     if (!access.allowed) return;
   }
   bindHomeFamilyMobilePageScrollLock();
-  if (typeof window !== "undefined" && typeof document !== "undefined") {
-    bindHomeUserDisplay({
-      documentLike: document,
-      pageId,
-      windowLike: window,
-      storageLike: resolveStorageByName({
-        // SAFETY: the helper only reads the named Web Storage property from Window.
-        windowLike: window as unknown as Record<string, unknown>,
-        storageName: "localStorage"
-      })
-    });
-  }
   await runBootstrapPipeline(pageId);
   await bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
   registerEngineFacade(

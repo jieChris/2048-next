@@ -50,6 +50,18 @@ describe("bootstrap home user display", () => {
     expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html?id=9&nickname=Smoke+User");
   });
 
+  it("links a cached cookie-auth identity to its public profile before token restore", () => {
+    const storageLike = {
+      getItem(key: string) {
+        if (key === "2048_public_profile_id_v1") return "23";
+        if (key === "2048_auth_nickname_v1") return "Jay";
+        return null;
+      }
+    };
+
+    expect(resolveHomeUserDisplayHref({ storageLike })).toBe("user.html?id=23&nickname=Jay");
+  });
+
   it("links authenticated sessions without a cached user id to the current user profile", () => {
     const storageLike = {
       getItem(key: string) {
@@ -126,7 +138,7 @@ describe("bootstrap home user display", () => {
         return {
           attrs: {},
           setAttribute(name: string, value: string) {
-            this.attrs[name] = value;
+            this.attrs![name] = value;
           }
         } as (typeof appended)[number] & {
           setAttribute(name: string, value: string): void;
