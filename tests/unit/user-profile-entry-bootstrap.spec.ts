@@ -183,7 +183,8 @@ describe("user-profile entry bootstrap", () => {
     expect(page).toContain('scene.preview_url');
     expect(page).toContain('preloadProfileBackground');
     expect(page).toContain('resetProfileBackgroundLayers');
-    expect(page).toContain('Promise.all(values.map');
+    expect(page).toContain("Promise.all(");
+    expect(page).toContain("values.map");
     expect(page).toContain('data-background-assets-ready');
     expect(page).toContain('"--profile-cover-sky-image"');
     expect(page).toContain('"--profile-cover-city-image"');

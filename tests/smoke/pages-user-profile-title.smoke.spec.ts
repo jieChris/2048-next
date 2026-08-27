@@ -556,6 +556,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
                   record_count: 3,
                   best_score: 8192,
                   best_tile: 2048,
+                  fastest_2048_ms: 61000,
                   latest_record_at: "2026-03-17T08:00:00.000Z"
                 },
                 {
@@ -654,6 +655,8 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#user-panel-records")).toBeVisible();
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight span")).toHaveText("最高分");
     await expect(page.locator(".user-performance-card").first().locator(".user-performance-highlight > strong")).toHaveText("8 192");
+    await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("合成2048最快时间：01:01");
+    await expect(page.locator(".user-performance-card").nth(1).locator("p")).toContainText("合成2048最快时间：--");
     await expect(page.locator(".user-performance-card").first().locator("p")).toContainText("3 局");
     await expect(page.locator("#user-summary-total-label")).toHaveText("总记录数");
     await expect(page.locator("#user-summary-total-value")).toHaveText("6");

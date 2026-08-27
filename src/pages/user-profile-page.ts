@@ -185,7 +185,7 @@ function formatDuration(value: unknown): string {
   const rest = seconds % 60;
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`
-    : `${minutes}:${String(rest).padStart(2, "0")}`;
+    : `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
 function initials(nickname: string): string {
@@ -443,9 +443,10 @@ function renderPerformance(): void {
     const title = document.createElement("h3");
     title.textContent = modeLabel(stats.mode_key, stats.mode_bucket);
     const detail = document.createElement("p");
+    const fastest2048 = formatDuration(stats.fastest_2048_ms);
     detail.textContent = language() === "en"
-      ? `Tile ${formatNumber(stats.best_tile)} · Fastest ${formatDuration(stats.fastest_duration_ms)} · ${formatNumber(stats.record_count)} games`
-      : `最大方块 ${formatNumber(stats.best_tile)} · 最快 ${formatDuration(stats.fastest_duration_ms)} · ${formatNumber(stats.record_count)} 局`;
+      ? `Best tile ${formatNumber(stats.best_tile)} · Fastest 2048 merge: ${fastest2048} · ${formatNumber(stats.record_count)} games`
+      : `最大方块 ${formatNumber(stats.best_tile)} · 合成2048最快时间：${fastest2048} · ${formatNumber(stats.record_count)} 局`;
     copy.append(title, detail);
     const highlight = document.createElement("div");
     highlight.className = "user-performance-highlight";

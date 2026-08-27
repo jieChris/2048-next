@@ -1243,6 +1243,7 @@
         best_score: parsePositiveInt(source.best_score || source.max_score),
         best_tile: parsePositiveInt(source.best_tile || source.max_tile),
         fastest_duration_ms: parsePositiveInt(source.fastest_duration_ms),
+        fastest_2048_ms: parsePositiveInt(source.fastest_2048_ms),
         fewest_steps: parsePositiveInt(source.fewest_steps),
         latest_record_at: toText(source.latest_record_at || source.last_record_at || source.updated_at).trim()
       });
