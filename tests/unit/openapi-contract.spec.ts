@@ -371,7 +371,9 @@ describe("OpenAPI contract", () => {
     expect(html).toContain('src="./src/entries/api-docs.ts"');
     expect(html).toContain("script-src 'self'");
     expect(html).not.toMatch(/https?:\/\//u);
-    expect(viteConfig).toContain("api_docs: resolve(__dirname, \"api-docs.html\")");
+    expect(viteConfig).toMatch(
+      /api_docs:\s*resolve\(\s*__dirname,\s*"api-docs\.html",?\s*\)/u,
+    );
     expect(viteConfig).toContain("copyOpenApiContractPlugin");
   });
 
