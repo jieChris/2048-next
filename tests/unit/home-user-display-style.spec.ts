@@ -25,13 +25,21 @@ describe("home user display style", () => {
   it("uses a fresh stylesheet cache key on the main game page", () => {
     const html = readFileSync("2048.html", "utf8");
 
-    expect(html).toContain("style/main.css?v=20260803-operation-feedback-live-lock-v3");
-    expect(html).not.toContain("style/main.css?v=20260626-breakout-window-controls");
+    expect(html).toContain("style/main.css?v=20260827-mobile-surface-v1");
+    expect(html).not.toContain(
+      "style/main.css?v=20260626-breakout-window-controls",
+    );
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-burst");
-    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-favicon");
+    expect(html).not.toContain(
+      "style/main.css?v=20260626-flying-tiles-favicon",
+    );
     expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-fast");
-    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-continuous");
-    expect(html).not.toContain("style/main.css?v=20260626-flying-tiles-rollback");
+    expect(html).not.toContain(
+      "style/main.css?v=20260626-flying-tiles-continuous",
+    );
+    expect(html).not.toContain(
+      "style/main.css?v=20260626-flying-tiles-rollback",
+    );
     expect(html).not.toContain("style/main.css?v=20260625-flying-tiles-smooth");
     expect(html).not.toContain("style/main.css?v=20260625-breakout-easter-egg");
     expect(html).not.toContain('"style/main.css?v=20260625-flying-tiles"');
@@ -46,7 +54,9 @@ describe("home user display style", () => {
     const html = readFileSync("2048.html", "utf8");
     const css = readCssEntry("style/main.css");
 
-    expect(html).toContain('class="top-action-btn profile-btn" id="top-user-profile-btn"');
+    expect(html).toContain(
+      'class="top-action-btn profile-btn" id="top-user-profile-btn"',
+    );
     expect(html).toContain('class="profile-line profile-head-left"');
     expect(html).toContain('class="profile-line profile-shoulder-right"');
     expect(html).toContain('class="profile-origin"');
@@ -56,7 +66,9 @@ describe("home user display style", () => {
     expect(html).toContain('width="34" height="34"');
     expect(css).toContain("width: 34px !important;");
     expect(css).toContain("stroke-width: 1.65;");
-    expect(css).not.toContain('.top-action-buttons .top-action-btn:not(#top-user-profile-btn)');
+    expect(css).not.toContain(
+      ".top-action-buttons .top-action-btn:not(#top-user-profile-btn)",
+    );
     expect(css).toContain("@keyframes profile-line-draw");
     expect(css).toContain("@keyframes profile-origin-fade");
   });

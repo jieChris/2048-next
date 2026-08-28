@@ -512,7 +512,9 @@ test.describe("Account palette draft outbox", () => {
       "改用已有色板",
     );
     await expect(
-      page.locator('.palette-item.is-active[data-palette-id="existing-palette"]'),
+      page.locator(
+        '.palette-item.is-active[data-palette-id="existing-palette"]',
+      ),
     ).toBeVisible();
     const duplicateRows = await readOutbox(page, 42);
     expect(
@@ -582,11 +584,11 @@ test.describe("Account palette draft outbox", () => {
     await page.evaluate(() => {
       const browserWindow = window as any;
       browserWindow.__paletteLeaveResult = null;
-      void browserWindow.AccountPalettePageLeaveHandler().then(
-        (allowed: boolean) => {
+      void browserWindow
+        .AccountPalettePageLeaveHandler()
+        .then((allowed: boolean) => {
           browserWindow.__paletteLeaveResult = allowed;
-        },
-      );
+        });
     });
     await expect(page.locator("#game-dialog-message")).toContainText(
       "离开前保存",
@@ -712,5 +714,4 @@ test.describe("Account palette draft outbox", () => {
       ).__paletteLeaveSetItem;
     });
   });
-
 });

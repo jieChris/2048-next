@@ -9,16 +9,23 @@ test.describe("Home user display", () => {
       window.localStorage.removeItem("2048_auth_nickname_v1");
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded",
+    });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#home-user-display")).toHaveText("游客");
     await expect(page.locator("#top-announcement-btn")).toBeHidden();
-    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute("href", "account_settings.html");
+    await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
+      "href",
+      "account_settings.html",
+    );
   });
 
-  test("keeps the cached signed-in identity while cookie auth refresh is pending", async ({ page }) => {
+  test("keeps the cached signed-in identity while cookie auth refresh is pending", async ({
+    page,
+  }) => {
     let releaseRefresh = (): void => {};
     const refreshReleased = new Promise<void>((resolve) => {
       releaseRefresh = resolve;
@@ -39,31 +46,35 @@ test.describe("Home user display", () => {
           body: JSON.stringify({
             success: true,
             token: "restored-cookie-token",
-            user: { id: 9023, public_profile_id: 23, nickname: "Jay" }
-          })
+            user: { id: 9023, public_profile_id: 23, nickname: "Jay" },
+          }),
         });
         return;
       }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
 
     await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("#home-user-display")).toHaveText("Jay", { timeout: 500 });
+    await expect(page.locator("#home-user-display")).toHaveText("Jay", {
+      timeout: 500,
+    });
     await expect(page.locator("#home-user-display")).toHaveAttribute(
       "href",
       "user.html?id=23&nickname=Jay",
-      { timeout: 500 }
+      { timeout: 500 },
     );
 
     releaseRefresh();
     await expect(page.locator("#home-user-display")).toHaveText("Jay");
   });
 
-  test("resyncs the account badge when a cached home page is shown again", async ({ page }) => {
+  test("resyncs the account badge when a cached home page is shown again", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.removeItem("2048_auth_token_v1");
       window.localStorage.removeItem("2048_auth_userId_v1");
@@ -75,7 +86,7 @@ test.describe("Home user display", () => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
 
@@ -87,48 +98,65 @@ test.describe("Home user display", () => {
       window.localStorage.setItem("2048_auth_userId_v1", "9023");
       window.localStorage.setItem("2048_public_profile_id_v1", "23");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
-      window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+      window.dispatchEvent(
+        new PageTransitionEvent("pageshow", { persisted: true }),
+      );
     });
 
     await expect(page.locator("#home-user-display")).toHaveText("Jay");
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
       "href",
-      "user.html?id=23&nickname=Jay"
+      "user.html?id=23&nickname=Jay",
     );
   });
 
-  test("switches the profile button between text and icon modes", async ({ page }) => {
+  test("switches the profile button between text and icon modes", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("theme_profile_v1", "mist_cyan");
       window.localStorage.setItem("settings_top_button_style_v1", "text");
     });
 
     await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("body")).toHaveAttribute("data-top-button-style", "text");
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-top-button-style",
+      "text",
+    );
     await expect(page.locator("#top-user-profile-btn")).toHaveText("用户");
     await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(0);
     await expect(page.locator("#top-mobile-hint-btn")).toBeHidden();
     await expect(page.locator("#top-mobile-undo-btn")).toBeHidden();
 
     const textButtonLayout = await page.evaluate(() =>
-      Array.from(document.querySelectorAll<HTMLElement>(".top-action-buttons .top-action-btn"))
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".top-action-buttons .top-action-btn",
+        ),
+      )
         .filter((button) => button.offsetParent !== null)
         .map((button) => ({
           height: button.getBoundingClientRect().height,
           borderRadius: getComputedStyle(button).borderRadius,
-          overflows: button.scrollWidth > button.clientWidth
-        }))
+          overflows: button.scrollWidth > button.clientWidth,
+        })),
     );
     expect(textButtonLayout.length).toBeGreaterThan(0);
     expect(textButtonLayout.every(({ height }) => height === 42)).toBe(true);
-    expect(textButtonLayout.every(({ borderRadius }) => borderRadius === "7px")).toBe(true);
+    expect(
+      textButtonLayout.every(({ borderRadius }) => borderRadius === "7px"),
+    ).toBe(true);
     expect(textButtonLayout.every(({ overflows }) => !overflows)).toBe(true);
 
-    await page.evaluate(() => (window as any).CoreTopButtonStyleRuntime.applyTopButtonStyle("icon"));
+    await page.evaluate(() =>
+      (window as any).CoreTopButtonStyleRuntime.applyTopButtonStyle("icon"),
+    );
     await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(1);
   });
 
-  test("shows stored nickname on the action row and aligns the logo with scores", async ({ page }) => {
+  test("shows stored nickname on the action row and aligns the logo with scores", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "home-display-token");
       window.localStorage.setItem("2048_auth_userId_v1", "119");
@@ -136,14 +164,16 @@ test.describe("Home user display", () => {
       window.localStorage.setItem("2048_auth_nickname_v1", "SmokeUser");
     });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded",
+    });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     await expect(page.locator("#home-user-display")).toHaveText("SmokeUser");
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
       "href",
-      "user.html?id=19&nickname=SmokeUser"
+      "user.html?id=19&nickname=SmokeUser",
     );
     await page.waitForFunction(() => {
       const label = document.getElementById("home-user-display");
@@ -175,7 +205,7 @@ test.describe("Home user display", () => {
         logoTop: logoRect?.top ?? null,
         logoLeft: logoRect?.left ?? null,
         scoreTop: scoreRect?.top ?? null,
-        headingWidth: headingRect?.width ?? null
+        headingWidth: headingRect?.width ?? null,
       };
     });
 
@@ -183,14 +213,28 @@ test.describe("Home user display", () => {
     expect(alignment.logoLeft).not.toBeNull();
     expect(alignment.topActionsTop).not.toBeNull();
     expect(alignment.scoreTop).not.toBeNull();
-    expect(Math.abs((Number(alignment.labelLeft) - 25) - Number(alignment.logoLeft))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(alignment.labelTop) - Number(alignment.topActionsTop))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(alignment.labelHeight) - Number(alignment.topActionsHeight))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(alignment.logoTop) - Number(alignment.scoreTop))).toBeLessThanOrEqual(1);
-    expect(Number(alignment.labelWidth)).toBeLessThan(Number(alignment.headingWidth) / 2);
+    expect(
+      Math.abs(Number(alignment.labelLeft) - 25 - Number(alignment.logoLeft)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(Number(alignment.labelTop) - Number(alignment.topActionsTop)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        Number(alignment.labelHeight) - Number(alignment.topActionsHeight),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(Number(alignment.logoTop) - Number(alignment.scoreTop)),
+    ).toBeLessThanOrEqual(1);
+    expect(Number(alignment.labelWidth)).toBeLessThan(
+      Number(alignment.headingWidth) / 2,
+    );
   });
 
-  test("does not show the account badge on hub and mode-selection pages", async ({ page }) => {
+  test("does not show the account badge on hub and mode-selection pages", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "hub-display-token");
       window.localStorage.setItem("2048_auth_userId_v1", "119");
@@ -198,7 +242,13 @@ test.describe("Home user display", () => {
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
-    for (const path of ["/account.html", "/history.html", "/palette.html", "/modes.html", "/medal-wall.html"]) {
+    for (const path of [
+      "/account.html",
+      "/history.html",
+      "/palette.html",
+      "/modes.html",
+      "/medal-wall.html",
+    ]) {
       const response = await page.goto(path, { waitUntil: "domcontentloaded" });
       expect(response, `${path} response should exist`).not.toBeNull();
       expect(response?.ok(), `${path} response should be 2xx`).toBeTruthy();
@@ -206,7 +256,9 @@ test.describe("Home user display", () => {
     }
   });
 
-  test("aligns the account badge with the game header on play pages", async ({ page }) => {
+  test("aligns the account badge with the game header on play pages", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "play-display-token");
       window.localStorage.setItem("2048_auth_userId_v1", "119");
@@ -214,7 +266,10 @@ test.describe("Home user display", () => {
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
-    const response = await page.goto("/play.html?mode_key=board_3x3_pow2_no_undo", { waitUntil: "domcontentloaded" });
+    const response = await page.goto(
+      "/play.html?mode_key=board_3x3_pow2_no_undo",
+      { waitUntil: "domcontentloaded" },
+    );
     expect(response, "Play response should exist").not.toBeNull();
     expect(response?.ok(), "Play response should be 2xx").toBeTruthy();
 
@@ -223,7 +278,7 @@ test.describe("Home user display", () => {
     await expect(badge).not.toHaveClass(/home-user-display--global/);
     await expect(page.locator("#top-user-profile-btn")).toHaveAttribute(
       "href",
-      "user.html?id=19&nickname=Jay"
+      "user.html?id=19&nickname=Jay",
     );
     await expect(page.locator("#top-user-profile-btn svg")).toHaveCount(1);
 
@@ -236,25 +291,34 @@ test.describe("Home user display", () => {
         labelLeft: labelRect?.left ?? null,
         logoLeft: logoRect?.left ?? null,
         labelTop: labelRect?.top ?? null,
-        logoTop: logoRect?.top ?? null
+        logoTop: logoRect?.top ?? null,
       };
     });
 
     expect(layout.labelLeft).not.toBeNull();
     expect(layout.logoLeft).not.toBeNull();
-    expect(Math.abs((Number(layout.labelLeft) - 25) - Number(layout.logoLeft))).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(Number(layout.labelLeft) - 25 - Number(layout.logoLeft)),
+    ).toBeLessThanOrEqual(1);
     expect(Number(layout.labelTop)).toBeLessThan(Number(layout.logoTop));
   });
 
-  test("does not show the account badge on practice pages", async ({ page }) => {
+  test("does not show the account badge on practice pages", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem("2048_auth_token_v1", "practice-display-token");
+      window.localStorage.setItem(
+        "2048_auth_token_v1",
+        "practice-display-token",
+      );
       window.localStorage.setItem("2048_auth_userId_v1", "119");
       window.localStorage.setItem("2048_public_profile_id_v1", "19");
       window.localStorage.setItem("2048_auth_nickname_v1", "Jay");
     });
 
-    const response = await page.goto("/Practice_board.html?practice_fresh=1", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/Practice_board.html?practice_fresh=1", {
+      waitUntil: "domcontentloaded",
+    });
     expect(response, "Practice response should exist").not.toBeNull();
     expect(response?.ok(), "Practice response should be 2xx").toBeTruthy();
 
@@ -263,7 +327,9 @@ test.describe("Home user display", () => {
   });
 
   test("keeps long score values fully visible", async ({ page }) => {
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded",
+    });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
@@ -308,14 +374,14 @@ test.describe("Home user display", () => {
           width: rect.width,
           clientWidth: element.clientWidth,
           scrollWidth: element.scrollWidth,
-          overflow: window.getComputedStyle(element).overflow
+          overflow: window.getComputedStyle(element).overflow,
         };
       };
 
       const sevenDigitWidth = measureSevenDigitWidth();
       const initial = {
         score: readBox(".score-container"),
-        best: readBox(".best-container")
+        best: readBox(".best-container"),
       };
       manager.actuator.updateScore(1234567);
       manager.actuator.updateBestScore(7654321);
@@ -324,24 +390,52 @@ test.describe("Home user display", () => {
         sevenDigitWidth,
         initial,
         score: readBox(".score-container"),
-        best: readBox(".best-container")
+        best: readBox(".best-container"),
       };
     });
 
     expect(scoreboard.score?.text).toContain("1234567");
     expect(scoreboard.best?.text).toContain("7654321");
-    expect(Number(scoreboard.score?.scrollWidth || 0)).toBeLessThanOrEqual(Number(scoreboard.score?.clientWidth || 0));
-    expect(Number(scoreboard.best?.scrollWidth || 0)).toBeLessThanOrEqual(Number(scoreboard.best?.clientWidth || 0));
-    expect(Math.abs(Number(scoreboard.score?.width || 0) - Number(scoreboard.best?.width || 0))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(scoreboard.score?.width || 0) - Number(scoreboard.sevenDigitWidth || 0))).toBeLessThanOrEqual(4);
-    expect(Math.abs(Number(scoreboard.initial.score?.width || 0) - Number(scoreboard.score?.width || 0))).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(scoreboard.initial.best?.width || 0) - Number(scoreboard.best?.width || 0))).toBeLessThanOrEqual(1);
+    expect(Number(scoreboard.score?.scrollWidth || 0)).toBeLessThanOrEqual(
+      Number(scoreboard.score?.clientWidth || 0),
+    );
+    expect(Number(scoreboard.best?.scrollWidth || 0)).toBeLessThanOrEqual(
+      Number(scoreboard.best?.clientWidth || 0),
+    );
+    expect(
+      Math.abs(
+        Number(scoreboard.score?.width || 0) -
+          Number(scoreboard.best?.width || 0),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        Number(scoreboard.score?.width || 0) -
+          Number(scoreboard.sevenDigitWidth || 0),
+      ),
+    ).toBeLessThanOrEqual(4);
+    expect(
+      Math.abs(
+        Number(scoreboard.initial.score?.width || 0) -
+          Number(scoreboard.score?.width || 0),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(
+        Number(scoreboard.initial.best?.width || 0) -
+          Number(scoreboard.best?.width || 0),
+      ),
+    ).toBeLessThanOrEqual(1);
   });
 
-  test("mobile score boxes split the row with a 3px center gap", async ({ page }) => {
+  test("mobile score boxes split the row with a 3px center gap", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 543, height: 837 });
 
-    const response = await page.goto("/2048.html", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/2048.html", {
+      waitUntil: "domcontentloaded",
+    });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
@@ -357,31 +451,39 @@ test.describe("Home user display", () => {
         bestWidth: bestRect?.width ?? null,
         gap: scoreRect && bestRect ? bestRect.left - scoreRect.right : null,
         rowWidth: rowRect?.width ?? null,
-        combinedWidth: scoreRect && bestRect ? bestRect.right - scoreRect.left : null
+        combinedWidth:
+          scoreRect && bestRect ? bestRect.right - scoreRect.left : null,
       };
     });
 
     expect(layout.scoreWidth).not.toBeNull();
     expect(layout.bestWidth).not.toBeNull();
     expect(layout.gap).not.toBeNull();
-    expect(Math.abs(Number(layout.scoreWidth) - Number(layout.bestWidth))).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(Number(layout.scoreWidth) - Number(layout.bestWidth)),
+    ).toBeLessThanOrEqual(1);
     expect(Math.abs(Number(layout.gap) - 3)).toBeLessThanOrEqual(1);
-    expect(Math.abs(Number(layout.combinedWidth) - Number(layout.rowWidth))).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(Number(layout.combinedWidth) - Number(layout.rowWidth)),
+    ).toBeLessThanOrEqual(1);
   });
 
-  test("settings modal does not show duplicate navigation links", async ({ page }) => {
-    await page.addInitScript(() => {
-    });
+  test("settings modal does not show duplicate navigation links", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {});
 
     const response = await page.goto("/2048.html?settings-nav-smoke=1", {
-      waitUntil: "domcontentloaded"
+      waitUntil: "domcontentloaded",
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
     const settingsBtn = page.locator("#top-settings-btn");
     await expect(settingsBtn).toBeVisible();
-    await page.waitForFunction(() => typeof (window as any).openSettingsModal === "function");
+    await page.waitForFunction(
+      () => typeof (window as any).openSettingsModal === "function",
+    );
     await page.evaluate(() => {
       (window as any).openSettingsModal();
     });
@@ -392,7 +494,9 @@ test.describe("Home user display", () => {
     await expect(page.locator("#toolkit-account-link")).toHaveCount(0);
   });
 
-  test("mobile board starts after the ranked session request without layout regression", async ({ page }) => {
+  test("mobile board starts after the ranked session request without layout regression", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 414, height: 896 });
     await page.route("**/api/ranked-session/start", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -408,41 +512,45 @@ test.describe("Home user display", () => {
             ranked_session_token: "slow-ranked-layout-token",
             issued_at: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600,
-            spawn_sequence_version: 2
-          }
-        })
+            spawn_sequence_version: 2,
+          },
+        }),
       });
     });
     await page.route("**/api/leaderboard**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
     await page.route("**/api/user/**/records**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: null })
+        body: JSON.stringify({ success: true, data: null }),
       });
     });
     await page.addInitScript(() => {
       window.localStorage.setItem("2048_auth_token_v1", "slow_ranked_token");
       window.localStorage.setItem("2048_auth_userId_v1", "12");
-      window.localStorage.removeItem("ranked_session_active:v1:standard_4x4_pow2_no_undo");
-      window.localStorage.removeItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo");
+      window.localStorage.removeItem(
+        "ranked_session_active:v1:standard_4x4_pow2_no_undo",
+      );
+      window.localStorage.removeItem(
+        "ranked_session_prefetch:v1:standard_4x4_pow2_no_undo",
+      );
     });
 
     const response = await page.goto("/2048.html?slow-ranked-layout-smoke=1", {
-      waitUntil: "domcontentloaded"
+      waitUntil: "domcontentloaded",
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
@@ -453,7 +561,7 @@ test.describe("Home user display", () => {
         return !!manager && !!manager.actuator;
       },
       null,
-      { timeout: 5_000 }
+      { timeout: 5_000 },
     );
 
     const layout = await page.evaluate(() => {
@@ -463,7 +571,7 @@ test.describe("Home user display", () => {
         if (!bounds) return null;
         return {
           width: bounds.width,
-          height: bounds.height
+          height: bounds.height,
         };
       };
       return {
@@ -471,7 +579,7 @@ test.describe("Home user display", () => {
         grid: rect(".grid-container"),
         firstCell: rect(".grid-cell"),
         tileContainer: rect(".tile-container"),
-        tileCount: document.querySelectorAll(".tile").length
+        tileCount: document.querySelectorAll(".tile").length,
       };
     });
 
@@ -482,7 +590,9 @@ test.describe("Home user display", () => {
     expect(layout.tileCount).toBeGreaterThan(0);
   });
 
-  test("reloads restored guest-ranked page after login before the next board is played", async ({ page }) => {
+  test("reloads restored guest-ranked page after login before the next board is played", async ({
+    page,
+  }) => {
     let sessionStartRequests = 0;
     await page.route("**/api/ranked-session/start", async (route) => {
       sessionStartRequests += 1;
@@ -498,43 +608,50 @@ test.describe("Home user display", () => {
             ranked_session_token: "auth-transition-token",
             issued_at: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600,
-            spawn_sequence_version: 2
-          }
-        })
+            spawn_sequence_version: 2,
+          },
+        }),
       });
     });
     await page.route("**/api/leaderboard**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
     await page.route("**/api/user/**/records**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: [] })
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ success: true, data: null })
+        body: JSON.stringify({ success: true, data: null }),
       });
     });
     await page.addInitScript(() => {
-      if (window.sessionStorage.getItem("auth_transition_smoke_cleaned") === "1") return;
+      if (
+        window.sessionStorage.getItem("auth_transition_smoke_cleaned") === "1"
+      )
+        return;
       window.sessionStorage.setItem("auth_transition_smoke_cleaned", "1");
       window.localStorage.removeItem("2048_auth_token_v1");
       window.localStorage.removeItem("2048_auth_userId_v1");
-      window.localStorage.removeItem("ranked_session_active:v1:standard_4x4_pow2_no_undo");
-      window.localStorage.removeItem("ranked_session_prefetch:v1:standard_4x4_pow2_no_undo");
+      window.localStorage.removeItem(
+        "ranked_session_active:v1:standard_4x4_pow2_no_undo",
+      );
+      window.localStorage.removeItem(
+        "ranked_session_prefetch:v1:standard_4x4_pow2_no_undo",
+      );
     });
 
     const response = await page.goto("/2048.html?auth-transition-smoke=1", {
-      waitUntil: "domcontentloaded"
+      waitUntil: "domcontentloaded",
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
@@ -542,10 +659,13 @@ test.describe("Home user display", () => {
     expect(sessionStartRequests).toBe(0);
 
     const rankedSessionRequest = page.waitForRequest((request) =>
-      new URL(request.url()).pathname.endsWith("/api/ranked-session/start")
+      new URL(request.url()).pathname.endsWith("/api/ranked-session/start"),
     );
     await page.evaluate(() => {
-      window.localStorage.setItem("2048_auth_token_v1", "auth-transition-login-token");
+      window.localStorage.setItem(
+        "2048_auth_token_v1",
+        "auth-transition-login-token",
+      );
       window.localStorage.setItem("2048_auth_userId_v1", "17");
       window.dispatchEvent(new Event("pageshow"));
     });
@@ -554,22 +674,26 @@ test.describe("Home user display", () => {
     await page.waitForFunction(
       () => {
         const context = (window as any).GAME_CHALLENGE_CONTEXT;
-        return context && context.ranked_session_token === "auth-transition-token";
+        return (
+          context && context.ranked_session_token === "auth-transition-token"
+        );
       },
       null,
-      { timeout: 5_000 }
+      { timeout: 5_000 },
     );
     expect(sessionStartRequests).toBeGreaterThan(0);
   });
 
-  test("mobile static board shell fills the board before scripts run", async ({ page }) => {
+  test("mobile static board shell fills the board before scripts run", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 414, height: 896 });
     await page.route("**/*.js", async (route) => {
       await route.abort();
     });
 
     const response = await page.goto("/2048.html?static-board-shell-smoke=1", {
-      waitUntil: "domcontentloaded"
+      waitUntil: "domcontentloaded",
     });
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
@@ -581,13 +705,13 @@ test.describe("Home user display", () => {
         if (!bounds) return null;
         return {
           width: bounds.width,
-          height: bounds.height
+          height: bounds.height,
         };
       };
       return {
         game: rect(".game-container"),
         grid: rect(".grid-container"),
-        firstCell: rect(".grid-cell")
+        firstCell: rect(".grid-cell"),
       };
     });
 
@@ -599,7 +723,9 @@ test.describe("Home user display", () => {
     expect(layout.firstCell?.height).toBeGreaterThanOrEqual(80);
   });
 
-  test("mobile board starts before deferred home scripts finish loading", async ({ page }) => {
+  test("mobile board starts before deferred home scripts finish loading", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 414, height: 896 });
     await page.route("**/js/announcement_manager.js", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 10_000));
@@ -610,9 +736,12 @@ test.describe("Home user display", () => {
       await route.continue();
     });
 
-    const response = await page.goto("/2048.html?slow-deferred-scripts-smoke=1", {
-      waitUntil: "domcontentloaded"
-    });
+    const response = await page.goto(
+      "/2048.html?slow-deferred-scripts-smoke=1",
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     expect(response, "Index response should exist").not.toBeNull();
     expect(response?.ok(), "Index response should be 2xx").toBeTruthy();
 
@@ -622,7 +751,7 @@ test.describe("Home user display", () => {
         return !!manager && !!manager.actuator;
       },
       null,
-      { timeout: 3_000 }
+      { timeout: 3_000 },
     );
 
     const layout = await page.evaluate(() => {
@@ -632,13 +761,13 @@ test.describe("Home user display", () => {
         if (!bounds) return null;
         return {
           width: bounds.width,
-          height: bounds.height
+          height: bounds.height,
         };
       };
       return {
         grid: rect(".grid-container"),
         tileContainer: rect(".tile-container"),
-        tileCount: document.querySelectorAll(".tile").length
+        tileCount: document.querySelectorAll(".tile").length,
       };
     });
 

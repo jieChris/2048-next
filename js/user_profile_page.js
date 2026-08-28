@@ -15,7 +15,8 @@
   var SIGNED_REPLAY_FETCH_TIMEOUT_MS = 30000;
   var DEFAULT_RECORD_LIMIT = 20;
   var BEIJING_TIMEZONE = "Asia/Shanghai";
-  var DATETIME_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
+  var DATETIME_TEXT_PATTERN =
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/;
   var beijingDateFormatter = null;
 
   function resolveLocalStorage() {
@@ -74,15 +75,17 @@
     if (global.GameDialog && typeof global.GameDialog.confirm === "function") {
       return global.GameDialog.confirm(message, options || {});
     }
-    return Promise.resolve(typeof global.confirm === "function" ? global.confirm(message) : true);
+    return Promise.resolve(
+      typeof global.confirm === "function" ? global.confirm(message) : true,
+    );
   }
 
   // --- localStorage key migration (old bare keys -> namespaced keys) ---
   (function migrateStorageKeys() {
     var migrations = [
-      { oldKey: "token",    newKey: "2048_auth_token_v1" },
-      { oldKey: "userId",   newKey: "2048_auth_userId_v1" },
-      { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY }
+      { oldKey: "token", newKey: "2048_auth_token_v1" },
+      { oldKey: "userId", newKey: "2048_auth_userId_v1" },
+      { oldKey: "nickname", newKey: STORAGE_NICKNAME_KEY },
     ];
     try {
       var storage = resolveLocalStorage();
@@ -97,7 +100,9 @@
           removeLocalStorageItem(m.oldKey);
         }
       }
-    } catch (_err) { /* localStorage unavailable or quota exceeded */ }
+    } catch (_err) {
+      /* localStorage unavailable or quota exceeded */
+    }
   })();
 
   var apiBases = buildApiBaseCandidates();
@@ -127,49 +132,216 @@
   var summaryRatingValue = null;
   var summaryRatingStatus = "";
   var CLOUD_REPLAY_STORAGE_KEY = "cloud_replay_payload_v1";
-  var cloudReplayContract = global.CLOUD_REPLAY_CONTRACT && typeof global.CLOUD_REPLAY_CONTRACT === "object"
-    ? global.CLOUD_REPLAY_CONTRACT
-    : {};
-  var CLOUD_REPLAY_PAYLOAD_VERSION = parsePositiveInt(cloudReplayContract.cloud_payload_version) || 2;
-  var CLOUD_REPLAY_FILE_VERSION = normalizeReplayFileVersion(cloudReplayContract.replay_file_version) || 1;
-  var CLOUD_REPLAY_LOGIC_VERSION = toText(cloudReplayContract.replay_logic_version).trim() || "v1";
+  var cloudReplayContract =
+    global.CLOUD_REPLAY_CONTRACT &&
+    typeof global.CLOUD_REPLAY_CONTRACT === "object"
+      ? global.CLOUD_REPLAY_CONTRACT
+      : {};
+  var CLOUD_REPLAY_PAYLOAD_VERSION =
+    parsePositiveInt(cloudReplayContract.cloud_payload_version) || 2;
+  var CLOUD_REPLAY_FILE_VERSION =
+    normalizeReplayFileVersion(cloudReplayContract.replay_file_version) || 1;
+  var CLOUD_REPLAY_LOGIC_VERSION =
+    toText(cloudReplayContract.replay_logic_version).trim() || "v1";
   var replayContractCache = {
     payloadVersion: 0,
     replayFileVersion: 0,
-    pending: null
+    pending: null,
   };
 
   var LEADERBOARD_MODE_OPTIONS = [
-    { value: "standard_4x4_pow2_no_undo", family: "pow2", undo: false, zh: "标准 4×4（无撤回）", en: "Standard 4×4 (No Undo)" },
-    { value: "classic_4x4_pow2_undo", family: "pow2", undo: true, zh: "经典 4×4（可撤回）", en: "Classic 4×4 (Undo)" },
-    { value: "board_3x3_pow2_no_undo", family: "pow2", undo: false, zh: "3×3（无撤回）", en: "3×3 (No Undo)" },
-    { value: "board_3x3_pow2_undo", family: "pow2", undo: true, zh: "3×3（可撤回）", en: "3×3 (Undo)" },
-    { value: "board_2x4_pow2_no_undo", family: "pow2", undo: false, zh: "4×2（无撤回）", en: "4×2 (No Undo)" },
-    { value: "board_2x4_pow2_undo", family: "pow2", undo: true, zh: "4×2（可撤回）", en: "4×2 (Undo)" },
-    { value: "board_3x4_pow2_no_undo", family: "pow2", undo: false, zh: "4×3（无撤回）", en: "4×3 (No Undo)" },
-    { value: "board_3x4_pow2_undo", family: "pow2", undo: true, zh: "4×3（可撤回）", en: "4×3 (Undo)" },
-    { value: "board_5x5_pow2_no_undo", family: "pow2", undo: false, zh: "5×5（无撤回）", en: "5×5 (No Undo)" },
-    { value: "board_5x5_pow2_undo", family: "pow2", undo: true, zh: "5×5（可撤回）", en: "5×5 (Undo)" },
-    { value: "diag_3x3_pow2_no_undo", family: "diagonal", undo: false, zh: "3×3 八方向", en: "3×3 8-Direction" },
-    { value: "diag_4x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×4 八方向", en: "4×4 8-Direction" },
-    { value: "diag_3x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×3 八方向", en: "4×3 8-Direction" },
-    { value: "diag_2x4_pow2_no_undo", family: "diagonal", undo: false, zh: "4×2 八方向", en: "4×2 8-Direction" },
-    { value: "capped_4x4_pow2_64_no_undo", family: "special", undo: false, zh: "4×4 封顶 64", en: "4×4 Capped 64" },
-    { value: "capped_4x4_pow2_no_undo", family: "special", undo: false, zh: "4×4 封顶 2048", en: "4×4 Capped 2048" },
-    { value: "capped_4x4_pow2_1024_no_undo", family: "special", undo: false, zh: "4×4 封顶 1024", en: "4×4 Capped 1024" },
-    { value: "capped_4x4_pow2_4096_no_undo", family: "special", undo: false, zh: "4×4 封顶 4096", en: "4×4 Capped 4096" },
-    { value: "obstacle_4x4_pow2_no_undo", family: "special", undo: false, zh: "障碍块 4×4", en: "Obstacle 4×4" },
-    { value: "fib_4x4_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×4（无撤回）", en: "Fibonacci 4×4 (No Undo)" },
-    { value: "fib_4x4_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×4（可撤回）", en: "Fibonacci 4×4 (Undo)" },
-    { value: "fib_3x3_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 3×3（无撤回）", en: "Fibonacci 3×3 (No Undo)" },
-    { value: "fib_3x3_undo", family: "fibonacci", undo: true, zh: "斐波那契 3×3（可撤回）", en: "Fibonacci 3×3 (Undo)" },
-    { value: "fib_4x3_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×3（无撤回）", en: "Fibonacci 4×3 (No Undo)" },
-    { value: "fib_4x3_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×3（可撤回）", en: "Fibonacci 4×3 (Undo)" },
-    { value: "fib_4x2_no_undo", family: "fibonacci", undo: false, zh: "斐波那契 4×2（无撤回）", en: "Fibonacci 4×2 (No Undo)" },
-    { value: "fib_4x2_undo", family: "fibonacci", undo: true, zh: "斐波那契 4×2（可撤回）", en: "Fibonacci 4×2 (Undo)" }
+    {
+      value: "standard_4x4_pow2_no_undo",
+      family: "pow2",
+      undo: false,
+      zh: "标准 4×4（无撤回）",
+      en: "Standard 4×4 (No Undo)",
+    },
+    {
+      value: "classic_4x4_pow2_undo",
+      family: "pow2",
+      undo: true,
+      zh: "经典 4×4（可撤回）",
+      en: "Classic 4×4 (Undo)",
+    },
+    {
+      value: "board_3x3_pow2_no_undo",
+      family: "pow2",
+      undo: false,
+      zh: "3×3（无撤回）",
+      en: "3×3 (No Undo)",
+    },
+    {
+      value: "board_3x3_pow2_undo",
+      family: "pow2",
+      undo: true,
+      zh: "3×3（可撤回）",
+      en: "3×3 (Undo)",
+    },
+    {
+      value: "board_2x4_pow2_no_undo",
+      family: "pow2",
+      undo: false,
+      zh: "4×2（无撤回）",
+      en: "4×2 (No Undo)",
+    },
+    {
+      value: "board_2x4_pow2_undo",
+      family: "pow2",
+      undo: true,
+      zh: "4×2（可撤回）",
+      en: "4×2 (Undo)",
+    },
+    {
+      value: "board_3x4_pow2_no_undo",
+      family: "pow2",
+      undo: false,
+      zh: "4×3（无撤回）",
+      en: "4×3 (No Undo)",
+    },
+    {
+      value: "board_3x4_pow2_undo",
+      family: "pow2",
+      undo: true,
+      zh: "4×3（可撤回）",
+      en: "4×3 (Undo)",
+    },
+    {
+      value: "board_5x5_pow2_no_undo",
+      family: "pow2",
+      undo: false,
+      zh: "5×5（无撤回）",
+      en: "5×5 (No Undo)",
+    },
+    {
+      value: "board_5x5_pow2_undo",
+      family: "pow2",
+      undo: true,
+      zh: "5×5（可撤回）",
+      en: "5×5 (Undo)",
+    },
+    {
+      value: "diag_3x3_pow2_no_undo",
+      family: "diagonal",
+      undo: false,
+      zh: "3×3 八方向",
+      en: "3×3 8-Direction",
+    },
+    {
+      value: "diag_4x4_pow2_no_undo",
+      family: "diagonal",
+      undo: false,
+      zh: "4×4 八方向",
+      en: "4×4 8-Direction",
+    },
+    {
+      value: "diag_3x4_pow2_no_undo",
+      family: "diagonal",
+      undo: false,
+      zh: "4×3 八方向",
+      en: "4×3 8-Direction",
+    },
+    {
+      value: "diag_2x4_pow2_no_undo",
+      family: "diagonal",
+      undo: false,
+      zh: "4×2 八方向",
+      en: "4×2 8-Direction",
+    },
+    {
+      value: "capped_4x4_pow2_64_no_undo",
+      family: "special",
+      undo: false,
+      zh: "4×4 封顶 64",
+      en: "4×4 Capped 64",
+    },
+    {
+      value: "capped_4x4_pow2_no_undo",
+      family: "special",
+      undo: false,
+      zh: "4×4 封顶 2048",
+      en: "4×4 Capped 2048",
+    },
+    {
+      value: "capped_4x4_pow2_1024_no_undo",
+      family: "special",
+      undo: false,
+      zh: "4×4 封顶 1024",
+      en: "4×4 Capped 1024",
+    },
+    {
+      value: "capped_4x4_pow2_4096_no_undo",
+      family: "special",
+      undo: false,
+      zh: "4×4 封顶 4096",
+      en: "4×4 Capped 4096",
+    },
+    {
+      value: "obstacle_4x4_pow2_no_undo",
+      family: "special",
+      undo: false,
+      zh: "障碍块 4×4",
+      en: "Obstacle 4×4",
+    },
+    {
+      value: "fib_4x4_no_undo",
+      family: "fibonacci",
+      undo: false,
+      zh: "斐波那契 4×4（无撤回）",
+      en: "Fibonacci 4×4 (No Undo)",
+    },
+    {
+      value: "fib_4x4_undo",
+      family: "fibonacci",
+      undo: true,
+      zh: "斐波那契 4×4（可撤回）",
+      en: "Fibonacci 4×4 (Undo)",
+    },
+    {
+      value: "fib_3x3_no_undo",
+      family: "fibonacci",
+      undo: false,
+      zh: "斐波那契 3×3（无撤回）",
+      en: "Fibonacci 3×3 (No Undo)",
+    },
+    {
+      value: "fib_3x3_undo",
+      family: "fibonacci",
+      undo: true,
+      zh: "斐波那契 3×3（可撤回）",
+      en: "Fibonacci 3×3 (Undo)",
+    },
+    {
+      value: "fib_4x3_no_undo",
+      family: "fibonacci",
+      undo: false,
+      zh: "斐波那契 4×3（无撤回）",
+      en: "Fibonacci 4×3 (No Undo)",
+    },
+    {
+      value: "fib_4x3_undo",
+      family: "fibonacci",
+      undo: true,
+      zh: "斐波那契 4×3（可撤回）",
+      en: "Fibonacci 4×3 (Undo)",
+    },
+    {
+      value: "fib_4x2_no_undo",
+      family: "fibonacci",
+      undo: false,
+      zh: "斐波那契 4×2（无撤回）",
+      en: "Fibonacci 4×2 (No Undo)",
+    },
+    {
+      value: "fib_4x2_undo",
+      family: "fibonacci",
+      undo: true,
+      zh: "斐波那契 4×2（可撤回）",
+      en: "Fibonacci 4×2 (Undo)",
+    },
   ];
 
-    var COPY = {
+  var COPY = {
     zh: {
       pageTitle: "2048 用户主页",
       title: "用户主页",
@@ -267,7 +439,7 @@
       summaryLastActiveLabel: "最近活跃",
       summaryAriaLabel: "用户摘要",
       summaryPreviewEmpty: "暂无云端记录",
-      navMedals: "勋章墙"
+      navMedals: "勋章墙",
     },
     en: {
       pageTitle: "2048 User Profile",
@@ -366,8 +538,8 @@
       summaryLastActiveLabel: "Last Active",
       summaryAriaLabel: "User summary",
       summaryPreviewEmpty: "No cloud records yet",
-      navMedals: "Medals"
-    }
+      navMedals: "Medals",
+    },
   };
 
   function toText(value) {
@@ -391,7 +563,7 @@
       source.public_profile_id,
       source.publicProfileId,
       source.game_user_id,
-      source.gameUserId
+      source.gameUserId,
     ];
     for (var index = 0; index < candidates.length; index += 1) {
       var parsed = parsePublicUserId(candidates[index]);
@@ -411,7 +583,10 @@
   }
 
   function resolveRecordEra(primary, fallback) {
-    return normalizeRecordEra(primary && primary.record_era) || normalizeRecordEra(fallback && fallback.record_era);
+    return (
+      normalizeRecordEra(primary && primary.record_era) ||
+      normalizeRecordEra(fallback && fallback.record_era)
+    );
   }
 
   function isBetaRecord(record, fallback) {
@@ -437,23 +612,27 @@
 
   function emitProfileState() {
     if (typeof global.CustomEvent !== "function") return;
-    global.dispatchEvent(new global.CustomEvent("userprofilestatechange", {
-      detail: getProfileState()
-    }));
+    global.dispatchEvent(
+      new global.CustomEvent("userprofilestatechange", {
+        detail: getProfileState(),
+      }),
+    );
   }
 
   function getProfileState() {
     return {
       targetUserId: targetUserId,
       isOwnProfile: isOwnProfile,
-      profile: currentProfileData ? Object.assign({}, currentProfileData) : null,
+      profile: currentProfileData
+        ? Object.assign({}, currentProfileData)
+        : null,
       records: Array.isArray(cachedRecords) ? cachedRecords.slice() : [],
       stats: {
         totalRecords: summaryTotalRecords,
         bestScore: summaryBestScore,
         bestTile: summaryBestTile,
         lastActive: summaryLastActive,
-        byMode: Array.isArray(summaryModeStats) ? summaryModeStats.slice() : []
+        byMode: Array.isArray(summaryModeStats) ? summaryModeStats.slice() : [],
       },
       filters: {
         modeKey: getModeFilterValue(),
@@ -461,8 +640,8 @@
         undo: getUndoFilterValue(),
         status: getRecordVisibilityValue(),
         sortBy: getSortByValue(),
-        order: getOrderValue()
-      }
+        order: getOrderValue(),
+      },
     };
   }
 
@@ -473,9 +652,14 @@
   function authRuntime() {
     var utils = global.ApiSharedUtils || {};
     return {
-      getToken: typeof utils.getAuthToken === "function" ? utils.getAuthToken : null,
-      clear: typeof utils.clearAuthSession === "function" ? utils.clearAuthSession : null,
-      request: typeof utils.fetchWithAuth === "function" ? utils.fetchWithAuth : null
+      getToken:
+        typeof utils.getAuthToken === "function" ? utils.getAuthToken : null,
+      clear:
+        typeof utils.clearAuthSession === "function"
+          ? utils.clearAuthSession
+          : null,
+      request:
+        typeof utils.fetchWithAuth === "function" ? utils.fetchWithAuth : null,
     };
   }
 
@@ -498,15 +682,29 @@
   }
 
   function canonicalizeSessionProfileUrl() {
-    if (targetUserId < 0 || !global.history || typeof global.history.replaceState !== "function") return;
+    if (
+      targetUserId < 0 ||
+      !global.history ||
+      typeof global.history.replaceState !== "function"
+    )
+      return;
     try {
       var locationObj = global.location || {};
       var params = new global.URLSearchParams(toText(locationObj.search));
       if (parsePublicUserId(params.get("id")) >= 0) return;
       params.set("id", String(targetUserId));
-      var nickname = toText(resolvedProfileNickname || targetNicknameHint).trim();
+      var nickname = toText(
+        resolvedProfileNickname || targetNicknameHint,
+      ).trim();
       if (nickname) params.set("nickname", nickname);
-      global.history.replaceState(null, "", toText(locationObj.pathname) + "?" + params.toString() + toText(locationObj.hash));
+      global.history.replaceState(
+        null,
+        "",
+        toText(locationObj.pathname) +
+          "?" +
+          params.toString() +
+          toText(locationObj.hash),
+      );
     } catch (_err) {}
   }
 
@@ -532,7 +730,8 @@
   }
 
   function resolveProfilePageTitle() {
-    var baseTitle = currentLang === "en" ? "User Profile" : "\u7528\u6237\u4e3b\u9875";
+    var baseTitle =
+      currentLang === "en" ? "User Profile" : "\u7528\u6237\u4e3b\u9875";
     if (currentLang === "en") return baseTitle;
     if (isOwnProfile) return baseTitle;
     var nickname = toText(resolvedProfileNickname || targetNicknameHint).trim();
@@ -587,10 +786,15 @@
     var locationObj = global.location || {};
     var hostname = toText(locationObj.hostname).toLowerCase();
     var origin = toText(locationObj.origin);
-    var allowCrossOriginFallback = toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() === "true";
-    var remoteFallback = normalizeApiBase(global.GAME_API_FALLBACK_BASE_URL) || DEFAULT_REMOTE_API_BASE_URL;
+    var allowCrossOriginFallback =
+      toText(global.GAME_API_ALLOW_CROSS_ORIGIN_FALLBACK).toLowerCase() ===
+      "true";
+    var remoteFallback =
+      normalizeApiBase(global.GAME_API_FALLBACK_BASE_URL) ||
+      DEFAULT_REMOTE_API_BASE_URL;
 
-    if (/^https?:\/\//i.test(origin) && shouldUseSameOriginApi(hostname)) push(origin + "/api");
+    if (/^https?:\/\//i.test(origin) && shouldUseSameOriginApi(hostname))
+      push(origin + "/api");
 
     if (shouldUseRemoteApiFallback(hostname, allowCrossOriginFallback)) {
       push(remoteFallback);
@@ -617,16 +821,20 @@
     var opts = options || {};
     var method = toText(opts.method || "GET").toUpperCase();
     var timeoutMs = Math.floor(Number(opts.timeoutMs) || 0);
-    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) timeoutMs = resolveApiTimeoutMs();
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
+      timeoutMs = resolveApiTimeoutMs();
     var lastError = t("networkError");
 
     for (var i = 0; i < apiBases.length; i += 1) {
       var base = apiBases[i];
-      var headers = opts.headers && typeof opts.headers === "object" ? Object.assign({}, opts.headers) : {};
+      var headers =
+        opts.headers && typeof opts.headers === "object"
+          ? Object.assign({}, opts.headers)
+          : {};
       var requestInit = {
         method: method,
         headers: headers,
-        credentials: "include"
+        credentials: "include",
       };
       var timeoutHandle = null;
       var controller = null;
@@ -645,12 +853,15 @@
         requestInit.headers["Content-Type"] = "application/json";
         requestInit.body = JSON.stringify(opts.body);
       }
-      var allowFallback = method === "GET" && !requestInit.headers.Authorization;
+      var allowFallback =
+        method === "GET" && !requestInit.headers.Authorization;
 
       try {
         if (controller) {
           timeoutHandle = global.setTimeout(function () {
-            try { controller.abort(); } catch (_err) {}
+            try {
+              controller.abort();
+            } catch (_err) {}
           }, timeoutMs);
         }
 
@@ -663,9 +874,11 @@
           timeoutHandle = null;
         }
         var contentType = toText(
-          response && response.headers && typeof response.headers.get === "function"
+          response &&
+            response.headers &&
+            typeof response.headers.get === "function"
             ? response.headers.get("content-type")
-            : ""
+            : "",
         ).toLowerCase();
 
         var data = null;
@@ -682,10 +895,17 @@
         }
 
         if (!data || typeof data !== "object") {
-          var origin = toText(global.location && global.location.origin).trim().replace(/\/+$/, "");
+          var origin = toText(global.location && global.location.origin)
+            .trim()
+            .replace(/\/+$/, "");
           var normalizedBase = toText(base).trim().replace(/\/+$/, "");
-          var isSameOriginApiBase = !!origin && normalizedBase === origin + "/api";
-          if (contentType.indexOf("text/html") >= 0 && isSameOriginApiBase && apiBases.length === 1) {
+          var isSameOriginApiBase =
+            !!origin && normalizedBase === origin + "/api";
+          if (
+            contentType.indexOf("text/html") >= 0 &&
+            isSameOriginApiBase &&
+            apiBases.length === 1
+          ) {
             return { error: t("apiNotConfigured") || "API not configured" };
           }
           if (allowFallback && i < apiBases.length - 1) continue;
@@ -714,17 +934,46 @@
 
   function resolveReplayContractMismatchMessage(kind, expected, actual) {
     var expectedText = String(expected);
-    var actualText = actual > 0 ? String(actual) : (currentLang === "en" ? "missing" : "\u7f3a\u5931");
+    var actualText =
+      actual > 0
+        ? String(actual)
+        : currentLang === "en"
+          ? "missing"
+          : "\u7f3a\u5931";
     if (currentLang === "en") {
       if (kind === "payload") {
-        return "Replay payload version mismatch (expected " + expectedText + ", got " + actualText + "). Please refresh and retry.";
+        return (
+          "Replay payload version mismatch (expected " +
+          expectedText +
+          ", got " +
+          actualText +
+          "). Please refresh and retry."
+        );
       }
-      return "Replay file version mismatch (expected " + expectedText + ", got " + actualText + "). Please refresh and retry.";
+      return (
+        "Replay file version mismatch (expected " +
+        expectedText +
+        ", got " +
+        actualText +
+        "). Please refresh and retry."
+      );
     }
     if (kind === "payload") {
-      return "\u56de\u653e\u8f7d\u8377\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " + expectedText + "\uff0c\u5b9e\u9645 " + actualText + "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002";
+      return (
+        "\u56de\u653e\u8f7d\u8377\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " +
+        expectedText +
+        "\uff0c\u5b9e\u9645 " +
+        actualText +
+        "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002"
+      );
     }
-    return "\u56de\u653e\u6587\u4ef6\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " + expectedText + "\uff0c\u5b9e\u9645 " + actualText + "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002";
+    return (
+      "\u56de\u653e\u6587\u4ef6\u7248\u672c\u4e0d\u5339\u914d\uff08\u671f\u671b " +
+      expectedText +
+      "\uff0c\u5b9e\u9645 " +
+      actualText +
+      "\uff09\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5\u3002"
+    );
   }
 
   function resolveReplayContractField(source, fieldNames) {
@@ -742,7 +991,7 @@
       "cloud_payload_version",
       "cloudPayloadVersion",
       "payload_version",
-      "payloadVersion"
+      "payloadVersion",
     ]);
     return parsePositiveInt(raw);
   }
@@ -752,7 +1001,7 @@
       "replay_file_version",
       "replayFileVersion",
       "file_version",
-      "fileVersion"
+      "fileVersion",
     ]);
     return normalizeReplayFileVersion(raw);
   }
@@ -762,15 +1011,18 @@
     replayContractCache.replayFileVersion = CLOUD_REPLAY_FILE_VERSION;
     return {
       payloadVersion: CLOUD_REPLAY_PAYLOAD_VERSION,
-      replayFileVersion: CLOUD_REPLAY_FILE_VERSION
+      replayFileVersion: CLOUD_REPLAY_FILE_VERSION,
     };
   }
 
   async function fetchReplayContractFromApi() {
-    if (replayContractCache.payloadVersion > 0 && replayContractCache.replayFileVersion > 0) {
+    if (
+      replayContractCache.payloadVersion > 0 &&
+      replayContractCache.replayFileVersion > 0
+    ) {
       return {
         payloadVersion: replayContractCache.payloadVersion,
-        replayFileVersion: replayContractCache.replayFileVersion
+        replayFileVersion: replayContractCache.replayFileVersion,
       };
     }
     if (replayContractCache.pending) return replayContractCache.pending;
@@ -778,7 +1030,7 @@
     replayContractCache.pending = (async function () {
       var result = await apiRequest("/replay/version", {
         method: "GET",
-        timeoutMs: DEFAULT_API_TIMEOUT_MS
+        timeoutMs: DEFAULT_API_TIMEOUT_MS,
       });
       if (result && result.error) {
         // Replay contract endpoint may be missing on some deployments.
@@ -797,7 +1049,7 @@
       replayContractCache.replayFileVersion = replayFileVersion;
       return {
         payloadVersion: payloadVersion,
-        replayFileVersion: replayFileVersion
+        replayFileVersion: replayFileVersion,
       };
     })().finally(function () {
       replayContractCache.pending = null;
@@ -807,22 +1059,42 @@
   }
 
   async function ensureReplayContractAligned(expectedReplayFileVersion) {
-    var expectedFileVersion = normalizeReplayFileVersion(expectedReplayFileVersion) || CLOUD_REPLAY_FILE_VERSION;
+    var expectedFileVersion =
+      normalizeReplayFileVersion(expectedReplayFileVersion) ||
+      CLOUD_REPLAY_FILE_VERSION;
     var contract = await fetchReplayContractFromApi();
-    var apiPayloadVersion = parsePositiveInt(contract && contract.payloadVersion);
-    var apiReplayFileVersion = normalizeReplayFileVersion(contract && contract.replayFileVersion);
+    var apiPayloadVersion = parsePositiveInt(
+      contract && contract.payloadVersion,
+    );
+    var apiReplayFileVersion = normalizeReplayFileVersion(
+      contract && contract.replayFileVersion,
+    );
     if (apiPayloadVersion !== CLOUD_REPLAY_PAYLOAD_VERSION) {
-      throw new Error(resolveReplayContractMismatchMessage("payload", CLOUD_REPLAY_PAYLOAD_VERSION, apiPayloadVersion));
+      throw new Error(
+        resolveReplayContractMismatchMessage(
+          "payload",
+          CLOUD_REPLAY_PAYLOAD_VERSION,
+          apiPayloadVersion,
+        ),
+      );
     }
     if (apiReplayFileVersion !== expectedFileVersion) {
-      throw new Error(resolveReplayContractMismatchMessage("file", expectedFileVersion, apiReplayFileVersion));
+      throw new Error(
+        resolveReplayContractMismatchMessage(
+          "file",
+          expectedFileVersion,
+          apiReplayFileVersion,
+        ),
+      );
     }
   }
 
   function getUserInfo(userId) {
     var safeUserId = parsePublicUserId(userId);
     if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
-    return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), { method: "GET" });
+    return apiRequest("/user/" + encodeURIComponent(String(safeUserId)), {
+      method: "GET",
+    });
   }
 
   function getMyUserInfo() {
@@ -832,7 +1104,7 @@
       var requestOptions = {
         method: "GET",
         auth: true,
-        timeoutMs: AUTH_API_TIMEOUT_MS
+        timeoutMs: AUTH_API_TIMEOUT_MS,
       };
 
       var result = await apiRequest("/user/me", requestOptions);
@@ -884,7 +1156,10 @@
     targetUserId = resolvedUserId;
     targetNicknameHint = toText(me.nickname).trim();
     resolvedProfileNickname = targetNicknameHint;
-    writeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY, String(resolvedUserId));
+    writeLocalStorageItem(
+      STORAGE_PUBLIC_PROFILE_ID_KEY,
+      String(resolvedUserId),
+    );
     if (targetNicknameHint) {
       writeLocalStorageItem(STORAGE_NICKNAME_KEY, targetNicknameHint);
     }
@@ -902,7 +1177,10 @@
     var safePage = Math.floor(Number(opts.page) || 1);
     if (safePage <= 0) safePage = 1;
     var requestedSortBy = toText(opts.sort_by).toLowerCase();
-    var sortBy = requestedSortBy === "score" || requestedSortBy === "board_sum" ? requestedSortBy : "time";
+    var sortBy =
+      requestedSortBy === "score" || requestedSortBy === "board_sum"
+        ? requestedSortBy
+        : "time";
     var order = toText(opts.order).toLowerCase() === "asc" ? "asc" : "desc";
     var modeKey = toText(opts.mode_key).trim();
     var modeFamily = toText(opts.mode_family).trim().toLowerCase();
@@ -915,38 +1193,44 @@
     path += "&page=" + encodeURIComponent(String(safePage));
     path += "&sort_by=" + encodeURIComponent(sortBy);
     path += "&order=" + encodeURIComponent(order);
-    if (modeKey && modeKey !== "all") path += "&mode_key=" + encodeURIComponent(modeKey);
+    if (modeKey && modeKey !== "all")
+      path += "&mode_key=" + encodeURIComponent(modeKey);
     if (["pow2", "fibonacci", "diagonal", "special"].indexOf(modeFamily) >= 0) {
       path += "&mode_family=" + encodeURIComponent(modeFamily);
     }
-    if (undo === "no_undo" || undo === "undo") path += "&undo=" + encodeURIComponent(undo);
+    if (undo === "no_undo" || undo === "undo")
+      path += "&undo=" + encodeURIComponent(undo);
     if (status === "deleted" || status === "all" || status === "active") {
       path += "&status=" + encodeURIComponent(status);
     }
     return apiRequest(path, {
       method: "GET",
       timeoutMs: USER_RECORDS_API_TIMEOUT_MS,
-      auth: status === "deleted" || status === "all"
+      auth: status === "deleted" || status === "all",
     });
   }
 
   function getUserStats(userId) {
     var safeUserId = parsePublicUserId(userId);
     if (safeUserId < 0) return Promise.resolve({ error: t("invalidUserId") });
-    return apiRequest("/user/" + encodeURIComponent(String(safeUserId)) + "/stats", {
-      method: "GET",
-      timeoutMs: USER_RECORDS_API_TIMEOUT_MS
-    });
+    return apiRequest(
+      "/user/" + encodeURIComponent(String(safeUserId)) + "/stats",
+      {
+        method: "GET",
+        timeoutMs: USER_RECORDS_API_TIMEOUT_MS,
+      },
+    );
   }
 
   function deleteUserRecord(recordId) {
     var id = toText(recordId).trim();
     if (!id) return Promise.resolve({ error: "invalid record id" });
     var token = getAuthToken();
-    if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
+    if (!token)
+      return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
     return apiRequest("/records/" + encodeURIComponent(id), {
       method: "DELETE",
-      auth: true
+      auth: true,
     });
   }
 
@@ -954,10 +1238,11 @@
     var id = toText(recordId).trim();
     if (!id) return Promise.resolve({ error: "invalid record id" });
     var token = getAuthToken();
-    if (!token) return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
+    if (!token)
+      return Promise.resolve({ error: "Unauthorized", code: "UNAUTHORIZED" });
     return apiRequest("/records/" + encodeURIComponent(id) + "/restore", {
       method: "POST",
-      auth: true
+      auth: true,
     });
   }
 
@@ -979,68 +1264,95 @@
     if (size <= 0) size = DEFAULT_RECORD_LIMIT;
     var count = Math.max(0, Math.floor(Number(itemCount) || 0));
 
-    var pagination = (result && (result.pagination || result.page_info || result.meta)) || {};
+    var pagination =
+      (result && (result.pagination || result.page_info || result.meta)) || {};
     var rawPage = Math.floor(
       Number(
-        pagination.page != null ? pagination.page :
-        pagination.current_page != null ? pagination.current_page :
-        result && result.page != null ? result.page :
-        result && result.current_page != null ? result.current_page :
-        page
-      ) || page
+        pagination.page != null
+          ? pagination.page
+          : pagination.current_page != null
+            ? pagination.current_page
+            : result && result.page != null
+              ? result.page
+              : result && result.current_page != null
+                ? result.current_page
+                : page,
+      ) || page,
     );
     if (rawPage <= 0) rawPage = page;
 
     var rawTotal = Math.floor(
       Number(
-        pagination.total != null ? pagination.total :
-        pagination.total_count != null ? pagination.total_count :
-        pagination.record_count != null ? pagination.record_count :
-        result && result.total != null ? result.total :
-        result && result.total_count != null ? result.total_count :
-        result && result.record_count != null ? result.record_count :
-        0
-      ) || 0
+        pagination.total != null
+          ? pagination.total
+          : pagination.total_count != null
+            ? pagination.total_count
+            : pagination.record_count != null
+              ? pagination.record_count
+              : result && result.total != null
+                ? result.total
+                : result && result.total_count != null
+                  ? result.total_count
+                  : result && result.record_count != null
+                    ? result.record_count
+                    : 0,
+      ) || 0,
     );
     if (rawTotal < 0) rawTotal = 0;
     var rawLimit = Math.floor(
       Number(
-        pagination.limit != null ? pagination.limit :
-        pagination.page_size != null ? pagination.page_size :
-        result && result.limit != null ? result.limit :
-        result && result.page_size != null ? result.page_size :
-        size
-      ) || size
+        pagination.limit != null
+          ? pagination.limit
+          : pagination.page_size != null
+            ? pagination.page_size
+            : result && result.limit != null
+              ? result.limit
+              : result && result.page_size != null
+                ? result.page_size
+                : size,
+      ) || size,
     );
     if (rawLimit <= 0) rawLimit = size;
 
     var rawTotalPages = Math.floor(
       Number(
-        pagination.total_pages != null ? pagination.total_pages :
-        pagination.pages != null ? pagination.pages :
-        pagination.page_count != null ? pagination.page_count :
-        result && result.total_pages != null ? result.total_pages :
-        result && result.pages != null ? result.pages :
-        result && result.page_count != null ? result.page_count :
-        0
-      ) || 0
+        pagination.total_pages != null
+          ? pagination.total_pages
+          : pagination.pages != null
+            ? pagination.pages
+            : pagination.page_count != null
+              ? pagination.page_count
+              : result && result.total_pages != null
+                ? result.total_pages
+                : result && result.pages != null
+                  ? result.pages
+                  : result && result.page_count != null
+                    ? result.page_count
+                    : 0,
+      ) || 0,
     );
     if (rawTotalPages <= 0 && rawTotal > 0) {
       rawTotalPages = Math.ceil(rawTotal / rawLimit);
     }
     if (rawTotalPages < 0) rawTotalPages = 0;
 
-    var hasPrev = typeof pagination.has_prev === "boolean" ? pagination.has_prev : rawPage > 1;
-    var hasNext = typeof pagination.has_next === "boolean"
-      ? pagination.has_next
-      : (rawTotalPages > 0 ? rawPage < rawTotalPages : count >= size);
+    var hasPrev =
+      typeof pagination.has_prev === "boolean"
+        ? pagination.has_prev
+        : rawPage > 1;
+    var hasNext =
+      typeof pagination.has_next === "boolean"
+        ? pagination.has_next
+        : rawTotalPages > 0
+          ? rawPage < rawTotalPages
+          : count >= size;
 
     return {
       page: rawPage,
       totalPages: rawTotalPages,
       totalCount: rawTotal,
       hasPrev: !!hasPrev,
-      hasNext: !!hasNext
+      hasNext: !!hasNext,
     };
   }
 
@@ -1048,14 +1360,22 @@
     var safePage = Math.max(1, Math.floor(Number(page) || 1));
     var safeTotal = Math.max(0, Math.floor(Number(totalPages) || 0));
     if (currentLang === "en") {
-      return safeTotal > 0 ? "Page " + safePage + "/" + safeTotal : "Page " + safePage;
+      return safeTotal > 0
+        ? "Page " + safePage + "/" + safeTotal
+        : "Page " + safePage;
     }
-    return safeTotal > 0 ? "第" + safePage + "/" + safeTotal + "页" : "第" + safePage + "页";
+    return safeTotal > 0
+      ? "第" + safePage + "/" + safeTotal + "页"
+      : "第" + safePage + "页";
   }
 
   function syncRecordPagerUi() {
     var pageNode = byId("user-record-page");
-    if (pageNode) pageNode.textContent = resolveRecordPageText(recordPage, recordTotalPages);
+    if (pageNode)
+      pageNode.textContent = resolveRecordPageText(
+        recordPage,
+        recordTotalPages,
+      );
     var prevBtn = byId("user-record-prev");
     var nextBtn = byId("user-record-next");
     if (prevBtn) prevBtn.disabled = !recordHasPrev;
@@ -1073,7 +1393,7 @@
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit"
+        second: "2-digit",
       });
     } catch (_err) {
       beijingDateFormatter = null;
@@ -1090,10 +1410,30 @@
       var map = Object.create(null);
       for (var i = 0; i < parts.length; i += 1) {
         var part = parts[i];
-        if (part && part.type && part.type !== "literal") map[part.type] = part.value;
+        if (part && part.type && part.type !== "literal")
+          map[part.type] = part.value;
       }
-      if (map.year && map.month && map.day && map.hour && map.minute && map.second) {
-        return map.year + "-" + map.month + "-" + map.day + " " + map.hour + ":" + map.minute + ":" + map.second;
+      if (
+        map.year &&
+        map.month &&
+        map.day &&
+        map.hour &&
+        map.minute &&
+        map.second
+      ) {
+        return (
+          map.year +
+          "-" +
+          map.month +
+          "-" +
+          map.day +
+          " " +
+          map.hour +
+          ":" +
+          map.minute +
+          ":" +
+          map.second
+        );
       }
     }
 
@@ -1105,7 +1445,9 @@
     var hour = String(shifted.getUTCHours()).padStart(2, "0");
     var minute = String(shifted.getUTCMinutes()).padStart(2, "0");
     var second = String(shifted.getUTCSeconds()).padStart(2, "0");
-    return year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second;
+    return (
+      year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second
+    );
   }
 
   function parseUtcDatetimeText(raw) {
@@ -1130,8 +1472,11 @@
     if (!text) return "--";
 
     // Backend often returns `YYYY-MM-DD HH:mm:ss` as UTC; convert to Beijing time explicitly.
-    var hasExplicitTimezone = /Z$/i.test(text) || /[+-]\d{2}:?\d{2}$/i.test(text);
-    var ts = hasExplicitTimezone ? parseDateTs(text) : parseUtcDatetimeText(text);
+    var hasExplicitTimezone =
+      /Z$/i.test(text) || /[+-]\d{2}:?\d{2}$/i.test(text);
+    var ts = hasExplicitTimezone
+      ? parseDateTs(text)
+      : parseUtcDatetimeText(text);
     if (!Number.isFinite(ts) || ts <= 0) {
       ts = parseDateTs(text);
     }
@@ -1140,16 +1485,27 @@
   }
 
   function formatDurationHms(durationMsLike) {
-    var totalSeconds = Math.max(0, Math.floor(Number(durationMsLike) / 1000) || 0);
+    var totalSeconds = Math.max(
+      0,
+      Math.floor(Number(durationMsLike) / 1000) || 0,
+    );
     var hours = Math.floor(totalSeconds / 3600);
     var minutes = Math.floor((totalSeconds % 3600) / 60);
     var seconds = totalSeconds % 60;
-    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    return (
+      String(hours).padStart(2, "0") +
+      ":" +
+      String(minutes).padStart(2, "0") +
+      ":" +
+      String(seconds).padStart(2, "0")
+    );
   }
 
   function resolveRecordDateValue(record) {
     var source = record && typeof record === "object" ? record : {};
-    return toText(source.created_at || source.ended_at || source.game_date).trim();
+    return toText(
+      source.created_at || source.ended_at || source.game_date,
+    ).trim();
   }
 
   function resolveRecordDateLabelText() {
@@ -1190,18 +1546,32 @@
     var modeKey = toText(source.mode_key).trim();
     var modeBucket = toText(source.mode_bucket).trim();
     if (currentLang !== "en") {
-      if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
+      if (
+        modeKey === "standard_4x4_pow2_no_undo" ||
+        modeKey === "classic_no_undo" ||
+        modeBucket === "standard_no_undo"
+      ) {
         return "4x4\uff08\u4e0d\u53ef\u64a4\u56de\uff09";
       }
-      if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
+      if (
+        modeKey === "classic_4x4_pow2_undo" ||
+        modeBucket === "standard_undo"
+      ) {
         return "4x4\u53ef\u64a4\u56de";
       }
     }
     if (currentLang === "en") {
-      if (modeKey === "standard_4x4_pow2_no_undo" || modeKey === "classic_no_undo" || modeBucket === "standard_no_undo") {
+      if (
+        modeKey === "standard_4x4_pow2_no_undo" ||
+        modeKey === "classic_no_undo" ||
+        modeBucket === "standard_no_undo"
+      ) {
         return "4x4 (No Undo)";
       }
-      if (modeKey === "classic_4x4_pow2_undo" || modeBucket === "standard_undo") {
+      if (
+        modeKey === "classic_4x4_pow2_undo" ||
+        modeBucket === "standard_undo"
+      ) {
         return "4x4 Undo";
       }
     }
@@ -1212,7 +1582,9 @@
     var key = toText(modeKey).trim();
     for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
       if (LEADERBOARD_MODE_OPTIONS[i].value === key) {
-        return currentLang === "en" ? LEADERBOARD_MODE_OPTIONS[i].en : LEADERBOARD_MODE_OPTIONS[i].zh;
+        return currentLang === "en"
+          ? LEADERBOARD_MODE_OPTIONS[i].en
+          : LEADERBOARD_MODE_OPTIONS[i].zh;
       }
     }
     return resolveRecordModeLabel({ mode_key: key, mode_bucket: modeBucket });
@@ -1220,7 +1592,8 @@
 
   function normalizeModeBucketFromKey(modeKey) {
     var key = toText(modeKey).trim();
-    if (key === "standard_4x4_pow2_no_undo" || key === "classic_no_undo") return "standard_no_undo";
+    if (key === "standard_4x4_pow2_no_undo" || key === "classic_no_undo")
+      return "standard_no_undo";
     if (key === "classic_4x4_pow2_undo") return "standard_undo";
     return key;
   }
@@ -1235,7 +1608,12 @@
       var modeBucket = toText(source.mode_bucket || source.mode).trim();
       var modeKey = toText(source.mode_key).trim();
       if (!modeBucket) modeBucket = normalizeModeBucketFromKey(modeKey);
-      var recordCount = parsePositiveInt(source.record_count || source.total_records || source.records || source.count);
+      var recordCount = parsePositiveInt(
+        source.record_count ||
+          source.total_records ||
+          source.records ||
+          source.count,
+      );
       out.push({
         mode_bucket: modeBucket,
         mode_key: modeKey,
@@ -1245,7 +1623,9 @@
         fastest_duration_ms: parsePositiveInt(source.fastest_duration_ms),
         fastest_2048_ms: parsePositiveInt(source.fastest_2048_ms),
         fewest_steps: parsePositiveInt(source.fewest_steps),
-        latest_record_at: toText(source.latest_record_at || source.last_record_at || source.updated_at).trim()
+        latest_record_at: toText(
+          source.latest_record_at || source.last_record_at || source.updated_at,
+        ).trim(),
       });
     }
     return out;
@@ -1256,8 +1636,18 @@
     if (!filter || filter === "all") return null;
     for (var i = 0; i < summaryModeStats.length; i += 1) {
       var item = summaryModeStats[i];
-      if (toText(item && item.mode_key).trim().toLowerCase() === filter) return item;
-      if (toText(item && item.mode_bucket).trim().toLowerCase() === filter) return item;
+      if (
+        toText(item && item.mode_key)
+          .trim()
+          .toLowerCase() === filter
+      )
+        return item;
+      if (
+        toText(item && item.mode_bucket)
+          .trim()
+          .toLowerCase() === filter
+      )
+        return item;
     }
     return null;
   }
@@ -1282,7 +1672,8 @@
 
   function formatGameCount(count) {
     var safeCount = parsePositiveInt(count);
-    if (currentLang === "en") return safeCount === 1 ? "1 game" : String(safeCount) + " games";
+    if (currentLang === "en")
+      return safeCount === 1 ? "1 game" : String(safeCount) + " games";
     return String(safeCount) + " \u5c40";
   }
 
@@ -1295,23 +1686,43 @@
   }
 
   function getUndoFilterValue() {
-    var value = toText(byId("user-record-undo") && byId("user-record-undo").value).trim().toLowerCase();
+    var value = toText(
+      byId("user-record-undo") && byId("user-record-undo").value,
+    )
+      .trim()
+      .toLowerCase();
     return value === "undo" || value === "no_undo" ? value : "all";
   }
 
   function getModeFamilyValue() {
-    var selected = global.document.querySelector("[data-user-mode-family][aria-pressed='true']");
-    var value = toText(selected && selected.getAttribute("data-user-mode-family")).trim().toLowerCase();
-    return ["pow2", "fibonacci", "diagonal", "special"].indexOf(value) >= 0 ? value : "all";
+    var selected = global.document.querySelector(
+      "[data-user-mode-family][aria-pressed='true']",
+    );
+    var value = toText(
+      selected && selected.getAttribute("data-user-mode-family"),
+    )
+      .trim()
+      .toLowerCase();
+    return ["pow2", "fibonacci", "diagonal", "special"].indexOf(value) >= 0
+      ? value
+      : "all";
   }
 
   function getModeFilterValue() {
-    var mode = toText(byId("user-record-mode") && byId("user-record-mode").value).trim().toLowerCase();
+    var mode = toText(
+      byId("user-record-mode") && byId("user-record-mode").value,
+    )
+      .trim()
+      .toLowerCase();
     return mode || "all";
   }
 
   function getRecordVisibilityValue() {
-    var visibility = toText(byId("user-record-visibility") && byId("user-record-visibility").value).trim().toLowerCase();
+    var visibility = toText(
+      byId("user-record-visibility") && byId("user-record-visibility").value,
+    )
+      .trim()
+      .toLowerCase();
     if (visibility === "all" || visibility === "deleted") return visibility;
     return "active";
   }
@@ -1346,7 +1757,8 @@
     for (var i = 0; i < LEADERBOARD_MODE_OPTIONS.length; i += 1) {
       var optionDef = LEADERBOARD_MODE_OPTIONS[i];
       if (familyFilter !== "all" && optionDef.family !== familyFilter) continue;
-      if (undoFilter !== "all" && optionDef.undo !== (undoFilter === "undo")) continue;
+      if (undoFilter !== "all" && optionDef.undo !== (undoFilter === "undo"))
+        continue;
       var optionEl = global.document.createElement("option");
       optionEl.value = optionDef.value;
       optionEl.textContent = currentLang === "en" ? optionDef.en : optionDef.zh;
@@ -1360,7 +1772,11 @@
   function isModeMatched(record, modeFilter) {
     var filter = toText(modeFilter).trim().toLowerCase();
     if (!filter || filter === "all") return true;
-    return toText(record && record.mode_bucket).trim().toLowerCase() === filter;
+    return (
+      toText(record && record.mode_bucket)
+        .trim()
+        .toLowerCase() === filter
+    );
   }
 
   function filterRecordsByMode(records, modeFilter) {
@@ -1378,7 +1794,11 @@
   function normalizeBoardMatrix(raw) {
     var source = raw;
     if (typeof source === "string") {
-      try { source = JSON.parse(source); } catch (_err) { source = []; }
+      try {
+        source = JSON.parse(source);
+      } catch (_err) {
+        source = [];
+      }
     }
     if (!Array.isArray(source)) return [];
     var rows = [];
@@ -1397,11 +1817,17 @@
 
   function normalizeHistoryRecordViaRuntime(raw, fallbackRecord) {
     var runtime = global.CoreGameSettingsStorageRuntime;
-    if (!runtime || typeof runtime.normalizeHistoryRecordFromContext !== "function") {
+    if (
+      !runtime ||
+      typeof runtime.normalizeHistoryRecordFromContext !== "function"
+    ) {
       return null;
     }
     var source = raw && typeof raw === "object" ? raw : {};
-    var fallback = fallbackRecord && typeof fallbackRecord === "object" ? fallbackRecord : null;
+    var fallback =
+      fallbackRecord && typeof fallbackRecord === "object"
+        ? fallbackRecord
+        : null;
     var candidate = {};
     if (fallback) {
       candidate.mode = toText(fallback.mode || fallback.mode_bucket).trim();
@@ -1414,17 +1840,21 @@
       candidate.duration_ms = fallback.duration_ms;
       candidate.ended_at = fallback.ended_at;
       candidate.end_reason = fallback.end_reason;
-      if (fallback.final_board != null) candidate.final_board = fallback.final_board;
-      if (fallback.replay_string != null) candidate.replay_string = fallback.replay_string;
+      if (fallback.final_board != null)
+        candidate.final_board = fallback.final_board;
+      if (fallback.replay_string != null)
+        candidate.replay_string = fallback.replay_string;
       if (fallback.replay != null) candidate.replay = fallback.replay;
       if (fallback.id != null) candidate.id = fallback.id;
     }
     if (source.mode != null || source.mode_bucket != null) {
       candidate.mode = toText(source.mode || source.mode_bucket).trim();
     }
-    if (source.mode_key != null) candidate.mode_key = toText(source.mode_key).trim();
+    if (source.mode_key != null)
+      candidate.mode_key = toText(source.mode_key).trim();
     if (source.board_width != null) candidate.board_width = source.board_width;
-    if (source.board_height != null) candidate.board_height = source.board_height;
+    if (source.board_height != null)
+      candidate.board_height = source.board_height;
     if (source.score != null) candidate.score = source.score;
     if (source.board_sum != null) candidate.board_sum = source.board_sum;
     if (source.best_tile != null) candidate.best_tile = source.best_tile;
@@ -1432,14 +1862,19 @@
     if (source.ended_at != null) candidate.ended_at = source.ended_at;
     if (source.end_reason != null) candidate.end_reason = source.end_reason;
     if (source.final_board != null) candidate.final_board = source.final_board;
-    if (source.replay_string != null) candidate.replay_string = source.replay_string;
+    if (source.replay_string != null)
+      candidate.replay_string = source.replay_string;
     if (source.replay != null) candidate.replay = source.replay;
     if (source.id != null) candidate.id = source.id;
     try {
       return runtime.normalizeHistoryRecordFromContext({
         record: candidate,
-        nowIso: function () { return ""; },
-        idFactory: function () { return ""; }
+        nowIso: function () {
+          return "";
+        },
+        idFactory: function () {
+          return "";
+        },
       });
     } catch (_err) {
       return null;
@@ -1456,7 +1891,7 @@
     }
     return {
       rows: Math.max(0, rowCount),
-      cols: Math.max(0, cols)
+      cols: Math.max(0, cols),
     };
   }
 
@@ -1467,7 +1902,7 @@
         gap: baseGap,
         cell: cell44,
         gridWidth: cols * cell44 + (cols - 1) * baseGap,
-        gridHeight: rows * cell44 + (rows - 1) * baseGap
+        gridHeight: rows * cell44 + (rows - 1) * baseGap,
       };
     }
 
@@ -1481,14 +1916,16 @@
       gap: baseGap,
       cell: cell,
       gridWidth: cols * cell + (cols - 1) * baseGap,
-      gridHeight: rows * cell + (rows - 1) * baseGap
+      gridHeight: rows * cell + (rows - 1) * baseGap,
     };
   }
 
   function computePreviewTileFontSize(value, cell, cols, rows) {
     var safeCell = Number(cell) || 0;
     if (!Number.isFinite(safeCell) || safeCell <= 0) safeCell = 56;
-    var digits = String(Math.max(0, Math.floor(Math.abs(Number(value) || 0)))).length;
+    var digits = String(
+      Math.max(0, Math.floor(Math.abs(Number(value) || 0))),
+    ).length;
     var maxDim = Math.max(Number(cols) || 4, Number(rows) || 4);
 
     var boardScale = 1;
@@ -1532,12 +1969,18 @@
     if (rows <= 0 || cols <= 0) {
       var empty = global.document.createElement("div");
       empty.className = "user-record-detail-error";
-      empty.textContent = currentLang === "en" ? "No final board data." : "\u65e0\u6700\u7ec8\u76d8\u9762\u6570\u636e";
+      empty.textContent =
+        currentLang === "en"
+          ? "No final board data."
+          : "\u65e0\u6700\u7ec8\u76d8\u9762\u6570\u636e";
       return empty;
     }
     var maxDim = Math.max(rows, cols);
     var baseGap = maxDim >= 5 ? 6 : 8;
-    var boardSize = Math.max(180, Math.min(300, maxDim * 60 + (maxDim - 1) * baseGap));
+    var boardSize = Math.max(
+      180,
+      Math.min(300, maxDim * 60 + (maxDim - 1) * baseGap),
+    );
     var layout = computePreviewBoardLayout(cols, rows, boardSize, baseGap);
     var framePadding = 8;
 
@@ -1546,8 +1989,10 @@
 
     var board = global.document.createElement("div");
     board.className = "game-container user-mini-game";
-    board.style.width = String(Math.round(layout.gridWidth + framePadding * 2)) + "px";
-    board.style.height = String(Math.round(layout.gridHeight + framePadding * 2)) + "px";
+    board.style.width =
+      String(Math.round(layout.gridWidth + framePadding * 2)) + "px";
+    board.style.height =
+      String(Math.round(layout.gridHeight + framePadding * 2)) + "px";
 
     var gridContainer = global.document.createElement("div");
     gridContainer.className = "grid-container";
@@ -1570,13 +2015,15 @@
     for (var y = 0; y < rows; y += 1) {
       var rowEl = global.document.createElement("div");
       rowEl.className = "grid-row";
-      rowEl.style.marginBottom = y === rows - 1 ? "0" : (String(Math.round(layout.gap)) + "px");
+      rowEl.style.marginBottom =
+        y === rows - 1 ? "0" : String(Math.round(layout.gap)) + "px";
       for (var x = 0; x < cols; x += 1) {
         var bgCell = global.document.createElement("div");
         bgCell.className = "grid-cell";
         bgCell.style.width = String(Math.round(layout.cell)) + "px";
         bgCell.style.height = String(Math.round(layout.cell)) + "px";
-        bgCell.style.marginRight = x === cols - 1 ? "0" : (String(Math.round(layout.gap)) + "px");
+        bgCell.style.marginRight =
+          x === cols - 1 ? "0" : String(Math.round(layout.gap)) + "px";
         rowEl.appendChild(bgCell);
       }
       gridContainer.appendChild(rowEl);
@@ -1592,15 +2039,24 @@
         tile.setAttribute("class", resolvePreviewTileClasses(value, c, r));
         tile.style.width = String(Math.round(layout.cell)) + "px";
         tile.style.height = String(Math.round(layout.cell)) + "px";
-        tile.style.transform = "translate(" + String(Math.round(c * (layout.cell + layout.gap))) + "px, " + String(Math.round(r * (layout.cell + layout.gap))) + "px)";
+        tile.style.transform =
+          "translate(" +
+          String(Math.round(c * (layout.cell + layout.gap))) +
+          "px, " +
+          String(Math.round(r * (layout.cell + layout.gap))) +
+          "px)";
 
         var inner = global.document.createElement("div");
         inner.className = "tile-inner";
         inner.style.width = String(Math.round(layout.cell)) + "px";
         inner.style.height = String(Math.round(layout.cell)) + "px";
         inner.style.lineHeight = String(Math.round(layout.cell)) + "px";
-        inner.style.fontSize = String(computePreviewTileFontSize(value, layout.cell, cols, rows)) + "px";
-        inner.textContent = isStoneValue(value) ? "" : String(Math.floor(Math.abs(value)));
+        inner.style.fontSize =
+          String(computePreviewTileFontSize(value, layout.cell, cols, rows)) +
+          "px";
+        inner.textContent = isStoneValue(value)
+          ? ""
+          : String(Math.floor(Math.abs(value)));
         tile.appendChild(inner);
         tileContainer.appendChild(tile);
       }
@@ -1612,60 +2068,130 @@
 
   function normalizeRecordDetailPayload(raw, fallbackRecord) {
     var source = raw && typeof raw === "object" ? raw : {};
-    var fallback = fallbackRecord && typeof fallbackRecord === "object" ? fallbackRecord : null;
+    var fallback =
+      fallbackRecord && typeof fallbackRecord === "object"
+        ? fallbackRecord
+        : null;
     var normalized = normalizeHistoryRecordViaRuntime(source, fallbackRecord);
     if (normalized) {
       var normalizedReplayString = toText(normalized.replay_string).trim();
-      var normalizedReplayObject = normalized && typeof normalized.replay === "object" && normalized.replay
-        ? normalized.replay
-        : (source && typeof source.replay === "object" && source.replay ? source.replay : null);
+      var normalizedReplayObject =
+        normalized && typeof normalized.replay === "object" && normalized.replay
+          ? normalized.replay
+          : source && typeof source.replay === "object" && source.replay
+            ? source.replay
+            : null;
       if (!normalizedReplayString && normalized.replay != null) {
-        try { normalizedReplayString = JSON.stringify(normalized.replay); } catch (_err) { normalizedReplayString = ""; }
+        try {
+          normalizedReplayString = JSON.stringify(normalized.replay);
+        } catch (_err) {
+          normalizedReplayString = "";
+        }
       }
       var replayFileVersion = normalizeReplayFileVersion(
         source.replay_file_version ||
-        normalized.replay_file_version ||
-        (fallback && fallback.replay_file_version)
+          normalized.replay_file_version ||
+          (fallback && fallback.replay_file_version),
       );
       return {
         score: Math.floor(Number(normalized.score) || 0),
         record_era: resolveRecordEra(source, fallback),
-        mode_bucket: toText(source.mode_bucket || (fallback && fallback.mode_bucket) || normalized.mode).trim(),
-        mode_key: toText(source.mode_key || (fallback && fallback.mode_key) || normalized.mode_key).trim(),
-        board_width: parsePositiveInt(source.board_width || normalized.board_width || (fallback && fallback.board_width)),
-        board_height: parsePositiveInt(source.board_height || normalized.board_height || (fallback && fallback.board_height)),
+        mode_bucket: toText(
+          source.mode_bucket ||
+            (fallback && fallback.mode_bucket) ||
+            normalized.mode,
+        ).trim(),
+        mode_key: toText(
+          source.mode_key ||
+            (fallback && fallback.mode_key) ||
+            normalized.mode_key,
+        ).trim(),
+        board_width: parsePositiveInt(
+          source.board_width ||
+            normalized.board_width ||
+            (fallback && fallback.board_width),
+        ),
+        board_height: parsePositiveInt(
+          source.board_height ||
+            normalized.board_height ||
+            (fallback && fallback.board_height),
+        ),
         best_tile: Math.floor(Number(normalized.best_tile) || 0),
         duration_ms: Math.floor(Number(normalized.duration_ms) || 0),
-        ended_at: toText(source.ended_at || normalized.ended_at || (fallback && fallback.ended_at)).trim(),
+        ended_at: toText(
+          source.ended_at ||
+            normalized.ended_at ||
+            (fallback && fallback.ended_at),
+        ).trim(),
         replay_string: normalizedReplayString,
         replay: normalizedReplayObject,
         replay_file_version: replayFileVersion,
-        final_board: normalizeBoardMatrix(normalized.final_board)
+        final_board: normalizeBoardMatrix(normalized.final_board),
       };
     }
 
     var replayString = toText(source.replay_string).trim();
-    var replayObject = source && typeof source.replay === "object" && source.replay
-      ? source.replay
-      : (fallbackRecord && typeof fallbackRecord.replay === "object" && fallbackRecord.replay ? fallbackRecord.replay : null);
+    var replayObject =
+      source && typeof source.replay === "object" && source.replay
+        ? source.replay
+        : fallbackRecord &&
+            typeof fallbackRecord.replay === "object" &&
+            fallbackRecord.replay
+          ? fallbackRecord.replay
+          : null;
     if (!replayString && source.replay != null) {
-      try { replayString = JSON.stringify(source.replay); } catch (_err) { replayString = ""; }
+      try {
+        replayString = JSON.stringify(source.replay);
+      } catch (_err) {
+        replayString = "";
+      }
     }
     var finalBoard = source.final_board;
     return {
-      score: Math.floor(Number(source.score != null ? source.score : fallbackRecord && fallbackRecord.score) || 0),
+      score: Math.floor(
+        Number(
+          source.score != null
+            ? source.score
+            : fallbackRecord && fallbackRecord.score,
+        ) || 0,
+      ),
       record_era: resolveRecordEra(source, fallbackRecord),
-      mode_bucket: toText(source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket)).trim(),
-      mode_key: toText(source.mode_key || (fallbackRecord && fallbackRecord.mode_key)).trim(),
-      board_width: parsePositiveInt(source.board_width || (fallbackRecord && fallbackRecord.board_width)),
-      board_height: parsePositiveInt(source.board_height || (fallbackRecord && fallbackRecord.board_height)),
-      best_tile: Math.floor(Number(source.best_tile != null ? source.best_tile : fallbackRecord && fallbackRecord.best_tile) || 0),
-      duration_ms: Math.floor(Number(source.duration_ms != null ? source.duration_ms : fallbackRecord && fallbackRecord.duration_ms) || 0),
-      ended_at: toText(source.ended_at || (fallbackRecord && fallbackRecord.ended_at)).trim(),
+      mode_bucket: toText(
+        source.mode_bucket || (fallbackRecord && fallbackRecord.mode_bucket),
+      ).trim(),
+      mode_key: toText(
+        source.mode_key || (fallbackRecord && fallbackRecord.mode_key),
+      ).trim(),
+      board_width: parsePositiveInt(
+        source.board_width || (fallbackRecord && fallbackRecord.board_width),
+      ),
+      board_height: parsePositiveInt(
+        source.board_height || (fallbackRecord && fallbackRecord.board_height),
+      ),
+      best_tile: Math.floor(
+        Number(
+          source.best_tile != null
+            ? source.best_tile
+            : fallbackRecord && fallbackRecord.best_tile,
+        ) || 0,
+      ),
+      duration_ms: Math.floor(
+        Number(
+          source.duration_ms != null
+            ? source.duration_ms
+            : fallbackRecord && fallbackRecord.duration_ms,
+        ) || 0,
+      ),
+      ended_at: toText(
+        source.ended_at || (fallbackRecord && fallbackRecord.ended_at),
+      ).trim(),
       replay_string: replayString,
       replay: replayObject,
-      replay_file_version: normalizeReplayFileVersion(source.replay_file_version || (fallbackRecord && fallbackRecord.replay_file_version)),
-      final_board: normalizeBoardMatrix(finalBoard)
+      replay_file_version: normalizeReplayFileVersion(
+        source.replay_file_version ||
+          (fallbackRecord && fallbackRecord.replay_file_version),
+      ),
+      final_board: normalizeBoardMatrix(finalBoard),
     };
   }
 
@@ -1683,7 +2209,11 @@
   function buildLocalRecordDetailFallback(record) {
     var payload = normalizeRecordDetailPayload(record, record);
     var replayString = toText(payload && payload.replay_string).trim();
-    var hasReplayObject = !!(payload && payload.replay && typeof payload.replay === "object");
+    var hasReplayObject = !!(
+      payload &&
+      payload.replay &&
+      typeof payload.replay === "object"
+    );
     var hasReplay = !!replayString || hasReplayObject;
     var hasBoard = hasBoardCells(payload && payload.final_board);
     if (!hasReplay && !hasBoard) return null;
@@ -1691,11 +2221,16 @@
   }
 
   async function tryFetchReplayEnvelopeFromSignedUrl(url, fallbackRecord) {
-    var controller = typeof global.AbortController === "function" ? new global.AbortController() : null;
+    var controller =
+      typeof global.AbortController === "function"
+        ? new global.AbortController()
+        : null;
     var timeoutHandle = null;
     if (controller) {
       timeoutHandle = global.setTimeout(function () {
-        try { controller.abort(); } catch (_err) {}
+        try {
+          controller.abort();
+        } catch (_err) {}
       }, SIGNED_REPLAY_FETCH_TIMEOUT_MS);
     }
 
@@ -1704,7 +2239,7 @@
       response = await callFetch(url, {
         method: "GET",
         credentials: "omit",
-        signal: controller ? controller.signal : undefined
+        signal: controller ? controller.signal : undefined,
       });
     } finally {
       if (timeoutHandle) {
@@ -1713,13 +2248,17 @@
       }
     }
 
-    if (!response || !response.ok) throw new Error("Signed replay fetch failed");
+    if (!response || !response.ok)
+      throw new Error("Signed replay fetch failed");
     var text = await response.text();
     if (!text) return normalizeRecordDetailPayload({}, fallbackRecord);
     try {
       return normalizeRecordDetailPayload(JSON.parse(text), fallbackRecord);
     } catch (_parseErr) {
-      return normalizeRecordDetailPayload({ replay_string: text }, fallbackRecord);
+      return normalizeRecordDetailPayload(
+        { replay_string: text },
+        fallbackRecord,
+      );
     }
   }
 
@@ -1752,7 +2291,7 @@
   async function requestRecordReplay(recordId, downloadMode) {
     return await apiRequest(buildRecordReplayPath(recordId, downloadMode), {
       method: "GET",
-      timeoutMs: RECORD_REPLAY_API_TIMEOUT_MS
+      timeoutMs: RECORD_REPLAY_API_TIMEOUT_MS,
     });
   }
 
@@ -1762,16 +2301,26 @@
     }
 
     if (result.data && typeof result.data === "object") {
-      var replayFileVersion = normalizeReplayFileVersion(result.replay_file_version);
+      var replayFileVersion = normalizeReplayFileVersion(
+        result.replay_file_version,
+      );
       var normalizedData = result.data;
       if (replayFileVersion > 0 && normalizedData.replay_file_version == null) {
-        normalizedData = Object.assign({}, normalizedData, { replay_file_version: replayFileVersion });
+        normalizedData = Object.assign({}, normalizedData, {
+          replay_file_version: replayFileVersion,
+        });
       }
       return normalizeRecordDetailPayload(normalizedData, record);
     }
 
-    if (toText(result.mode).toLowerCase() === "signed_url" && toText(result.url).trim()) {
-      return await tryFetchReplayEnvelopeFromSignedUrl(toText(result.url).trim(), record);
+    if (
+      toText(result.mode).toLowerCase() === "signed_url" &&
+      toText(result.url).trim()
+    ) {
+      return await tryFetchReplayEnvelopeFromSignedUrl(
+        toText(result.url).trim(),
+        record,
+      );
     }
 
     return normalizeRecordDetailPayload({}, record);
@@ -1785,7 +2334,10 @@
     if (cached && !cached.loading) return cached;
 
     if (isDeletedRecord(record)) {
-      var deletedDetail = Object.assign({ loading: false }, normalizeRecordDetailPayload(record, record));
+      var deletedDetail = Object.assign(
+        { loading: false },
+        normalizeRecordDetailPayload(record, record),
+      );
       recordDetailCache[recordId] = deletedDetail;
       return deletedDetail;
     }
@@ -1811,9 +2363,10 @@
         } catch (requestError) {
           var requestErrorText = toText(requestError && requestError.message);
           if (isNotFoundLikeText(requestErrorText)) {
-            lastErrorText = currentLang === "en"
-              ? "Replay data is unavailable for this record."
-              : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
+            lastErrorText =
+              currentLang === "en"
+                ? "Replay data is unavailable for this record."
+                : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
           } else {
             lastErrorText = requestErrorText || lastErrorText;
           }
@@ -1824,9 +2377,10 @@
           var errorText = toText(result && result.error).trim();
           if (errorText) {
             if (isNotFoundLikeText(errorText)) {
-              lastErrorText = currentLang === "en"
-                ? "Replay data is unavailable for this record."
-                : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
+              lastErrorText =
+                currentLang === "en"
+                  ? "Replay data is unavailable for this record."
+                  : "\u8be5\u8bb0\u5f55\u7684\u56de\u653e\u6570\u636e\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u6e05\u7406";
             } else {
               lastErrorText = errorText;
             }
@@ -1840,7 +2394,8 @@
           recordDetailCache[recordId] = detail;
           return detail;
         } catch (resolveError) {
-          lastErrorText = toText(resolveError && resolveError.message) || lastErrorText;
+          lastErrorText =
+            toText(resolveError && resolveError.message) || lastErrorText;
         }
       }
 
@@ -1851,7 +2406,11 @@
       }
 
       if (isTimeoutLikeText(lastErrorText)) {
-        throw new Error(currentLang === "en" ? "Replay load timed out" : "\u56de\u653e\u52a0\u8f7d\u8d85\u65f6");
+        throw new Error(
+          currentLang === "en"
+            ? "Replay load timed out"
+            : "\u56de\u653e\u52a0\u8f7d\u8d85\u65f6",
+        );
       }
       throw new Error(lastErrorText || "Replay load failed");
     } catch (error) {
@@ -1862,7 +2421,7 @@
       }
       var failed = {
         loading: false,
-        error: toText(error && error.message) || "Replay load failed"
+        error: toText(error && error.message) || "Replay load failed",
       };
       recordDetailCache[recordId] = failed;
       return failed;
@@ -1871,10 +2430,15 @@
 
   function createReplaySessionPayload(record, detail) {
     var replayString = toText(detail && detail.replay_string).trim();
-    var replayObject = detail && detail.replay && typeof detail.replay === "object" ? detail.replay : null;
+    var replayObject =
+      detail && detail.replay && typeof detail.replay === "object"
+        ? detail.replay
+        : null;
     if (!replayString && !replayObject) return "";
     var replayFileVersion = normalizeReplayFileVersion(
-      (detail && detail.replay_file_version) || (record && record.replay_file_version) || CLOUD_REPLAY_FILE_VERSION
+      (detail && detail.replay_file_version) ||
+        (record && record.replay_file_version) ||
+        CLOUD_REPLAY_FILE_VERSION,
     );
     return JSON.stringify({
       source: "cloud_record",
@@ -1884,27 +2448,51 @@
       id: toText(record && record.id).trim(),
       record_era: resolveRecordEra(detail, record),
       score: Math.floor(Number(record && record.score) || 0),
-      mode_key: toText((detail && detail.mode_key) || (record && record.mode_key)).trim(),
-      mode_bucket: toText((detail && detail.mode_bucket) || (record && record.mode_bucket)).trim(),
-      board_width: parsePositiveInt((detail && detail.board_width) || (record && record.board_width)),
-      board_height: parsePositiveInt((detail && detail.board_height) || (record && record.board_height)),
-      ended_at: toText((detail && detail.ended_at) || (record && record.ended_at)).trim(),
+      mode_key: toText(
+        (detail && detail.mode_key) || (record && record.mode_key),
+      ).trim(),
+      mode_bucket: toText(
+        (detail && detail.mode_bucket) || (record && record.mode_bucket),
+      ).trim(),
+      board_width: parsePositiveInt(
+        (detail && detail.board_width) || (record && record.board_width),
+      ),
+      board_height: parsePositiveInt(
+        (detail && detail.board_height) || (record && record.board_height),
+      ),
+      ended_at: toText(
+        (detail && detail.ended_at) || (record && record.ended_at),
+      ).trim(),
       replay_string: replayString,
-      replay: replayObject
+      replay: replayObject,
     });
   }
 
   function buildReplayExportFilename(record) {
     var rawId = toText(record && record.id).trim() || "unknown";
-    var safeId = rawId.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "unknown";
+    var safeId =
+      rawId.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") ||
+      "unknown";
     return "2048-record-" + safeId + "-replay.json";
   }
 
   function downloadTextFile(filename, textContent, mimeType) {
-    if (!global.Blob || !global.URL || typeof global.URL.createObjectURL !== "function") return false;
+    if (
+      !global.Blob ||
+      !global.URL ||
+      typeof global.URL.createObjectURL !== "function"
+    )
+      return false;
     var documentLike = global.document;
-    if (!documentLike || typeof documentLike.createElement !== "function" || !documentLike.body) return false;
-    var blob = new global.Blob([toText(textContent)], { type: mimeType || "application/json;charset=utf-8" });
+    if (
+      !documentLike ||
+      typeof documentLike.createElement !== "function" ||
+      !documentLike.body
+    )
+      return false;
+    var blob = new global.Blob([toText(textContent)], {
+      type: mimeType || "application/json;charset=utf-8",
+    });
     var objectUrl = "";
     var anchor = null;
     try {
@@ -1920,10 +2508,14 @@
       return true;
     } catch (_error) {
       if (anchor && anchor.parentNode) {
-        try { anchor.parentNode.removeChild(anchor); } catch (_removeError) {}
+        try {
+          anchor.parentNode.removeChild(anchor);
+        } catch (_removeError) {}
       }
       if (objectUrl && typeof global.URL.revokeObjectURL === "function") {
-        try { global.URL.revokeObjectURL(objectUrl); } catch (_revokeError) {}
+        try {
+          global.URL.revokeObjectURL(objectUrl);
+        } catch (_revokeError) {}
       }
       return false;
     }
@@ -1932,28 +2524,50 @@
   function exportReplayByRecord(record, detail) {
     var payload = createReplaySessionPayload(record, detail);
     if (!payload) {
-      setTip(currentLang === "en" ? "Replay payload is missing." : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e", "err");
+      setTip(
+        currentLang === "en"
+          ? "Replay payload is missing."
+          : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e",
+        "err",
+      );
       return false;
     }
-    var ok = downloadTextFile(buildReplayExportFilename(record), payload, "application/json;charset=utf-8");
+    var ok = downloadTextFile(
+      buildReplayExportFilename(record),
+      payload,
+      "application/json;charset=utf-8",
+    );
     setTip(ok ? t("exportReplayOk") : t("exportReplayFail"), ok ? "ok" : "err");
     return ok;
   }
 
   async function openReplayByRecord(record, detail) {
     var replayFileVersion = normalizeReplayFileVersion(
-      (detail && detail.replay_file_version) || (record && record.replay_file_version) || CLOUD_REPLAY_FILE_VERSION
+      (detail && detail.replay_file_version) ||
+        (record && record.replay_file_version) ||
+        CLOUD_REPLAY_FILE_VERSION,
     );
     try {
       await ensureReplayContractAligned(replayFileVersion);
     } catch (versionError) {
-      setTip(toText(versionError && versionError.message) || (currentLang === "en" ? "Replay version check failed" : "\u56de\u653e\u7248\u672c\u6821\u9a8c\u5931\u8d25"), "err");
+      setTip(
+        toText(versionError && versionError.message) ||
+          (currentLang === "en"
+            ? "Replay version check failed"
+            : "\u56de\u653e\u7248\u672c\u6821\u9a8c\u5931\u8d25"),
+        "err",
+      );
       return;
     }
 
     var payload = createReplaySessionPayload(record, detail);
     if (!payload) {
-      setTip(currentLang === "en" ? "Replay payload is missing." : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e", "err");
+      setTip(
+        currentLang === "en"
+          ? "Replay payload is missing."
+          : "\u8be5\u8bb0\u5f55\u7f3a\u5c11\u56de\u653e\u6570\u636e",
+        "err",
+      );
       return;
     }
     writeSessionStorageItem(CLOUD_REPLAY_STORAGE_KEY, payload);
@@ -1976,11 +2590,15 @@
     if (!detail || detail.loading) {
       var loading = global.document.createElement("div");
       loading.className = "user-record-detail-error";
-      loading.textContent = currentLang === "en" ? "Loading detail..." : "\u6b63\u5728\u52a0\u8f7d\u8be6\u60c5...";
+      loading.textContent =
+        currentLang === "en"
+          ? "Loading detail..."
+          : "\u6b63\u5728\u52a0\u8f7d\u8be6\u60c5...";
       card.appendChild(loading);
       if (!detail || !detail.loading) {
         loadRecordDetail(record).then(function () {
-          if (expandedRecordId === toText(record && record.id).trim()) applyCurrentSortAndRender();
+          if (expandedRecordId === toText(record && record.id).trim())
+            applyCurrentSortAndRender();
         });
       }
       return detailHost;
@@ -1996,8 +2614,12 @@
 
     var meta = global.document.createElement("div");
     meta.className = "user-record-detail-meta";
-    var bestTileText = (currentLang === "en" ? "Best Tile: " : "\u6700\u5927\u683c: ") + String(Math.floor(Number(detail.best_tile) || 0));
-    var durationText = (currentLang === "en" ? "Duration: " : "\u7528\u65f6: ") + formatDurationHms(detail.duration_ms);
+    var bestTileText =
+      (currentLang === "en" ? "Best Tile: " : "\u6700\u5927\u683c: ") +
+      String(Math.floor(Number(detail.best_tile) || 0));
+    var durationText =
+      (currentLang === "en" ? "Duration: " : "\u7528\u65f6: ") +
+      formatDurationHms(detail.duration_ms);
     var metaText = bestTileText + " \u00b7 " + durationText;
     if (isDeletedRecord(record)) {
       metaText += " \u00b7 " + t("deletedHint");
@@ -2016,11 +2638,19 @@
       var replayBtn = global.document.createElement("button");
       replayBtn.type = "button";
       replayBtn.className = "replay-button user-replay-btn";
-      replayBtn.textContent = currentLang === "en" ? "Watch Replay" : "\u67e5\u770b\u56de\u653e";
+      replayBtn.textContent =
+        currentLang === "en" ? "Watch Replay" : "\u67e5\u770b\u56de\u653e";
       replayBtn.addEventListener("click", function (eventLike) {
-        if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+        if (eventLike && typeof eventLike.stopPropagation === "function")
+          eventLike.stopPropagation();
         openReplayByRecord(record, detail).catch(function (error) {
-          setTip(toText(error && error.message) || (currentLang === "en" ? "Replay open failed" : "\u6253\u5f00\u56de\u653e\u5931\u8d25"), "err");
+          setTip(
+            toText(error && error.message) ||
+              (currentLang === "en"
+                ? "Replay open failed"
+                : "\u6253\u5f00\u56de\u653e\u5931\u8d25"),
+            "err",
+          );
         });
       });
       actions.appendChild(replayBtn);
@@ -2030,7 +2660,8 @@
       exportReplayBtn.className = "replay-button user-replay-export-btn";
       exportReplayBtn.textContent = t("exportReplayBtn");
       exportReplayBtn.addEventListener("click", function (eventLike) {
-        if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+        if (eventLike && typeof eventLike.stopPropagation === "function")
+          eventLike.stopPropagation();
         exportReplayByRecord(record, detail);
       });
       actions.appendChild(exportReplayBtn);
@@ -2043,41 +2674,56 @@
         restoreBtn.className = "replay-button user-record-action-btn";
         restoreBtn.textContent = t("restoreBtn");
         restoreBtn.addEventListener("click", function (eventLike) {
-          if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
+          if (eventLike && typeof eventLike.stopPropagation === "function")
+            eventLike.stopPropagation();
           setTip(t("restoring"), "");
-          restoreUserRecord(record.id).then(function (result) {
-            if (result && result.success) {
-              setTip(t("restoreOk"), "ok");
-              updateCachedRecordAfterRestore(record.id);
-              return;
-            }
-            setTip(toText(result && result.error) || t("restoreFail"), "err");
-          }).catch(function (error) {
-            setTip(toText(error && error.message) || t("restoreFail"), "err");
-          });
+          restoreUserRecord(record.id)
+            .then(function (result) {
+              if (result && result.success) {
+                setTip(t("restoreOk"), "ok");
+                updateCachedRecordAfterRestore(record.id);
+                return;
+              }
+              setTip(toText(result && result.error) || t("restoreFail"), "err");
+            })
+            .catch(function (error) {
+              setTip(toText(error && error.message) || t("restoreFail"), "err");
+            });
         });
         actions.appendChild(restoreBtn);
       } else if (!isBetaRecord(detail, record)) {
         var deleteBtn = global.document.createElement("button");
         deleteBtn.type = "button";
-        deleteBtn.className = "replay-button user-record-action-btn user-danger-btn";
+        deleteBtn.className =
+          "replay-button user-record-action-btn user-danger-btn";
         deleteBtn.textContent = t("deleteBtn");
         deleteBtn.addEventListener("click", function (eventLike) {
-          if (eventLike && typeof eventLike.stopPropagation === "function") eventLike.stopPropagation();
-          confirmWithGameDialog(t("deleteConfirm"), { kind: "danger" }).then(function (confirmed) {
-            if (!confirmed) return;
-            setTip(t("deleting"), "");
-            deleteUserRecord(record.id).then(function (result) {
-              if (result && result.success) {
-                setTip(t("deleteOk"), "ok");
-                updateCachedRecordAfterDelete(record.id);
-                return;
-              }
-              setTip(toText(result && result.error) || t("deleteFail"), "err");
-            }).catch(function (error) {
-              setTip(toText(error && error.message) || t("deleteFail"), "err");
-            });
-          });
+          if (eventLike && typeof eventLike.stopPropagation === "function")
+            eventLike.stopPropagation();
+          confirmWithGameDialog(t("deleteConfirm"), { kind: "danger" }).then(
+            function (confirmed) {
+              if (!confirmed) return;
+              setTip(t("deleting"), "");
+              deleteUserRecord(record.id)
+                .then(function (result) {
+                  if (result && result.success) {
+                    setTip(t("deleteOk"), "ok");
+                    updateCachedRecordAfterDelete(record.id);
+                    return;
+                  }
+                  setTip(
+                    toText(result && result.error) || t("deleteFail"),
+                    "err",
+                  );
+                })
+                .catch(function (error) {
+                  setTip(
+                    toText(error && error.message) || t("deleteFail"),
+                    "err",
+                  );
+                });
+            },
+          );
         });
         actions.appendChild(deleteBtn);
       }
@@ -2134,7 +2780,9 @@
     var boardSum = global.document.createElement("span");
     boardSum.className = "user-record-board-sum";
     boardSum.setAttribute("data-label", t("colBoardSum"));
-    boardSum.textContent = String(Math.max(0, Math.floor(Number(record.board_sum) || 0)));
+    boardSum.textContent = String(
+      Math.max(0, Math.floor(Number(record.board_sum) || 0)),
+    );
     row.appendChild(boardSum);
 
     var bestTile = global.document.createElement("span");
@@ -2170,7 +2818,9 @@
       var empty = global.document.createElement("div");
       empty.className = "user-record-empty";
       empty.textContent = recordsLoading
-        ? (currentLang === "en" ? "Loading records..." : "\u6b63\u5728\u52a0\u8f7d\u8bb0\u5f55...")
+        ? currentLang === "en"
+          ? "Loading records..."
+          : "\u6b63\u5728\u52a0\u8f7d\u8bb0\u5f55..."
         : t("empty");
       list.appendChild(empty);
       return;
@@ -2203,30 +2853,44 @@
         if (boardSumA !== boardSumB) return dir * (boardSumA - boardSumB);
         if (scoreA !== scoreB) return scoreB - scoreA;
         if (timeA !== timeB) return timeB - timeA;
-        return toText(a && a.mode_bucket).localeCompare(toText(b && b.mode_bucket));
+        return toText(a && a.mode_bucket).localeCompare(
+          toText(b && b.mode_bucket),
+        );
       }
 
       if (by === "score") {
         if (scoreA !== scoreB) return dir * (scoreA - scoreB);
         if (timeA !== timeB) return dir * (timeA - timeB);
-        return toText(a && a.mode_bucket).localeCompare(toText(b && b.mode_bucket));
+        return toText(a && a.mode_bucket).localeCompare(
+          toText(b && b.mode_bucket),
+        );
       }
 
       if (timeA !== timeB) return dir * (timeA - timeB);
       if (scoreA !== scoreB) return dir * (scoreA - scoreB);
-      return toText(a && a.mode_bucket).localeCompare(toText(b && b.mode_bucket));
+      return toText(a && a.mode_bucket).localeCompare(
+        toText(b && b.mode_bucket),
+      );
     });
 
     return list;
   }
 
   function getSortByValue() {
-    var sortBy = toText(byId("user-record-sort") && byId("user-record-sort").value).trim().toLowerCase();
+    var sortBy = toText(
+      byId("user-record-sort") && byId("user-record-sort").value,
+    )
+      .trim()
+      .toLowerCase();
     return sortBy === "score" || sortBy === "board_sum" ? sortBy : "time";
   }
 
   function getOrderValue() {
-    var order = toText(byId("user-record-order") && byId("user-record-order").value).trim().toLowerCase();
+    var order = toText(
+      byId("user-record-order") && byId("user-record-order").value,
+    )
+      .trim()
+      .toLowerCase();
     return order === "asc" ? "asc" : "desc";
   }
 
@@ -2234,14 +2898,17 @@
     var modeFilter = getModeFilterValue();
     activeModeFilter = modeFilter;
     activeRecordVisibility = getRecordVisibilityValue();
-    renderRecords(sortRecords(cachedRecords, getSortByValue(), getOrderValue()));
+    renderRecords(
+      sortRecords(cachedRecords, getSortByValue(), getOrderValue()),
+    );
   }
 
   function findCachedRecordIndex(recordId) {
     var id = toText(recordId).trim();
     if (!id || !Array.isArray(cachedRecords)) return -1;
     for (var i = 0; i < cachedRecords.length; i += 1) {
-      if (toText(cachedRecords[i] && cachedRecords[i].id).trim() === id) return i;
+      if (toText(cachedRecords[i] && cachedRecords[i].id).trim() === id)
+        return i;
     }
     return -1;
   }
@@ -2252,7 +2919,11 @@
     var id = toText(recordId).trim();
     var visibility = getRecordVisibilityValue();
     var record = cachedRecords[idx] || {};
-    if (isOfficialRecord(record) && !isDeletedRecord(record) && summaryTotalRecords > 0) {
+    if (
+      isOfficialRecord(record) &&
+      !isDeletedRecord(record) &&
+      summaryTotalRecords > 0
+    ) {
       summaryTotalRecords -= 1;
       updateSummaryCards();
     }
@@ -2298,30 +2969,73 @@
         id: toText(item.id || (normalized && normalized.id)).trim(),
         user_id: parsePositiveInt(item.user_id),
         record_era: normalizeRecordEra(item.record_era),
-        mode_bucket: toText(item.mode_bucket || (normalized && normalized.mode)).trim(),
-        mode_key: toText(item.mode_key || (normalized && normalized.mode_key)).trim(),
+        mode_bucket: toText(
+          item.mode_bucket || (normalized && normalized.mode),
+        ).trim(),
+        mode_key: toText(
+          item.mode_key || (normalized && normalized.mode_key),
+        ).trim(),
         mode_family: toText(item.mode_family).trim(),
         undo: item.undo === true,
-        board_width: parsePositiveInt(item.board_width || (normalized && normalized.board_width)),
-        board_height: parsePositiveInt(item.board_height || (normalized && normalized.board_height)),
-        score: Math.floor(Number((normalized && normalized.score) != null ? normalized.score : item.score) || 0),
-        board_sum: Math.max(0, Math.floor(Number(
-          (normalized && normalized.board_sum) != null ? normalized.board_sum : item.board_sum
-        ) || 0)),
-        best_tile: Math.floor(Number((normalized && normalized.best_tile) != null ? normalized.best_tile : item.best_tile) || 0),
-        duration_ms: Math.floor(Number((normalized && normalized.duration_ms) != null ? normalized.duration_ms : item.duration_ms) || 0),
-        end_reason: toText(item.end_reason || (normalized && normalized.end_reason)).trim(),
-        ended_at: toText(item.ended_at || (normalized && normalized.ended_at)).trim(),
+        board_width: parsePositiveInt(
+          item.board_width || (normalized && normalized.board_width),
+        ),
+        board_height: parsePositiveInt(
+          item.board_height || (normalized && normalized.board_height),
+        ),
+        score: Math.floor(
+          Number(
+            (normalized && normalized.score) != null
+              ? normalized.score
+              : item.score,
+          ) || 0,
+        ),
+        board_sum: Math.max(
+          0,
+          Math.floor(
+            Number(
+              (normalized && normalized.board_sum) != null
+                ? normalized.board_sum
+                : item.board_sum,
+            ) || 0,
+          ),
+        ),
+        best_tile: Math.floor(
+          Number(
+            (normalized && normalized.best_tile) != null
+              ? normalized.best_tile
+              : item.best_tile,
+          ) || 0,
+        ),
+        duration_ms: Math.floor(
+          Number(
+            (normalized && normalized.duration_ms) != null
+              ? normalized.duration_ms
+              : item.duration_ms,
+          ) || 0,
+        ),
+        end_reason: toText(
+          item.end_reason || (normalized && normalized.end_reason),
+        ).trim(),
+        ended_at: toText(
+          item.ended_at || (normalized && normalized.ended_at),
+        ).trim(),
         created_at: toText(item.created_at).trim(),
         deleted_at: toText(item.deleted_at).trim(),
         replay_string: toText(
-          (normalized && normalized.replay_string != null ? normalized.replay_string : item.replay_string) ||
-          ""
+          (normalized && normalized.replay_string != null
+            ? normalized.replay_string
+            : item.replay_string) || "",
         ).trim(),
-        replay: (normalized && normalized.replay != null ? normalized.replay : item.replay),
+        replay:
+          normalized && normalized.replay != null
+            ? normalized.replay
+            : item.replay,
         final_board: normalizeBoardMatrix(
-          (normalized && normalized.final_board != null ? normalized.final_board : item.final_board)
-        )
+          normalized && normalized.final_board != null
+            ? normalized.final_board
+            : item.final_board,
+        ),
       });
     }
     return out;
@@ -2338,11 +3052,13 @@
     var nameNode = byId("user-value-name");
     var createdNode = byId("user-value-created");
 
-    resolvedProfileNickname = toText(data.nickname || targetNicknameHint || "").trim();
+    resolvedProfileNickname = toText(
+      data.nickname || targetNicknameHint || "",
+    ).trim();
     var responseUserId = publicProfileIdFromUser(data);
     currentProfileData = Object.assign({}, data, {
       id: responseUserId >= 0 ? responseUserId : targetUserId,
-      nickname: resolvedProfileNickname
+      nickname: resolvedProfileNickname,
     });
     if (nameNode) nameNode.textContent = resolvedProfileNickname || "--";
     if (createdNode) createdNode.textContent = formatDate(data.created_at);
@@ -2366,7 +3082,8 @@
     var me = result.data || {};
     var myUserId = publicProfileIdFromUser(me);
     isOwnProfile = myUserId >= 0 && myUserId === targetUserId;
-    if (myUserId >= 0) writeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY, String(myUserId));
+    if (myUserId >= 0)
+      writeLocalStorageItem(STORAGE_PUBLIC_PROFILE_ID_KEY, String(myUserId));
 
     if (isOwnProfile && !resolvedProfileNickname) {
       resolvedProfileNickname = toText(me.nickname).trim();
@@ -2392,22 +3109,59 @@
     if (modeFilter && modeFilter !== "all") {
       var modeStats = findSummaryModeStats(modeFilter);
       var modeTotal = modeStats ? modeStats.record_count : 0;
-      var modeBest = modeStats && modeStats.best_score > 0 ? String(modeStats.best_score) : "--";
-      var selectedModeLabel = resolveModeOptionLabel(modeFilter, modeStats && modeStats.mode_bucket);
+      var modeBest =
+        modeStats && modeStats.best_score > 0
+          ? String(modeStats.best_score)
+          : "--";
+      var selectedModeLabel = resolveModeOptionLabel(
+        modeFilter,
+        modeStats && modeStats.mode_bucket,
+      );
       if (currentLang === "en") {
-        return escapeHtml(selectedModeLabel) + " · <strong>" + String(modeTotal) + "</strong> records · Best <strong>" + modeBest + "</strong>";
+        return (
+          escapeHtml(selectedModeLabel) +
+          " · <strong>" +
+          String(modeTotal) +
+          "</strong> records · Best <strong>" +
+          modeBest +
+          "</strong>"
+        );
       }
-      return escapeHtml(selectedModeLabel) + " · <strong>" + String(modeTotal) + "</strong> \u6761\u8bb0\u5f55 · \u6700\u9ad8\u5206 <strong>" + modeBest + "</strong>";
+      return (
+        escapeHtml(selectedModeLabel) +
+        " · <strong>" +
+        String(modeTotal) +
+        "</strong> \u6761\u8bb0\u5f55 · \u6700\u9ad8\u5206 <strong>" +
+        modeBest +
+        "</strong>"
+      );
     }
 
     var mostPlayed = findMostPlayedModeStats();
     if (mostPlayed) {
-      var mostPlayedLabel = resolveModeOptionLabel(mostPlayed.mode_key, mostPlayed.mode_bucket);
+      var mostPlayedLabel = resolveModeOptionLabel(
+        mostPlayed.mode_key,
+        mostPlayed.mode_bucket,
+      );
       var mostPlayedCount = formatGameCount(mostPlayed.record_count);
       if (currentLang === "en") {
-        return "<strong>" + String(summaryTotalRecords) + "</strong> records · Most played <strong>" + escapeHtml(mostPlayedLabel) + "</strong> " + escapeHtml(mostPlayedCount);
+        return (
+          "<strong>" +
+          String(summaryTotalRecords) +
+          "</strong> records · Most played <strong>" +
+          escapeHtml(mostPlayedLabel) +
+          "</strong> " +
+          escapeHtml(mostPlayedCount)
+        );
       }
-      return "\u5171 <strong>" + String(summaryTotalRecords) + "</strong> \u6761\u8bb0\u5f55 · \u6700\u5e38\u73a9 <strong>" + escapeHtml(mostPlayedLabel) + "</strong> " + escapeHtml(mostPlayedCount);
+      return (
+        "\u5171 <strong>" +
+        String(summaryTotalRecords) +
+        "</strong> \u6761\u8bb0\u5f55 · \u6700\u5e38\u73a9 <strong>" +
+        escapeHtml(mostPlayedLabel) +
+        "</strong> " +
+        escapeHtml(mostPlayedCount)
+      );
     }
 
     var total = String(summaryTotalRecords);
@@ -2430,40 +3184,61 @@
     var lastActiveNode = byId("user-summary-last-active-value");
     var previewNode = byId("user-summary-preview");
     var mostPlayed = findMostPlayedModeStats();
-    var mostPlayedLabel = mostPlayed ? resolveModeOptionLabel(mostPlayed.mode_key, mostPlayed.mode_bucket) : "--";
+    var mostPlayedLabel = mostPlayed
+      ? resolveModeOptionLabel(mostPlayed.mode_key, mostPlayed.mode_bucket)
+      : "--";
     if (totalLabelNode) totalLabelNode.textContent = t("summaryTotalLabel");
-    if (mostPlayedLabelNode) mostPlayedLabelNode.textContent = t("summaryMostPlayedLabel");
+    if (mostPlayedLabelNode)
+      mostPlayedLabelNode.textContent = t("summaryMostPlayedLabel");
     if (ratingLabelNode) ratingLabelNode.textContent = t("summaryRatingLabel");
-    if (lastActiveLabelNode) lastActiveLabelNode.textContent = t("summaryLastActiveLabel");
+    if (lastActiveLabelNode)
+      lastActiveLabelNode.textContent = t("summaryLastActiveLabel");
     if (totalNode) totalNode.textContent = String(summaryTotalRecords);
     if (mostPlayedNode) {
       mostPlayedNode.textContent = mostPlayedLabel;
       mostPlayedNode.title = mostPlayedLabel;
     }
-    if (mostPlayedDetailNode) mostPlayedDetailNode.textContent = mostPlayed ? formatGameCount(mostPlayed.record_count) : "";
-    if (ratingNode) ratingNode.textContent = summaryRatingValue == null ? "--" : formatNumber(summaryRatingValue);
-    if (ratingDetailNode) ratingDetailNode.textContent = summaryRatingValue == null ? t("summaryRatingPending") : "Rating";
-    if (lastActiveNode) lastActiveNode.textContent = summaryLastActive ? formatDate(summaryLastActive) : "--";
+    if (mostPlayedDetailNode)
+      mostPlayedDetailNode.textContent = mostPlayed
+        ? formatGameCount(mostPlayed.record_count)
+        : "";
+    if (ratingNode)
+      ratingNode.textContent =
+        summaryRatingValue == null ? "--" : formatNumber(summaryRatingValue);
+    if (ratingDetailNode)
+      ratingDetailNode.textContent =
+        summaryRatingValue == null ? t("summaryRatingPending") : "Rating";
+    if (lastActiveNode)
+      lastActiveNode.textContent = summaryLastActive
+        ? formatDate(summaryLastActive)
+        : "--";
     if (previewNode) previewNode.innerHTML = buildSummaryPreviewHtml();
   }
 
   async function fetchSummaryData() {
     if (targetUserId < 0) return;
     var stats = await getUserStats(targetUserId);
-    var statsData = stats && stats.success && stats.data && typeof stats.data === "object"
-      ? stats.data
-      : null;
-    var rating = statsData && statsData.rating && typeof statsData.rating === "object"
-      ? statsData.rating
-      : null;
+    var statsData =
+      stats && stats.success && stats.data && typeof stats.data === "object"
+        ? stats.data
+        : null;
+    var rating =
+      statsData && statsData.rating && typeof statsData.rating === "object"
+        ? statsData.rating
+        : null;
     var rawRatingValue = rating ? rating.value : null;
     var parsedRating = Number(rawRatingValue);
-    summaryRatingValue = rawRatingValue != null && rawRatingValue !== "" && Number.isFinite(parsedRating) && parsedRating >= 0
-      ? Math.floor(parsedRating)
-      : null;
-    summaryRatingStatus = toText(rating && rating.status).trim() === "insufficient_data"
-      ? "insufficient_data"
-      : "";
+    summaryRatingValue =
+      rawRatingValue != null &&
+      rawRatingValue !== "" &&
+      Number.isFinite(parsedRating) &&
+      parsedRating >= 0
+        ? Math.floor(parsedRating)
+        : null;
+    summaryRatingStatus =
+      toText(rating && rating.status).trim() === "insufficient_data"
+        ? "insufficient_data"
+        : "";
     var summary = statsData ? statsData.summary : null;
     if (summary && typeof summary === "object" && !isBetaRecord(summary)) {
       summaryModeStats = normalizeSummaryModeStats(statsData.by_mode);
@@ -2501,7 +3276,9 @@
     var requestSeq = ++recordsRequestSeq;
     activeModeFilter = getModeFilterValue();
     updateSummaryCards();
-    activeRecordVisibility = isOwnProfile ? getRecordVisibilityValue() : "active";
+    activeRecordVisibility = isOwnProfile
+      ? getRecordVisibilityValue()
+      : "active";
     var result = await getUserRecords(targetUserId, {
       limit: DEFAULT_RECORD_LIMIT,
       page: recordPage,
@@ -2510,9 +3287,12 @@
       undo: getUndoFilterValue(),
       status: activeRecordVisibility,
       sort_by: getSortByValue(),
-      order: getOrderValue()
+      order: getOrderValue(),
     });
-    if ((!result || !result.success) && isTimeoutLikeText(toText(result && result.error))) {
+    if (
+      (!result || !result.success) &&
+      isTimeoutLikeText(toText(result && result.error))
+    ) {
       result = await getUserRecords(targetUserId, {
         limit: DEFAULT_RECORD_LIMIT,
         page: recordPage,
@@ -2521,7 +3301,7 @@
         undo: getUndoFilterValue(),
         status: activeRecordVisibility,
         sort_by: getSortByValue(),
-        order: getOrderValue()
+        order: getOrderValue(),
       });
     }
     if (requestSeq !== recordsRequestSeq) return;
@@ -2541,7 +3321,12 @@
 
     cachedRecords = normalizeUserRecordsFromApi(result.data);
     recordsLoading = false;
-    var meta = resolvePagerMeta(result, recordPage, DEFAULT_RECORD_LIMIT, cachedRecords.length);
+    var meta = resolvePagerMeta(
+      result,
+      recordPage,
+      DEFAULT_RECORD_LIMIT,
+      cachedRecords.length,
+    );
     recordPage = meta.page;
     recordTotalPages = meta.totalPages;
     recordHasPrev = meta.hasPrev;
@@ -2550,7 +3335,10 @@
     if (expandedRecordId) {
       var exists = false;
       for (var i = 0; i < cachedRecords.length; i += 1) {
-        if (toText(cachedRecords[i] && cachedRecords[i].id).trim() === expandedRecordId) {
+        if (
+          toText(cachedRecords[i] && cachedRecords[i].id).trim() ===
+          expandedRecordId
+        ) {
           exists = true;
           break;
         }
@@ -2604,7 +3392,7 @@
       "user-col-board-sum": t("colBoardSum"),
       "user-col-best-tile": t("colBestTile"),
       "user-col-duration": t("colDuration"),
-      "user-col-date": resolveRecordDateLabelText()
+      "user-col-date": resolveRecordDateLabelText(),
     };
 
     var keys = Object.keys(textMap);
@@ -2614,7 +3402,8 @@
       if (node) node.textContent = textMap[id];
     }
     var summaryRow = document.querySelector(".user-summary-row");
-    if (summaryRow) summaryRow.setAttribute("aria-label", t("summaryAriaLabel"));
+    if (summaryRow)
+      summaryRow.setAttribute("aria-label", t("summaryAriaLabel"));
 
     var undoSelect = byId("user-record-undo");
     if (undoSelect && undoSelect.options && undoSelect.options.length >= 3) {
@@ -2639,7 +3428,11 @@
     refreshModeSelectOptions();
 
     var visibilitySelect = byId("user-record-visibility");
-    if (visibilitySelect && visibilitySelect.options && visibilitySelect.options.length >= 3) {
+    if (
+      visibilitySelect &&
+      visibilitySelect.options &&
+      visibilitySelect.options.length >= 3
+    ) {
       visibilitySelect.options[0].textContent = t("visibilityActive");
       visibilitySelect.options[1].textContent = t("visibilityDeleted");
       visibilitySelect.options[2].textContent = t("visibilityAll");
@@ -2682,9 +3475,14 @@
     var nextBtn = byId("user-record-next");
     var logoutBtn = byId("user-nav-logout");
     var navMenu = global.document.querySelector(".user-nav-menu");
-    var familyButtons = global.document.querySelectorAll("[data-user-mode-family]");
+    var familyButtons = global.document.querySelectorAll(
+      "[data-user-mode-family]",
+    );
 
-    if (refreshBtn) refreshBtn.addEventListener("click", function () { refreshRecords(false); });
+    if (refreshBtn)
+      refreshBtn.addEventListener("click", function () {
+        refreshRecords(false);
+      });
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
         void logoutCurrentUser();
@@ -2696,15 +3494,30 @@
         refreshRecords(true);
       });
     }
-    if (modeSelect) modeSelect.addEventListener("change", function () { refreshRecords(true); });
-    if (sortSelect) sortSelect.addEventListener("change", function () { refreshRecords(true); });
-    if (orderSelect) orderSelect.addEventListener("change", function () { refreshRecords(true); });
-    if (visibilitySelect) visibilitySelect.addEventListener("change", function () { refreshRecords(true); });
+    if (modeSelect)
+      modeSelect.addEventListener("change", function () {
+        refreshRecords(true);
+      });
+    if (sortSelect)
+      sortSelect.addEventListener("change", function () {
+        refreshRecords(true);
+      });
+    if (orderSelect)
+      orderSelect.addEventListener("change", function () {
+        refreshRecords(true);
+      });
+    if (visibilitySelect)
+      visibilitySelect.addEventListener("change", function () {
+        refreshRecords(true);
+      });
     for (var i = 0; i < familyButtons.length; i += 1) {
       familyButtons[i].addEventListener("click", function (eventLike) {
         var selected = eventLike.currentTarget;
         for (var j = 0; j < familyButtons.length; j += 1) {
-          familyButtons[j].setAttribute("aria-pressed", familyButtons[j] === selected ? "true" : "false");
+          familyButtons[j].setAttribute(
+            "aria-pressed",
+            familyButtons[j] === selected ? "true" : "false",
+          );
         }
         refreshModeSelectOptions();
         refreshRecords(true);
@@ -2727,7 +3540,8 @@
     if (navMenu) {
       global.document.addEventListener("click", function (eventLike) {
         if (!navMenu.open) return;
-        if (eventLike && eventLike.target && navMenu.contains(eventLike.target)) return;
+        if (eventLike && eventLike.target && navMenu.contains(eventLike.target))
+          return;
         navMenu.open = false;
       });
     }
@@ -2743,7 +3557,9 @@
   }
 
   function parseQuery() {
-    var params = new global.URLSearchParams(toText(global.location && global.location.search));
+    var params = new global.URLSearchParams(
+      toText(global.location && global.location.search),
+    );
     targetUserId = parsePublicUserId(params.get("id"));
     targetNicknameHint = toText(params.get("nickname")).trim();
     resolvedProfileNickname = targetNicknameHint;
@@ -2765,7 +3581,8 @@
     if (modeSelect && !modeSelect.value) modeSelect.value = "all";
     if (sortSelect && !sortSelect.value) sortSelect.value = "time";
     if (orderSelect && !orderSelect.value) orderSelect.value = "desc";
-    if (visibilitySelect && !visibilitySelect.value) visibilitySelect.value = "active";
+    if (visibilitySelect && !visibilitySelect.value)
+      visibilitySelect.value = "active";
 
     await resolveTargetUserFromSession();
 
@@ -2778,7 +3595,8 @@
     }
 
     var nameNode = byId("user-value-name");
-    if (nameNode && targetNicknameHint) nameNode.textContent = targetNicknameHint;
+    if (nameNode && targetNicknameHint)
+      nameNode.textContent = targetNicknameHint;
     isOwnProfile = false;
     updateVisibilityControl();
     applyDocumentTitle();
@@ -2787,7 +3605,12 @@
     var userInfoPromise = refreshUserInfo();
     var recordsPromise = refreshRecords(true);
     var summaryPromise = fetchSummaryData();
-    await Promise.all([ownershipPromise, userInfoPromise, recordsPromise, summaryPromise]);
+    await Promise.all([
+      ownershipPromise,
+      userInfoPromise,
+      recordsPromise,
+      summaryPromise,
+    ]);
   }
 
   global.UserProfilePageRuntime = {
@@ -2799,7 +3622,7 @@
     openRecord: function (recordId) {
       expandedRecordId = toText(recordId).trim();
       applyCurrentSortAndRender();
-    }
+    },
   };
 
   if (global.document.readyState === "loading") {

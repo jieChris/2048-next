@@ -10,7 +10,7 @@ export function installUserProfileLegacyRuntime(): Promise<void> {
     userProfileLegacyRuntimePromise = loadLegacyScriptsSequentially([
       coreGameSettingsStorageRuntimeUrl,
       apiSharedUtilsUrl,
-      userProfilePageUrl
+      userProfilePageUrl,
     ]);
   }
   return userProfileLegacyRuntimePromise;

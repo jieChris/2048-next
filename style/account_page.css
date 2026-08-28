@@ -9,13 +9,21 @@ body[data-page="account-hub"] {
   color: var(--pp-ink);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(1200px 500px at 8% -20%, rgba(176, 153, 130, 0.33), transparent 68%),
-    radial-gradient(1000px 420px at 95% -24%, rgba(174, 157, 136, 0.25), transparent 70%),
+    radial-gradient(
+      1200px 500px at 8% -20%,
+      rgba(176, 153, 130, 0.33),
+      transparent 68%
+    ),
+    radial-gradient(
+      1000px 420px at 95% -24%,
+      rgba(174, 157, 136, 0.25),
+      transparent 70%
+    ),
     linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
 }
 
 body[data-page="account-hub"][data-i18n-ready="0"] {
-  visibility: hidden;
+  opacity: 1;
 }
 
 .account-page-shell {
@@ -48,7 +56,10 @@ body[data-page="account-hub"][data-auth-state] .account-grid {
 
 body[data-page="account-hub"][data-auth-state="guest"] .account-auth-card {
   display: grid;
-  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) minmax(320px, 360px);
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) minmax(
+      320px,
+      360px
+    );
   grid-template-areas:
     "head form actions"
     "tip tip tip";
@@ -61,7 +72,8 @@ body[data-page="account-hub"][data-auth-state="guest"] .account-auth-title-row {
   margin-bottom: 0;
 }
 
-body[data-page="account-hub"][data-auth-state="guest"] .account-auth-form-surface {
+body[data-page="account-hub"][data-auth-state="guest"]
+  .account-auth-form-surface {
   grid-area: form;
 }
 
@@ -78,7 +90,9 @@ body[data-page="account-hub"][data-auth-state="guest"] .account-action-row {
   margin-top: 0;
 }
 
-body[data-page="account-hub"][data-auth-state="guest"] .account-action-row .replay-button {
+body[data-page="account-hub"][data-auth-state="guest"]
+  .account-action-row
+  .replay-button {
   box-sizing: border-box;
   min-width: 0;
   padding-left: 8px;
@@ -99,11 +113,14 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-auth-card {
   padding: 12px 14px;
 }
 
-body[data-page="account-hub"][data-auth-state="authed"] .account-auth-title-row {
+body[data-page="account-hub"][data-auth-state="authed"]
+  .account-auth-title-row {
   margin-bottom: 0;
 }
 
-body[data-page="account-hub"][data-auth-state="authed"] .account-auth-title-wrap h2 {
+body[data-page="account-hub"][data-auth-state="authed"]
+  .account-auth-title-wrap
+  h2 {
   font-size: 24px;
   line-height: 1.1;
 }
@@ -155,8 +172,11 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
   border: 1px solid #e1d5c7;
   border-radius: 12px;
   padding: 10px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(252, 245, 236, 0.84));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.62),
+    rgba(252, 245, 236, 0.84)
+  );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.64),
     0 1px 3px rgba(127, 104, 84, 0.08);
@@ -187,7 +207,10 @@ body[data-page="account-hub"][data-auth-state="authed"] .account-user-lines {
   font-size: 14px;
   color: var(--pp-ink);
   background: #fffdf9;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .account-input:hover {
@@ -481,7 +504,11 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
   padding: 0 36px 0 12px;
   background-color: var(--app-surface-control);
   background-image:
-    linear-gradient(180deg, var(--app-surface-control), var(--app-surface-light)),
+    linear-gradient(
+      180deg,
+      var(--app-surface-control),
+      var(--app-surface-light)
+    ),
     linear-gradient(45deg, transparent 50%, var(--app-text-strong) 50%),
     linear-gradient(135deg, var(--app-text-strong) 50%, transparent 50%);
   background-repeat: no-repeat, no-repeat, no-repeat;
@@ -489,7 +516,10 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
     center center,
     calc(100% - 16px) calc(50% - 2px),
     calc(100% - 10px) calc(50% - 2px);
-  background-size: auto, 6px 6px, 6px 6px;
+  background-size:
+    auto,
+    6px 6px,
+    6px 6px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 1px 2px rgba(117, 99, 82, 0.08);
@@ -498,7 +528,10 @@ body[data-page="account-hub"] .account-board-tools .settings-select {
   font-weight: 600;
   line-height: 1.2;
   outline: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
 }
 
 body[data-page="account-hub"] .account-board-tools .settings-select:hover {
@@ -507,7 +540,9 @@ body[data-page="account-hub"] .account-board-tools .settings-select:hover {
 }
 
 body[data-page="account-hub"] .account-board-tools .settings-select:focus,
-body[data-page="account-hub"] .account-board-tools .settings-select:focus-visible {
+body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select:focus-visible {
   border-color: var(--app-accent);
   box-shadow:
     0 0 0 3px var(--app-focus-ring-control),
@@ -615,7 +650,11 @@ body[data-page="account-hub"] .account-board-tools .settings-select:focus-visibl
 }
 
 .account-board-row.is-rank-top1 {
-  background: color-mix(in srgb, var(--app-milestone) 14%, var(--app-surface-light));
+  background: color-mix(
+    in srgb,
+    var(--app-milestone) 14%,
+    var(--app-surface-light)
+  );
 }
 
 .account-board-row.is-rank-top2 {
@@ -680,48 +719,101 @@ html[data-night-background="1"] body[data-page="account-hub"] {
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-kicker,
 html[data-night-background="1"] body[data-page="account-hub"] .palette-subtitle,
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-subtitle,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-subtitle,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-subtitle,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-subtitle,
 html[data-night-background="1"] body[data-page="account-hub"] .account-tip,
 html[data-night-background="1"] body[data-page="account-hub"] .account-date,
-html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card span,
-html[data-night-background="1"] body[data-page="account-hub"] .account-page-indicator {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-summary-card
+  span,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-page-indicator {
   color: var(--app-text-muted);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-title,
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-title-wrap h2,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-title-row h2,
-html[data-night-background="1"] body[data-page="account-hub"] .account-user-card h3,
-html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card strong,
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-grid label,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools label {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-title-wrap
+  h2,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-title-row
+  h2,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-user-card
+  h3,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-summary-card
+  strong,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-grid
+  label,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  label {
   color: var(--app-text-strong);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .card-surface,
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-form-surface,
-html[data-night-background="1"] body[data-page="account-hub"] .account-action-row,
-html[data-night-background="1"] body[data-page="account-hub"] .account-user-card,
-html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-form-surface,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-action-row,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-user-card,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-summary-card,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-filter-row,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-table-wrap {
   border-color: var(--app-border-structure);
   box-shadow:
     0 18px 36px rgba(1, 5, 14, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-form-surface,
-html[data-night-background="1"] body[data-page="account-hub"] .account-action-row,
-html[data-night-background="1"] body[data-page="account-hub"] .account-user-card,
-html[data-night-background="1"] body[data-page="account-hub"] .account-summary-card,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-table-wrap,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-list {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-form-surface,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-action-row,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-user-card,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-summary-card,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-table-wrap,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-list {
   background: var(--app-surface-light);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-filter-row {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-filter-row {
   background: var(--app-surface-soft);
 }
 
@@ -731,28 +823,50 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-rank {
   color: var(--app-text-strong);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-user-lines,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-head-row,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-empty,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-user-lines,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-head-row,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-empty,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row,
 html[data-night-background="1"] body[data-page="account-hub"] .account-name,
 html[data-night-background="1"] body[data-page="account-hub"] .account-score {
   color: var(--app-text);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-user-lines strong,
-html[data-night-background="1"] body[data-page="account-hub"] .account-name-link {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-user-lines
+  strong,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-name-link {
   color: var(--app-link);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-name-link:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-name-link:focus-visible {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-name-link:hover,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-name-link:focus-visible {
   color: var(--app-link-hover);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .account-input,
-html[data-night-background="1"] body[data-page="account-hub"] .account-login-captcha-image,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-login-captcha-image,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select {
   border-color: var(--app-border-control);
   background-color: var(--app-surface-control);
   color: var(--app-text-strong);
@@ -761,19 +875,36 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-too
     0 1px 2px rgba(2, 6, 16, 0.16);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-input::placeholder {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-input::placeholder {
   color: var(--app-text-muted);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-input:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:hover {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-input:hover,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select:hover {
   border-color: var(--app-accent);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-input:focus,
-html[data-night-background="1"] body[data-page="account-hub"] .account-input:focus-visible,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:focus,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select:focus-visible {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-input:focus,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-input:focus-visible,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select:focus,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select:focus-visible {
   border-color: var(--app-accent);
   background-color: var(--app-surface-control);
   box-shadow:
@@ -781,16 +912,29 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-too
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .settings-select {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .settings-select {
   background-image:
-    linear-gradient(180deg, var(--app-surface-control), var(--app-surface-light)),
+    linear-gradient(
+      180deg,
+      var(--app-surface-control),
+      var(--app-surface-light)
+    ),
     linear-gradient(45deg, transparent 50%, var(--app-text-strong) 50%),
     linear-gradient(135deg, var(--app-text-strong) 50%, transparent 50%);
 }
 
 html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn,
-html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-action-row
+  .replay-button,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .replay-button {
   background: var(--app-surface-control);
   color: var(--app-text-strong);
   border: 1px solid var(--app-border-control);
@@ -799,52 +943,83 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-too
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .palette-nav-btn:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-action-row .replay-button:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-tools .replay-button:hover {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .palette-nav-btn:hover,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-action-row
+  .replay-button:hover,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-tools
+  .replay-button:hover {
   background: var(--app-accent-soft);
   color: var(--app-link-hover);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-link {
   color: var(--app-link);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:hover,
-html[data-night-background="1"] body[data-page="account-hub"] .account-auth-link:focus-visible {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-link:hover,
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-auth-link:focus-visible {
   color: var(--app-link-hover);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-head-row {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-head-row {
   border-bottom-color: var(--app-border-structure);
   background: var(--app-surface-soft);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row + .account-board-row {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row
+  + .account-board-row {
   border-top-color: var(--app-border-muted);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:nth-child(odd) {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row:nth-child(odd) {
   background: var(--app-surface-light);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:nth-child(even) {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row:nth-child(even) {
   background: var(--app-surface-soft);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row:hover {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row:hover {
   background: var(--app-accent-soft);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row.is-rank-top1 {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row.is-rank-top1 {
   background: rgba(108, 84, 40, 0.34);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row.is-rank-top2 {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row.is-rank-top2 {
   background: rgba(88, 97, 110, 0.26);
 }
 
-html[data-night-background="1"] body[data-page="account-hub"] .account-board-row.is-rank-top3 {
+html[data-night-background="1"]
+  body[data-page="account-hub"]
+  .account-board-row.is-rank-top3 {
   background: rgba(117, 82, 58, 0.28);
 }
 
@@ -863,7 +1038,8 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
     grid-template-columns: 1fr;
   }
 
-  body[data-page="account-hub"][data-auth-state="guest"] .account-auth-title-row {
+  body[data-page="account-hub"][data-auth-state="guest"]
+    .account-auth-title-row {
     margin-bottom: 10px;
   }
 
@@ -972,12 +1148,14 @@ html[data-night-background="1"] body[data-page="account-hub"] .account-board-row
     max-width: 100%;
   }
 
-  body[data-page="account-hub"] .account-board-tools :is(
-    #account-board-undo,
-    #account-board-mode,
-    #account-board-metric,
-    #account-board-speed-target
-  ) {
+  body[data-page="account-hub"]
+    .account-board-tools
+    :is(
+      #account-board-undo,
+      #account-board-mode,
+      #account-board-metric,
+      #account-board-speed-target
+    ) {
     flex: 1 1 140px;
     width: auto;
   }

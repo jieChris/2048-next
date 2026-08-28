@@ -1,199 +1,700 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <title>用户主页</title>
-  <link rel="icon" type="image/svg+xml" sizes="any" href="meta/favicon.svg?v=20260606-fillframe">
-  <link rel="icon" type="image/x-icon" href="meta/favicon.ico?v=20260606-fillframe">
-  <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe">
-  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png?v=20260704-png-opt">
-  <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons">
-  <script src="/js/core_night_mode_preload.js?v=20260822-theme-inheritance-v1"></script>
-  <script src="/js/beta_access_preload.js?v=20260708-01"></script>
-  <link href="style/main.css?v=20260822-night-profile-nav-v1" rel="stylesheet" type="text/css">
-  <link href="style/palette_page.css?v=20260310-01" rel="stylesheet" type="text/css">
-  <link href="style/user_profile_page.css?v=20260827-profile-fullscreen-sync-v1" rel="stylesheet" type="text/css">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn https://*.myqcloud.com; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';">
-</head>
-<body data-page="user-profile" data-i18n-ready="0">
-  <main class="palette-page-shell user-page-shell">
-    <header class="palette-page-header user-page-nav">
-      <div class="palette-title-wrap">
-        <a class="page-back-button" href="/" id="user-nav-home">首页</a>
-        <div class="page-title-visually-hidden"><h1 class="palette-title" id="user-title">用户主页</h1></div>
-      </div>
-      <nav class="palette-nav" aria-label="用户主页导航">
-        <a class="replay-button palette-nav-btn" href="account.html" id="user-nav-account">排行榜</a>
-        <details class="user-nav-menu">
-          <summary class="replay-button palette-nav-btn user-nav-menu-summary" id="user-nav-menu">菜单</summary>
-          <div class="user-nav-menu-panel">
-            <a class="replay-button palette-nav-btn" href="account_settings.html" id="user-nav-settings">账号设置</a>
-            <button class="replay-button palette-nav-btn" id="user-nav-edit-mode" type="button" aria-pressed="false" hidden>进入编辑模式</button>
-            <a class="replay-button palette-nav-btn" href="history.html" id="user-nav-history">本地历史</a>
-            <a class="replay-button palette-nav-btn" href="replay.html" id="user-nav-replay">回放</a>
-            <a class="replay-button palette-nav-btn" href="palette.html" id="user-nav-palette">设置</a>
-            <a class="replay-button palette-nav-btn" href="Practice_board.html" id="user-nav-practice">练习板</a>
-            <a class="replay-button palette-nav-btn" href="medal-wall.html" id="user-nav-medals">勋章墙</a>
-            <button class="replay-button palette-nav-btn" id="user-nav-logout" type="button">退出账号</button>
-          </div>
-        </details>
-      </nav>
-    </header>
-
-    <article class="user-profile-page">
-      <header class="user-profile-cover" id="user-profile-cover" data-cover="tide">
-        <div class="user-profile-cover-art" aria-hidden="true">
-          <span class="user-profile-cover-art-layer user-profile-cover-art-sky"></span>
-          <span class="user-profile-cover-art-layer user-profile-cover-art-glow"></span>
-          <span class="user-profile-cover-art-layer user-profile-cover-art-city"></span>
-          <span class="user-profile-cover-art-layer user-profile-cover-art-foreground"></span>
-        </div>
-        <div class="user-profile-identity">
-          <div class="user-profile-avatar" id="user-profile-avatar" aria-hidden="true">--</div>
-          <div class="user-profile-copy">
-            <p class="user-profile-labels" aria-hidden="true"><span id="user-label-name">昵称：</span><span id="user-label-created">注册时间：</span></p>
-            <h1 id="user-value-name">--</h1>
-            <p id="user-profile-bio">这个玩家还没有填写简介。</p>
-            <span class="user-profile-join" id="user-profile-joined">正在读取注册时间…</span>
-            <strong id="user-value-created" class="user-profile-created-contract">--</strong>
+  <head>
+    <meta charset="utf-8" />
+    <title>用户主页</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      sizes="any"
+      href="meta/favicon.svg?v=20260606-fillframe"
+    />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="meta/favicon.ico?v=20260606-fillframe"
+    />
+    <link rel="shortcut icon" href="meta/favicon.ico?v=20260606-fillframe" />
+    <link
+      rel="apple-touch-icon"
+      href="meta/apple-touch-icon.png?v=20260704-png-opt"
+    />
+    <link rel="manifest" href="/site.webmanifest?v=20260704-pwa-icons" />
+    <script src="/js/core_night_mode_preload.js?v=20260822-theme-inheritance-v1"></script>
+    <script src="/js/beta_access_preload.js?v=20260708-01"></script>
+    <link
+      href="style/main.css?v=20260827-mobile-surface-v1"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="style/palette_page.css?v=20260310-01"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="style/user_profile_page.css?v=20260827-mobile-initial-state-v1"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://2048next.cn https://www.2048next.cn https://*.myqcloud.com; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline';"
+    />
+  </head>
+  <body data-page="user-profile" data-i18n-ready="0">
+    <main class="palette-page-shell user-page-shell">
+      <header class="palette-page-header user-page-nav">
+        <div class="palette-title-wrap">
+          <a class="page-back-button" href="/" id="user-nav-home">首页</a>
+          <div class="page-title-visually-hidden">
+            <h1 class="palette-title" id="user-title">用户主页</h1>
           </div>
         </div>
+        <nav class="palette-nav" aria-label="用户主页导航">
+          <a
+            class="replay-button palette-nav-btn"
+            href="account.html"
+            id="user-nav-account"
+            >排行榜</a
+          >
+          <details class="user-nav-menu">
+            <summary
+              class="replay-button palette-nav-btn user-nav-menu-summary"
+              id="user-nav-menu"
+            >
+              菜单
+            </summary>
+            <div class="user-nav-menu-panel">
+              <a
+                class="replay-button palette-nav-btn"
+                href="account_settings.html"
+                id="user-nav-settings"
+                >账号设置</a
+              >
+              <button
+                class="replay-button palette-nav-btn"
+                id="user-nav-edit-mode"
+                type="button"
+                aria-pressed="false"
+                hidden
+              >
+                进入编辑模式
+              </button>
+              <a
+                class="replay-button palette-nav-btn"
+                href="history.html"
+                id="user-nav-history"
+                >本地历史</a
+              >
+              <a
+                class="replay-button palette-nav-btn"
+                href="replay.html"
+                id="user-nav-replay"
+                >回放</a
+              >
+              <a
+                class="replay-button palette-nav-btn"
+                href="palette.html"
+                id="user-nav-palette"
+                >设置</a
+              >
+              <a
+                class="replay-button palette-nav-btn"
+                href="Practice_board.html"
+                id="user-nav-practice"
+                >练习板</a
+              >
+              <a
+                class="replay-button palette-nav-btn"
+                href="medal-wall.html"
+                id="user-nav-medals"
+                >勋章墙</a
+              >
+              <button
+                class="replay-button palette-nav-btn"
+                id="user-nav-logout"
+                type="button"
+              >
+                退出账号
+              </button>
+            </div>
+          </details>
+        </nav>
       </header>
 
-      <section class="user-summary-row" role="group" aria-label="用户摘要">
-        <div class="user-summary-card"><span id="user-summary-total-label">游戏记录</span><strong id="user-summary-total-value">--</strong></div>
-        <div class="user-summary-card"><span id="user-summary-best-score-label">最常玩</span><strong id="user-summary-best-score-value">--</strong><small id="user-summary-best-score-detail"></small></div>
-        <div class="user-summary-card"><span id="user-summary-best-tile-label">等级分</span><strong id="user-summary-best-tile-value">--</strong><small id="user-summary-best-tile-detail"></small></div>
-        <div class="user-summary-card"><span id="user-summary-last-active-label">最近活跃</span><strong id="user-summary-last-active-value">--</strong></div>
-        <span id="user-summary-preview" hidden>--</span>
-      </section>
-
-      <section class="user-profile-panel user-profile-avatar-editor" id="user-profile-avatar-editor" aria-labelledby="user-profile-avatar-editor-title" hidden>
-        <div class="user-profile-panel-head"><h2 id="user-profile-avatar-editor-title">更换头像</h2></div>
-        <form class="user-profile-avatar-form" id="user-profile-avatar-form">
-          <div class="user-profile-avatar-upload">
-            <img id="user-profile-avatar-preview" alt="待上传头像预览" hidden>
-            <div>
-              <label for="user-profile-avatar-input" id="user-profile-avatar-label">选择头像</label>
-              <input id="user-profile-avatar-input" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="user-profile-avatar-help user-profile-avatar-status">
-              <p id="user-profile-avatar-help">支持 JPEG、PNG、WebP，文件不超过 200 KB；每 7 天最多上传一次，审核通过前继续显示当前头像。</p>
+      <article class="user-profile-page">
+        <header
+          class="user-profile-cover"
+          id="user-profile-cover"
+          data-cover="tide"
+        >
+          <div class="user-profile-cover-art" aria-hidden="true">
+            <span
+              class="user-profile-cover-art-layer user-profile-cover-art-sky"
+            ></span>
+            <span
+              class="user-profile-cover-art-layer user-profile-cover-art-glow"
+            ></span>
+            <span
+              class="user-profile-cover-art-layer user-profile-cover-art-city"
+            ></span>
+            <span
+              class="user-profile-cover-art-layer user-profile-cover-art-foreground"
+            ></span>
+          </div>
+          <div class="user-profile-identity">
+            <div
+              class="user-profile-avatar"
+              id="user-profile-avatar"
+              aria-hidden="true"
+            >
+              --
+            </div>
+            <div class="user-profile-copy">
+              <p class="user-profile-labels" aria-hidden="true">
+                <span id="user-label-name">昵称：</span
+                ><span id="user-label-created">注册时间：</span>
+              </p>
+              <h1 id="user-value-name">--</h1>
+              <p id="user-profile-bio">这个玩家还没有填写简介。</p>
+              <span class="user-profile-join" id="user-profile-joined"
+                >正在读取注册时间…</span
+              >
+              <strong
+                id="user-value-created"
+                class="user-profile-created-contract"
+                >--</strong
+              >
             </div>
           </div>
-          <section class="user-profile-avatar-review" aria-labelledby="user-profile-avatar-review-title">
-            <h3 id="user-profile-avatar-review-title">最新头像审核</h3>
-            <div id="user-profile-avatar-review" aria-live="polite"></div>
-          </section>
-          <p class="user-dialog-status" id="user-profile-avatar-status" aria-live="polite"></p>
-          <button class="replay-button user-profile-avatar-save" id="user-profile-avatar-save" type="submit">提交头像审核</button>
-        </form>
-      </section>
+        </header>
 
-      <section class="user-profile-panel user-profile-bio-editor" id="user-profile-bio-editor" aria-labelledby="user-profile-bio-editor-title" hidden>
-        <div class="user-profile-panel-head"><h2 id="user-profile-bio-editor-title">编辑主页简介</h2></div>
-        <div class="user-profile-bio-editor-body">
-          <form id="user-profile-bio-form">
-            <div class="user-profile-bio-label-row"><label for="user-profile-bio-input">主页简介</label><span id="user-profile-bio-count">0 / 150</span></div>
-            <textarea id="user-profile-bio-input" rows="4" aria-describedby="user-profile-bio-help user-profile-bio-status"></textarea>
-            <p id="user-profile-bio-help">简介会发送给 DeepSeek 自动审核；审核通过前继续显示当前公开简介。留空保存表示清空简介。</p>
-            <p class="user-dialog-status" id="user-profile-bio-status" aria-live="polite"></p>
-            <button class="replay-button user-profile-bio-save" id="user-profile-bio-save" type="submit">提交审核</button>
+        <section class="user-summary-row" role="group" aria-label="用户摘要">
+          <div class="user-summary-card">
+            <span id="user-summary-total-label">游戏记录</span
+            ><strong id="user-summary-total-value">--</strong>
+          </div>
+          <div class="user-summary-card">
+            <span id="user-summary-best-score-label">最常玩</span
+            ><strong id="user-summary-best-score-value">--</strong
+            ><small id="user-summary-best-score-detail"></small>
+          </div>
+          <div class="user-summary-card">
+            <span id="user-summary-best-tile-label">等级分</span
+            ><strong id="user-summary-best-tile-value">--</strong
+            ><small id="user-summary-best-tile-detail"></small>
+          </div>
+          <div class="user-summary-card">
+            <span id="user-summary-last-active-label">最近活跃</span
+            ><strong id="user-summary-last-active-value">--</strong>
+          </div>
+          <span id="user-summary-preview" hidden>--</span>
+        </section>
+
+        <section
+          class="user-profile-panel user-profile-avatar-editor"
+          id="user-profile-avatar-editor"
+          aria-labelledby="user-profile-avatar-editor-title"
+          hidden
+        >
+          <div class="user-profile-panel-head">
+            <h2 id="user-profile-avatar-editor-title">更换头像</h2>
+          </div>
+          <form class="user-profile-avatar-form" id="user-profile-avatar-form">
+            <div class="user-profile-avatar-upload">
+              <img
+                id="user-profile-avatar-preview"
+                alt="待上传头像预览"
+                hidden
+              />
+              <div>
+                <label
+                  for="user-profile-avatar-input"
+                  id="user-profile-avatar-label"
+                  >选择头像</label
+                >
+                <input
+                  id="user-profile-avatar-input"
+                  name="avatar"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-describedby="user-profile-avatar-help user-profile-avatar-status"
+                />
+                <p id="user-profile-avatar-help">
+                  支持 JPEG、PNG、WebP，文件不超过 200 KB；每 7
+                  天最多上传一次，审核通过前继续显示当前头像。
+                </p>
+              </div>
+            </div>
+            <section
+              class="user-profile-avatar-review"
+              aria-labelledby="user-profile-avatar-review-title"
+            >
+              <h3 id="user-profile-avatar-review-title">最新头像审核</h3>
+              <div id="user-profile-avatar-review" aria-live="polite"></div>
+            </section>
+            <p
+              class="user-dialog-status"
+              id="user-profile-avatar-status"
+              aria-live="polite"
+            ></p>
+            <button
+              class="replay-button user-profile-avatar-save"
+              id="user-profile-avatar-save"
+              type="submit"
+            >
+              提交头像审核
+            </button>
           </form>
-          <section class="user-profile-moderation" aria-labelledby="user-profile-moderation-title">
-            <h3 id="user-profile-moderation-title">简介审核记录</h3>
-            <p id="user-profile-bio-blocked" hidden></p>
-            <div class="user-profile-moderation-history" id="user-profile-moderation-history" aria-live="polite"></div>
-          </section>
-        </div>
-      </section>
+        </section>
 
-      <section class="user-profile-panel user-profile-background-editor" id="user-profile-background-editor" aria-labelledby="user-profile-background-editor-title" hidden>
-        <div class="user-profile-panel-head"><h2 id="user-profile-background-editor-title">编辑主页背景</h2></div>
-        <form class="user-profile-background-form" id="user-profile-background-form">
-          <p id="user-profile-background-help">只显示白天预览；页面会按自动、白天或夜晚状态切换同一场景。</p>
-          <div class="user-profile-background-choices" id="user-profile-background-choices" role="radiogroup" aria-label="主页背景"></div>
-          <p class="user-dialog-status" id="user-profile-background-status" aria-live="polite"></p>
-          <button class="replay-button user-profile-background-save" id="user-profile-background-save" type="submit">保存背景</button>
-        </form>
-      </section>
-
-      <div class="user-profile-workspace">
-        <aside class="user-profile-sidebar">
-          <section class="user-profile-panel">
-            <div class="user-profile-panel-head"><h2>关于我</h2></div>
-            <div class="user-profile-panel-body"><p class="user-profile-about" id="user-profile-about">这个玩家还没有填写简介。</p></div>
-          </section>
-          <section class="user-profile-panel">
-            <div class="user-profile-panel-head"><h2>展示成就</h2><a href="medal-wall.html" id="user-showcase-wall-link" hidden>勋章墙设置</a></div>
-            <div class="user-profile-showcase" id="user-profile-showcase" aria-live="polite">
-              <span class="user-showcase-empty">加载中</span><span class="user-showcase-empty">加载中</span><span class="user-showcase-empty">加载中</span>
-            </div>
-          </section>
-          <section class="user-profile-panel">
-            <div class="user-profile-panel-head"><h2>主页信息</h2></div>
-            <dl class="user-profile-facts"><div><dt>参与模式</dt><dd id="user-profile-mode-count">--</dd></div><div><dt>成就数量</dt><dd id="user-profile-achievement-count">--</dd></div></dl>
-          </section>
-        </aside>
-
-        <section class="user-profile-panel user-profile-main-panel">
-          <nav class="user-profile-tabs" role="tablist" aria-label="个人主页内容">
-            <button type="button" role="tab" id="user-tab-overview" data-user-tab="overview" aria-controls="user-panel-overview" aria-selected="true">概览</button>
-            <button type="button" role="tab" id="user-tab-performance" data-user-tab="performance" aria-controls="user-panel-performance" aria-selected="false">模式成绩</button>
-            <button type="button" role="tab" id="user-tab-records" data-user-tab="records" aria-controls="user-panel-records" aria-selected="false">游戏记录</button>
-            <button type="button" role="tab" id="user-tab-achievements" data-user-tab="achievements" aria-controls="user-panel-achievements" aria-selected="false">成就</button>
-          </nav>
-
-          <section class="user-profile-tab-panel is-active" id="user-panel-overview" data-user-panel="overview" role="tabpanel" aria-labelledby="user-tab-overview">
-            <div class="user-profile-section">
-              <div class="user-profile-section-head"><h2>代表模式</h2><button class="user-profile-link-button" id="user-featured-edit" type="button" hidden>编辑首页展示</button></div>
-              <div class="user-featured-modes" id="user-featured-modes"></div>
-            </div>
-            <div class="user-profile-section">
-              <div class="user-profile-section-head"><h2>最近游戏</h2><button class="user-profile-link-button" type="button" data-user-jump="records">查看全部记录</button></div>
-              <div class="user-recent-records" id="user-recent-records"></div>
-            </div>
-          </section>
-
-          <section class="user-profile-tab-panel" id="user-panel-performance" data-user-panel="performance" role="tabpanel" aria-labelledby="user-tab-performance" hidden>
-            <div class="user-profile-section"><div class="user-profile-section-head"><h2>按模式汇总的个人成绩</h2></div><p class="user-profile-section-note">不同规则下的分数不作跨模式比较。</p><div class="user-performance-grid" id="user-performance-grid"></div></div>
-          </section>
-
-          <section class="user-profile-tab-panel" id="user-panel-records" data-user-panel="records" role="tabpanel" aria-labelledby="user-tab-records" hidden>
-            <section class="user-record-card">
-              <div class="panel-head user-record-panel-head"><h2 id="user-record-heading">历史记录</h2><button id="user-record-refresh" class="replay-button" type="button">刷新</button></div>
-              <div class="user-record-family" role="group" aria-label="模式分类">
-                <button type="button" data-user-mode-family="all" aria-pressed="true">全部</button><button type="button" data-user-mode-family="pow2" aria-pressed="false">2 的幂</button><button type="button" data-user-mode-family="fibonacci" aria-pressed="false">斐波那契</button><button type="button" data-user-mode-family="diagonal" aria-pressed="false">八方向</button><button type="button" data-user-mode-family="special" aria-pressed="false">特殊模式</button>
+        <section
+          class="user-profile-panel user-profile-bio-editor"
+          id="user-profile-bio-editor"
+          aria-labelledby="user-profile-bio-editor-title"
+          hidden
+        >
+          <div class="user-profile-panel-head">
+            <h2 id="user-profile-bio-editor-title">编辑主页简介</h2>
+          </div>
+          <div class="user-profile-bio-editor-body">
+            <form id="user-profile-bio-form">
+              <div class="user-profile-bio-label-row">
+                <label for="user-profile-bio-input">主页简介</label
+                ><span id="user-profile-bio-count">0 / 150</span>
               </div>
-              <div class="user-record-tools">
-                <div class="user-record-field user-record-mode-field"><label for="user-record-mode" id="user-mode-label">具体模式</label><select id="user-record-mode" class="settings-select"><option value="all">全部模式</option></select></div>
-                <div class="user-record-field user-record-undo-field"><label for="user-record-undo" id="user-undo-label">撤回</label><select id="user-record-undo" class="settings-select"><option value="all">全部</option><option value="no_undo">无撤回</option><option value="undo">可撤回</option></select></div>
-                <div class="user-record-field user-record-sort-field"><label for="user-record-sort" id="user-sort-label">排序字段</label><select id="user-record-sort" class="settings-select"><option value="time">上传时间</option><option value="score">分数</option><option value="board_sum">盘面和</option></select></div>
-                <div class="user-record-field user-record-order-field"><label for="user-record-order" id="user-order-label">顺序</label><select id="user-record-order" class="settings-select"><option value="desc">倒序</option><option value="asc">正序</option></select></div>
-                <div class="user-record-field user-record-visibility-field" id="user-record-visibility-field"><label for="user-record-visibility" id="user-visibility-label">记录状态</label><select id="user-record-visibility" class="settings-select"><option value="active">有效</option><option value="deleted">已删除</option><option value="all">全部</option></select></div>
+              <textarea
+                id="user-profile-bio-input"
+                rows="4"
+                aria-describedby="user-profile-bio-help user-profile-bio-status"
+              ></textarea>
+              <p id="user-profile-bio-help">
+                简介会发送给 DeepSeek
+                自动审核；审核通过前继续显示当前公开简介。留空保存表示清空简介。
+              </p>
+              <p
+                class="user-dialog-status"
+                id="user-profile-bio-status"
+                aria-live="polite"
+              ></p>
+              <button
+                class="replay-button user-profile-bio-save"
+                id="user-profile-bio-save"
+                type="submit"
+              >
+                提交审核
+              </button>
+            </form>
+            <section
+              class="user-profile-moderation"
+              aria-labelledby="user-profile-moderation-title"
+            >
+              <h3 id="user-profile-moderation-title">简介审核记录</h3>
+              <p id="user-profile-bio-blocked" hidden></p>
+              <div
+                class="user-profile-moderation-history"
+                id="user-profile-moderation-history"
+                aria-live="polite"
+              ></div>
+            </section>
+          </div>
+        </section>
+
+        <section
+          class="user-profile-panel user-profile-background-editor"
+          id="user-profile-background-editor"
+          aria-labelledby="user-profile-background-editor-title"
+          hidden
+        >
+          <div class="user-profile-panel-head">
+            <h2 id="user-profile-background-editor-title">编辑主页背景</h2>
+          </div>
+          <form
+            class="user-profile-background-form"
+            id="user-profile-background-form"
+          >
+            <p id="user-profile-background-help">
+              只显示白天预览；页面会按自动、白天或夜晚状态切换同一场景。
+            </p>
+            <div
+              class="user-profile-background-choices"
+              id="user-profile-background-choices"
+              role="radiogroup"
+              aria-label="主页背景"
+            ></div>
+            <p
+              class="user-dialog-status"
+              id="user-profile-background-status"
+              aria-live="polite"
+            ></p>
+            <button
+              class="replay-button user-profile-background-save"
+              id="user-profile-background-save"
+              type="submit"
+            >
+              保存背景
+            </button>
+          </form>
+        </section>
+
+        <div class="user-profile-workspace">
+          <aside class="user-profile-sidebar">
+            <section class="user-profile-panel">
+              <div class="user-profile-panel-head"><h2>关于我</h2></div>
+              <div class="user-profile-panel-body">
+                <p class="user-profile-about" id="user-profile-about">
+                  这个玩家还没有填写简介。
+                </p>
               </div>
-              <div class="user-record-head-row"><span id="user-col-mode">模式</span><span id="user-col-score">分数</span><span id="user-col-board-sum">盘面和</span><span id="user-col-best-tile">最大方块</span><span id="user-col-duration">用时</span><span id="user-col-date">更新时间</span></div>
-              <div id="user-record-list" class="user-record-list"></div>
-              <div class="user-record-pager"><button id="user-record-prev" class="replay-button" type="button">上一页</button><span id="user-record-page" class="user-page-indicator">第1页</span><button id="user-record-next" class="replay-button" type="button">下一页</button></div>
-              <p id="user-record-tip" class="user-tip" aria-live="polite"></p>
+            </section>
+            <section class="user-profile-panel">
+              <div class="user-profile-panel-head">
+                <h2>展示成就</h2>
+                <a href="medal-wall.html" id="user-showcase-wall-link" hidden
+                  >勋章墙设置</a
+                >
+              </div>
+              <div
+                class="user-profile-showcase"
+                id="user-profile-showcase"
+                aria-live="polite"
+              >
+                <span class="user-showcase-empty">加载中</span
+                ><span class="user-showcase-empty">加载中</span
+                ><span class="user-showcase-empty">加载中</span>
+              </div>
+            </section>
+            <section class="user-profile-panel">
+              <div class="user-profile-panel-head"><h2>主页信息</h2></div>
+              <dl class="user-profile-facts">
+                <div>
+                  <dt>参与模式</dt>
+                  <dd id="user-profile-mode-count">--</dd>
+                </div>
+                <div>
+                  <dt>成就数量</dt>
+                  <dd id="user-profile-achievement-count">--</dd>
+                </div>
+              </dl>
+            </section>
+          </aside>
+
+          <section class="user-profile-panel user-profile-main-panel">
+            <nav
+              class="user-profile-tabs"
+              role="tablist"
+              aria-label="个人主页内容"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="user-tab-overview"
+                data-user-tab="overview"
+                aria-controls="user-panel-overview"
+                aria-selected="true"
+              >
+                概览
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="user-tab-performance"
+                data-user-tab="performance"
+                aria-controls="user-panel-performance"
+                aria-selected="false"
+              >
+                模式成绩
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="user-tab-records"
+                data-user-tab="records"
+                aria-controls="user-panel-records"
+                aria-selected="false"
+              >
+                游戏记录
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="user-tab-achievements"
+                data-user-tab="achievements"
+                aria-controls="user-panel-achievements"
+                aria-selected="false"
+              >
+                成就
+              </button>
+            </nav>
+
+            <section
+              class="user-profile-tab-panel is-active"
+              id="user-panel-overview"
+              data-user-panel="overview"
+              role="tabpanel"
+              aria-labelledby="user-tab-overview"
+            >
+              <div class="user-profile-section">
+                <div class="user-profile-section-head">
+                  <h2>代表模式</h2>
+                  <button
+                    class="user-profile-link-button"
+                    id="user-featured-edit"
+                    type="button"
+                    hidden
+                  >
+                    编辑首页展示
+                  </button>
+                </div>
+                <div class="user-featured-modes" id="user-featured-modes"></div>
+              </div>
+              <div class="user-profile-section">
+                <div class="user-profile-section-head">
+                  <h2>最近游戏</h2>
+                  <button
+                    class="user-profile-link-button"
+                    type="button"
+                    data-user-jump="records"
+                  >
+                    查看全部记录
+                  </button>
+                </div>
+                <div class="user-recent-records" id="user-recent-records"></div>
+              </div>
+            </section>
+
+            <section
+              class="user-profile-tab-panel"
+              id="user-panel-performance"
+              data-user-panel="performance"
+              role="tabpanel"
+              aria-labelledby="user-tab-performance"
+              hidden
+            >
+              <div class="user-profile-section">
+                <div class="user-profile-section-head">
+                  <h2>按模式汇总的个人成绩</h2>
+                </div>
+                <p class="user-profile-section-note">
+                  不同规则下的分数不作跨模式比较。
+                </p>
+                <div
+                  class="user-performance-grid"
+                  id="user-performance-grid"
+                ></div>
+              </div>
+            </section>
+
+            <section
+              class="user-profile-tab-panel"
+              id="user-panel-records"
+              data-user-panel="records"
+              role="tabpanel"
+              aria-labelledby="user-tab-records"
+              hidden
+            >
+              <section class="user-record-card">
+                <div class="panel-head user-record-panel-head">
+                  <h2 id="user-record-heading">历史记录</h2>
+                  <button
+                    id="user-record-refresh"
+                    class="replay-button"
+                    type="button"
+                  >
+                    刷新
+                  </button>
+                </div>
+                <div
+                  class="user-record-family"
+                  role="group"
+                  aria-label="模式分类"
+                >
+                  <button
+                    type="button"
+                    data-user-mode-family="all"
+                    aria-pressed="true"
+                  >
+                    全部</button
+                  ><button
+                    type="button"
+                    data-user-mode-family="pow2"
+                    aria-pressed="false"
+                  >
+                    2 的幂</button
+                  ><button
+                    type="button"
+                    data-user-mode-family="fibonacci"
+                    aria-pressed="false"
+                  >
+                    斐波那契</button
+                  ><button
+                    type="button"
+                    data-user-mode-family="diagonal"
+                    aria-pressed="false"
+                  >
+                    八方向</button
+                  ><button
+                    type="button"
+                    data-user-mode-family="special"
+                    aria-pressed="false"
+                  >
+                    特殊模式
+                  </button>
+                </div>
+                <div class="user-record-tools">
+                  <div class="user-record-field user-record-mode-field">
+                    <label for="user-record-mode" id="user-mode-label"
+                      >具体模式</label
+                    ><select id="user-record-mode" class="settings-select">
+                      <option value="all">全部模式</option>
+                    </select>
+                  </div>
+                  <div class="user-record-field user-record-undo-field">
+                    <label for="user-record-undo" id="user-undo-label"
+                      >撤回</label
+                    ><select id="user-record-undo" class="settings-select">
+                      <option value="all">全部</option>
+                      <option value="no_undo">无撤回</option>
+                      <option value="undo">可撤回</option>
+                    </select>
+                  </div>
+                  <div class="user-record-field user-record-sort-field">
+                    <label for="user-record-sort" id="user-sort-label"
+                      >排序字段</label
+                    ><select id="user-record-sort" class="settings-select">
+                      <option value="time">上传时间</option>
+                      <option value="score">分数</option>
+                      <option value="board_sum">盘面和</option>
+                    </select>
+                  </div>
+                  <div class="user-record-field user-record-order-field">
+                    <label for="user-record-order" id="user-order-label"
+                      >顺序</label
+                    ><select id="user-record-order" class="settings-select">
+                      <option value="desc">倒序</option>
+                      <option value="asc">正序</option>
+                    </select>
+                  </div>
+                  <div
+                    class="user-record-field user-record-visibility-field"
+                    id="user-record-visibility-field"
+                  >
+                    <label
+                      for="user-record-visibility"
+                      id="user-visibility-label"
+                      >记录状态</label
+                    ><select
+                      id="user-record-visibility"
+                      class="settings-select"
+                    >
+                      <option value="active">有效</option>
+                      <option value="deleted">已删除</option>
+                      <option value="all">全部</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="user-record-head-row">
+                  <span id="user-col-mode">模式</span
+                  ><span id="user-col-score">分数</span
+                  ><span id="user-col-board-sum">盘面和</span
+                  ><span id="user-col-best-tile">最大方块</span
+                  ><span id="user-col-duration">用时</span
+                  ><span id="user-col-date">更新时间</span>
+                </div>
+                <div id="user-record-list" class="user-record-list"></div>
+                <div class="user-record-pager">
+                  <button
+                    id="user-record-prev"
+                    class="replay-button"
+                    type="button"
+                  >
+                    上一页</button
+                  ><span id="user-record-page" class="user-page-indicator"
+                    >第1页</span
+                  ><button
+                    id="user-record-next"
+                    class="replay-button"
+                    type="button"
+                  >
+                    下一页
+                  </button>
+                </div>
+                <p id="user-record-tip" class="user-tip" aria-live="polite"></p>
+              </section>
+            </section>
+
+            <section
+              class="user-profile-tab-panel"
+              id="user-panel-achievements"
+              data-user-panel="achievements"
+              role="tabpanel"
+              aria-labelledby="user-tab-achievements"
+              hidden
+            >
+              <div class="user-profile-section">
+                <div class="user-profile-section-head"><h2>已获得成就</h2></div>
+                <div
+                  class="user-achievement-grid"
+                  id="user-achievement-grid"
+                  aria-live="polite"
+                ></div>
+              </div>
             </section>
           </section>
+        </div>
+      </article>
+    </main>
 
-          <section class="user-profile-tab-panel" id="user-panel-achievements" data-user-panel="achievements" role="tabpanel" aria-labelledby="user-tab-achievements" hidden>
-            <div class="user-profile-section"><div class="user-profile-section-head"><h2>已获得成就</h2></div><div class="user-achievement-grid" id="user-achievement-grid" aria-live="polite"></div></div>
+    <dialog
+      class="user-profile-dialog"
+      id="user-featured-dialog"
+      aria-labelledby="user-featured-dialog-title"
+    >
+      <form
+        method="dialog"
+        class="user-profile-dialog-frame"
+        id="user-featured-form"
+      >
+        <header>
+          <h2 id="user-featured-dialog-title">编辑首页展示</h2>
+          <button
+            type="button"
+            data-user-dialog-close="user-featured-dialog"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </header>
+        <div class="user-profile-dialog-body">
+          <section>
+            <div class="user-dialog-section-title">
+              <strong>代表模式</strong
+              ><span id="user-featured-count">已选 0 / 3</span>
+            </div>
+            <div class="user-featured-choices" id="user-featured-choices"></div>
+            <p>最多选择三个玩过的模式。展示成就继续在勋章墙中设置。</p>
           </section>
-        </section>
-      </div>
-    </article>
-  </main>
+          <p
+            class="user-dialog-status"
+            id="user-featured-save-status"
+            aria-live="polite"
+          ></p>
+        </div>
+        <footer>
+          <button type="button" data-user-dialog-close="user-featured-dialog">
+            取消</button
+          ><button class="is-primary" id="user-featured-save" type="submit">
+            保存
+          </button>
+        </footer>
+      </form>
+    </dialog>
 
-  <dialog class="user-profile-dialog" id="user-featured-dialog" aria-labelledby="user-featured-dialog-title">
-    <form method="dialog" class="user-profile-dialog-frame" id="user-featured-form">
-      <header><h2 id="user-featured-dialog-title">编辑首页展示</h2><button type="button" data-user-dialog-close="user-featured-dialog" aria-label="关闭">×</button></header>
-      <div class="user-profile-dialog-body"><section><div class="user-dialog-section-title"><strong>代表模式</strong><span id="user-featured-count">已选 0 / 3</span></div><div class="user-featured-choices" id="user-featured-choices"></div><p>最多选择三个玩过的模式。展示成就继续在勋章墙中设置。</p></section><p class="user-dialog-status" id="user-featured-save-status" aria-live="polite"></p></div>
-      <footer><button type="button" data-user-dialog-close="user-featured-dialog">取消</button><button class="is-primary" id="user-featured-save" type="submit">保存</button></footer>
-    </form>
-  </dialog>
-
-  <script type="module" src="./src/entries/user-profile.ts"></script>
-</body>
+    <script type="module" src="./src/entries/user-profile.ts"></script>
+  </body>
 </html>

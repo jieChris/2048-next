@@ -15,7 +15,10 @@ type DocumentLike = {
     appendChild?: <T>(node: T) => T;
   } | null;
   createElement?: (tagName: string) => HomeUserDisplayNodeLike;
-  createElementNS?: (namespace: string, tagName: string) => HomeUserDisplayNodeLike;
+  createElementNS?: (
+    namespace: string,
+    tagName: string,
+  ) => HomeUserDisplayNodeLike;
   getElementById?: (id: string) => HomeUserDisplayNodeLike | null;
   querySelector?: (selector: string) => HomeUserDisplayParentLike | null;
 };
@@ -41,7 +44,7 @@ const PROFILE_PATHS = [
   ["profile-line profile-head-left", "M12 12A4 4 0 0 1 12 4"],
   ["profile-line profile-head-right", "M12 12A4 4 0 0 0 12 4"],
   ["profile-line profile-shoulder-left", "M12 12A8 8 0 0 0 4 20"],
-  ["profile-line profile-shoulder-right", "M12 12A8 8 0 0 1 20 20"]
+  ["profile-line profile-shoulder-right", "M12 12A8 8 0 0 1 20 20"],
 ] as const;
 
 const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
@@ -60,11 +63,13 @@ const GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS = new Set([
   "replay",
   "stone-2k-monitor",
   "theme-plaza",
-  "user-profile"
+  "user-profile",
 ]);
 
 function toRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function readNickname(storageLike: unknown): string {
@@ -95,20 +100,28 @@ function readUiLanguage(storageLike: unknown): "en" | "zh" {
   const storage = toRecord(storageLike) as StorageLike;
   if (typeof storage.getItem !== "function") return "zh";
   try {
-    const raw = String(storage.getItem(UI_LANGUAGE_STORAGE_KEY) || "").trim().toLowerCase();
+    const raw = String(storage.getItem(UI_LANGUAGE_STORAGE_KEY) || "")
+      .trim()
+      .toLowerCase();
     return raw.startsWith("en") ? "en" : "zh";
   } catch {
     return "zh";
   }
 }
 
-export function resolveHomeUserDisplayName(input: { storageLike?: unknown }): string {
+export function resolveHomeUserDisplayName(input: {
+  storageLike?: unknown;
+}): string {
   const nickname = readNickname(input.storageLike);
   if (nickname) return nickname;
-  return readUiLanguage(input.storageLike) === "en" ? DEFAULT_GUEST_LABEL_EN : DEFAULT_GUEST_LABEL_ZH;
+  return readUiLanguage(input.storageLike) === "en"
+    ? DEFAULT_GUEST_LABEL_EN
+    : DEFAULT_GUEST_LABEL_ZH;
 }
 
-export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): string {
+export function resolveHomeUserDisplayHref(input: {
+  storageLike?: unknown;
+}): string {
   const userId = readPublicProfileId(input.storageLike);
   const nickname = readNickname(input.storageLike);
   if (userId) {
@@ -120,7 +133,9 @@ export function resolveHomeUserDisplayHref(input: { storageLike?: unknown }): st
   return "user.html";
 }
 
-export function shouldShowHomeUserDisplayForPage(pageId?: string | null): boolean {
+export function shouldShowHomeUserDisplayForPage(
+  pageId?: string | null,
+): boolean {
   if (!pageId) return false;
   return !GLOBAL_HOME_USER_DISPLAY_EXCLUDED_PAGE_IDS.has(pageId);
 }
@@ -147,7 +162,10 @@ function createGlobalHomeUserDisplay(input: {
 
   const node = input.documentLike.createElement("a");
   node.id = "home-user-display";
-  node.className = parent === headingParent ? "home-user-display" : "home-user-display home-user-display--global";
+  node.className =
+    parent === headingParent
+      ? "home-user-display"
+      : "home-user-display home-user-display--global";
   node.href = "";
   if (typeof node.setAttribute === "function") {
     node.setAttribute("aria-live", "polite");
@@ -155,8 +173,15 @@ function createGlobalHomeUserDisplay(input: {
   return parent.appendChild(node);
 }
 
-function appendProfileButtonIcon(documentLike: DocumentLike, button: HomeUserDisplayNodeLike): void {
-  if (typeof documentLike.createElementNS !== "function" || typeof button.appendChild !== "function") return;
+function appendProfileButtonIcon(
+  documentLike: DocumentLike,
+  button: HomeUserDisplayNodeLike,
+): void {
+  if (
+    typeof documentLike.createElementNS !== "function" ||
+    typeof button.appendChild !== "function"
+  )
+    return;
   const svg = documentLike.createElementNS(PROFILE_SVG_NAMESPACE, "svg");
   svg.setAttribute?.("width", "34");
   svg.setAttribute?.("height", "34");
@@ -184,8 +209,13 @@ function appendProfileButtonIcon(documentLike: DocumentLike, button: HomeUserDis
   button.appendChild(svg);
 }
 
-function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplayNodeLike | null {
-  if (typeof documentLike.createElement !== "function" || typeof documentLike.querySelector !== "function") {
+function createTopUserProfileButton(
+  documentLike: DocumentLike,
+): HomeUserDisplayNodeLike | null {
+  if (
+    typeof documentLike.createElement !== "function" ||
+    typeof documentLike.querySelector !== "function"
+  ) {
     return null;
   }
 
@@ -211,9 +241,14 @@ function createTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplay
   return null;
 }
 
-function ensureTopUserProfileButton(documentLike: DocumentLike): HomeUserDisplayNodeLike | null {
+function ensureTopUserProfileButton(
+  documentLike: DocumentLike,
+): HomeUserDisplayNodeLike | null {
   if (typeof documentLike.getElementById !== "function") return null;
-  return documentLike.getElementById(TOP_USER_PROFILE_BUTTON_ID) || createTopUserProfileButton(documentLike);
+  return (
+    documentLike.getElementById(TOP_USER_PROFILE_BUTTON_ID) ||
+    createTopUserProfileButton(documentLike)
+  );
 }
 
 export function syncHomeUserDisplay(input: {
@@ -224,7 +259,9 @@ export function syncHomeUserDisplay(input: {
   const documentLike = toRecord(input.documentLike) as DocumentLike;
   if (typeof documentLike.getElementById !== "function") return false;
   if (input.pageId === "practice") return false;
-  const profileHref = resolveHomeUserDisplayHref({ storageLike: input.storageLike });
+  const profileHref = resolveHomeUserDisplayHref({
+    storageLike: input.storageLike,
+  });
   const profileButton = ensureTopUserProfileButton(documentLike);
   let profileSynced = false;
   if (profileButton && "href" in profileButton) {
@@ -232,14 +269,17 @@ export function syncHomeUserDisplay(input: {
     profileSynced = true;
   }
 
-  if (input.pageId && !shouldShowHomeUserDisplayForPage(input.pageId)) return profileSynced;
+  if (input.pageId && !shouldShowHomeUserDisplayForPage(input.pageId))
+    return profileSynced;
 
   const node =
     documentLike.getElementById("home-user-display") ||
     createGlobalHomeUserDisplay({ documentLike, pageId: input.pageId });
   if (!node) return profileSynced;
 
-  node.textContent = resolveHomeUserDisplayName({ storageLike: input.storageLike });
+  node.textContent = resolveHomeUserDisplayName({
+    storageLike: input.storageLike,
+  });
   if ("href" in node) {
     node.href = profileHref;
   }
@@ -255,14 +295,20 @@ export function bindHomeUserDisplay(input: {
   const synced = syncHomeUserDisplay({
     documentLike: input.documentLike,
     pageId: input.pageId,
-    storageLike: input.storageLike
+    storageLike: input.storageLike,
   });
   const windowRecord = toRecord(input.windowLike) as {
-    addEventListener?: (type: string, listener: (event?: { key?: string | null }) => void) => void;
+    addEventListener?: (
+      type: string,
+      listener: (event?: { key?: string | null }) => void,
+    ) => void;
     __homeUserDisplayBound?: boolean;
   };
 
-  if (windowRecord.__homeUserDisplayBound || typeof windowRecord.addEventListener !== "function") {
+  if (
+    windowRecord.__homeUserDisplayBound ||
+    typeof windowRecord.addEventListener !== "function"
+  ) {
     return synced;
   }
 
@@ -270,7 +316,7 @@ export function bindHomeUserDisplay(input: {
     syncHomeUserDisplay({
       documentLike: input.documentLike,
       pageId: input.pageId,
-      storageLike: input.storageLike
+      storageLike: input.storageLike,
     });
   };
 
