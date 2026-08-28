@@ -12,7 +12,7 @@ import {
   isTimerboxMobileScope,
   isTimerboxCollapseViewport,
   isViewportAtMost,
-  resolvePageScopeValue
+  resolvePageScopeValue,
 } from "../../src/bootstrap/mobile-viewport";
 
 describe("bootstrap mobile viewport", () => {
@@ -22,22 +22,30 @@ describe("bootstrap mobile viewport", () => {
         windowLike: {
           matchMedia(query: string) {
             return { matches: query === "(max-width: 760px)" };
-          }
+          },
         },
-        maxWidth: 760
-      })
+        maxWidth: 760,
+      }),
     ).toBe(true);
   });
 
   it("falls back to innerWidth when matchMedia is unavailable", () => {
-    expect(isViewportAtMost({ windowLike: { innerWidth: 760 }, maxWidth: 760 })).toBe(true);
-    expect(isViewportAtMost({ windowLike: { innerWidth: 761 }, maxWidth: 760 })).toBe(false);
+    expect(
+      isViewportAtMost({ windowLike: { innerWidth: 760 }, maxWidth: 760 }),
+    ).toBe(true);
+    expect(
+      isViewportAtMost({ windowLike: { innerWidth: 761 }, maxWidth: 760 }),
+    ).toBe(false);
   });
 
   it("provides compact and timerbox wrappers", () => {
     const win = { innerWidth: 980 };
-    expect(isCompactGameViewport({ windowLike: win, maxWidth: 980 })).toBe(true);
-    expect(isTimerboxCollapseViewport({ windowLike: win, maxWidth: 980 })).toBe(true);
+    expect(isCompactGameViewport({ windowLike: win, maxWidth: 980 })).toBe(
+      true,
+    );
+    expect(isTimerboxCollapseViewport({ windowLike: win, maxWidth: 980 })).toBe(
+      true,
+    );
   });
 
   it("returns false when not narrow enough for mobile viewport", () => {
@@ -45,8 +53,8 @@ describe("bootstrap mobile viewport", () => {
       isMobileGameViewport({
         windowLike: { innerWidth: 1000 },
         navigatorLike: { userAgent: "iPhone" },
-        maxWidth: 760
-      })
+        maxWidth: 760,
+      }),
     ).toBe(false);
   });
 
@@ -59,11 +67,11 @@ describe("bootstrap mobile viewport", () => {
             if (query === "(pointer: coarse)") return { matches: true };
             if (query === "(hover: none)") return { matches: false };
             return { matches: false };
-          }
+          },
         },
         navigatorLike: { userAgent: "Desktop" },
-        maxWidth: 760
-      })
+        maxWidth: 760,
+      }),
     ).toBe(true);
   });
 
@@ -73,11 +81,13 @@ describe("bootstrap mobile viewport", () => {
         windowLike: {
           matchMedia(query: string) {
             return { matches: query === "(max-width: 760px)" };
-          }
+          },
         },
-        navigatorLike: { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" },
-        maxWidth: 760
-      })
+        navigatorLike: {
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        },
+        maxWidth: 760,
+      }),
     ).toBe(true);
   });
 
@@ -88,11 +98,11 @@ describe("bootstrap mobile viewport", () => {
           matchMedia(query: string) {
             if (query === "(max-width: 760px)") return { matches: true };
             return { matches: false };
-          }
+          },
         },
         navigatorLike: { userAgent: "Desktop" },
-        maxWidth: 760
-      })
+        maxWidth: 760,
+      }),
     ).toBe(false);
   });
 
@@ -102,9 +112,9 @@ describe("bootstrap mobile viewport", () => {
         bodyLike: {
           getAttribute(name: string) {
             return name === "data-page" ? "game" : null;
-          }
-        }
-      })
+          },
+        },
+      }),
     ).toBe("game");
     expect(resolvePageScopeValue({ bodyLike: null })).toBe("");
   });
@@ -113,17 +123,17 @@ describe("bootstrap mobile viewport", () => {
     const gameBody = {
       getAttribute(name: string) {
         return name === "data-page" ? "game" : null;
-      }
+      },
     };
     const practiceBody = {
       getAttribute(name: string) {
         return name === "data-page" ? "practice" : null;
-      }
+      },
     };
     const homeBody = {
       getAttribute(name: string) {
         return name === "data-page" ? "home" : null;
-      }
+      },
     };
     expect(isGamePageScope({ bodyLike: gameBody })).toBe(true);
     expect(isGamePageScope({ bodyLike: practiceBody })).toBe(false);
@@ -147,18 +157,18 @@ describe("bootstrap mobile viewport", () => {
       },
       getAttribute(name: string) {
         return this.attributes.get(name) || null;
-      }
+      },
     };
     const body = {
       scrollHeight: 620,
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "game" : null;
-      }
+      },
     };
     const documentLike = {
       documentElement: root,
-      body
+      body,
     };
     const windowLike = {
       innerWidth: 390,
@@ -167,7 +177,7 @@ describe("bootstrap mobile viewport", () => {
         if (query === "(max-width: 760px)") return { matches: true };
         if (query === "(pointer: coarse)") return { matches: true };
         return { matches: false };
-      }
+      },
     };
 
     expect(
@@ -176,8 +186,8 @@ describe("bootstrap mobile viewport", () => {
         windowLike,
         navigatorLike: { userAgent: "iPhone" },
         bodyLike: body,
-        maxWidth: 760
-      }).shouldLock
+        maxWidth: 760,
+      }).shouldLock,
     ).toBe(true);
 
     const result = applyMobilePageScrollLock({
@@ -185,7 +195,7 @@ describe("bootstrap mobile viewport", () => {
       windowLike,
       navigatorLike: { userAgent: "iPhone" },
       bodyLike: body,
-      maxWidth: 760
+      maxWidth: 760,
     });
 
     expect(result.shouldLock).toBe(true);
@@ -196,7 +206,9 @@ describe("bootstrap mobile viewport", () => {
     const root = {
       scrollHeight: 920,
       clientHeight: 640,
-      attributes: new Map<string, string>([["data-mobile-page-scroll-lock", "1"]]),
+      attributes: new Map<string, string>([
+        ["data-mobile-page-scroll-lock", "1"],
+      ]),
       setAttribute(name: string, value: string) {
         this.attributes.set(name, value);
       },
@@ -205,20 +217,20 @@ describe("bootstrap mobile viewport", () => {
       },
       getAttribute(name: string) {
         return this.attributes.get(name) || null;
-      }
+      },
     };
     const body = {
       scrollHeight: 920,
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "game" : null;
-      }
+      },
     };
 
     const result = applyMobilePageScrollLock({
       documentLike: {
         documentElement: root,
-        body
+        body,
       },
       windowLike: {
         innerWidth: 390,
@@ -227,11 +239,11 @@ describe("bootstrap mobile viewport", () => {
           if (query === "(max-width: 760px)") return { matches: true };
           if (query === "(hover: none)") return { matches: true };
           return { matches: false };
-        }
+        },
       },
       navigatorLike: { userAgent: "iPhone" },
       bodyLike: body,
-      maxWidth: 760
+      maxWidth: 760,
     });
 
     expect(result.shouldLock).toBe(false);
@@ -251,14 +263,14 @@ describe("bootstrap mobile viewport", () => {
       },
       getAttribute(name: string) {
         return this.attributes.get(name) || null;
-      }
+      },
     };
     const body = {
       scrollHeight: 640,
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "practice" : null;
-      }
+      },
     };
     const listeners = new Map<string, Array<() => void>>();
     const windowLike = {
@@ -277,18 +289,18 @@ describe("bootstrap mobile viewport", () => {
       requestAnimationFrame(callback: () => void) {
         callback();
         return 1;
-      }
+      },
     };
 
     bindMobilePageScrollLock({
       documentLike: {
         documentElement: root,
-        body
+        body,
       },
       windowLike,
       navigatorLike: { userAgent: "iPhone" },
       bodyLike: body,
-      maxWidth: 760
+      maxWidth: 760,
     });
 
     expect(root.getAttribute("data-mobile-page-scroll-lock")).toBe("1");
@@ -306,14 +318,14 @@ describe("bootstrap mobile viewport", () => {
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "game" : null;
-      }
+      },
     };
     const documentLike = {
       documentElement: {
         scrollHeight: 640,
-        clientHeight: 640
+        clientHeight: 640,
       },
-      body
+      body,
     };
     const windowLike = {
       innerWidth: 390,
@@ -322,7 +334,7 @@ describe("bootstrap mobile viewport", () => {
         if (query === "(max-width: 760px)") return { matches: true };
         if (query === "(pointer: coarse)") return { matches: true };
         return { matches: false };
-      }
+      },
     };
     let prevented = false;
 
@@ -332,38 +344,34 @@ describe("bootstrap mobile viewport", () => {
         windowLike,
         navigatorLike: { userAgent: "iPhone" },
         bodyLike: body,
-        maxWidth: 760
+        maxWidth: 760,
       },
       {
         cancelable: true,
         preventDefault() {
           prevented = true;
-        }
-      }
+        },
+      },
     );
 
     expect(didPrevent).toBe(true);
     expect(prevented).toBe(true);
   });
 
-  it("does not prevent touchmove when the mobile page still needs scrolling", () => {
+  it("does not prevent touchmove inside a scrollable settings modal", () => {
     const body = {
-      scrollHeight: 900,
+      scrollHeight: 640,
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "game" : null;
-      }
+      },
     };
     let prevented = false;
-
     const didPrevent = handleMobilePageScrollLockTouchMove(
       {
         documentLike: {
-          documentElement: {
-            scrollHeight: 900,
-            clientHeight: 640
-          },
-          body
+          documentElement: { scrollHeight: 640, clientHeight: 640 },
+          body,
         },
         windowLike: {
           innerWidth: 390,
@@ -372,18 +380,67 @@ describe("bootstrap mobile viewport", () => {
             if (query === "(max-width: 760px)") return { matches: true };
             if (query === "(pointer: coarse)") return { matches: true };
             return { matches: false };
-          }
+          },
         },
         navigatorLike: { userAgent: "iPhone" },
         bodyLike: body,
-        maxWidth: 760
+        maxWidth: 760,
+      },
+      {
+        target: {
+          closest(selector: string) {
+            return selector.includes(".settings-modal-content") ? {} : null;
+          },
+        },
+        cancelable: true,
+        preventDefault() {
+          prevented = true;
+        },
+      },
+    );
+
+    expect(didPrevent).toBe(false);
+    expect(prevented).toBe(false);
+  });
+
+  it("does not prevent touchmove when the mobile page still needs scrolling", () => {
+    const body = {
+      scrollHeight: 900,
+      clientHeight: 640,
+      getAttribute(name: string) {
+        return name === "data-page" ? "game" : null;
+      },
+    };
+    let prevented = false;
+
+    const didPrevent = handleMobilePageScrollLockTouchMove(
+      {
+        documentLike: {
+          documentElement: {
+            scrollHeight: 900,
+            clientHeight: 640,
+          },
+          body,
+        },
+        windowLike: {
+          innerWidth: 390,
+          innerHeight: 640,
+          matchMedia(query: string) {
+            if (query === "(max-width: 760px)") return { matches: true };
+            if (query === "(pointer: coarse)") return { matches: true };
+            return { matches: false };
+          },
+        },
+        navigatorLike: { userAgent: "iPhone" },
+        bodyLike: body,
+        maxWidth: 760,
       },
       {
         cancelable: true,
         preventDefault() {
           prevented = true;
-        }
-      }
+        },
+      },
     );
 
     expect(didPrevent).toBe(false);
@@ -396,20 +453,28 @@ describe("bootstrap mobile viewport", () => {
       clientHeight: 640,
       getAttribute(name: string) {
         return name === "data-page" ? "practice" : null;
-      }
+      },
     };
-    const listeners: Array<{ name: string; listener: (event: unknown) => void; options: unknown }> = [];
+    const listeners: Array<{
+      name: string;
+      listener: (event: unknown) => void;
+      options: unknown;
+    }> = [];
     const documentLike = {
       documentElement: {
         scrollHeight: 640,
         clientHeight: 640,
         setAttribute() {},
-        removeAttribute() {}
+        removeAttribute() {},
       },
       body,
-      addEventListener(name: string, listener: (event: unknown) => void, options?: unknown) {
+      addEventListener(
+        name: string,
+        listener: (event: unknown) => void,
+        options?: unknown,
+      ) {
         listeners.push({ name, listener, options });
-      }
+      },
     };
 
     bindMobilePageScrollLock({
@@ -421,17 +486,17 @@ describe("bootstrap mobile viewport", () => {
           if (query === "(max-width: 760px)") return { matches: true };
           if (query === "(pointer: coarse)") return { matches: true };
           return { matches: false };
-        }
+        },
       },
       navigatorLike: { userAgent: "iPhone" },
       bodyLike: body,
-      maxWidth: 760
+      maxWidth: 760,
     });
 
     expect(listeners).toContainEqual({
       name: "touchmove",
       listener: expect.any(Function),
-      options: { passive: false }
+      options: { passive: false },
     });
   });
 });

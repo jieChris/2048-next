@@ -27,3 +27,4 @@ artifacts
 *.sln
 *.sw?
 zotero-import/
+/tmp/

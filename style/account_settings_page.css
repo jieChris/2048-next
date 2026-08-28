@@ -5,13 +5,21 @@ body[data-page="account-settings-hub"] {
   color: var(--pp-ink);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(1200px 500px at 8% -20%, rgba(176, 153, 130, 0.33), transparent 68%),
-    radial-gradient(1000px 420px at 95% -24%, rgba(174, 157, 136, 0.25), transparent 70%),
+    radial-gradient(
+      1200px 500px at 8% -20%,
+      rgba(176, 153, 130, 0.33),
+      transparent 68%
+    ),
+    radial-gradient(
+      1000px 420px at 95% -24%,
+      rgba(174, 157, 136, 0.25),
+      transparent 70%
+    ),
     linear-gradient(165deg, var(--pp-bg-0), var(--pp-bg-1));
 }
 
 body[data-page="account-settings-hub"][data-i18n-ready="0"] {
-  visibility: hidden;
+  opacity: 1;
 }
 
 .account-settings-page-shell {
@@ -22,7 +30,11 @@ body[data-page="account-settings-hub"][data-i18n-ready="0"] {
   padding: 16px;
 }
 
-html body[data-page="account-settings-hub"] main.account-settings-page-shell > .settings-stack > .settings-auth-section {
+html
+  body[data-page="account-settings-hub"]
+  main.account-settings-page-shell
+  > .settings-stack
+  > .settings-auth-section {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -78,7 +90,10 @@ html body[data-page="account-settings-hub"] main.account-settings-page-shell > .
   font-size: 25px;
 }
 
-html body[data-page="account-settings-hub"] .settings-auth-section #account-auth-state-tag {
+html
+  body[data-page="account-settings-hub"]
+  .settings-auth-section
+  #account-auth-state-tag {
   margin-right: 15px;
   padding-right: 12px;
   padding-left: 12px;
@@ -87,12 +102,18 @@ html body[data-page="account-settings-hub"] .settings-auth-section #account-auth
   color: var(--app-link) !important;
 }
 
-html body[data-page="account-settings-hub"][data-auth-state="authed"] .settings-auth-section #account-auth-state-tag {
+html
+  body[data-page="account-settings-hub"][data-auth-state="authed"]
+  .settings-auth-section
+  #account-auth-state-tag {
   background: var(--app-success-soft) !important;
   color: var(--app-success) !important;
 }
 
-html body[data-page="account-settings-hub"] .settings-auth-section #account-action-row {
+html
+  body[data-page="account-settings-hub"]
+  .settings-auth-section
+  #account-action-row {
   box-sizing: border-box;
   width: 100%;
   max-width: none;
@@ -104,7 +125,8 @@ html body[data-page="account-settings-hub"] .settings-auth-section #account-acti
   box-shadow: none !important;
 }
 
-body[data-page="account-settings-hub"] :is(#settings-kicker, #settings-subtitle) {
+body[data-page="account-settings-hub"]
+  :is(#settings-kicker, #settings-subtitle) {
   display: none !important;
 }
 
@@ -114,27 +136,37 @@ body[data-page="account-settings-hub"] .palette-page-header {
   justify-content: space-between;
 }
 
-body[data-page="account-settings-hub"] .settings-auth-section .settings-section-title-row {
+body[data-page="account-settings-hub"]
+  .settings-auth-section
+  .settings-section-title-row {
   box-sizing: border-box;
   width: 100%;
   max-width: 560px;
   margin-inline: auto;
 }
 
-body[data-page="account-settings-hub"][data-auth-state="guest"] .account-user-card,
-body[data-page="account-settings-hub"][data-auth-state="guest"] [data-settings-account-only] {
+body[data-page="account-settings-hub"][data-auth-state="guest"]
+  .account-user-card,
+body[data-page="account-settings-hub"][data-auth-state="guest"]
+  [data-settings-account-only] {
   display: none;
 }
 
-body[data-page="account-settings-hub"][data-auth-state="authed"] .account-auth-form-surface,
-body[data-page="account-settings-hub"][data-auth-state="authed"] .account-auth-subtitle,
-body[data-page="account-settings-hub"][data-auth-state="authed"] #account-action-row,
-body[data-page="account-settings-hub"][data-auth-state="authed"] #account-auth-tip {
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  .account-auth-form-surface,
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  .account-auth-subtitle,
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  #account-action-row,
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  #account-auth-tip {
   display: none;
 }
 
-body[data-page="account-settings-hub"][data-auth-state="authed"] .account-user-card,
-body[data-page="account-settings-hub"][data-auth-state="authed"] [data-settings-account-only] {
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  .account-user-card,
+body[data-page="account-settings-hub"][data-auth-state="authed"]
+  [data-settings-account-only] {
   box-sizing: border-box;
   width: 100%;
   max-width: 560px;
@@ -185,76 +217,149 @@ html[data-night-background="1"] body[data-page="account-settings-hub"] {
   --pp-ink: #ece2d3;
   --pp-muted: #97a7bc;
   background:
-    radial-gradient(circle at 18% 14%, rgba(82, 110, 151, 0.16), transparent 30%),
+    radial-gradient(
+      circle at 18% 14%,
+      rgba(82, 110, 151, 0.16),
+      transparent 30%
+    ),
     radial-gradient(circle at 80% 6%, rgba(109, 87, 146, 0.12), transparent 24%),
     linear-gradient(180deg, #101726 0%, #0b1220 52%, #070d16 100%);
   color: var(--pp-ink);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .palette-kicker,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .palette-subtitle,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-subtitle,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-tip {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .palette-kicker,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .palette-subtitle,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-subtitle,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-tip {
   color: #a6b3c6;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .palette-title,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-section h2,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-user-card h3,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-grid label {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .palette-title,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-section
+  h2,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-user-card
+  h3,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-grid
+  label {
   color: #ece2d3;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-card,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-form-surface,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-user-card,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-current-nickname-wrap,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-action-row,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-login-captcha-image,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-card,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-form-surface,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-user-card,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-current-nickname-wrap,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-action-row,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-login-captcha-image,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input {
   border-color: rgba(181, 198, 221, 0.16);
   box-shadow:
     0 18px 36px rgba(1, 5, 14, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-card,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-form-surface,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-user-card,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-current-nickname-wrap,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-action-row {
-  background: linear-gradient(180deg, rgba(24, 36, 56, 0.96) 0%, rgba(13, 21, 34, 0.97) 100%);
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-card,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-form-surface,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-user-card,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-current-nickname-wrap,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-action-row {
+  background: linear-gradient(
+    180deg,
+    rgba(24, 36, 56, 0.96) 0%,
+    rgba(13, 21, 34, 0.97) 100%
+  );
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-current-nickname-wrap,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-user-lines strong {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-current-nickname-wrap,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-user-lines
+  strong {
   color: #f0dcc0;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-user-lines {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-user-lines {
   color: #d9d0c2;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-section + .settings-section {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-section
+  + .settings-section {
   border-top-color: rgba(181, 198, 221, 0.16);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-login-captcha-image {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-login-captcha-image {
   background-color: rgba(16, 24, 38, 0.92);
   color: #ece2d3;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input::placeholder {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input::placeholder {
   color: #8390a2;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input:hover {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input:hover {
   border-color: rgba(213, 168, 106, 0.44);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input:focus,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-input:focus-visible {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input:focus,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-input:focus-visible {
   border-color: rgba(213, 168, 106, 0.72);
   background-color: rgba(19, 29, 45, 0.96);
   box-shadow:
@@ -262,9 +367,18 @@ html[data-night-background="1"] body[data-page="account-settings-hub"] .account-
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .palette-nav-btn,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-action-row .replay-button {
-  background: linear-gradient(180deg, rgba(69, 98, 130, 0.98) 0%, rgba(47, 68, 92, 0.98) 100%);
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .palette-nav-btn,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-action-row
+  .replay-button {
+  background: linear-gradient(
+    180deg,
+    rgba(69, 98, 130, 0.98) 0%,
+    rgba(47, 68, 92, 0.98) 100%
+  );
   color: #f6efe3;
   border: 1px solid rgba(181, 198, 221, 0.16);
   box-shadow:
@@ -272,18 +386,33 @@ html[data-night-background="1"] body[data-page="account-settings-hub"] .settings
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .palette-nav-btn:hover,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .settings-action-row .replay-button:hover {
-  background: linear-gradient(180deg, rgba(84, 117, 152, 1) 0%, rgba(56, 81, 109, 1) 100%);
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .palette-nav-btn:hover,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .settings-action-row
+  .replay-button:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(84, 117, 152, 1) 0%,
+    rgba(56, 81, 109, 1) 100%
+  );
   color: #fff4e1;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-link {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-link {
   color: #f0dcc0;
 }
 
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-link:hover,
-html[data-night-background="1"] body[data-page="account-settings-hub"] .account-auth-link:focus-visible {
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-link:hover,
+html[data-night-background="1"]
+  body[data-page="account-settings-hub"]
+  .account-auth-link:focus-visible {
   color: #fff4e1;
 }
 

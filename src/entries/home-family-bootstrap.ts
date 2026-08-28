@@ -1,6 +1,15 @@
-import { createBootstrapPipeline, resolvePageDescriptor } from "../bootstrap/page-bootstrap";
-import { registerEngineFacade, type EngineFacadeWindowLike } from "../bootstrap/engine-facade-host";
-import { runBetaAccessGate, shouldRunBetaAccessGate } from "../bootstrap/access-gate";
+import {
+  createBootstrapPipeline,
+  resolvePageDescriptor,
+} from "../bootstrap/page-bootstrap";
+import {
+  registerEngineFacade,
+  type EngineFacadeWindowLike,
+} from "../bootstrap/engine-facade-host";
+import {
+  runBetaAccessGate,
+  shouldRunBetaAccessGate,
+} from "../bootstrap/access-gate";
 import { bootstrapRankedSessionForHomeFamilyPage } from "../bootstrap/ranked-session";
 import { restoreAuthSession } from "../services/auth-session";
 import { getAccountPaletteSessionController } from "../features/palette/account-palette-session";
@@ -114,15 +123,16 @@ const GAME_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "core",
   "capped-core",
   "standard-startup",
-  "capped-startup"
+  "capped-startup",
 ]);
 const UI_STARTUP_CAPABILITIES = new Set<RuntimeCapability>([
   "settings-and-panel",
   "top-button-style",
   "index-tail",
-  "i18n"
+  "i18n",
 ]);
-const INDEX_STARTUP_BUNDLE_URL = "./js/home_standard_startup_bundle.js?v=20260803-operation-feedback";
+const INDEX_STARTUP_BUNDLE_URL =
+  "./js/home_standard_startup_bundle.js?v=20260803-operation-feedback";
 const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
   "core_capped_timer_scroll_runtime",
   "capped_timer_scroll",
@@ -130,21 +140,23 @@ const INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES = [
   "core_night_mode_runtime",
   "core_top_button_style_runtime",
   "core_top_action_bindings_host_runtime",
-  "core_i18n_runtime"
+  "core_i18n_runtime",
 ] as const;
 const LEGACY_INDEX_UI_RUNTIME_NAMES = [
   "core_index_ui_runtime_contract_runtime",
   "core_index_ui_page_host_runtime",
   "core_index_ui_page_resolvers_host_runtime",
   "core_index_ui_page_actions_host_runtime",
-  "index_ui"
+  "index_ui",
 ] as const;
 
 function bindNightBackgroundSync(): void {
   if (typeof window === "undefined") {
     return;
   }
-  const typedWindow = window as Window & { __nightBackgroundSyncBound?: boolean };
+  const typedWindow = window as Window & {
+    __nightBackgroundSyncBound?: boolean;
+  };
   if (typedWindow.__nightBackgroundSyncBound) {
     bindDisplayModeSync({ documentLike: document, windowLike: window });
     return;
@@ -162,7 +174,7 @@ function bindHomeFamilyMobilePageScrollLock(): void {
     windowLike: window,
     navigatorLike: navigator,
     bodyLike: document.body,
-    maxWidth: 760
+    maxWidth: 760,
   });
 }
 
@@ -171,33 +183,43 @@ function resolveIndexDeferredSideEffectScripts(): readonly string[] {
     "settings-and-panel",
     "top-button-style",
     "index-tail",
-    "i18n"
+    "i18n",
   ]).filter((scriptUrl) =>
-    INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES.some((runtimeName) => scriptUrl.includes(runtimeName))
+    INDEX_DEFERRED_SIDE_EFFECT_RUNTIME_NAMES.some((runtimeName) =>
+      scriptUrl.includes(runtimeName),
+    ),
   );
 }
 
-function shouldApplyIndexUiBootstrapFromTs(capabilities: readonly RuntimeCapability[]): boolean {
+function shouldApplyIndexUiBootstrapFromTs(
+  capabilities: readonly RuntimeCapability[],
+): boolean {
   return capabilities.includes("index-tail") || capabilities.includes("play");
 }
 
-function filterLegacyIndexUiScripts(scripts: readonly string[]): readonly string[] {
+function filterLegacyIndexUiScripts(
+  scripts: readonly string[],
+): readonly string[] {
   return scripts.filter(
     (scriptUrl) =>
-      !LEGACY_INDEX_UI_RUNTIME_NAMES.some((runtimeName) => scriptUrl.includes(runtimeName))
+      !LEGACY_INDEX_UI_RUNTIME_NAMES.some((runtimeName) =>
+        scriptUrl.includes(runtimeName),
+      ),
   );
 }
 
 function resolveHomeFamilyRuntimeScriptsForLoad(
   capabilities: readonly RuntimeCapability[],
-  useTsIndexUiBootstrap: boolean
+  useTsIndexUiBootstrap: boolean,
 ): readonly string[] {
   const scripts = resolveHomeFamilyScriptsByCapabilities(capabilities);
   return useTsIndexUiBootstrap ? filterLegacyIndexUiScripts(scripts) : scripts;
 }
 
 async function applyIndexUiBootstrapFromTsRuntime(): Promise<void> {
-  const { applyIndexUiBootstrapFromTsRuntime } = await import("./index-ui-bootstrap");
+  const { applyIndexUiBootstrapFromTsRuntime } = await import(
+    "./index-ui-bootstrap"
+  );
   applyIndexUiBootstrapFromTsRuntime();
 }
 
@@ -209,14 +231,22 @@ async function runBootstrapPipeline(pageId: string): Promise<void> {
   }
 }
 
-async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapability[]): Promise<void> {
+async function loadHomeFamilyRuntimeScripts(
+  capabilities: readonly RuntimeCapability[],
+): Promise<void> {
   const useTsIndexUiBootstrap = shouldApplyIndexUiBootstrapFromTs(capabilities);
   const startupCapabilities = capabilities.filter((capability) =>
-    GAME_STARTUP_CAPABILITIES.has(capability)
+    GAME_STARTUP_CAPABILITIES.has(capability),
   );
-  if (startupCapabilities.length === 0 || startupCapabilities.length === capabilities.length) {
+  if (
+    startupCapabilities.length === 0 ||
+    startupCapabilities.length === capabilities.length
+  ) {
     await loadLegacyScriptsSequentially(
-      resolveHomeFamilyRuntimeScriptsForLoad(capabilities, useTsIndexUiBootstrap)
+      resolveHomeFamilyRuntimeScriptsForLoad(
+        capabilities,
+        useTsIndexUiBootstrap,
+      ),
     );
     if (useTsIndexUiBootstrap) {
       await applyIndexUiBootstrapFromTsRuntime();
@@ -225,21 +255,27 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
   }
 
   const deferredCapabilities = capabilities.filter(
-    (capability) => !GAME_STARTUP_CAPABILITIES.has(capability)
+    (capability) => !GAME_STARTUP_CAPABILITIES.has(capability),
   );
   const uiStartupCapabilities = deferredCapabilities.filter((capability) =>
-    UI_STARTUP_CAPABILITIES.has(capability)
+    UI_STARTUP_CAPABILITIES.has(capability),
   );
   const backgroundCapabilities = deferredCapabilities.filter(
-    (capability) => !UI_STARTUP_CAPABILITIES.has(capability)
+    (capability) => !UI_STARTUP_CAPABILITIES.has(capability),
   );
 
   await loadLegacyScriptsSequentially(
-    resolveHomeFamilyRuntimeScriptsForLoad(startupCapabilities, useTsIndexUiBootstrap)
+    resolveHomeFamilyRuntimeScriptsForLoad(
+      startupCapabilities,
+      useTsIndexUiBootstrap,
+    ),
   );
   if (uiStartupCapabilities.length > 0) {
     await loadLegacyScriptsSequentially(
-      resolveHomeFamilyRuntimeScriptsForLoad(uiStartupCapabilities, useTsIndexUiBootstrap)
+      resolveHomeFamilyRuntimeScriptsForLoad(
+        uiStartupCapabilities,
+        useTsIndexUiBootstrap,
+      ),
     );
   }
   if (useTsIndexUiBootstrap) {
@@ -247,7 +283,10 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
   }
   if (backgroundCapabilities.length > 0) {
     void loadLegacyScriptsSequentially(
-      resolveHomeFamilyRuntimeScriptsForLoad(backgroundCapabilities, useTsIndexUiBootstrap)
+      resolveHomeFamilyRuntimeScriptsForLoad(
+        backgroundCapabilities,
+        useTsIndexUiBootstrap,
+      ),
     ).catch(() => {});
   }
 }
@@ -255,12 +294,14 @@ async function loadHomeFamilyRuntimeScripts(capabilities: readonly RuntimeCapabi
 async function runIndexDeferredRuntimeLoad(): Promise<void> {
   const sideEffectScripts = resolveIndexDeferredSideEffectScripts();
   const sideEffectsReady =
-    sideEffectScripts.length > 0 ? loadLegacyScriptsSequentially(sideEffectScripts) : Promise.resolve();
+    sideEffectScripts.length > 0
+      ? loadLegacyScriptsSequentially(sideEffectScripts)
+      : Promise.resolve();
   const indexUiReady = sideEffectsReady
     .then(() => applyIndexUiBootstrapFromTsRuntime())
     .catch(() => {});
   const leaderboardReady = loadLegacyScriptsSequentially(
-    resolveHomeFamilyScriptsByCapabilities(["leaderboard"])
+    resolveHomeFamilyScriptsByCapabilities(["leaderboard"]),
   );
 
   await Promise.all([indexUiReady, leaderboardReady]);
@@ -278,15 +319,19 @@ function scheduleIndexDeferredRuntimeLoad(): void {
 
   const requestIdleCallback = (
     window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+      requestIdleCallback?: (
+        callback: () => void,
+        options?: { timeout?: number },
+      ) => number;
     }
   ).requestIdleCallback;
 
   if (typeof requestIdleCallback === "function") {
-    requestIdleCallback(loadDeferredRuntime, { timeout: 1_000 });
+    requestIdleCallback(loadDeferredRuntime, { timeout: 1_500 });
+    return;
   }
 
-  window.setTimeout(loadDeferredRuntime, 0);
+  window.setTimeout(loadDeferredRuntime, 300);
 }
 
 export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
@@ -300,18 +345,24 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
     const storageLike = resolveStorageByName({
       // SAFETY: the helper only reads the named Web Storage property from Window.
       windowLike: window as unknown as Record<string, unknown>,
-      storageName: "localStorage"
+      storageName: "localStorage",
     });
     bindHomeUserDisplay({
       documentLike: document,
       pageId,
       windowLike: window,
-      storageLike
+      storageLike,
     });
   }
 
-  await restoreAuthSession().catch(() => ({ status: "transient_error" as const, code: "NETWORK_ERROR" }));
-  if (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function") {
+  await restoreAuthSession().catch(() => ({
+    status: "transient_error" as const,
+    code: "NETWORK_ERROR",
+  }));
+  if (
+    typeof window !== "undefined" &&
+    typeof window.localStorage?.getItem === "function"
+  ) {
     void accountPaletteSession.bootstrap().catch(() => {});
   }
   bindNightBackgroundSync();
@@ -322,12 +373,14 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   bindHomeFamilyMobilePageScrollLock();
   await runBootstrapPipeline(pageId);
   await bootstrapRankedSessionForHomeFamilyPage(pageId).catch(() => {});
-  registerEngineFacade(
-    typeof window === "undefined" ? undefined : (
-      // SAFETY: the facade adapter reads the browser's registered legacy engine globals.
-      window as unknown as EngineFacadeWindowLike
-    )
-  );
+  const engineFacadeWindow: EngineFacadeWindowLike | undefined =
+    typeof window === "undefined"
+      ? undefined
+      : (() => {
+          // SAFETY: this adapter reads only the legacy engine globals installed on browser Window.
+          return window as unknown as EngineFacadeWindowLike;
+        })();
+  registerEngineFacade(engineFacadeWindow);
   installCryptoRandomRuntime();
   installGameManagerClientRecordIdRuntime();
   installCustomSecondaryTimerRuntime();
@@ -426,21 +479,32 @@ export async function bootstrapHomeFamilyPage(pageId: string): Promise<void> {
   installUndoTileRestoreRuntime();
   installUndoTileSnapshotRuntime();
   if (typeof window !== "undefined" && typeof document !== "undefined") {
-    initOperationFeedbackSettingsUI({ documentLike: document, windowLike: window });
+    initOperationFeedbackSettingsUI({
+      documentLike: document,
+      windowLike: window,
+    });
   }
   if (pageId === "index") {
     await loadLegacyScriptsSequentially([INDEX_STARTUP_BUNDLE_URL]);
     accountPaletteSession.applyToThemeManager(
-      typeof window === "undefined" ? undefined : (window as Window & { ThemeManager?: Record<string, unknown> }).ThemeManager
+      typeof window === "undefined"
+        ? undefined
+        : (window as Window & { ThemeManager?: Record<string, unknown> })
+            .ThemeManager,
     );
     if (manifest.capabilities.includes("announcement")) {
-      await loadLegacyScriptsSequentially(resolveHomeFamilyScriptsByCapabilities(["announcement"]));
+      await loadLegacyScriptsSequentially(
+        resolveHomeFamilyScriptsByCapabilities(["announcement"]),
+      );
     }
     scheduleIndexDeferredRuntimeLoad();
     return;
   }
   await loadHomeFamilyRuntimeScripts(manifest.capabilities);
   accountPaletteSession.applyToThemeManager(
-    typeof window === "undefined" ? undefined : (window as Window & { ThemeManager?: Record<string, unknown> }).ThemeManager
+    typeof window === "undefined"
+      ? undefined
+      : (window as Window & { ThemeManager?: Record<string, unknown> })
+          .ThemeManager,
   );
 }

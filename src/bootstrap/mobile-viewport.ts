@@ -8,13 +8,15 @@ interface WindowLike {
   matchMedia?(query: string): MatchMediaResultLike;
   visualViewport?: {
     height?: number;
-    addEventListener?(name: string, listener: () => void): unknown;
+    addEventListener?(name: string, listener: () => void): void;
   } | null;
-  addEventListener?(name: string, listener: () => void): unknown;
-  requestAnimationFrame?(callback: () => void): unknown;
-  setTimeout?(callback: () => void, delay?: number): unknown;
-  ResizeObserver?: new (callback: () => void) => {
-    observe(target: unknown): unknown;
+  addEventListener?(name: string, listener: () => void): void;
+  requestAnimationFrame?(callback: () => void): number;
+  setTimeout?(callback: () => void, delay?: number): number;
+  ResizeObserver?: new (
+    callback: () => void,
+  ) => {
+    observe(target: unknown): void;
   };
   __mobilePageScrollLockBound?: boolean;
 }
@@ -32,24 +34,32 @@ interface BodyLike {
 interface AttributeElementLike {
   scrollHeight?: number;
   clientHeight?: number;
-  setAttribute?(name: string, value: string): unknown;
-  removeAttribute?(name: string): unknown;
+  setAttribute?(name: string, value: string): void;
+  removeAttribute?(name: string): void;
 }
+
+interface ObservedElementLike extends AttributeElementLike {}
 
 interface DocumentLike {
   documentElement?: AttributeElementLike | null;
   body?: BodyLike | null;
-  querySelector?(selector: string): unknown;
+  querySelector?(selector: string): ObservedElementLike | null;
   addEventListener?(
     name: string,
     listener: (event: unknown) => void,
-    options?: unknown
-  ): unknown;
+    options?: unknown,
+  ): void;
+}
+
+interface TouchMoveTargetLike {
+  closest?(selector: string): TouchMoveTargetLike | null;
+  parentElement?: TouchMoveTargetLike | null;
 }
 
 interface TouchMoveEventLike {
+  target?: TouchMoveTargetLike | null;
   cancelable?: boolean;
-  preventDefault?(): unknown;
+  preventDefault?(): void;
 }
 
 export interface ViewportWidthOptions {
@@ -65,7 +75,9 @@ export interface PageScopeOptions {
   bodyLike?: BodyLike | null | undefined;
 }
 
-export interface MobilePageScrollLockOptions extends MobileGameViewportOptions, PageScopeOptions {
+export interface MobilePageScrollLockOptions
+  extends MobileGameViewportOptions,
+    PageScopeOptions {
   documentLike?: DocumentLike | null | undefined;
   tolerancePx?: number | null | undefined;
   attributeName?: string | null | undefined;
@@ -92,7 +104,9 @@ export function isViewportAtMost(options: ViewportWidthOptions): boolean {
     if (typeof win.matchMedia === "function") {
       return !!win.matchMedia(query).matches;
     }
-  } catch (_err) {}
+  } catch {
+    // Fall back to innerWidth when matchMedia is unavailable or throws.
+  }
 
   return typeof win.innerWidth === "number" && win.innerWidth <= maxWidth;
 }
@@ -101,14 +115,19 @@ export function isCompactGameViewport(options: ViewportWidthOptions): boolean {
   return isViewportAtMost(options);
 }
 
-export function isTimerboxCollapseViewport(options: ViewportWidthOptions): boolean {
+export function isTimerboxCollapseViewport(
+  options: ViewportWidthOptions,
+): boolean {
   return isViewportAtMost(options);
 }
 
-export function isMobileGameViewport(options: MobileGameViewportOptions): boolean {
+export function isMobileGameViewport(
+  options: MobileGameViewportOptions,
+): boolean {
   const opts = options || {};
   const win = opts.windowLike || null;
-  if (!isViewportAtMost({ windowLike: win, maxWidth: opts.maxWidth })) return false;
+  if (!isViewportAtMost({ windowLike: win, maxWidth: opts.maxWidth }))
+    return false;
 
   let coarsePointer = false;
   let noHover = false;
@@ -117,16 +136,20 @@ export function isMobileGameViewport(options: MobileGameViewportOptions): boolea
       coarsePointer = !!win.matchMedia("(pointer: coarse)").matches;
       noHover = !!win.matchMedia("(hover: none)").matches;
     }
-  } catch (_err) {}
+  } catch {
+    coarsePointer = false;
+    noHover = false;
+  }
 
   let ua = "";
   const nav = opts.navigatorLike || null;
   try {
     ua = nav && typeof nav.userAgent === "string" ? nav.userAgent : "";
-  } catch (_err) {
+  } catch {
     ua = "";
   }
-  const mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const mobileUa =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 
   return coarsePointer || noHover || mobileUa;
 }
@@ -156,15 +179,24 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function resolveBodyLike(options: MobilePageScrollLockOptions): BodyLike | null {
+function resolveBodyLike(
+  options: MobilePageScrollLockOptions,
+): BodyLike | null {
   if (options.bodyLike) return options.bodyLike;
   const doc = options.documentLike || null;
   return doc && doc.body ? doc.body : null;
 }
 
-function resolveViewportHeight(windowLike: WindowLike | null, root: AttributeElementLike | null): number {
-  const visualViewport = windowLike && windowLike.visualViewport ? windowLike.visualViewport : null;
-  const visualHeight = toFiniteNumber(visualViewport && visualViewport.height, 0);
+function resolveViewportHeight(
+  windowLike: WindowLike | null,
+  root: AttributeElementLike | null,
+): number {
+  const visualViewport =
+    windowLike && windowLike.visualViewport ? windowLike.visualViewport : null;
+  const visualHeight = toFiniteNumber(
+    visualViewport && visualViewport.height,
+    0,
+  );
   if (visualHeight > 0) return visualHeight;
   const innerHeight = toFiniteNumber(windowLike && windowLike.innerHeight, 0);
   if (innerHeight > 0) return innerHeight;
@@ -173,18 +205,18 @@ function resolveViewportHeight(windowLike: WindowLike | null, root: AttributeEle
 
 function resolvePageScrollHeight(
   root: AttributeElementLike | null,
-  body: BodyLike | null
+  body: BodyLike | null,
 ): number {
   return Math.max(
     toFiniteNumber(root && root.scrollHeight, 0),
     toFiniteNumber(body && body.scrollHeight, 0),
     toFiniteNumber(root && root.clientHeight, 0),
-    toFiniteNumber(body && body.clientHeight, 0)
+    toFiniteNumber(body && body.clientHeight, 0),
   );
 }
 
 export function resolveMobilePageScrollLockState(
-  options: MobilePageScrollLockOptions
+  options: MobilePageScrollLockOptions,
 ): MobilePageScrollLockState {
   const opts = options || {};
   const doc = opts.documentLike || null;
@@ -197,23 +229,27 @@ export function resolveMobilePageScrollLockState(
   const isMobileViewport = isMobileGameViewport({
     windowLike: win,
     navigatorLike: opts.navigatorLike,
-    maxWidth: opts.maxWidth
+    maxWidth: opts.maxWidth,
   });
   const isPageScope = isTimerboxMobileScope({ bodyLike: body });
   const overflowPx = Math.max(0, scrollHeight - viewportHeight);
 
   return {
-    shouldLock: isMobileViewport && isPageScope && viewportHeight > 0 && overflowPx <= tolerancePx,
+    shouldLock:
+      isMobileViewport &&
+      isPageScope &&
+      viewportHeight > 0 &&
+      overflowPx <= tolerancePx,
     isMobileViewport,
     isPageScope,
     viewportHeight,
     scrollHeight,
-    overflowPx
+    overflowPx,
   };
 }
 
 export function applyMobilePageScrollLock(
-  options: MobilePageScrollLockOptions
+  options: MobilePageScrollLockOptions,
 ): MobilePageScrollLockState {
   const opts = options || {};
   const doc = opts.documentLike || null;
@@ -223,13 +259,18 @@ export function applyMobilePageScrollLock(
       ? opts.attributeName
       : "data-mobile-page-scroll-lock";
   const lockedValue =
-    typeof opts.lockedValue === "string" && opts.lockedValue ? opts.lockedValue : "1";
+    typeof opts.lockedValue === "string" && opts.lockedValue
+      ? opts.lockedValue
+      : "1";
   const state = resolveMobilePageScrollLockState(opts);
 
   if (root) {
     if (state.shouldLock && typeof root.setAttribute === "function") {
       root.setAttribute(attributeName, lockedValue);
-    } else if (!state.shouldLock && typeof root.removeAttribute === "function") {
+    } else if (
+      !state.shouldLock &&
+      typeof root.removeAttribute === "function"
+    ) {
       root.removeAttribute(attributeName);
     }
   }
@@ -237,13 +278,28 @@ export function applyMobilePageScrollLock(
   return state;
 }
 
+function isTouchMoveInsideScrollableSurface(
+  target: TouchMoveTargetLike | null | undefined,
+): boolean {
+  let current = target || null;
+  const selectors =
+    ".settings-modal-content, .replay-modal-content, .announcement-modal-content, .mobile-hint-body";
+  while (current) {
+    if (typeof current.closest === "function" && current.closest(selectors))
+      return true;
+    current = current.parentElement || null;
+  }
+  return false;
+}
+
 export function handleMobilePageScrollLockTouchMove(
   options: MobilePageScrollLockOptions,
-  eventLike: TouchMoveEventLike | null | undefined
+  eventLike: TouchMoveEventLike | null | undefined,
 ): boolean {
   const state = resolveMobilePageScrollLockState(options || {});
   if (!state.shouldLock) return false;
   const eventRecord = eventLike || null;
+  if (isTouchMoveInsideScrollableSurface(eventRecord?.target)) return false;
   if (
     eventRecord &&
     eventRecord.cancelable !== false &&
@@ -255,14 +311,14 @@ export function handleMobilePageScrollLockTouchMove(
   return false;
 }
 
-export function bindMobilePageScrollLock(options: MobilePageScrollLockOptions): MobilePageScrollLockState {
+export function bindMobilePageScrollLock(
+  options: MobilePageScrollLockOptions,
+): MobilePageScrollLockState {
   const opts = options || {};
   const win = opts.windowLike || null;
   const doc = opts.documentLike || null;
-  const sync = function (): MobilePageScrollLockState {
-    return applyMobilePageScrollLock(opts);
-  };
-  const scheduleSync = function (): void {
+  const sync = (): MobilePageScrollLockState => applyMobilePageScrollLock(opts);
+  const scheduleSync = (): void => {
     if (win && typeof win.requestAnimationFrame === "function") {
       win.requestAnimationFrame(sync);
       return;
@@ -290,10 +346,10 @@ export function bindMobilePageScrollLock(options: MobilePageScrollLockOptions): 
   if (doc && typeof doc.addEventListener === "function") {
     doc.addEventListener(
       "touchmove",
-      function (event: unknown): void {
+      (event: unknown): void => {
         handleMobilePageScrollLockTouchMove(opts, event as TouchMoveEventLike);
       },
-      { passive: false }
+      { passive: false },
     );
   }
   const ResizeObserverCtor = win.ResizeObserver;
@@ -304,7 +360,9 @@ export function bindMobilePageScrollLock(options: MobilePageScrollLockOptions): 
     if (root) observer.observe(root);
     if (body) observer.observe(body);
     const container =
-      doc && typeof doc.querySelector === "function" ? doc.querySelector(".container") : null;
+      doc && typeof doc.querySelector === "function"
+        ? doc.querySelector(".container")
+        : null;
     if (container) observer.observe(container);
   }
 

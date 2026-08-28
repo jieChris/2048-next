@@ -7,7 +7,7 @@ const HOME_FAMILY_ENTRIES = [
   "src/entries/undo.ts",
   "src/entries/capped.ts",
   "src/entries/practice-board.ts",
-  "src/entries/replay.ts"
+  "src/entries/replay.ts",
 ] as const;
 
 describe("first-load performance assets", () => {
@@ -15,23 +15,43 @@ describe("first-load performance assets", () => {
     const html = readFileSync("2048.html", "utf8");
 
     expect(html).toContain('type="module" src="./src/entries/index.ts"');
-    expect(html).not.toContain('rel="preload" href="js/home_standard_startup_bundle.js');
+    expect(html).not.toContain(
+      'rel="preload" href="js/home_standard_startup_bundle.js',
+    );
     expect(html).not.toContain("core_game_manager_replay_helpers_runtime.js");
     expect(html).not.toContain("home_standard_deferred_bundle");
   });
 
+  it("keeps account surfaces visible while i18n fills in dynamic copy", () => {
+    for (const cssPath of [
+      "style/account_settings_page.css",
+      "style/account_page.css",
+      "style/register_page.css",
+      "style/password_page.css",
+      "style/user_profile_page.css",
+    ]) {
+      const css = readFileSync(cssPath, "utf8");
+      expect(css).not.toMatch(/data-i18n-ready="0"[^}]*visibility:\s*hidden/u);
+    }
+  });
   it("loads the game dialog in the startup bundle before restart handling", () => {
     const viteConfig = readFileSync("vite.config.ts", "utf8");
-    const startupStart = viteConfig.indexOf("const HOME_STANDARD_STARTUP_FILES = [");
+    const startupStart = viteConfig.indexOf(
+      "const HOME_STANDARD_STARTUP_FILES = [",
+    );
     const startupEnd = viteConfig.indexOf("];", startupStart);
-    const deferredStart = viteConfig.indexOf("const HOME_STANDARD_DEFERRED_FILES = [");
+    const deferredStart = viteConfig.indexOf(
+      "const HOME_STANDARD_DEFERRED_FILES = [",
+    );
     const deferredEnd = viteConfig.indexOf("];", deferredStart);
     const startupBlock = viteConfig.slice(startupStart, startupEnd);
     const deferredBlock = viteConfig.slice(deferredStart, deferredEnd);
 
     expect(startupBlock).toContain('"game_dialog_runtime.js"');
     expect(startupBlock.indexOf('"game_dialog_runtime.js"')).toBeLessThan(
-      startupBlock.indexOf('"core_game_manager_restart_setup_helpers_runtime.js"')
+      startupBlock.indexOf(
+        '"core_game_manager_restart_setup_helpers_runtime.js"',
+      ),
     );
     expect(deferredBlock).not.toContain('"game_dialog_runtime.js"');
   });
@@ -40,20 +60,28 @@ describe("first-load performance assets", () => {
     for (const entryPath of HOME_FAMILY_ENTRIES) {
       const entry = readFileSync(entryPath, "utf8");
 
-      expect(entry, entryPath).toContain('await import("./home-family-bootstrap")');
+      expect(entry, entryPath).toContain(
+        'await import("./home-family-bootstrap")',
+      );
       expect(entry, entryPath).not.toContain(
-        'import { bootstrapHomeFamilyPage } from "./home-family-bootstrap"'
+        'import { bootstrapHomeFamilyPage } from "./home-family-bootstrap"',
       );
     }
   });
 
   it("keeps idle index UI runtimes out of the home-family bootstrap chunk", () => {
-    const homeFamilyBootstrap = readFileSync("src/entries/home-family-bootstrap.ts", "utf8");
-    const indexUiBootstrap = readFileSync("src/entries/index-ui-bootstrap.ts", "utf8");
+    const homeFamilyBootstrap = readFileSync(
+      "src/entries/home-family-bootstrap.ts",
+      "utf8",
+    );
+    const indexUiBootstrap = readFileSync(
+      "src/entries/index-ui-bootstrap.ts",
+      "utf8",
+    );
     const idleOnlyRuntimeImports = [
       '"../bootstrap/settings-modal-page-host"',
       '"../bootstrap/replay-export"',
-      '"../bootstrap/index-ui-startup-host"'
+      '"../bootstrap/index-ui-startup-host"',
     ];
 
     for (const runtimeImport of idleOnlyRuntimeImports) {
@@ -72,7 +100,9 @@ describe("first-load performance assets", () => {
 
   it("keeps local CSS imports build-resolvable instead of cache-keyed", () => {
     const css = readFileSync("style/main.css", "utf8");
-    const localImports = Array.from(css.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gu))
+    const localImports = Array.from(
+      css.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gu),
+    )
       .map((match) => match[1])
       .filter((url) => !/^(?:https?:)?\/\//u.test(url));
 
@@ -84,6 +114,8 @@ describe("first-load performance assets", () => {
     const viteConfig = readFileSync("vite.config.ts", "utf8");
 
     expect(viteConfig).not.toMatch(/favicon_preview\s*:/);
-    expect(viteConfig).not.toContain('resolve(__dirname, "favicon-preview.html")');
+    expect(viteConfig).not.toContain(
+      'resolve(__dirname, "favicon-preview.html")',
+    );
   });
 });

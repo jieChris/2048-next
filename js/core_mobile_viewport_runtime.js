@@ -30,7 +30,8 @@
   function isMobileGameViewport(options) {
     var opts = options || {};
     var win = opts.windowLike || null;
-    if (!isViewportAtMost({ windowLike: win, maxWidth: opts.maxWidth })) return false;
+    if (!isViewportAtMost({ windowLike: win, maxWidth: opts.maxWidth }))
+      return false;
 
     var coarsePointer = false;
     var noHover = false;
@@ -48,7 +49,8 @@
     } catch (_err) {
       ua = "";
     }
-    var mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+    var mobileUa =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 
     return coarsePointer || noHover || mobileUa;
   }
@@ -85,8 +87,14 @@
   }
 
   function resolveViewportHeight(windowLike, root) {
-    var visualViewport = windowLike && windowLike.visualViewport ? windowLike.visualViewport : null;
-    var visualHeight = toFiniteNumber(visualViewport && visualViewport.height, 0);
+    var visualViewport =
+      windowLike && windowLike.visualViewport
+        ? windowLike.visualViewport
+        : null;
+    var visualHeight = toFiniteNumber(
+      visualViewport && visualViewport.height,
+      0,
+    );
     if (visualHeight > 0) return visualHeight;
     var innerHeight = toFiniteNumber(windowLike && windowLike.innerHeight, 0);
     if (innerHeight > 0) return innerHeight;
@@ -98,7 +106,7 @@
       toFiniteNumber(root && root.scrollHeight, 0),
       toFiniteNumber(body && body.scrollHeight, 0),
       toFiniteNumber(root && root.clientHeight, 0),
-      toFiniteNumber(body && body.clientHeight, 0)
+      toFiniteNumber(body && body.clientHeight, 0),
     );
   }
 
@@ -114,18 +122,22 @@
     var isMobileViewport = isMobileGameViewport({
       windowLike: win,
       navigatorLike: opts.navigatorLike,
-      maxWidth: opts.maxWidth
+      maxWidth: opts.maxWidth,
     });
     var isPageScope = isTimerboxMobileScope({ bodyLike: body });
     var overflowPx = Math.max(0, scrollHeight - viewportHeight);
 
     return {
-      shouldLock: isMobileViewport && isPageScope && viewportHeight > 0 && overflowPx <= tolerancePx,
+      shouldLock:
+        isMobileViewport &&
+        isPageScope &&
+        viewportHeight > 0 &&
+        overflowPx <= tolerancePx,
       isMobileViewport: isMobileViewport,
       isPageScope: isPageScope,
       viewportHeight: viewportHeight,
       scrollHeight: scrollHeight,
-      overflowPx: overflowPx
+      overflowPx: overflowPx,
     };
   }
 
@@ -138,13 +150,18 @@
         ? opts.attributeName
         : "data-mobile-page-scroll-lock";
     var lockedValue =
-      typeof opts.lockedValue === "string" && opts.lockedValue ? opts.lockedValue : "1";
+      typeof opts.lockedValue === "string" && opts.lockedValue
+        ? opts.lockedValue
+        : "1";
     var state = resolveMobilePageScrollLockState(opts);
 
     if (root) {
       if (state.shouldLock && typeof root.setAttribute === "function") {
         root.setAttribute(attributeName, lockedValue);
-      } else if (!state.shouldLock && typeof root.removeAttribute === "function") {
+      } else if (
+        !state.shouldLock &&
+        typeof root.removeAttribute === "function"
+      ) {
         root.removeAttribute(attributeName);
       }
     }
@@ -152,10 +169,23 @@
     return state;
   }
 
+  function isTouchMoveInsideScrollableSurface(target) {
+    var current = target || null;
+    var selectors =
+      ".settings-modal-content, .replay-modal-content, .announcement-modal-content, .mobile-hint-body";
+    while (current) {
+      if (typeof current.closest === "function" && current.closest(selectors))
+        return true;
+      current = current.parentElement || null;
+    }
+    return false;
+  }
+
   function handleMobilePageScrollLockTouchMove(options, eventLike) {
     var state = resolveMobilePageScrollLockState(options || {});
     if (!state.shouldLock) return false;
     var eventRecord = eventLike || null;
+    if (isTouchMoveInsideScrollableSurface(eventRecord.target)) return false;
     if (
       eventRecord &&
       eventRecord.cancelable !== false &&
@@ -196,7 +226,10 @@
       win.addEventListener("load", scheduleSync);
     }
     var visualViewport = win.visualViewport || null;
-    if (visualViewport && typeof visualViewport.addEventListener === "function") {
+    if (
+      visualViewport &&
+      typeof visualViewport.addEventListener === "function"
+    ) {
       visualViewport.addEventListener("resize", scheduleSync);
     }
     if (doc && typeof doc.addEventListener === "function") {
@@ -205,7 +238,7 @@
         function (event) {
           handleMobilePageScrollLockTouchMove(opts, event);
         },
-        { passive: false }
+        { passive: false },
       );
     }
     var ResizeObserverCtor = win.ResizeObserver;
@@ -216,7 +249,9 @@
       if (root) observer.observe(root);
       if (body) observer.observe(body);
       var container =
-        doc && typeof doc.querySelector === "function" ? doc.querySelector(".container") : null;
+        doc && typeof doc.querySelector === "function"
+          ? doc.querySelector(".container")
+          : null;
       if (container) observer.observe(container);
     }
 
@@ -226,17 +261,23 @@
 
   global.CoreMobileViewportRuntime = global.CoreMobileViewportRuntime || {};
   global.CoreMobileViewportRuntime.isViewportAtMost = isViewportAtMost;
-  global.CoreMobileViewportRuntime.isCompactGameViewport = isCompactGameViewport;
-  global.CoreMobileViewportRuntime.isTimerboxCollapseViewport = isTimerboxCollapseViewport;
+  global.CoreMobileViewportRuntime.isCompactGameViewport =
+    isCompactGameViewport;
+  global.CoreMobileViewportRuntime.isTimerboxCollapseViewport =
+    isTimerboxCollapseViewport;
   global.CoreMobileViewportRuntime.isMobileGameViewport = isMobileGameViewport;
-  global.CoreMobileViewportRuntime.resolvePageScopeValue = resolvePageScopeValue;
+  global.CoreMobileViewportRuntime.resolvePageScopeValue =
+    resolvePageScopeValue;
   global.CoreMobileViewportRuntime.isGamePageScope = isGamePageScope;
   global.CoreMobileViewportRuntime.isPracticePageScope = isPracticePageScope;
-  global.CoreMobileViewportRuntime.isTimerboxMobileScope = isTimerboxMobileScope;
+  global.CoreMobileViewportRuntime.isTimerboxMobileScope =
+    isTimerboxMobileScope;
   global.CoreMobileViewportRuntime.resolveMobilePageScrollLockState =
     resolveMobilePageScrollLockState;
-  global.CoreMobileViewportRuntime.applyMobilePageScrollLock = applyMobilePageScrollLock;
+  global.CoreMobileViewportRuntime.applyMobilePageScrollLock =
+    applyMobilePageScrollLock;
   global.CoreMobileViewportRuntime.handleMobilePageScrollLockTouchMove =
     handleMobilePageScrollLockTouchMove;
-  global.CoreMobileViewportRuntime.bindMobilePageScrollLock = bindMobilePageScrollLock;
+  global.CoreMobileViewportRuntime.bindMobilePageScrollLock =
+    bindMobilePageScrollLock;
 })(typeof window !== "undefined" ? window : undefined);
