@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 function isPanelTimerRecordObject(value) {
   return !!(value && typeof value === "object");
 }
@@ -38,23 +39,30 @@ function getTimerModuleViewMode(manager) {
     manager,
     "normalizeTimerModuleViewMode",
     manager.timerModuleView,
-    false
+    false,
   );
   return manager.resolveNormalizedCoreValueOrFallback(
     coreCallResult,
     function (viewByCore) {
-      return viewByCore === "hidden" ? "hidden" : (viewByCore === "timer" ? "timer" : undefined);
+      return viewByCore === "hidden"
+        ? "hidden"
+        : viewByCore === "timer"
+          ? "timer"
+          : undefined;
     },
     function () {
       return manager.timerModuleView === "hidden" ? "hidden" : "timer";
-    }
+    },
   );
 }
 
 function updateTimerModuleBaseHeight(manager, timerBox) {
   var height = Math.max(timerBox.offsetHeight || 0, timerBox.scrollHeight || 0);
   if (height > 0) {
-    manager.timerModuleBaseHeight = Math.max(manager.timerModuleBaseHeight || 0, height);
+    manager.timerModuleBaseHeight = Math.max(
+      manager.timerModuleBaseHeight || 0,
+      height,
+    );
   }
 }
 
@@ -69,7 +77,8 @@ function applyTimerModuleViewLayout(manager, timerBox, next) {
     timerBox.classList.remove("timerbox-hidden-mode");
     timerBox.classList.remove("timerbox-leaderboard-mode");
     var root = timerBox.ownerDocument && timerBox.ownerDocument.documentElement;
-    if (root && typeof root.removeAttribute === "function") root.removeAttribute("data-initial-timer-leaderboard");
+    if (root && typeof root.removeAttribute === "function")
+      root.removeAttribute("data-initial-timer-leaderboard");
   }
   if (manager.timerModuleBaseHeight > 0) {
     timerBox.style.minHeight = manager.timerModuleBaseHeight + "px";
@@ -80,11 +89,15 @@ function createTimerModuleViewNextMapPayload(manager, baseMap, next) {
   return {
     map: baseMap,
     mode: manager.mode,
-    view: next
+    view: next,
   };
 }
 
-function resolveTimerModuleViewNextMapFromCore(manager, coreCallResult, baseMap) {
+function resolveTimerModuleViewNextMapFromCore(
+  manager,
+  coreCallResult,
+  baseMap,
+) {
   var nextMap = manager.resolveNormalizedCoreValueOrFallback(
     coreCallResult,
     function (coreValue) {
@@ -92,27 +105,33 @@ function resolveTimerModuleViewNextMapFromCore(manager, coreCallResult, baseMap)
     },
     function () {
       return baseMap;
-    }
+    },
   );
   return manager.isNonArrayObject(nextMap) ? nextMap : baseMap;
 }
 
 function resolveTimerModuleViewNextMap(manager, next) {
-  var map = manager.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
+  var map = manager.readLocalStorageJsonMap(
+    GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY,
+  );
   var baseMap = manager.isNonArrayObject(map) ? map : {};
   var coreCallResult = callCoreStorageRuntime(
     manager,
     "writeTimerModuleViewForModeToMap",
     createTimerModuleViewNextMapPayload(manager, baseMap, next),
-    false
+    false,
   );
-  return resolveTimerModuleViewNextMapFromCore(manager, coreCallResult, baseMap);
+  return resolveTimerModuleViewNextMapFromCore(
+    manager,
+    coreCallResult,
+    baseMap,
+  );
 }
 
 function createWriteTimerModuleViewMapPayload(nextMap) {
   return {
     key: GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY,
-    map: nextMap
+    map: nextMap,
   };
 }
 
@@ -122,7 +141,7 @@ function writeTimerModuleViewMapFallback(manager, nextMap) {
   try {
     storage.setItem(
       GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY,
-      JSON.stringify(manager.isNonArrayObject(nextMap) ? nextMap : {})
+      JSON.stringify(manager.isNonArrayObject(nextMap) ? nextMap : {}),
     );
     return true;
   } catch (_errWrite) {
@@ -135,11 +154,14 @@ function writeTimerModuleViewMap(manager, nextMap) {
     manager,
     "writeStorageJsonMapFromContext",
     createWriteTimerModuleViewMapPayload(nextMap),
-    true
+    true,
   );
-  return manager.resolveCoreBooleanCallOrFallback(writeCoreCallResult, function () {
-    return writeTimerModuleViewMapFallback(manager, nextMap);
-  });
+  return manager.resolveCoreBooleanCallOrFallback(
+    writeCoreCallResult,
+    function () {
+      return writeTimerModuleViewMapFallback(manager, nextMap);
+    },
+  );
 }
 
 function persistTimerModuleView(manager, next) {
@@ -175,20 +197,28 @@ function resolveVisibleTimerUpdateIntervalMs(manager) {
     [manager.width, manager.height],
     MIN_TIMER_UPDATE_INTERVAL_MS,
     function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreNumericCallOrFallback(coreCallResult, function () {
-      var area = (currentManager.width || 4) * (currentManager.height || 4);
-      if (area >= 100) return 50;
-      if (area >= 64) return 33;
-      return MIN_TIMER_UPDATE_INTERVAL_MS;
-    });
-    }
+      return currentManager.resolveCoreNumericCallOrFallback(
+        coreCallResult,
+        function () {
+          var area = (currentManager.width || 4) * (currentManager.height || 4);
+          if (area >= 100) return 50;
+          if (area >= 64) return 33;
+          return MIN_TIMER_UPDATE_INTERVAL_MS;
+        },
+      );
+    },
   );
 }
 
 function resolveTimerUpdateIntervalMs(manager) {
-  var visibleInterval = Math.floor(Number(resolveVisibleTimerUpdateIntervalMs(manager)) || MIN_TIMER_UPDATE_INTERVAL_MS);
-  if (visibleInterval < MIN_TIMER_UPDATE_INTERVAL_MS) visibleInterval = MIN_TIMER_UPDATE_INTERVAL_MS;
-  if (isDocumentHiddenLike()) return Math.max(visibleInterval, HIDDEN_TIMER_UPDATE_INTERVAL_MS);
+  var visibleInterval = Math.floor(
+    Number(resolveVisibleTimerUpdateIntervalMs(manager)) ||
+      MIN_TIMER_UPDATE_INTERVAL_MS,
+  );
+  if (visibleInterval < MIN_TIMER_UPDATE_INTERVAL_MS)
+    visibleInterval = MIN_TIMER_UPDATE_INTERVAL_MS;
+  if (isDocumentHiddenLike())
+    return Math.max(visibleInterval, HIDDEN_TIMER_UPDATE_INTERVAL_MS);
   return visibleInterval;
 }
 
@@ -209,30 +239,55 @@ function restartTimerIntervalWithCurrentSettings(manager) {
 
 function bindTimerVisibilityChangeListener(manager) {
   if (!manager || manager._timerVisibilityBound) return;
-  if (typeof document === "undefined" || !document || typeof document.addEventListener !== "function") return;
+  if (
+    typeof document === "undefined" ||
+    !document ||
+    typeof document.addEventListener !== "function"
+  )
+    return;
   manager._timerVisibilityBound = true;
   manager._timerVisibilityHandler = function () {
     if (manager && manager.timerFrozen) return;
     restartTimerIntervalWithCurrentSettings(manager);
   };
-  document.addEventListener("visibilitychange", manager._timerVisibilityHandler);
+  document.addEventListener(
+    "visibilitychange",
+    manager._timerVisibilityHandler,
+  );
 }
 
 function shouldUpdateStatsPanelAtTimerTick(manager, overlay, time) {
   if (!(overlay && overlay.style.display !== "none")) return false;
-  if (manager.lastStatsPanelUpdateAt && (time - manager.lastStatsPanelUpdateAt) < 100) return false;
+  if (
+    manager.lastStatsPanelUpdateAt &&
+    time - manager.lastStatsPanelUpdateAt < 100
+  )
+    return false;
   return true;
 }
 
 function resolveCoreGameManagerTimerTickRuntime() {
-  if (typeof CoreGameManagerTimerTickRuntime !== "undefined" && CoreGameManagerTimerTickRuntime) return CoreGameManagerTimerTickRuntime;
-  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerTickRuntime) return window.CoreGameManagerTimerTickRuntime;
+  if (
+    typeof CoreGameManagerTimerTickRuntime !== "undefined" &&
+    CoreGameManagerTimerTickRuntime
+  )
+    return CoreGameManagerTimerTickRuntime;
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerTimerTickRuntime
+  )
+    return window.CoreGameManagerTimerTickRuntime;
   return null;
 }
 
 function executeTimerTickFallback(manager, nowMs) {
-  if (!(manager.startTime && typeof manager.startTime.getTime === "function")) return;
-  if (typeof checkAndHandleMoveTimeout === "function" && checkAndHandleMoveTimeout(manager, nowMs)) {
+  if (!(manager.startTime && typeof manager.startTime.getTime === "function"))
+    return;
+  if (
+    typeof checkAndHandleMoveTimeout === "function" &&
+    checkAndHandleMoveTimeout(manager, nowMs)
+  ) {
     return;
   }
   var time = resolveTimerElapsedMs(manager, nowMs);
@@ -253,24 +308,37 @@ function executeTimerTick(manager) {
   var nowMs = Date.now();
   var runtime = resolveCoreGameManagerTimerTickRuntime();
   if (runtime && typeof runtime.executeTimerTick === "function") {
-    return runtime.executeTimerTick(manager, {
-      checkAndHandleMoveTimeout: typeof checkAndHandleMoveTimeout === "function" ? checkAndHandleMoveTimeout : undefined,
-      resolveTimerElapsedMs: resolveTimerElapsedMs, resolveManagerElementById: resolveManagerElementById,
-      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined,
-      refreshIpsDisplay: refreshIpsDisplay, shouldUpdateStatsPanelAtTimerTick: shouldUpdateStatsPanelAtTimerTick
-    }, nowMs);
+    return runtime.executeTimerTick(
+      manager,
+      {
+        checkAndHandleMoveTimeout:
+          typeof checkAndHandleMoveTimeout === "function"
+            ? checkAndHandleMoveTimeout
+            : undefined,
+        resolveTimerElapsedMs: resolveTimerElapsedMs,
+        resolveManagerElementById: resolveManagerElementById,
+        updateMoveTimeoutHud:
+          typeof updateMoveTimeoutHud === "function"
+            ? updateMoveTimeoutHud
+            : undefined,
+        refreshIpsDisplay: refreshIpsDisplay,
+        shouldUpdateStatsPanelAtTimerTick: shouldUpdateStatsPanelAtTimerTick,
+      },
+      nowMs,
+    );
   }
   return executeTimerTickFallback(manager, nowMs);
 }
 
 function normalizeTimerAnchorMs(rawValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") return null;
+  if (rawValue === undefined || rawValue === null || rawValue === "")
+    return null;
   var ms = Math.floor(Number(rawValue));
   return Number.isFinite(ms) && ms >= 0 ? ms : null;
 }
 
 function resolveTimerModeKey(manager) {
-  return String(manager && (manager.modeKey || manager.mode) || "").trim();
+  return String((manager && (manager.modeKey || manager.mode)) || "").trim();
 }
 
 function resolveTimerWindowLike(manager) {
@@ -291,11 +359,14 @@ function readTimerActiveRankedSession(manager) {
   var storage = windowLike && windowLike.localStorage;
   if (!(storage && typeof storage.getItem === "function")) return null;
   try {
-    var raw = storage.getItem(RANKED_SESSION_ACTIVE_KEY_PREFIX_FOR_TIMER + modeKey);
+    var raw = storage.getItem(
+      RANKED_SESSION_ACTIVE_KEY_PREFIX_FOR_TIMER + modeKey,
+    );
     if (!raw) return null;
     var parsed = JSON.parse(raw);
     if (!(parsed && typeof parsed === "object")) return null;
-    if (parsed.mode_key && String(parsed.mode_key).trim() !== modeKey) return null;
+    if (parsed.mode_key && String(parsed.mode_key).trim() !== modeKey)
+      return null;
     return parsed;
   } catch (_errStorage) {
     return null;
@@ -304,17 +375,25 @@ function readTimerActiveRankedSession(manager) {
 
 function resolveTimerServerNowMs(manager, nowMs) {
   var activeSession = readTimerActiveRankedSession(manager);
-  var issuedAtMs = normalizeTimerAnchorMs(Number(activeSession && activeSession.issued_at) * 1000);
-  var receivedAtMs = normalizeTimerAnchorMs(activeSession && activeSession.client_received_at_ms);
+  var issuedAtMs = normalizeTimerAnchorMs(
+    Number(activeSession && activeSession.issued_at) * 1000,
+  );
+  var receivedAtMs = normalizeTimerAnchorMs(
+    activeSession && activeSession.client_received_at_ms,
+  );
   if (issuedAtMs !== null && receivedAtMs !== null) {
     return Math.max(0, issuedAtMs + Math.max(0, nowMs - receivedAtMs));
   }
-  var pendingServerMs = normalizeTimerAnchorMs(manager && manager.pendingTimerAnchorServerMs);
+  var pendingServerMs = normalizeTimerAnchorMs(
+    manager && manager.pendingTimerAnchorServerMs,
+  );
   return pendingServerMs !== null ? pendingServerMs : null;
 }
 
 function resolveTimerElapsedOffsetMs(manager) {
-  var offsetMs = normalizeTimerAnchorMs(manager && manager.timerElapsedOffsetMs);
+  var offsetMs = normalizeTimerAnchorMs(
+    manager && manager.timerElapsedOffsetMs,
+  );
   if (offsetMs !== null) return offsetMs;
   offsetMs = normalizeTimerAnchorMs(manager && manager.accumulatedTime);
   return offsetMs !== null ? offsetMs : 0;
@@ -343,8 +422,17 @@ function clearActiveTimerAnchors(manager, elapsedMs) {
 }
 
 function resolveCoreGameManagerTimerElapsedRuntime() {
-  if (typeof CoreGameManagerTimerElapsedRuntime !== "undefined" && CoreGameManagerTimerElapsedRuntime) return CoreGameManagerTimerElapsedRuntime;
-  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerElapsedRuntime) return window.CoreGameManagerTimerElapsedRuntime;
+  if (
+    typeof CoreGameManagerTimerElapsedRuntime !== "undefined" &&
+    CoreGameManagerTimerElapsedRuntime
+  )
+    return CoreGameManagerTimerElapsedRuntime;
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerTimerElapsedRuntime
+  )
+    return window.CoreGameManagerTimerElapsedRuntime;
   return null;
 }
 
@@ -354,7 +442,10 @@ function resolveTimerElapsedFromServerAnchor(manager, nowMs) {
   var serverNowMs = resolveTimerServerNowMs(manager, nowMs);
   if (serverNowMs === null) return null;
   var offsetMs = resolveTimerElapsedOffsetMs(manager);
-  return Math.max(0, Math.floor(offsetMs + Math.max(0, serverNowMs - anchorServerMs)));
+  return Math.max(
+    0,
+    Math.floor(offsetMs + Math.max(0, serverNowMs - anchorServerMs)),
+  );
 }
 
 function resolveTimerElapsedFromLocalAnchor(manager, nowMs) {
@@ -370,7 +461,11 @@ function resolveTimerElapsedMsFallback(manager, nowMs) {
   if (serverElapsedMs !== null) return serverElapsedMs;
   var localElapsedMs = resolveTimerElapsedFromLocalAnchor(manager, nowMs);
   if (localElapsedMs !== null) return localElapsedMs;
-  if (manager.timerStatus === 1 && manager.startTime && typeof manager.startTime.getTime === "function") {
+  if (
+    manager.timerStatus === 1 &&
+    manager.startTime &&
+    typeof manager.startTime.getTime === "function"
+  ) {
     return Math.max(0, Math.floor(nowMs - manager.startTime.getTime()));
   }
   return resolveTimerElapsedOffsetMs(manager);
@@ -381,15 +476,24 @@ function resolveTimerElapsedMs(manager, nowMs) {
   if (runtime && typeof runtime.resolveTimerElapsedMs === "function") {
     return runtime.resolveTimerElapsedMs(manager, nowMs, {
       resolveTimerElapsedOffsetMs: resolveTimerElapsedOffsetMs,
-      resolveTimerServerNowMs: resolveTimerServerNowMs
+      resolveTimerServerNowMs: resolveTimerServerNowMs,
     });
   }
   return resolveTimerElapsedMsFallback(manager, nowMs);
 }
 
 function resolveCoreGameManagerTimerStartRuntime() {
-  if (typeof CoreGameManagerTimerStartRuntime !== "undefined" && CoreGameManagerTimerStartRuntime) return CoreGameManagerTimerStartRuntime;
-  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerStartRuntime) return window.CoreGameManagerTimerStartRuntime;
+  if (
+    typeof CoreGameManagerTimerStartRuntime !== "undefined" &&
+    CoreGameManagerTimerStartRuntime
+  )
+    return CoreGameManagerTimerStartRuntime;
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerTimerStartRuntime
+  )
+    return window.CoreGameManagerTimerStartRuntime;
   return null;
 }
 
@@ -407,19 +511,29 @@ function startTimerFallback(manager, nowMs) {
   manager.lastStatsPanelUpdateAt = 0;
   bindTimerVisibilityChangeListener(manager);
   restartTimerIntervalWithCurrentSettings(manager);
-  if (typeof updateMoveTimeoutHud === "function") updateMoveTimeoutHud(manager, nowMs);
+  if (typeof updateMoveTimeoutHud === "function")
+    updateMoveTimeoutHud(manager, nowMs);
 }
 
 function startTimer(manager) {
-  var nowMs = Date.now(), runtime = resolveCoreGameManagerTimerStartRuntime();
+  var nowMs = Date.now(),
+    runtime = resolveCoreGameManagerTimerStartRuntime();
   if (runtime && typeof runtime.startTimer === "function") {
-    return runtime.startTimer(manager, {
-      bindTimerVisibilityChangeListener: bindTimerVisibilityChangeListener,
-      ensureTimerAnchors: ensureTimerAnchors,
-      resolveTimerElapsedMs: resolveTimerElapsedMs,
-      restartTimerIntervalWithCurrentSettings: restartTimerIntervalWithCurrentSettings,
-      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined
-    }, nowMs);
+    return runtime.startTimer(
+      manager,
+      {
+        bindTimerVisibilityChangeListener: bindTimerVisibilityChangeListener,
+        ensureTimerAnchors: ensureTimerAnchors,
+        resolveTimerElapsedMs: resolveTimerElapsedMs,
+        restartTimerIntervalWithCurrentSettings:
+          restartTimerIntervalWithCurrentSettings,
+        updateMoveTimeoutHud:
+          typeof updateMoveTimeoutHud === "function"
+            ? updateMoveTimeoutHud
+            : undefined,
+      },
+      nowMs,
+    );
   }
   return startTimerFallback(manager, nowMs);
 }
@@ -428,7 +542,10 @@ function stopTimer(manager) {
   if (!(manager && manager.timerStatus === 1)) return;
   manager.accumulatedTime = resolveTimerElapsedMs(manager, Date.now());
   clearActiveTimerAnchors(manager, manager.accumulatedTime);
-  manager.timerFrozen = !!(manager.over || (manager.won && !manager.keepPlaying));
+  manager.timerFrozen = !!(
+    manager.over ||
+    (manager.won && !manager.keepPlaying)
+  );
   clearInterval(manager.timerID);
   manager.timerID = null;
   manager.timerStatus = 0;
@@ -439,20 +556,34 @@ function stopTimer(manager) {
 
 function resolvePrettyTimeFallbackString(rawTime) {
   var time = rawTime;
-  if (time < 0) {return "DNF";}
+  if (time < 0) {
+    return "DNF";
+  }
   var bits = time % 1000;
   time = (time - bits) / 1000;
   var secs = time % 60;
   var mins = ((time - secs) / 60) % 60;
   var hours = (time - secs - 60 * mins) / 3600;
   var s = "" + bits;
-  if (bits < 10) {s = "0" + s;}
-  if (bits < 100) {s = "0" + s;}
+  if (bits < 10) {
+    s = "0" + s;
+  }
+  if (bits < 100) {
+    s = "0" + s;
+  }
   s = secs + "." + s;
-  if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
-  if (mins > 0 || hours > 0) {s = mins + ":" + s;}
-  if (mins < 10 && hours > 0) {s = "0" + s;}
-  if (hours > 0) {s = hours + ":" + s;}
+  if (secs < 10 && (mins > 0 || hours > 0)) {
+    s = "0" + s;
+  }
+  if (mins > 0 || hours > 0) {
+    s = mins + ":" + s;
+  }
+  if (mins < 10 && hours > 0) {
+    s = "0" + s;
+  }
+  if (hours > 0) {
+    s = hours + ":" + s;
+  }
   return s;
 }
 
@@ -465,10 +596,13 @@ function formatPrettyTime(manager, time) {
     [time],
     "",
     function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-        return resolvePrettyTimeFallbackString(time);
-      });
-    }
+      return currentManager.resolveCoreStringCallOrFallback(
+        coreCallResult,
+        function () {
+          return resolvePrettyTimeFallbackString(time);
+        },
+      );
+    },
   );
 }
 
@@ -500,11 +634,15 @@ function buildDurationMsResolvePayload(manager, nowMs) {
     timerAnchorServerMs: manager.timerAnchorServerMs,
     timerServerNowMs: resolveTimerServerNowMs(manager, nowMs),
     sessionStartedAt: manager.sessionStartedAt,
-    nowMs: nowMs
+    nowMs: nowMs,
   };
 }
 
-function resolveDurationMsFromCoreResult(currentManager, coreCallResult, nowMs) {
+function resolveDurationMsFromCoreResult(
+  currentManager,
+  coreCallResult,
+  nowMs,
+) {
   return currentManager.resolveNormalizedCoreValueOrFallback(
     coreCallResult,
     function (rawMs) {
@@ -512,7 +650,7 @@ function resolveDurationMsFromCoreResult(currentManager, coreCallResult, nowMs) 
     },
     function () {
       return resolveDurationMsFallbackValue(currentManager, nowMs);
-    }
+    },
   );
 }
 
@@ -526,8 +664,12 @@ function getDurationMs(manager) {
     buildDurationMsResolvePayload(manager, nowMs),
     undefined,
     function (currentManager, coreCallResult) {
-      return resolveDurationMsFromCoreResult(currentManager, coreCallResult, nowMs);
-    }
+      return resolveDurationMsFromCoreResult(
+        currentManager,
+        coreCallResult,
+        nowMs,
+      );
+    },
   );
 }
 
@@ -536,10 +678,11 @@ function cloneResolvedCappedModeState(state) {
   return {
     isCappedMode: !!source.isCappedMode,
     cappedTargetValue:
-      Number.isFinite(source.cappedTargetValue) && Number(source.cappedTargetValue) > 0
+      Number.isFinite(source.cappedTargetValue) &&
+      Number(source.cappedTargetValue) > 0
         ? Number(source.cappedTargetValue)
         : null,
-    isProgressiveCapped64Mode: !!source.isProgressiveCapped64Mode
+    isProgressiveCapped64Mode: !!source.isProgressiveCapped64Mode,
   };
 }
 
@@ -563,21 +706,24 @@ function buildResolvedCappedModeStateFallback(currentManager) {
     isCappedMode: isCappedModeFallback,
     cappedTargetValue: isCappedModeFallback ? Number(maxTile) : null,
     // Disable progressive hidden timer rows for 64-capped mode.
-    isProgressiveCapped64Mode: false
+    isProgressiveCapped64Mode: false,
   };
 }
 
-function resolveResolvedCappedModeStateFromCore(currentManager, coreCallResult) {
+function resolveResolvedCappedModeStateFromCore(
+  currentManager,
+  coreCallResult,
+) {
   return currentManager.resolveNormalizedCoreValueOrFallback(
     coreCallResult,
     function (coreValue) {
       return currentManager.cloneResolvedCappedModeState(
-        normalizePanelTimerRecordObject(coreValue, {})
+        normalizePanelTimerRecordObject(coreValue, {}),
       );
     },
     function () {
       return buildResolvedCappedModeStateFallback(currentManager);
-    }
+    },
   );
 }
 
@@ -586,7 +732,7 @@ function writeResolvedCappedModeStateCache(manager, resolvedState) {
     modeKey: manager.modeKey,
     mode: manager.mode,
     maxTile: manager.maxTile,
-    state: manager.cloneResolvedCappedModeState(resolvedState)
+    state: manager.cloneResolvedCappedModeState(resolvedState),
   };
 }
 
@@ -594,7 +740,7 @@ function createCappedModeStateResolvePayload(manager) {
   return {
     modeKey: manager.modeKey,
     mode: manager.mode,
-    maxTile: manager.maxTile
+    maxTile: manager.maxTile,
   };
 }
 
@@ -606,8 +752,11 @@ function resolveCappedModeStateFromCore(manager) {
     createCappedModeStateResolvePayload(manager),
     undefined,
     function (currentManager, coreCallResult) {
-      return resolveResolvedCappedModeStateFromCore(currentManager, coreCallResult);
-    }
+      return resolveResolvedCappedModeStateFromCore(
+        currentManager,
+        coreCallResult,
+      );
+    },
   );
 }
 
@@ -623,8 +772,17 @@ function resolveCappedModeState(manager) {
 }
 
 function resolveCoreGameManagerTimerRowVisibleStateRuntime() {
-  if (typeof CoreGameManagerTimerRowVisibleStateRuntime !== "undefined" && CoreGameManagerTimerRowVisibleStateRuntime) return CoreGameManagerTimerRowVisibleStateRuntime;
-  if (typeof window !== "undefined" && window && window.CoreGameManagerTimerRowVisibleStateRuntime) return window.CoreGameManagerTimerRowVisibleStateRuntime;
+  if (
+    typeof CoreGameManagerTimerRowVisibleStateRuntime !== "undefined" &&
+    CoreGameManagerTimerRowVisibleStateRuntime
+  )
+    return CoreGameManagerTimerRowVisibleStateRuntime;
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerTimerRowVisibleStateRuntime
+  )
+    return window.CoreGameManagerTimerRowVisibleStateRuntime;
   return null;
 }
 
@@ -667,7 +825,7 @@ function setTimerRowVisibleState(manager, value, visible, keepSpace) {
 }
 
 function resolveProgressiveCapped64UnlockedStateFallback(unlockedState) {
-  var base = { "16": false, "32": false, "64": false };
+  var base = { 16: false, 32: false, 64: false };
   if (!isPanelTimerRecordObject(unlockedState)) return base;
   if (unlockedState["16"] === true) base["16"] = true;
   if (unlockedState["32"] === true) base["32"] = true;
@@ -677,18 +835,31 @@ function resolveProgressiveCapped64UnlockedStateFallback(unlockedState) {
 
 function resolveProgressiveCapped64UnlockedState(manager, unlockedState) {
   if (!manager) return null;
-  return resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "createProgressiveCapped64UnlockedState", unlockedState, undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return normalizePanelTimerRecordObject(coreValue, null);
-    }, function () {
-      return resolveProgressiveCapped64UnlockedStateFallback(unlockedState);
-    });
-  });
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreModeRuntime",
+    "createProgressiveCapped64UnlockedState",
+    unlockedState,
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrFallback(
+        coreCallResult,
+        function (coreValue) {
+          return normalizePanelTimerRecordObject(coreValue, null);
+        },
+        function () {
+          return resolveProgressiveCapped64UnlockedStateFallback(unlockedState);
+        },
+      );
+    },
+  );
 }
 
 function resetProgressiveCapped64Rows(manager) {
   if (!manager) return;
-  manager.capped64Unlocked = manager.resolveProgressiveCapped64UnlockedState(manager.capped64Unlocked);
+  manager.capped64Unlocked = manager.resolveProgressiveCapped64UnlockedState(
+    manager.capped64Unlocked,
+  );
   var values = [16, 32, 64];
   for (var i = 0; i < values.length; i++) {
     manager.setCapped64RowVisible(values[i], false);
@@ -698,25 +869,38 @@ function resetProgressiveCapped64Rows(manager) {
 function resolveCappedTargetValueOrNull(manager, cappedTargetValue) {
   if (!manager) return null;
   var targetValue = Number(cappedTargetValue);
-  targetValue = (Number.isFinite(targetValue) && targetValue > 0) ? targetValue : null;
+  targetValue =
+    Number.isFinite(targetValue) && targetValue > 0 ? targetValue : null;
   if (targetValue !== null) return targetValue;
   var cappedState = manager.resolveCappedModeState();
   var normalized = Number(cappedState.cappedTargetValue);
-  return (Number.isFinite(normalized) && normalized > 0) ? normalized : null;
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : null;
 }
 
 function getCappedTimerLegendClass(manager, cappedTargetValue) {
   if (!manager) return "timertile";
   var targetValue = manager.resolveCappedTargetValueOrNull(cappedTargetValue);
-  return resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "resolveCappedTimerLegendClass", {
-    timerMilestoneSlotByValue: manager.timerMilestoneSlotByValue,
-    cappedTargetValue: targetValue
-  }, "", function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-      var slotId = currentManager.timerMilestoneSlotByValue ? currentManager.timerMilestoneSlotByValue[String(targetValue)] : null;
-      return slotId ? ("timertile timer-legend-" + slotId) : "timertile";
-    });
-  });
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreModeRuntime",
+    "resolveCappedTimerLegendClass",
+    {
+      timerMilestoneSlotByValue: manager.timerMilestoneSlotByValue,
+      cappedTargetValue: targetValue,
+    },
+    "",
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveCoreStringCallOrFallback(
+        coreCallResult,
+        function () {
+          var slotId = currentManager.timerMilestoneSlotByValue
+            ? currentManager.timerMilestoneSlotByValue[String(targetValue)]
+            : null;
+          return slotId ? "timertile timer-legend-" + slotId : "timertile";
+        },
+      );
+    },
+  );
 }
 
 function resolveCappedTimerTargetValue(manager, cappedTargetValue) {
@@ -744,10 +928,13 @@ function getCappedTimerLegendFontSize(manager, cappedTargetValue) {
     targetValue,
     "",
     function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-        return resolveCappedTimerLegendFontSizeFallback(targetValue);
-      });
-    }
+      return currentManager.resolveCoreStringCallOrFallback(
+        coreCallResult,
+        function () {
+          return resolveCappedTimerLegendFontSizeFallback(targetValue);
+        },
+      );
+    },
   );
 }
 
@@ -770,11 +957,14 @@ function createCappedPlaceholderRowValuesPayload(resolvedCappedState) {
   return {
     isCappedMode: resolvedCappedState.isCappedMode,
     cappedTargetValue: resolvedCappedState.cappedTargetValue,
-    timerSlotIds: GameManager.TIMER_SLOT_IDS
+    timerSlotIds: GameManager.TIMER_SLOT_IDS,
   };
 }
 
-function resolveCappedPlaceholderRowValuesFromCore(currentManager, coreCallResult) {
+function resolveCappedPlaceholderRowValuesFromCore(
+  currentManager,
+  coreCallResult,
+) {
   return currentManager.resolveNormalizedCoreValueOrFallback(
     coreCallResult,
     function (coreValues) {
@@ -782,7 +972,7 @@ function resolveCappedPlaceholderRowValuesFromCore(currentManager, coreCallResul
     },
     function () {
       return undefined;
-    }
+    },
   );
 }
 
@@ -794,8 +984,11 @@ function resolveCappedPlaceholderRowValuesByCore(manager, resolvedCappedState) {
     createCappedPlaceholderRowValuesPayload(resolvedCappedState),
     undefined,
     function (currentManager, coreCallResult) {
-      return resolveCappedPlaceholderRowValuesFromCore(currentManager, coreCallResult);
-    }
+      return resolveCappedPlaceholderRowValuesFromCore(
+        currentManager,
+        coreCallResult,
+      );
+    },
   );
 }
 
@@ -813,15 +1006,22 @@ function resolveCappedPlaceholderRowValuesFallback(resolvedCappedState) {
 function getCappedPlaceholderRowValues(manager, cappedState) {
   if (!manager) return [];
   var resolvedCappedState = manager.resolveProvidedCappedModeState(cappedState);
-  var normalizedByCore = resolveCappedPlaceholderRowValuesByCore(manager, resolvedCappedState);
+  var normalizedByCore = resolveCappedPlaceholderRowValuesByCore(
+    manager,
+    resolvedCappedState,
+  );
   if (normalizedByCore) return normalizedByCore;
   return resolveCappedPlaceholderRowValuesFallback(resolvedCappedState);
 }
 
 function resolveOrCreateCappedOverflowContainer(manager, documentLike) {
-  var container = resolveManagerElementById(manager, "capped-timer-overflow-container");
+  var container = resolveManagerElementById(
+    manager,
+    "capped-timer-overflow-container",
+  );
   if (container) return container;
-  if (!(documentLike && typeof documentLike.createElement === "function")) return null;
+  if (!(documentLike && typeof documentLike.createElement === "function"))
+    return null;
   container = documentLike.createElement("div");
   if (!container) return null;
   container.id = "capped-timer-overflow-container";
@@ -830,7 +1030,10 @@ function resolveOrCreateCappedOverflowContainer(manager, documentLike) {
 
 function mountCappedOverflowContainerAfterAnchor(container, anchor) {
   if (!(container && anchor && anchor.parentNode)) return;
-  if (container.parentNode !== anchor.parentNode || anchor.nextSibling !== container) {
+  if (
+    container.parentNode !== anchor.parentNode ||
+    anchor.nextSibling !== container
+  ) {
     anchor.parentNode.insertBefore(container, anchor.nextSibling);
   }
 }
@@ -844,13 +1047,20 @@ function getCappedOverflowContainer(manager, cappedState) {
   var container = resolveOrCreateCappedOverflowContainer(manager, documentLike);
   if (!container) return null;
   var values = manager.getCappedPlaceholderRowValues(resolvedCappedState);
-  var anchor = values.length ? manager.getTimerRowEl(values[values.length - 1]) : null;
+  var anchor = values.length
+    ? manager.getTimerRowEl(values[values.length - 1])
+    : null;
   mountCappedOverflowContainerAfterAnchor(container, anchor);
   return container;
 }
 
 function resolveProvidedCappedModeState(manager, cappedState) {
-  if (!manager) return { isCappedMode: false, cappedTargetValue: null, isProgressiveCapped64Mode: false };
+  if (!manager)
+    return {
+      isCappedMode: false,
+      cappedTargetValue: null,
+      isProgressiveCapped64Mode: false,
+    };
   if (isPanelTimerRecordObject(cappedState)) return cappedState;
   return manager.resolveCappedModeState();
 }
@@ -867,20 +1077,34 @@ function isProgressiveCapped64UnlockValue(value) {
 // saved-state storage/sync helpers moved from saved_state runtime to satisfy audit size gate
 function readLocalStorageJsonMap(manager, key) {
   if (!manager) return {};
-  var coreCallResult = callCoreStorageRuntime(manager, "readStorageJsonMapFromContext", { key: key }, true);
-  return manager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (runtimeMap) {
-    return manager.isNonArrayObject(runtimeMap) ? runtimeMap : {};
-  }, function () {
-    var storage = manager.getWebStorageByName("localStorage");
-    return readStorageJsonMapFallback(storage, key, function (parsed) {
-      return manager.isNonArrayObject(parsed);
-    });
-  });
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "readStorageJsonMapFromContext",
+    { key: key },
+    true,
+  );
+  return manager.resolveNormalizedCoreValueOrFallback(
+    coreCallResult,
+    function (runtimeMap) {
+      return manager.isNonArrayObject(runtimeMap) ? runtimeMap : {};
+    },
+    function () {
+      var storage = manager.getWebStorageByName("localStorage");
+      return readStorageJsonMapFallback(storage, key, function (parsed) {
+        return manager.isNonArrayObject(parsed);
+      });
+    },
+  );
 }
 
 function writeLocalStorageJsonPayload(manager, key, payload) {
   if (!manager) return false;
-  var coreCallResult = callCoreStorageRuntime(manager, "writeStorageJsonPayloadFromContext", { key: key, payload: payload }, true);
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "writeStorageJsonPayloadFromContext",
+    { key: key, payload: payload },
+    true,
+  );
   return manager.resolveCoreBooleanCallOrFallback(coreCallResult, function () {
     var storage = manager.getWebStorageByName("localStorage");
     return writeStorageJsonPayloadFallback(storage, key, payload);
@@ -900,7 +1124,8 @@ function parseStorageJsonMap(raw, guardObjectFn) {
   if (!raw) return {};
   try {
     var parsed = JSON.parse(raw);
-    if (typeof guardObjectFn === "function" && !guardObjectFn(parsed)) return {};
+    if (typeof guardObjectFn === "function" && !guardObjectFn(parsed))
+      return {};
     return parsed;
   } catch (_err) {
     return {};
@@ -937,27 +1162,41 @@ function writeStorageJsonPayloadFallback(storage, key, payload) {
 
 function resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey) {
   if (!manager) return "";
-  var key = (typeof modeKey === "string" && modeKey)
-    ? modeKey
-    : (manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY);
+  var key =
+    typeof modeKey === "string" && modeKey
+      ? modeKey
+      : manager.modeKey || manager.mode || GameManager.DEFAULT_MODE_KEY;
   return (typeof keyPrefix === "string" ? keyPrefix : "") + key;
 }
 
 function resolveSavedGameStateStorageKey(manager, keyPrefix, modeKey) {
   if (!manager) return null;
-  var coreCallResult = callCoreStorageRuntime(manager, "resolveSavedGameStateStorageKey", manager.createCoreModeContextPayload({
-    modeKey: modeKey,
-    keyPrefix: typeof keyPrefix === "string" ? keyPrefix : ""
-  }), false);
-  return manager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (keyByCore) {
-    return typeof keyByCore === "string" && keyByCore ? keyByCore : undefined;
-  }, function () {
-    return resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey);
-  });
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "resolveSavedGameStateStorageKey",
+    manager.createCoreModeContextPayload({
+      modeKey: modeKey,
+      keyPrefix: typeof keyPrefix === "string" ? keyPrefix : "",
+    }),
+    false,
+  );
+  return manager.resolveNormalizedCoreValueOrFallback(
+    coreCallResult,
+    function (keyByCore) {
+      return typeof keyByCore === "string" && keyByCore ? keyByCore : undefined;
+    },
+    function () {
+      return resolveSavedStateStorageKeyFallback(manager, keyPrefix, modeKey);
+    },
+  );
 }
 
 function resolveSavedGameStateSyncStorageKey(manager, modeKey) {
-  return resolveSavedGameStateStorageKey(manager, GameManager.SAVED_GAME_STATE_SYNC_KEY_PREFIX, modeKey);
+  return resolveSavedGameStateStorageKey(
+    manager,
+    GameManager.SAVED_GAME_STATE_SYNC_KEY_PREFIX,
+    modeKey,
+  );
 }
 
 function normalizeSavedGameStateStoragesFromCore(storagesByCore) {
@@ -970,18 +1209,28 @@ function getSavedGameStateStoragesFallback(manager) {
   var sessionStore = manager.getWebStorageByName("sessionStorage");
   var mobileSafari = isMobileSafariLikeByManager(manager);
   if (localStore) out.push(localStore);
-  if (!mobileSafari && sessionStore && sessionStore !== localStore) out.push(sessionStore);
+  if (!mobileSafari && sessionStore && sessionStore !== localStore)
+    out.push(sessionStore);
   return out;
 }
 
 function getSavedGameStateStorages(manager) {
   if (!manager) return [];
-  var coreCallResult = callCoreStorageRuntime(manager, "getSavedGameStateStoragesFromContext", {}, true);
-  return manager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (storagesByCore) {
-    return normalizeSavedGameStateStoragesFromCore(storagesByCore);
-  }, function () {
-    return getSavedGameStateStoragesFallback(manager);
-  });
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "getSavedGameStateStoragesFromContext",
+    {},
+    true,
+  );
+  return manager.resolveNormalizedCoreValueOrFallback(
+    coreCallResult,
+    function (storagesByCore) {
+      return normalizeSavedGameStateStoragesFromCore(storagesByCore);
+    },
+    function () {
+      return getSavedGameStateStoragesFallback(manager);
+    },
+  );
 }
 
 function parseSavedPayloadRawObject(manager, raw) {
@@ -1023,7 +1272,11 @@ function readSavedPayloadByKeyFallback(manager, stores, key) {
   var targetStores = Array.isArray(stores) ? stores : [];
   var best = null;
   for (var i = 0; i < targetStores.length; i++) {
-    var nextPayload = readSavedPayloadFromStorageByKey(manager, targetStores[i], key);
+    var nextPayload = readSavedPayloadFromStorageByKey(
+      manager,
+      targetStores[i],
+      key,
+    );
     best = resolveLatestSavedPayloadBySavedAt(best, nextPayload);
   }
   return best;
@@ -1032,25 +1285,36 @@ function readSavedPayloadByKeyFallback(manager, stores, key) {
 function createReadSavedPayloadByKeyCorePayload(stores, key) {
   return {
     storages: Array.isArray(stores) ? stores : [],
-    key: key
+    key: key,
   };
 }
 
 function normalizeSavedPayloadByKeyFromCore(currentManager, savedByCore) {
   return currentManager.isNonArrayObject(savedByCore)
     ? savedByCore
-    : (savedByCore === null ? null : undefined);
+    : savedByCore === null
+      ? null
+      : undefined;
 }
 
 function readSavedPayloadByKey(manager, key) {
   if (!manager) return null;
   var stores = getSavedGameStateStorages(manager);
-  var coreCallResult = callCoreStorageRuntime(manager, "readSavedPayloadByKeyFromStorages", createReadSavedPayloadByKeyCorePayload(stores, key), false);
-  return manager.resolveNormalizedCoreValueOrFallbackAllowNull(coreCallResult, function (savedByCore) {
-    return normalizeSavedPayloadByKeyFromCore(manager, savedByCore);
-  }, function () {
-    return readSavedPayloadByKeyFallback(manager, stores, key);
-  });
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "readSavedPayloadByKeyFromStorages",
+    createReadSavedPayloadByKeyCorePayload(stores, key),
+    false,
+  );
+  return manager.resolveNormalizedCoreValueOrFallbackAllowNull(
+    coreCallResult,
+    function (savedByCore) {
+      return normalizeSavedPayloadByKeyFromCore(manager, savedByCore);
+    },
+    function () {
+      return readSavedPayloadByKeyFallback(manager, stores, key);
+    },
+  );
 }
 
 function mergeWindowNameSavedPayloadMap(manager, modeKey, payload, map) {
@@ -1078,25 +1342,40 @@ function buildWindowNameSavedPayloadString(marker, keptParts, map) {
   return typeof nextWindowName === "string" ? nextWindowName : null;
 }
 
-function buildWriteWindowNameSavedPayloadCorePayload(manager, windowLike, modeKey, payload) {
+function buildWriteWindowNameSavedPayloadCorePayload(
+  manager,
+  windowLike,
+  modeKey,
+  payload,
+) {
   return Object.assign(
     {},
     manager.createCoreModeContextPayload({
       windowLike: windowLike,
       windowNameKey: GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY,
-      modeKey: modeKey
+      modeKey: modeKey,
     }),
-    { payload: payload }
+    { payload: payload },
   );
 }
 
-function writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, payload) {
+function writeWindowNameSavedPayloadFallback(
+  manager,
+  windowLike,
+  modeKey,
+  payload,
+) {
   if (!windowLike) return false;
   var marker = GameManager.SAVED_GAME_STATE_WINDOW_NAME_KEY + "=";
   var raw = readWindowNameRawValue(windowLike);
   var scanned = scanWindowNamePartsByMarker(raw, marker);
   var kept = scanned.keptParts;
-  var map = mergeWindowNameSavedPayloadMap(manager, modeKey, payload, scanned.map);
+  var map = mergeWindowNameSavedPayloadMap(
+    manager,
+    modeKey,
+    payload,
+    scanned.map,
+  );
   var nextWindowName = buildWindowNameSavedPayloadString(marker, kept, map);
   if (!nextWindowName) return false;
   try {
@@ -1110,16 +1389,35 @@ function writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, paylo
 function writeWindowNameSavedPayload(manager, modeKey, payload) {
   if (!manager) return false;
   var windowLike = manager.getWindowLike();
-  var coreCallResult = callCoreStorageRuntime(manager, "writeSavedPayloadToWindowName", buildWriteWindowNameSavedPayloadCorePayload(manager, windowLike, modeKey, payload), false);
-  return manager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (writtenByCore) {
-    return typeof writtenByCore === "boolean" ? writtenByCore : undefined;
-  }, function () {
-    return writeWindowNameSavedPayloadFallback(manager, windowLike, modeKey, payload);
-  });
+  var coreCallResult = callCoreStorageRuntime(
+    manager,
+    "writeSavedPayloadToWindowName",
+    buildWriteWindowNameSavedPayloadCorePayload(
+      manager,
+      windowLike,
+      modeKey,
+      payload,
+    ),
+    false,
+  );
+  return manager.resolveNormalizedCoreValueOrFallback(
+    coreCallResult,
+    function (writtenByCore) {
+      return typeof writtenByCore === "boolean" ? writtenByCore : undefined;
+    },
+    function () {
+      return writeWindowNameSavedPayloadFallback(
+        manager,
+        windowLike,
+        modeKey,
+        payload,
+      );
+    },
+  );
 }
 
 function resolveSavedStatePathname(windowLike) {
-  return (windowLike && windowLike.location && windowLike.location.pathname)
+  return windowLike && windowLike.location && windowLike.location.pathname
     ? String(windowLike.location.pathname)
     : "";
 }
@@ -1127,7 +1425,8 @@ function resolveSavedStatePathname(windowLike) {
 function resolveSaveThrottleUserAgent(manager) {
   if (!(manager && typeof manager.getWindowLike === "function")) return "";
   var windowLike = manager.getWindowLike();
-  var navigatorLike = windowLike && windowLike.navigator ? windowLike.navigator : null;
+  var navigatorLike =
+    windowLike && windowLike.navigator ? windowLike.navigator : null;
   return navigatorLike && typeof navigatorLike.userAgent === "string"
     ? navigatorLike.userAgent
     : "";
@@ -1143,17 +1442,28 @@ function isMobileSafariUserAgent(userAgent) {
 }
 
 function isMobileSafariLikeByManager(manager) {
-  return isMobileSafariUserAgent(resolveSaveThrottleUserAgent(manager));
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
+  var userAgent = resolveSaveThrottleUserAgent(manager);
+  if (isMobileSafariUserAgent(userAgent)) return true;
+  var maxTouchPoints = Number(
+    windowLike && windowLike.navigator && windowLike.navigator.maxTouchPoints,
+  );
+  return (
+    /Macintosh/i.test(userAgent) &&
+    Number.isFinite(maxTouchPoints) &&
+    maxTouchPoints > 1
+  );
 }
 
 function resolveSaveGameStateThrottleMs(manager) {
-  if (isMobileSafariLikeByManager(manager)) return 900;
-  return 350;
+  return isMobileSafariLikeByManager(manager) ? 300 : 350;
 }
 
 function resolveSaveGameStateFullPersistIntervalMs(manager) {
-  if (isMobileSafariLikeByManager(manager)) return 12000;
-  return 5000;
+  return isMobileSafariLikeByManager(manager) ? 4000 : 5000;
 }
 
 function resolveSavedStateSavedAt(saved) {
@@ -1166,15 +1476,20 @@ function resolveManagerSavedStateKnownSavedAt(manager) {
   if (!manager) return 0;
   var persistedAt = Number(manager.lastSavedGameStateAt);
   var syncedAt = Number(manager.lastSyncedSavedStateAt);
-  var best = Number.isFinite(persistedAt) && persistedAt > 0 ? Math.floor(persistedAt) : 0;
-  var synced = Number.isFinite(syncedAt) && syncedAt > 0 ? Math.floor(syncedAt) : 0;
+  var best =
+    Number.isFinite(persistedAt) && persistedAt > 0
+      ? Math.floor(persistedAt)
+      : 0;
+  var synced =
+    Number.isFinite(syncedAt) && syncedAt > 0 ? Math.floor(syncedAt) : 0;
   return synced > best ? synced : best;
 }
 
 function rememberSavedStateKnownSavedAt(manager, savedAt) {
   if (!manager) return 0;
   var value = Number(savedAt);
-  if (!Number.isFinite(value) || value <= 0) return resolveManagerSavedStateKnownSavedAt(manager);
+  if (!Number.isFinite(value) || value <= 0)
+    return resolveManagerSavedStateKnownSavedAt(manager);
   var normalized = Math.floor(value);
   if (normalized > (Number(manager.lastSyncedSavedStateAt) || 0)) {
     manager.lastSyncedSavedStateAt = normalized;
@@ -1190,16 +1505,28 @@ function resolvePersistedSavedStateAtForWrite(manager, keyPrefix) {
 
 function shouldSkipStaleSavedGameStateWrite(manager) {
   if (!manager) return false;
-  var gameManagerRuntime = typeof GameManager !== "undefined" && GameManager ? GameManager : null;
+  var gameManagerRuntime =
+    typeof GameManager !== "undefined" && GameManager ? GameManager : null;
   if (!gameManagerRuntime) return false;
-  var fullAt = resolvePersistedSavedStateAtForWrite(manager, gameManagerRuntime.SAVED_GAME_STATE_KEY_PREFIX);
-  var liteAt = resolvePersistedSavedStateAtForWrite(manager, gameManagerRuntime.SAVED_GAME_STATE_LITE_KEY_PREFIX);
-  return Math.max(fullAt, liteAt) > resolveManagerSavedStateKnownSavedAt(manager);
+  var fullAt = resolvePersistedSavedStateAtForWrite(
+    manager,
+    gameManagerRuntime.SAVED_GAME_STATE_KEY_PREFIX,
+  );
+  var liteAt = resolvePersistedSavedStateAtForWrite(
+    manager,
+    gameManagerRuntime.SAVED_GAME_STATE_LITE_KEY_PREFIX,
+  );
+  return (
+    Math.max(fullAt, liteAt) > resolveManagerSavedStateKnownSavedAt(manager)
+  );
 }
 
 function ensureSavedStateSyncClientId(manager) {
   if (!manager) return "";
-  if (typeof manager.savedStateSyncClientId === "string" && manager.savedStateSyncClientId) {
+  if (
+    typeof manager.savedStateSyncClientId === "string" &&
+    manager.savedStateSyncClientId
+  ) {
     return manager.savedStateSyncClientId;
   }
   if (
@@ -1207,18 +1534,28 @@ function ensureSavedStateSyncClientId(manager) {
     CoreCryptoRandomRuntime &&
     typeof CoreCryptoRandomRuntime.randomId === "function"
   ) {
-    manager.savedStateSyncClientId = CoreCryptoRandomRuntime.randomId("tab", { length: 8 });
+    manager.savedStateSyncClientId = CoreCryptoRandomRuntime.randomId("tab", {
+      length: 8,
+    });
     return manager.savedStateSyncClientId;
   }
-  manager.savedStateSyncClientId = "tab_" + Date.now().toString(36) + "_00000000";
+  manager.savedStateSyncClientId =
+    "tab_" + Date.now().toString(36) + "_00000000";
   return manager.savedStateSyncClientId;
 }
 
 function resolveCoreSavedStateSyncPayloadRuntime() {
-  if (typeof CoreSavedStateSyncPayloadRuntime !== "undefined" && CoreSavedStateSyncPayloadRuntime) {
+  if (
+    typeof CoreSavedStateSyncPayloadRuntime !== "undefined" &&
+    CoreSavedStateSyncPayloadRuntime
+  ) {
     return CoreSavedStateSyncPayloadRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreSavedStateSyncPayloadRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreSavedStateSyncPayloadRuntime
+  ) {
     return window.CoreSavedStateSyncPayloadRuntime;
   }
   return null;
@@ -1233,9 +1570,23 @@ function buildSavedStateSyncTrimPayloadFallback(manager) {
     session_replay_v3: null,
     replay_string: "",
     ips_input_count:
-      manager && Number.isInteger(manager.ipsInputCount) && manager.ipsInputCount >= 0
+      manager &&
+      Number.isInteger(manager.ipsInputCount) &&
+      manager.ipsInputCount >= 0
         ? manager.ipsInputCount
-        : 0
+        : 0,
+    valid_input_count:
+      manager &&
+      Number.isInteger(manager.validInputCount) &&
+      manager.validInputCount >= 0
+        ? manager.validInputCount
+        : 0,
+    invalid_input_count:
+      manager &&
+      Number.isInteger(manager.invalidInputCount) &&
+      manager.invalidInputCount >= 0
+        ? manager.invalidInputCount
+        : 0,
   };
 }
 
@@ -1249,7 +1600,9 @@ function buildSavedStateSyncTrimPayload(manager) {
 
 function buildSavedStateSyncStatePayload(manager, now) {
   if (!manager) return null;
-  var safeNow = Number.isFinite(Number(now)) ? Math.floor(Number(now)) : Date.now();
+  var safeNow = Number.isFinite(Number(now))
+    ? Math.floor(Number(now))
+    : Date.now();
   return Object.assign(
     {},
     buildSavedGameStateMetaPayload(manager, safeNow),
@@ -1257,7 +1610,7 @@ function buildSavedStateSyncStatePayload(manager, now) {
     buildSavedGameStateProgressPayload(manager),
     buildSavedGameStateDirectionLockPayload(manager),
     buildSavedGameStateTimerCorePayload(manager),
-    buildSavedStateSyncTrimPayload(manager)
+    buildSavedStateSyncTrimPayload(manager),
   );
 }
 
@@ -1270,27 +1623,41 @@ function buildSavedStateSyncEventPayload(manager, now) {
     mode_key: manager.modeKey,
     source_client_id: ensureSavedStateSyncClientId(manager),
     saved_at: resolveSavedStateSavedAt(snapshot),
-    state: snapshot
+    state: snapshot,
   };
 }
 
 function parseSavedStateSyncEventPayloadFallback(raw) {
   if (!(typeof raw === "string" && raw)) return null;
   var parsed = null;
-  try { parsed = JSON.parse(raw); } catch (_errParse) { return null; }
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_errParse) {
+    return null;
+  }
   if (!normalizeSavedStateRecordObject(parsed, null)) return null;
   var state = normalizeSavedStateRecordObject(parsed.state, null);
   if (!state) return null;
   var savedAt = resolveSavedStateSavedAt(state);
   if (!(savedAt > 0)) savedAt = resolveSavedStateSavedAt(parsed);
   if (!(savedAt > 0)) return null;
-  return { sourceClientId: typeof parsed.source_client_id === "string" ? parsed.source_client_id : "", savedAt: savedAt, state: state };
+  return {
+    sourceClientId:
+      typeof parsed.source_client_id === "string"
+        ? parsed.source_client_id
+        : "",
+    savedAt: savedAt,
+    state: state,
+  };
 }
 
 function parseSavedStateSyncEventPayload(manager, raw) {
   if (!manager) return null;
   var runtime = resolveCoreSavedStateSyncPayloadRuntime();
-  if (runtime && typeof runtime.parseSavedStateSyncEventPayload === "function") {
+  if (
+    runtime &&
+    typeof runtime.parseSavedStateSyncEventPayload === "function"
+  ) {
     return runtime.parseSavedStateSyncEventPayload(raw);
   }
   return parseSavedStateSyncEventPayloadFallback(raw);
@@ -1349,24 +1716,54 @@ function resolveSavedStateSyncThrottleMs(manager) {
 function shouldSkipSavedStateSyncPublishByThrottle(manager, now) {
   if (!manager) return true;
   if (!manager.lastSavedStateSyncPublishedAt) return false;
-  return (now - manager.lastSavedStateSyncPublishedAt) < resolveSavedStateSyncThrottleMs(manager);
+  return (
+    now - manager.lastSavedStateSyncPublishedAt <
+    resolveSavedStateSyncThrottleMs(manager)
+  );
 }
 
 function resolveCoreSavedStateSyncPublishRuntime() {
-  if (typeof CoreSavedStateSyncPublishRuntime !== "undefined" && CoreSavedStateSyncPublishRuntime) return CoreSavedStateSyncPublishRuntime;
-  if (typeof window !== "undefined" && window && window.CoreSavedStateSyncPublishRuntime) return window.CoreSavedStateSyncPublishRuntime;
+  if (
+    typeof CoreSavedStateSyncPublishRuntime !== "undefined" &&
+    CoreSavedStateSyncPublishRuntime
+  )
+    return CoreSavedStateSyncPublishRuntime;
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreSavedStateSyncPublishRuntime
+  )
+    return window.CoreSavedStateSyncPublishRuntime;
   return null;
 }
 
 function createSavedStateSyncPublishOperations() {
   return {
-    buildSavedStateSyncEventPayload: function (manager, now) { return buildSavedStateSyncEventPayload(manager, now); },
-    canWriteToStorage: function (storage) { return typeof canWriteToStorage === "function" && canWriteToStorage(storage); },
-    rememberSavedStateKnownSavedAt: function (manager, savedAt) { return rememberSavedStateKnownSavedAt(manager, savedAt); },
-    resolveSavedGameStateSyncStorageKey: function (manager) { return resolveSavedGameStateSyncStorageKey(manager); },
-    shouldSkipSavedStateSyncPublishByThrottle: shouldSkipSavedStateSyncPublishByThrottle,
-    shouldUseSavedGameState: function (manager) { return typeof shouldUseSavedGameState === "function" && shouldUseSavedGameState(manager); },
-    writeStorageJsonPayload: function (storage, key, payload) { return writeStorageJsonPayloadFallback(storage, key, payload); }
+    buildSavedStateSyncEventPayload: function (manager, now) {
+      return buildSavedStateSyncEventPayload(manager, now);
+    },
+    canWriteToStorage: function (storage) {
+      return (
+        typeof canWriteToStorage === "function" && canWriteToStorage(storage)
+      );
+    },
+    rememberSavedStateKnownSavedAt: function (manager, savedAt) {
+      return rememberSavedStateKnownSavedAt(manager, savedAt);
+    },
+    resolveSavedGameStateSyncStorageKey: function (manager) {
+      return resolveSavedGameStateSyncStorageKey(manager);
+    },
+    shouldSkipSavedStateSyncPublishByThrottle:
+      shouldSkipSavedStateSyncPublishByThrottle,
+    shouldUseSavedGameState: function (manager) {
+      return (
+        typeof shouldUseSavedGameState === "function" &&
+        shouldUseSavedGameState(manager)
+      );
+    },
+    writeStorageJsonPayload: function (storage, key, payload) {
+      return writeStorageJsonPayloadFallback(storage, key, payload);
+    },
   };
 }
 
@@ -1391,9 +1788,14 @@ function publishSavedStateSyncSnapshotFallback(manager, now) {
 
 function publishSavedStateSyncSnapshot(manager) {
   if (shouldSkipStaleSavedGameStateWrite(manager)) return false;
-  var now = Date.now(), runtime = resolveCoreSavedStateSyncPublishRuntime();
+  var now = Date.now(),
+    runtime = resolveCoreSavedStateSyncPublishRuntime();
   if (runtime && typeof runtime.publishSavedStateSyncSnapshot === "function") {
-    return runtime.publishSavedStateSyncSnapshot(manager, createSavedStateSyncPublishOperations(), now);
+    return runtime.publishSavedStateSyncSnapshot(
+      manager,
+      createSavedStateSyncPublishOperations(),
+      now,
+    );
   }
   return publishSavedStateSyncSnapshotFallback(manager, now);
 }
@@ -1403,16 +1805,26 @@ function handleSavedStateSyncStorageEvent(manager, storageEvent) {
   var syncKey = resolveSavedGameStateSyncStorageKey(manager);
   if (!(typeof syncKey === "string" && syncKey)) return;
   if (storageEvent.key !== syncKey) return;
-  if (!(typeof storageEvent.newValue === "string" && storageEvent.newValue)) return;
+  if (!(typeof storageEvent.newValue === "string" && storageEvent.newValue))
+    return;
   var parsed = parseSavedStateSyncEventPayload(manager, storageEvent.newValue);
   if (!parsed) return;
-  if (!shouldApplySavedStateSync(manager, parsed.state, parsed.savedAt, parsed.sourceClientId)) return;
+  if (
+    !shouldApplySavedStateSync(
+      manager,
+      parsed.state,
+      parsed.savedAt,
+      parsed.sourceClientId,
+    )
+  )
+    return;
   applySavedStateSyncSnapshot(manager, parsed.state, parsed.savedAt);
 }
 
 function bindSavedStateSyncStorageListener(manager, windowLike) {
   if (!manager) return;
-  if (!(windowLike && typeof windowLike.addEventListener === "function")) return;
+  if (!(windowLike && typeof windowLike.addEventListener === "function"))
+    return;
   if (manager.savedStateSyncListenerBound) return;
   if (!shouldUseSavedGameState(manager)) return;
   ensureSavedStateSyncClientId(manager);

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 function buildTimerMilestoneSlotByValueMap(milestones) {
   var map = {};
   var resolvedMilestones = Array.isArray(milestones) ? milestones : [];
@@ -16,10 +17,7 @@ function resolveTimerMilestones(manager) {
 }
 
 function createTimerMilestoneSlotResolveArgs(milestones) {
-  return [
-    milestones,
-    GameManager.TIMER_SLOT_IDS
-  ];
+  return [milestones, GameManager.TIMER_SLOT_IDS];
 }
 
 function normalizeTimerMilestoneSlotMapFromCore(currentManager, coreValue) {
@@ -27,17 +25,35 @@ function normalizeTimerMilestoneSlotMapFromCore(currentManager, coreValue) {
 }
 
 function resolveTimerMilestoneSlotByValue(manager, milestones) {
-  return resolveCoreArgsCallWith(manager, "callCoreRulesRuntime", "getTimerMilestoneSlotByValue", createTimerMilestoneSlotResolveArgs(milestones), undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return normalizeTimerMilestoneSlotMapFromCore(currentManager, coreValue);
-    }, function () {
-      return buildTimerMilestoneSlotByValueMap(milestones);
-    });
-  });
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreRulesRuntime",
+    "getTimerMilestoneSlotByValue",
+    createTimerMilestoneSlotResolveArgs(milestones),
+    undefined,
+    function (currentManager, coreCallResult) {
+      return currentManager.resolveNormalizedCoreValueOrFallback(
+        coreCallResult,
+        function (coreValue) {
+          return normalizeTimerMilestoneSlotMapFromCore(
+            currentManager,
+            coreValue,
+          );
+        },
+        function () {
+          return buildTimerMilestoneSlotByValueMap(milestones);
+        },
+      );
+    },
+  );
 }
 
 function applyTimerLegendLabels(documentLike, milestones) {
-  for (var milestoneIndex = 0; milestoneIndex < GameManager.TIMER_SLOT_IDS.length; milestoneIndex++) {
+  for (
+    var milestoneIndex = 0;
+    milestoneIndex < GameManager.TIMER_SLOT_IDS.length;
+    milestoneIndex++
+  ) {
     var legendSlotId = String(GameManager.TIMER_SLOT_IDS[milestoneIndex]);
     var label = String(milestones[milestoneIndex]);
     var nodes = documentLike.querySelectorAll(".timer-legend-" + legendSlotId);
@@ -50,7 +66,10 @@ function applyTimerLegendLabels(documentLike, milestones) {
 function initializeTimerMilestones(manager) {
   if (!manager) return;
   manager.timerMilestones = resolveTimerMilestones(manager);
-  manager.timerMilestoneSlotByValue = resolveTimerMilestoneSlotByValue(manager, manager.timerMilestones);
+  manager.timerMilestoneSlotByValue = resolveTimerMilestoneSlotByValue(
+    manager,
+    manager.timerMilestones,
+  );
   var documentLike = resolveManagerDocumentLike(manager);
   if (!documentLike) return;
   var milestones = manager.timerMilestones || resolveTimerMilestones(manager);
@@ -60,25 +79,47 @@ function initializeTimerMilestones(manager) {
 
 function resetRoundStatsStateFallback(manager) {
   if (!manager) return;
-  manager.comboStreak = 0; manager.successfulMoveCount = 0;
-  manager.validInputCount = 0; manager.invalidInputCount = 0; manager.ipsInputCount = 0;
+  manager.comboStreak = 0;
+  manager.successfulMoveCount = 0;
+  manager.validInputCount = 0;
+  manager.invalidInputCount = 0;
+  manager.ipsInputCount = 0;
   manager.ipsInputTimes = [];
-  manager.undoUsed = 0; manager.lockConsumedAtMoveCount = -1;
-  manager.lockedDirectionTurn = null; manager.lockedDirection = null;
+  manager.pendingMoveInput = null;
+  if (Array.isArray(manager.pendingMoveInputQueue))
+    manager.pendingMoveInputQueue.length = 0;
+  else manager.pendingMoveInputQueue = [];
+  manager.pendingMoveInputDelayScheduled = false;
+  manager.moveInputFlushScheduled = false;
+  manager.undoUsed = 0;
+  manager.lockConsumedAtMoveCount = -1;
+  manager.lockedDirectionTurn = null;
+  manager.lockedDirection = null;
   manager.spawnValueCounts = {};
-  manager.spawnTwos = 0; manager.spawnFours = 0; manager.itemProgress = 0;
+  manager.spawnTwos = 0;
+  manager.spawnFours = 0;
+  manager.itemProgress = 0;
   manager.itemInventory = createEmptyItemInventory();
-  manager.nextSpawnSuppressed = false; manager.nextSpawnValueOverride = null;
+  manager.nextSpawnSuppressed = false;
+  manager.nextSpawnValueOverride = null;
   manager.undoEnabled = manager.loadUndoSettingForMode(manager.mode);
   if (typeof updateItemModeHud === "function") updateItemModeHud(manager);
-  if (typeof updateMoveTimeoutHud === "function") updateMoveTimeoutHud(manager, Date.now());
+  if (typeof updateMoveTimeoutHud === "function")
+    updateMoveTimeoutHud(manager, Date.now());
 }
 
 function resolveCoreGameManagerRuntimeStateRuntime() {
-  if (typeof CoreGameManagerRuntimeStateRuntime !== "undefined" && CoreGameManagerRuntimeStateRuntime) {
+  if (
+    typeof CoreGameManagerRuntimeStateRuntime !== "undefined" &&
+    CoreGameManagerRuntimeStateRuntime
+  ) {
     return CoreGameManagerRuntimeStateRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerRuntimeStateRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerRuntimeStateRuntime
+  ) {
     return window.CoreGameManagerRuntimeStateRuntime;
   }
   return null;
@@ -89,30 +130,44 @@ function resetRoundStatsState(manager) {
   if (runtime && typeof runtime.resetRoundStatsState === "function") {
     runtime.resetRoundStatsState(manager, {
       createEmptyItemInventory: createEmptyItemInventory,
-      updateItemModeHud: typeof updateItemModeHud === "function" ? updateItemModeHud : undefined,
-      updateMoveTimeoutHud: typeof updateMoveTimeoutHud === "function" ? updateMoveTimeoutHud : undefined,
-      nowMs: Date.now()
+      updateItemModeHud:
+        typeof updateItemModeHud === "function" ? updateItemModeHud : undefined,
+      updateMoveTimeoutHud:
+        typeof updateMoveTimeoutHud === "function"
+          ? updateMoveTimeoutHud
+          : undefined,
+      nowMs: Date.now(),
     });
   } else {
     resetRoundStatsStateFallback(manager);
   }
   var inputEventsRuntime = resolveCoreGameManagerInputEventsRuntime();
-  if (inputEventsRuntime && typeof inputEventsRuntime.publishOperationFeedbackReset === "function") {
+  if (
+    inputEventsRuntime &&
+    typeof inputEventsRuntime.publishOperationFeedbackReset === "function"
+  ) {
     inputEventsRuntime.publishOperationFeedbackReset(manager);
   }
 }
 
-function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, ScoreManager) {
+function initializeGameManagerCoreFields(
+  manager,
+  size,
+  InputManager,
+  Actuator,
+  ScoreManager,
+) {
   if (!manager) return;
   manager.size = size; // Size of the grid
   manager.width = size;
   manager.height = size;
-  manager.inputManager = new InputManager;
-  manager.scoreManager = new ScoreManager;
-  manager.actuator = new Actuator;
+  manager.inputManager = new InputManager();
+  manager.scoreManager = new ScoreManager();
+  manager.actuator = new Actuator();
   var documentLike = resolveManagerDocumentLike(manager);
   manager.timerContainer = documentLike
-    ? (documentLike.querySelector(".timer-container") || resolveManagerElementById(manager, "timer"))
+    ? documentLike.querySelector(".timer-container") ||
+      resolveManagerElementById(manager, "timer")
     : null;
   manager.cornerRateEl = null;
   manager.cornerIpsEl = null;
@@ -120,19 +175,29 @@ function initializeGameManagerCoreFields(manager, size, InputManager, Actuator, 
 
 function initializeGameManagerRuntimeState(manager) {
   var runtime = resolveCoreGameManagerRuntimeStateRuntime();
-  if (runtime && typeof runtime.initializeGameManagerRuntimeState === "function") {
+  if (
+    runtime &&
+    typeof runtime.initializeGameManagerRuntimeState === "function"
+  ) {
     runtime.initializeGameManagerRuntimeState(manager, {
       detectMode: detectMode,
-      createEmptyItemInventory: createEmptyItemInventory
+      createEmptyItemInventory: createEmptyItemInventory,
     });
   }
 }
 
 function resolveCoreGameManagerInputEventsRuntime() {
-  if (typeof CoreGameManagerInputEventsRuntime !== "undefined" && CoreGameManagerInputEventsRuntime) {
+  if (
+    typeof CoreGameManagerInputEventsRuntime !== "undefined" &&
+    CoreGameManagerInputEventsRuntime
+  ) {
     return CoreGameManagerInputEventsRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerInputEventsRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerInputEventsRuntime
+  ) {
     return window.CoreGameManagerInputEventsRuntime;
   }
   return null;
@@ -142,16 +207,23 @@ function bindGameManagerInputEvents(manager) {
   var runtime = resolveCoreGameManagerInputEventsRuntime();
   if (runtime && typeof runtime.bindGameManagerInputEvents === "function") {
     runtime.bindGameManagerInputEvents(manager, {
-      handleMoveInput: handleMoveInput
+      handleMoveInput: handleMoveInput,
     });
   }
 }
 
 function resolveCoreGameManagerSavedStatePersistenceBindingRuntime() {
-  if (typeof CoreGameManagerSavedStatePersistenceBindingRuntime !== "undefined" && CoreGameManagerSavedStatePersistenceBindingRuntime) {
+  if (
+    typeof CoreGameManagerSavedStatePersistenceBindingRuntime !== "undefined" &&
+    CoreGameManagerSavedStatePersistenceBindingRuntime
+  ) {
     return CoreGameManagerSavedStatePersistenceBindingRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerSavedStatePersistenceBindingRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerSavedStatePersistenceBindingRuntime
+  ) {
     return window.CoreGameManagerSavedStatePersistenceBindingRuntime;
   }
   return null;
@@ -165,22 +237,44 @@ function bindGameManagerSavedStatePersistenceFallback(manager) {
     if (manager.singleModePageLockRejected) return;
     saveGameState(manager, { force: true });
     try {
-      var rankedRuntime = windowLikeForPersistence && windowLikeForPersistence.OnlineLeaderboardRuntime;
-      var persistRankedCheckpoint = rankedRuntime && rankedRuntime.persistRankedCheckpointOnPageHide;
-      if (typeof persistRankedCheckpoint === "function") persistRankedCheckpoint(manager);
+      var rankedRuntime =
+        windowLikeForPersistence &&
+        windowLikeForPersistence.OnlineLeaderboardRuntime;
+      var persistRankedCheckpoint =
+        rankedRuntime && rankedRuntime.persistRankedCheckpointOnPageHide;
+      if (typeof persistRankedCheckpoint === "function")
+        persistRankedCheckpoint(manager);
     } catch (_errCheckpoint) {}
+  };
+  var visibilityHandler = function () {
+    var visibilityState =
+      windowLikeForPersistence.document &&
+      windowLikeForPersistence.document.visibilityState;
+    if (!visibilityState || visibilityState === "hidden") saveHandler();
   };
   windowLikeForPersistence.addEventListener("beforeunload", saveHandler);
   windowLikeForPersistence.addEventListener("pagehide", saveHandler);
+  if (
+    windowLikeForPersistence.document &&
+    typeof windowLikeForPersistence.document.addEventListener === "function"
+  ) {
+    windowLikeForPersistence.document.addEventListener(
+      "visibilitychange",
+      visibilityHandler,
+    );
+  }
   bindSavedStateSyncStorageListener(manager, windowLikeForPersistence);
   manager.savedGameStateBound = true;
 }
 function bindGameManagerSavedStatePersistence(manager) {
   var runtime = resolveCoreGameManagerSavedStatePersistenceBindingRuntime();
-  if (runtime && typeof runtime.bindGameManagerSavedStatePersistence === "function") {
+  if (
+    runtime &&
+    typeof runtime.bindGameManagerSavedStatePersistence === "function"
+  ) {
     runtime.bindGameManagerSavedStatePersistence(manager, {
       saveGameState: saveGameState,
-      bindSavedStateSyncStorageListener: bindSavedStateSyncStorageListener
+      bindSavedStateSyncStorageListener: bindSavedStateSyncStorageListener,
     });
     return;
   }

@@ -16,6 +16,7 @@ import tileUrl from "../../js/tile.js?url";
 import localScoreManagerUrl from "../../js/local_score_manager.js?url";
 import localHistoryStoreUrl from "../../js/local_history_store.js?url";
 import coreGameManagerSavedStateHelpersRuntimeUrl from "../../js/core_game_manager_saved_state_helpers_runtime.js?url";
+import coreGameManagerSavedStatePersistenceRuntimeUrl from "../../js/core_game_manager_saved_state_persistence_runtime.js?url";
 import coreRankedCheckpointLocalMirrorFallbackRuntimeUrl from "../../js/core_ranked_checkpoint_local_mirror_fallback_runtime.js?url";
 import coreGameManagerStatsUiHelpersRuntimeUrl from "../../js/core_game_manager_stats_ui_helpers_runtime.js?url";
 import coreGameManagerMoveInputHelpersRuntimeUrl from "../../js/core_game_manager_move_input_helpers_runtime.js?url";
@@ -88,7 +89,7 @@ import type { RuntimeCapability } from "./runtime-manifest";
 export const homeAnnouncementScripts = [
   announcementRecordsUrl,
   coreAnnouncementRuntimeUrl,
-  announcementManagerUrl
+  announcementManagerUrl,
 ] as const;
 
 export const homeCoreScripts = [
@@ -105,6 +106,7 @@ export const homeCoreScripts = [
   localScoreManagerUrl,
   localHistoryStoreUrl,
   coreGameManagerSavedStateHelpersRuntimeUrl,
+  coreGameManagerSavedStatePersistenceRuntimeUrl,
   coreRankedCheckpointLocalMirrorFallbackRuntimeUrl,
   coreGameManagerStatsUiHelpersRuntimeUrl,
   coreGameManagerMoveInputHelpersRuntimeUrl,
@@ -117,7 +119,7 @@ export const homeCoreScripts = [
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl
+  gameManagerUrl,
 ] as const;
 
 export const cappedCoreScripts = [
@@ -133,6 +135,7 @@ export const cappedCoreScripts = [
   localScoreManagerUrl,
   localHistoryStoreUrl,
   coreGameManagerSavedStateHelpersRuntimeUrl,
+  coreGameManagerSavedStatePersistenceRuntimeUrl,
   coreGameManagerStatsUiHelpersRuntimeUrl,
   coreGameManagerMoveInputHelpersRuntimeUrl,
   coreGameManagerStatsDisplayHelpersRuntimeUrl,
@@ -144,18 +147,16 @@ export const cappedCoreScripts = [
   coreGameManagerModeRulesHelpersRuntimeUrl,
   coreGameManagerStaticRuntimeUrl,
   coreGameManagerBindingsRuntimeUrl,
-  gameManagerUrl
+  gameManagerUrl,
 ] as const;
 
-export const homeStandardStartupScripts = [
-  applicationUrl
-] as const;
+export const homeStandardStartupScripts = [applicationUrl] as const;
 
 export const cappedStartupScripts = [
   coreSimpleRuntimeContractRuntimeUrl,
   coreSimpleStartupRuntimeUrl,
   coreSimplePageHostRuntimeUrl,
-  cappedApplicationUrl
+  cappedApplicationUrl,
 ] as const;
 
 export const homeSettingsAndPanelScripts = [
@@ -195,7 +196,9 @@ export const homeSettingsAndPanelScripts = [
   coreNightModeRuntimeUrl,
 ] as const;
 
-export const homeTopButtonStyleScripts = [coreTopButtonStyleRuntimeUrl] as const;
+export const homeTopButtonStyleScripts = [
+  coreTopButtonStyleRuntimeUrl,
+] as const;
 
 export const homeIndexTailScripts = [
   coreTopActionBindingsHostRuntimeUrl,
@@ -203,20 +206,24 @@ export const homeIndexTailScripts = [
   coreIndexUiPageHostRuntimeUrl,
   coreIndexUiPageResolversHostRuntimeUrl,
   coreIndexUiPageActionsHostRuntimeUrl,
-  indexUiUrl
+  indexUiUrl,
 ] as const;
 
 export const homeLeaderboardScripts = [
   refreshSchedulerRuntimeUrl,
   apiSharedUtilsUrl,
   adminRescueClientRuntimeUrl,
-  onlineLeaderboardRuntimeUrl
+  onlineLeaderboardRuntimeUrl,
 ] as const;
 export const homeTestUiScripts = [testUiUrl] as const;
-export const homePkuInlineStatsScripts = [pku2048InlineStatsRuntimeUrl] as const;
+export const homePkuInlineStatsScripts = [
+  pku2048InlineStatsRuntimeUrl,
+] as const;
 export const homeI18nScripts = [coreI18nRuntimeUrl] as const;
 
-const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonly string[]>> = {
+const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<
+  Record<RuntimeCapability, readonly string[]>
+> = {
   announcement: homeAnnouncementScripts,
   core: homeCoreScripts,
   "capped-core": cappedCoreScripts,
@@ -245,11 +252,11 @@ const HOME_FAMILY_CAPABILITY_SCRIPTS: Readonly<Record<RuntimeCapability, readonl
   "theme-plaza": [],
   "stone-2k-monitor": [],
   register: [],
-  password: []
+  password: [],
 } as const;
 
 export function resolveHomeFamilyScriptsByCapabilities(
-  capabilities: readonly RuntimeCapability[]
+  capabilities: readonly RuntimeCapability[],
 ): readonly string[] {
   const scripts: string[] = [];
   for (const capability of capabilities) {

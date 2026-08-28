@@ -1,24 +1,33 @@
 export interface GameManagerSavedStatePersistenceWindowLike {
   addEventListener?: (eventName: string, handler: () => void) => void;
+  document?: {
+    visibilityState?: string;
+    addEventListener?: (eventName: string, handler: () => void) => void;
+  } | null;
   OnlineLeaderboardRuntime?: {
-    persistRankedCheckpointOnPageHide?: (manager: GameManagerSavedStatePersistenceManagerLike) => void;
+    persistRankedCheckpointOnPageHide?: (
+      manager: GameManagerSavedStatePersistenceManagerLike,
+    ) => void;
   } | null;
 }
 
 export interface GameManagerSavedStatePersistenceManagerLike {
   savedGameStateBound?: boolean;
   singleModePageLockRejected?: boolean;
-  getWindowLike?: () => GameManagerSavedStatePersistenceWindowLike | null | undefined;
+  getWindowLike?: () =>
+    | GameManagerSavedStatePersistenceWindowLike
+    | null
+    | undefined;
 }
 
 export interface GameManagerSavedStatePersistenceBindingOperations {
   saveGameState?: (
     manager: GameManagerSavedStatePersistenceManagerLike,
-    options: { force: boolean }
+    options: { force: boolean },
   ) => void;
   bindSavedStateSyncStorageListener?: (
     manager: GameManagerSavedStatePersistenceManagerLike,
-    windowLike: GameManagerSavedStatePersistenceWindowLike
+    windowLike: GameManagerSavedStatePersistenceWindowLike,
   ) => void;
 }
 
@@ -36,7 +45,7 @@ export interface GameManagerSavedStatePersistenceBindingRuntimeInstallOptions {
 
 function persistRankedCheckpointOnPageHide(
   manager: GameManagerSavedStatePersistenceManagerLike,
-  windowLike: GameManagerSavedStatePersistenceWindowLike
+  windowLike: GameManagerSavedStatePersistenceWindowLike,
 ): void {
   try {
     const persistRankedCheckpoint =
@@ -51,7 +60,7 @@ function persistRankedCheckpointOnPageHide(
 
 export function bindGameManagerSavedStatePersistence(
   manager: GameManagerSavedStatePersistenceManagerLike | null | undefined,
-  operations: GameManagerSavedStatePersistenceBindingOperations = {}
+  operations: GameManagerSavedStatePersistenceBindingOperations = {},
 ): void {
   if (!manager || manager.savedGameStateBound) return;
   const windowLike = manager.getWindowLike?.();
@@ -62,27 +71,36 @@ export function bindGameManagerSavedStatePersistence(
     operations.saveGameState?.(manager, { force: true });
     persistRankedCheckpointOnPageHide(manager, windowLike);
   };
+  const handleVisibilityChange = () => {
+    const visibilityState = windowLike.document?.visibilityState;
+    if (!visibilityState || visibilityState === "hidden") saveHandler();
+  };
   windowLike.addEventListener("beforeunload", saveHandler);
   windowLike.addEventListener("pagehide", saveHandler);
+  windowLike.document?.addEventListener?.(
+    "visibilitychange",
+    handleVisibilityChange,
+  );
   operations.bindSavedStateSyncStorageListener?.(manager, windowLike);
   manager.savedGameStateBound = true;
 }
 
 export function createGameManagerSavedStatePersistenceBindingRuntime(): GameManagerSavedStatePersistenceBindingRuntime {
   return {
-    bindGameManagerSavedStatePersistence
+    bindGameManagerSavedStatePersistence,
   };
 }
 
 export function installGameManagerSavedStatePersistenceBindingRuntime(
-  options: GameManagerSavedStatePersistenceBindingRuntimeInstallOptions = {}
+  options: GameManagerSavedStatePersistenceBindingRuntimeInstallOptions = {},
 ): GameManagerSavedStatePersistenceBindingRuntime | null {
-  const target =
-    options.windowLike === undefined
-      ? typeof window === "undefined"
-        ? null
-        : (window as unknown as GameManagerSavedStatePersistenceBindingWindowLike)
-      : options.windowLike;
+  let target = options.windowLike;
+  if (target === undefined) {
+    if (typeof window === "undefined") return null;
+    // SAFETY: this runtime is published on the browser Window namespace.
+    target =
+      window as unknown as GameManagerSavedStatePersistenceBindingWindowLike;
+  }
   if (!target) return null;
   if (!target.CoreGameManagerSavedStatePersistenceBindingRuntime) {
     target.CoreGameManagerSavedStatePersistenceBindingRuntime =

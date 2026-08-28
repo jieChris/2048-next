@@ -15,6 +15,8 @@ export interface SetupStateInitializationManagerLike {
   timerUpdateIntervalMs?: unknown;
   timerFrozen?: unknown;
   pendingMoveInput?: unknown;
+  pendingMoveInputQueue?: unknown[];
+  pendingMoveInputDelayScheduled?: unknown;
   moveInputFlushScheduled?: unknown;
   lastMoveInputAt?: unknown;
   moveDeadlineAt?: unknown;
@@ -28,7 +30,7 @@ export interface SetupStateInitializationWindowLike {
   OnlineLeaderboardRuntime?: {
     scheduleRankedCheckpointRestore?: (
       manager: SetupStateInitializationManagerLike,
-      options: { reason: "setup" }
+      options: { reason: "setup" },
     ) => void;
   } | null;
 }
@@ -45,31 +47,41 @@ export interface SetupStateInitializationRestoreState {
 export interface SetupStateInitializationOperations {
   initializeSetupSeedAndReplayState?: (
     manager: SetupStateInitializationManagerLike,
-    inputSeed: unknown
+    inputSeed: unknown,
   ) => SetupStateInitializationSeedState;
-  resetSetupRuntimeState?: (manager: SetupStateInitializationManagerLike) => void;
+  resetSetupRuntimeState?: (
+    manager: SetupStateInitializationManagerLike,
+  ) => void;
   resolveSetupChallengeId?: (
     manager: SetupStateInitializationManagerLike,
     normalizedOptions: Record<string, unknown>,
-    rankedSessionContext: unknown
+    rankedSessionContext: unknown,
   ) => unknown;
   resolveSetupRankedSessionToken?: (rankedSessionContext: unknown) => unknown;
   resolveSetupSpawnSequenceVersion?: (rankedSessionContext: unknown) => unknown;
-  initializeSetupSessionReplaySnapshot?: (manager: SetupStateInitializationManagerLike) => void;
-  initializeTimerMilestones?: (manager: SetupStateInitializationManagerLike) => void;
+  initializeSetupSessionReplaySnapshot?: (
+    manager: SetupStateInitializationManagerLike,
+  ) => void;
+  initializeTimerMilestones?: (
+    manager: SetupStateInitializationManagerLike,
+  ) => void;
   resetRoundStatsState?: (manager: SetupStateInitializationManagerLike) => void;
   resetTimerUiForSetup?: (manager: SetupStateInitializationManagerLike) => void;
-  resolvePreferredTimerModuleViewForSetup?: (manager: SetupStateInitializationManagerLike) => unknown;
+  resolvePreferredTimerModuleViewForSetup?: (
+    manager: SetupStateInitializationManagerLike,
+  ) => unknown;
   resolveSetupRestoreAndInitialBoardState?: (
     manager: SetupStateInitializationManagerLike,
     hasInputSeed: boolean,
-    normalizedOptions: Record<string, unknown>
+    normalizedOptions: Record<string, unknown>,
   ) => SetupStateInitializationRestoreState;
-  syncSetupSessionReplayV1InitTiles?: (manager: SetupStateInitializationManagerLike) => void;
+  syncSetupSessionReplayV1InitTiles?: (
+    manager: SetupStateInitializationManagerLike,
+  ) => void;
   finalizeSetupUiAndStatsState?: (
     manager: SetupStateInitializationManagerLike,
     preferredTimerModuleView: unknown,
-    restoredFromSavedState: boolean
+    restoredFromSavedState: boolean,
   ) => void;
 }
 
@@ -97,7 +109,7 @@ export interface ResetSetupTimerAndInputStateOperations {
 
 export function resetSetupTimerAndInputState(
   manager: SetupStateInitializationManagerLike | null | undefined,
-  operations: ResetSetupTimerAndInputStateOperations = {}
+  operations: ResetSetupTimerAndInputStateOperations = {},
 ): void {
   if (!manager) return;
   if (manager.timerID !== null && typeof manager.timerID !== "undefined") {
@@ -116,44 +128,74 @@ export function resetSetupTimerAndInputState(
   manager.timerUpdateIntervalMs = null;
   manager.timerFrozen = false;
   manager.pendingMoveInput = null;
+  if (Array.isArray(manager.pendingMoveInputQueue))
+    manager.pendingMoveInputQueue.length = 0;
+  else manager.pendingMoveInputQueue = [];
+  manager.pendingMoveInputDelayScheduled = false;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
   manager.moveDeadlineAt = null;
 }
 
+type SetupChallengeId = string | null;
+
 export function resolveSetupChallengeId(
   manager: SetupStateInitializationManagerLike | null | undefined,
   normalizedOptions: Record<string, unknown>,
-  rankedSessionContext: unknown
-): unknown {
+  rankedSessionContext: unknown,
+): SetupChallengeId {
   if (!manager) return null;
-  let challengeId: unknown =
-    typeof normalizedOptions.challengeId === "string" && normalizedOptions.challengeId
+  let challengeId: SetupChallengeId =
+    typeof normalizedOptions.challengeId === "string" &&
+    normalizedOptions.challengeId
       ? normalizedOptions.challengeId
       : null;
-  if (!challengeId && isNonArrayRecord(rankedSessionContext) && rankedSessionContext.id) {
+  if (
+    !challengeId &&
+    isNonArrayRecord(rankedSessionContext) &&
+    typeof rankedSessionContext.id === "string"
+  ) {
     challengeId = rankedSessionContext.id;
   }
   try {
-    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
-    if (!challengeId && windowLike?.GAME_CHALLENGE_CONTEXT?.id) {
-      challengeId = windowLike.GAME_CHALLENGE_CONTEXT.id;
+    const windowLike =
+      typeof manager.getWindowLike === "function"
+        ? manager.getWindowLike()
+        : null;
+    const windowChallengeId = windowLike?.GAME_CHALLENGE_CONTEXT?.id;
+    if (
+      !challengeId &&
+      typeof windowChallengeId === "string" &&
+      windowChallengeId
+    ) {
+      challengeId = windowChallengeId;
     }
-  } catch (_error) {}
+  } catch {
+    // Challenge context is optional during early page bootstrap.
+  }
   return challengeId;
 }
 
-function scheduleRankedCheckpointRestoreIfNeeded(manager: SetupStateInitializationManagerLike): void {
+function scheduleRankedCheckpointRestoreIfNeeded(
+  manager: SetupStateInitializationManagerLike,
+): void {
   try {
-    const windowLike = typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    const windowLike =
+      typeof manager.getWindowLike === "function"
+        ? manager.getWindowLike()
+        : null;
     if (
       manager.needsRankedCheckpointRestore &&
       windowLike?.OnlineLeaderboardRuntime &&
-      typeof windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore === "function"
+      typeof windowLike.OnlineLeaderboardRuntime
+        .scheduleRankedCheckpointRestore === "function"
     ) {
-      windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(manager, { reason: "setup" });
+      windowLike.OnlineLeaderboardRuntime.scheduleRankedCheckpointRestore(
+        manager,
+        { reason: "setup" },
+      );
     }
-  } catch (_error) {
+  } catch {
     // Legacy setup intentionally ignores checkpoint scheduling failures.
   }
 }
@@ -162,42 +204,55 @@ export function runSetupStateInitialization(
   manager: SetupStateInitializationManagerLike | null | undefined,
   inputSeed: unknown,
   setupOptions: unknown,
-  operations: SetupStateInitializationOperations = {}
+  operations: SetupStateInitializationOperations = {},
 ): void {
   if (!manager) return;
   const normalizedOptions = isNonArrayRecord(setupOptions) ? setupOptions : {};
-  const seedState =
-    operations.initializeSetupSeedAndReplayState?.(manager, inputSeed) || {
-      hasInputSeed: typeof inputSeed !== "undefined",
-      rankedSessionContext: null
-    };
+  const seedState = operations.initializeSetupSeedAndReplayState?.(
+    manager,
+    inputSeed,
+  ) || {
+    hasInputSeed: typeof inputSeed !== "undefined",
+    rankedSessionContext: null,
+  };
   operations.resetSetupRuntimeState?.(manager);
   manager.challengeId = operations.resolveSetupChallengeId?.(
     manager,
     normalizedOptions,
-    seedState.rankedSessionContext
+    seedState.rankedSessionContext,
   );
-  manager.rankedSessionToken = operations.resolveSetupRankedSessionToken?.(seedState.rankedSessionContext);
-  const requestedSpawnSequenceVersion = operations.resolveSetupSpawnSequenceVersion?.(
-    seedState.rankedSessionContext
+  manager.rankedSessionToken = operations.resolveSetupRankedSessionToken?.(
+    seedState.rankedSessionContext,
   );
+  const requestedSpawnSequenceVersion =
+    operations.resolveSetupSpawnSequenceVersion?.(
+      seedState.rankedSessionContext,
+    );
   manager.spawnSequenceVersion = seedState.rankedSessionContext
-    ? requestedSpawnSequenceVersion === 2 ? 2 : 1
-    : seedState.hasInputSeed ? 1 : 2;
+    ? requestedSpawnSequenceVersion === 2
+      ? 2
+      : 1
+    : seedState.hasInputSeed
+      ? 1
+      : 2;
   operations.initializeSetupSessionReplaySnapshot?.(manager);
   operations.initializeTimerMilestones?.(manager);
   operations.resetRoundStatsState?.(manager);
   operations.resetTimerUiForSetup?.(manager);
-  const preferredTimerModuleView = operations.resolvePreferredTimerModuleViewForSetup?.(manager);
-  const restoreState =
-    operations.resolveSetupRestoreAndInitialBoardState?.(manager, seedState.hasInputSeed, normalizedOptions) || {
-      restoredFromSavedState: false
-    };
+  const preferredTimerModuleView =
+    operations.resolvePreferredTimerModuleViewForSetup?.(manager);
+  const restoreState = operations.resolveSetupRestoreAndInitialBoardState?.(
+    manager,
+    seedState.hasInputSeed,
+    normalizedOptions,
+  ) || {
+    restoredFromSavedState: false,
+  };
   operations.syncSetupSessionReplayV1InitTiles?.(manager);
   operations.finalizeSetupUiAndStatsState?.(
     manager,
     preferredTimerModuleView,
-    restoreState.restoredFromSavedState
+    restoreState.restoredFromSavedState,
   );
   scheduleRankedCheckpointRestoreIfNeeded(manager);
 }
@@ -206,22 +261,23 @@ export function createSetupStateInitializationRuntime(): SetupStateInitializatio
   return {
     runSetupStateInitialization,
     resetSetupTimerAndInputState,
-    resolveSetupChallengeId
+    resolveSetupChallengeId,
   };
 }
 
 export function installSetupStateInitializationRuntime(
-  options: SetupStateInitializationRuntimeInstallOptions = {}
+  options: SetupStateInitializationRuntimeInstallOptions = {},
 ): SetupStateInitializationRuntime | null {
-  const target =
-    options.windowLike === undefined
-      ? typeof window === "undefined"
-        ? null
-        : (window as unknown as SetupStateInitializationRuntimeWindowLike)
-      : options.windowLike;
+  let target = options.windowLike;
+  if (target === undefined) {
+    if (typeof window === "undefined") return null;
+    // SAFETY: this runtime is published on the browser Window namespace.
+    target = window as unknown as SetupStateInitializationRuntimeWindowLike;
+  }
   if (!target) return null;
   if (!target.CoreSetupStateInitializationRuntime) {
-    target.CoreSetupStateInitializationRuntime = createSetupStateInitializationRuntime();
+    target.CoreSetupStateInitializationRuntime =
+      createSetupStateInitializationRuntime();
   }
   return target.CoreSetupStateInitializationRuntime;
 }

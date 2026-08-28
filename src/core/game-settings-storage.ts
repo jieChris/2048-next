@@ -3,8 +3,8 @@ import { calculateHistoryBoardSum } from "../contracts";
 
 interface StorageLike {
   getItem?(key: string): string | null;
-  setItem?(key: string, value: string): unknown;
-  removeItem?(key: string): unknown;
+  setItem?(key: string, value: string): void;
+  removeItem?(key: string): void;
 }
 
 interface WindowLike {
@@ -12,6 +12,7 @@ interface WindowLike {
   sessionStorage?: StorageLike | null;
   navigator?: {
     userAgent?: string;
+    maxTouchPoints?: number;
   } | null;
   name?: string;
 }
@@ -57,6 +58,17 @@ function isMobileSafariUserAgent(userAgent: unknown): boolean {
   return true;
 }
 
+function isMobileSafariLike(windowLike: WindowLike): boolean {
+  const userAgent = windowLike.navigator?.userAgent || "";
+  if (isMobileSafariUserAgent(userAgent)) return true;
+  const maxTouchPoints = Number(windowLike.navigator?.maxTouchPoints);
+  return (
+    /Macintosh/i.test(userAgent) &&
+    Number.isFinite(maxTouchPoints) &&
+    maxTouchPoints > 1
+  );
+}
+
 function resolveModeKey(options: {
   modeKey?: unknown;
   currentModeKey?: unknown;
@@ -65,9 +77,12 @@ function resolveModeKey(options: {
 }): string {
   const opts = options || {};
   if (typeof opts.modeKey === "string" && opts.modeKey) return opts.modeKey;
-  if (typeof opts.currentModeKey === "string" && opts.currentModeKey) return opts.currentModeKey;
-  if (typeof opts.currentMode === "string" && opts.currentMode) return opts.currentMode;
-  if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey) return opts.defaultModeKey;
+  if (typeof opts.currentModeKey === "string" && opts.currentModeKey)
+    return opts.currentModeKey;
+  if (typeof opts.currentMode === "string" && opts.currentMode)
+    return opts.currentMode;
+  if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey)
+    return opts.defaultModeKey;
   return "";
 }
 
@@ -85,7 +100,7 @@ function cloneBoardMatrix(value: unknown): number[][] | null {
 function normalizeHistoryBoardMatrix(value: unknown): number[][] {
   if (!Array.isArray(value)) return [];
   return value.map((row) =>
-    Array.isArray(row) ? row.map((cell) => Math.floor(Number(cell) || 0)) : []
+    Array.isArray(row) ? row.map((cell) => Math.floor(Number(cell) || 0)) : [],
   );
 }
 
@@ -103,7 +118,10 @@ function normalizePositiveInteger(value: unknown, fallback: number): number {
   return normalized > 0 ? normalized : fallback;
 }
 
-function normalizeHistoryOwnerKeyPart(value: unknown, maxLength: number): string {
+function normalizeHistoryOwnerKeyPart(
+  value: unknown,
+  maxLength: number,
+): string {
   return String(value ?? "")
     .trim()
     .toLowerCase()
@@ -111,7 +129,10 @@ function normalizeHistoryOwnerKeyPart(value: unknown, maxLength: number): string
     .slice(0, maxLength);
 }
 
-function normalizeHistoryDiagnosticPayloadArrayValue(value: unknown, maxStringLength: number): string | number | boolean | null {
+function normalizeHistoryDiagnosticPayloadArrayValue(
+  value: unknown,
+  maxStringLength: number,
+): string | number | boolean | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
   }
@@ -124,13 +145,16 @@ function normalizeHistoryDiagnosticPayloadArrayValue(value: unknown, maxStringLe
 
 function normalizeHistoryDiagnosticPayloadArray(
   value: unknown,
-  options: { maxArrayItems: number; maxStringLength: number }
+  options: { maxArrayItems: number; maxStringLength: number },
 ): Array<string | number | boolean> {
   const source = Array.isArray(value) ? value : [];
   const out: Array<string | number | boolean> = [];
   for (let i = 0; i < source.length; i += 1) {
     if (out.length >= options.maxArrayItems) break;
-    const normalized = normalizeHistoryDiagnosticPayloadArrayValue(source[i], options.maxStringLength);
+    const normalized = normalizeHistoryDiagnosticPayloadArrayValue(
+      source[i],
+      options.maxStringLength,
+    );
     if (normalized === null) continue;
     out.push(normalized);
   }
@@ -139,7 +163,7 @@ function normalizeHistoryDiagnosticPayloadArray(
 
 function normalizeHistoryDiagnosticPayloadValue(
   value: unknown,
-  options: { maxArrayItems: number; maxStringLength: number }
+  options: { maxArrayItems: number; maxStringLength: number },
 ): string | number | boolean | Array<string | number | boolean> | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -161,7 +185,7 @@ function normalizeHistoryDiagnosticPayload(
     keyMaxLength: number;
     maxArrayItems: number;
     maxStringLength: number;
-  }
+  },
 ): Record<string, unknown> | null {
   if (!isObjectRecord(payload)) return null;
   const out: Record<string, unknown> = {};
@@ -171,7 +195,10 @@ function normalizeHistoryDiagnosticPayload(
     if (accepted >= options.maxPayloadKeys) break;
     const key = keys[i].slice(0, options.keyMaxLength);
     if (!key) continue;
-    const value = normalizeHistoryDiagnosticPayloadValue(payload[keys[i]], options);
+    const value = normalizeHistoryDiagnosticPayloadValue(
+      payload[keys[i]],
+      options,
+    );
     if (value === null) continue;
     out[key] = value;
     accepted += 1;
@@ -189,16 +216,21 @@ export function normalizeHistoryOwnerMetaFromContext(options: {
   const source = isObjectRecord(opts.record) ? opts.record : {};
   const keyPartMaxLength = normalizePositiveInteger(opts.keyPartMaxLength, 64);
 
-  const ownerTypeRaw = typeof source.owner_type === "string" ? source.owner_type.trim().toLowerCase() : "";
+  const ownerTypeRaw =
+    typeof source.owner_type === "string"
+      ? source.owner_type.trim().toLowerCase()
+      : "";
   let ownerUserId =
     source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
   let ownerNickname =
     source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
-  let ownerKey = typeof source.owner_key === "string" ? source.owner_key.trim() : "";
+  let ownerKey =
+    typeof source.owner_key === "string" ? source.owner_key.trim() : "";
 
   if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
     ownerUserId = opts.authUserId == null ? "" : String(opts.authUserId).trim();
-    ownerNickname = opts.authNickname == null ? "" : String(opts.authNickname).trim();
+    ownerNickname =
+      opts.authNickname == null ? "" : String(opts.authNickname).trim();
   }
 
   let ownerType: "guest" | "user" = ownerTypeRaw === "guest" ? "guest" : "user";
@@ -212,9 +244,13 @@ export function normalizeHistoryOwnerMetaFromContext(options: {
     if (ownerType === "guest") {
       ownerKey = "guest";
     } else if (ownerUserId) {
-      ownerKey = "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
+      ownerKey =
+        "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
     } else {
-      const normalizedNickname = normalizeHistoryOwnerKeyPart(ownerNickname, keyPartMaxLength);
+      const normalizedNickname = normalizeHistoryOwnerKeyPart(
+        ownerNickname,
+        keyPartMaxLength,
+      );
       ownerKey = normalizedNickname ? "nick:" + normalizedNickname : "guest";
     }
   }
@@ -223,7 +259,7 @@ export function normalizeHistoryOwnerMetaFromContext(options: {
     owner_type: ownerType,
     owner_user_id: ownerUserId || null,
     owner_nickname: ownerNickname,
-    owner_key: ownerKey || "guest"
+    owner_key: ownerKey || "guest",
   };
 }
 
@@ -247,7 +283,8 @@ export function normalizeHistoryDiagnosticsIndexEntriesFromContext(options: {
     if (out.length >= maxEntries) break;
     const entry = source[i];
     if (!isObjectRecord(entry)) continue;
-    const key = typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
+    const key =
+      typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
     if (!key) continue;
     const schemaVersion = Number(entry.schemaVersion);
     if (!Number.isInteger(schemaVersion) || schemaVersion < 1) continue;
@@ -255,13 +292,13 @@ export function normalizeHistoryDiagnosticsIndexEntriesFromContext(options: {
       maxPayloadKeys,
       keyMaxLength,
       maxArrayItems,
-      maxStringLength
+      maxStringLength,
     });
     if (!payload) continue;
     out.push({
       key,
       schemaVersion,
-      payload
+      payload,
     });
   }
   return out;
@@ -270,7 +307,7 @@ export function normalizeHistoryDiagnosticsIndexEntriesFromContext(options: {
 function safeClonePlain<T>(value: T, fallback: T): T {
   try {
     return JSON.parse(JSON.stringify(value)) as T;
-  } catch (_err) {
+  } catch {
     return fallback;
   }
 }
@@ -302,7 +339,7 @@ export function shouldUseSavedGameStateFromContext(options: {
 }
 
 export function buildLiteSavedGameStatePayload(
-  input: BuildLiteSavedGameStatePayloadInput
+  input: BuildLiteSavedGameStatePayloadInput,
 ): Record<string, unknown> | null {
   const opts = input || {};
   const payload = isObjectRecord(opts.payload) ? opts.payload : null;
@@ -339,7 +376,8 @@ export function buildLiteSavedGameStatePayload(
     payload.practice_restart_mode_config !== undefined &&
     payload.practice_restart_mode_config !== null;
   const hasFallbackPracticeModeConfig =
-    opts.practiceRestartModeConfig !== undefined && opts.practiceRestartModeConfig !== null;
+    opts.practiceRestartModeConfig !== undefined &&
+    opts.practiceRestartModeConfig !== null;
   const practiceRestartModeConfig = hasPayloadPracticeModeConfig
     ? safeClonePlain(payload.practice_restart_mode_config, null)
     : hasFallbackPracticeModeConfig
@@ -362,9 +400,12 @@ export function buildLiteSavedGameStatePayload(
     initial_seed: Number.isFinite(Number(payload.initial_seed))
       ? Number(payload.initial_seed)
       : fallbackInitialSeed,
-    seed: Number.isFinite(Number(payload.seed)) ? Number(payload.seed) : fallbackSeed,
+    seed: Number.isFinite(Number(payload.seed))
+      ? Number(payload.seed)
+      : fallbackSeed,
     ips_input_count:
-      Number.isInteger(payload.ips_input_count) && Number(payload.ips_input_count) >= 0
+      Number.isInteger(payload.ips_input_count) &&
+      Number(payload.ips_input_count) >= 0
         ? Number(payload.ips_input_count)
         : 0,
     timer_status: payload.timer_status === 1 ? 1 : 0,
@@ -389,12 +430,24 @@ export function buildLiteSavedGameStatePayload(
       ? Number(payload.capped_milestone_count)
       : 0,
     capped64_unlocked: null,
-    combo_streak: Number.isInteger(payload.combo_streak) ? Number(payload.combo_streak) : 0,
+    combo_streak: Number.isInteger(payload.combo_streak)
+      ? Number(payload.combo_streak)
+      : 0,
     successful_move_count: Number.isInteger(payload.successful_move_count)
       ? Number(payload.successful_move_count)
       : 0,
-    undo_used: Number.isInteger(payload.undo_used) ? Number(payload.undo_used) : 0,
-    lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count)
+    undo_used: Number.isInteger(payload.undo_used)
+      ? Number(payload.undo_used)
+      : 0,
+    valid_input_count: Number.isInteger(payload.valid_input_count)
+      ? Number(payload.valid_input_count)
+      : 0,
+    invalid_input_count: Number.isInteger(payload.invalid_input_count)
+      ? Number(payload.invalid_input_count)
+      : 0,
+    lock_consumed_at_move_count: Number.isInteger(
+      payload.lock_consumed_at_move_count,
+    )
       ? Number(payload.lock_consumed_at_move_count)
       : -1,
     locked_direction_turn: Number.isInteger(payload.locked_direction_turn)
@@ -405,10 +458,11 @@ export function buildLiteSavedGameStatePayload(
       : null,
     challenge_id: payload.challenge_id || null,
     ranked_session_token: payload.ranked_session_token || null,
-    spawn_sequence_version: Number(payload.spawn_sequence_version) === 2 ? 2 : 1,
+    spawn_sequence_version:
+      Number(payload.spawn_sequence_version) === 2 ? 2 : 1,
     session_replay_v1: isObjectRecord(payload.session_replay_v1)
       ? safeClonePlain(payload.session_replay_v1, null)
-      : null
+      : null,
   };
 }
 
@@ -425,7 +479,7 @@ export function readStorageFlagFromContext(options: {
   if (!storage || typeof storage.getItem !== "function") return false;
   try {
     return storage.getItem(key) === trueValue;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -440,7 +494,7 @@ export function readStorageTextFromContext(options: {
   if (!storage || typeof storage.getItem !== "function") return "";
   try {
     return String(storage.getItem(key) || "");
-  } catch (_err) {
+  } catch {
     return "";
   }
 }
@@ -457,7 +511,7 @@ export function writeStorageTextFromContext(options: {
   try {
     storage.setItem(key, String(options?.value || ""));
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -472,7 +526,8 @@ export function writeStorageFlagFromContext(options: {
   const opts = options || {};
   const key = typeof opts.key === "string" ? opts.key : "";
   const trueValue = typeof opts.trueValue === "string" ? opts.trueValue : "1";
-  const falseValue = typeof opts.falseValue === "string" ? opts.falseValue : "0";
+  const falseValue =
+    typeof opts.falseValue === "string" ? opts.falseValue : "0";
   if (!key) return false;
   const storage = resolveLocalStorage(opts.windowLike);
   if (!storage || typeof storage.setItem !== "function") return false;
@@ -480,7 +535,7 @@ export function writeStorageFlagFromContext(options: {
   try {
     storage.setItem(key, value);
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -499,7 +554,7 @@ export function readStorageJsonMapFromContext(options: {
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return isObjectRecord(parsed) ? parsed : {};
-  } catch (_err) {
+  } catch {
     return {};
   }
 }
@@ -518,7 +573,7 @@ export function writeStorageJsonMapFromContext(options: {
   try {
     storage.setItem(key, JSON.stringify(map));
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -538,7 +593,7 @@ export function writeStorageJsonPayloadFromContext(options: {
     if (typeof serialized !== "string") return false;
     storage.setItem(key, serialized);
     return true;
-  } catch (_err) {
+  } catch {
     return false;
   }
 }
@@ -557,7 +612,7 @@ export function writeSavedPayloadToStorages(options: {
   let serialized: string;
   try {
     serialized = JSON.stringify(opts.payload);
-  } catch (_err) {
+  } catch {
     return false;
   }
   if (typeof serialized !== "string") return false;
@@ -568,7 +623,7 @@ export function writeSavedPayloadToStorages(options: {
     try {
       storage.setItem(key, serialized);
       return true;
-    } catch (_err) {
+    } catch {
       // Try the next available storage.
     }
   }
@@ -585,10 +640,13 @@ export function getSavedGameStateStoragesFromContext(options: {
   const storages: StorageLike[] = [];
   const localStorage = win.localStorage || null;
   const sessionStorage = win.sessionStorage || null;
-  const userAgent = win.navigator?.userAgent || "";
-  const shouldSkipSessionStorage = isMobileSafariUserAgent(userAgent);
+  const shouldSkipSessionStorage = isMobileSafariLike(win);
   if (localStorage) storages.push(localStorage);
-  if (!shouldSkipSessionStorage && sessionStorage && sessionStorage !== localStorage) {
+  if (
+    !shouldSkipSessionStorage &&
+    sessionStorage &&
+    sessionStorage !== localStorage
+  ) {
     storages.push(sessionStorage);
   }
   return storages;
@@ -601,7 +659,9 @@ export function removeKeysFromStorages(options: {
   const opts = options || {};
   const storages = Array.isArray(opts.storages) ? opts.storages : [];
   const keys = Array.isArray(opts.keys)
-    ? opts.keys.filter((key): key is string => typeof key === "string" && key.length > 0)
+    ? opts.keys.filter(
+        (key): key is string => typeof key === "string" && key.length > 0,
+      )
     : [];
   if (!storages.length || !keys.length) return false;
 
@@ -613,7 +673,9 @@ export function removeKeysFromStorages(options: {
       try {
         storage.removeItem(keys[k]);
         removed = true;
-      } catch (_err) {}
+      } catch {
+        // Removal is best-effort across storage implementations.
+      }
     }
   }
   return removed;
@@ -637,7 +699,7 @@ export function readSavedPayloadByKeyFromStorages(options: {
     let raw: string | null = null;
     try {
       raw = storage.getItem(key);
-    } catch (_errRead) {
+    } catch {
       raw = null;
     }
     if (!raw) continue;
@@ -645,11 +707,13 @@ export function readSavedPayloadByKeyFromStorages(options: {
     let parsed: unknown = null;
     try {
       parsed = JSON.parse(raw);
-    } catch (_errParse) {
+    } catch {
       if (typeof storage.removeItem === "function") {
         try {
           storage.removeItem(key);
-        } catch (_errRemove) {}
+        } catch {
+          // A corrupt copy may remain in a storage that rejected removal.
+        }
       }
       continue;
     }
@@ -679,12 +743,13 @@ export function readSavedPayloadFromWindowName(options: {
   let raw = "";
   try {
     raw = typeof win.name === "string" ? win.name : "";
-  } catch (_errName) {
+  } catch {
     return null;
   }
   if (!raw) return null;
 
-  const windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+  const windowNameKey =
+    typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
   if (!windowNameKey) return null;
   const marker = windowNameKey + "=";
 
@@ -701,7 +766,7 @@ export function readSavedPayloadFromWindowName(options: {
   let map: unknown = null;
   try {
     map = JSON.parse(decodeURIComponent(encoded));
-  } catch (_errParse) {
+  } catch {
     return null;
   }
   if (!isObjectRecord(map)) return null;
@@ -729,14 +794,15 @@ export function writeSavedPayloadToWindowName(options: {
   const modeKey = resolveModeKey(opts);
   if (!modeKey) return false;
 
-  const windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+  const windowNameKey =
+    typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
   if (!windowNameKey) return false;
   const marker = windowNameKey + "=";
 
   let raw = "";
   try {
     raw = typeof win.name === "string" ? win.name : "";
-  } catch (_errNameRead) {
+  } catch {
     raw = "";
   }
 
@@ -751,7 +817,9 @@ export function writeSavedPayloadToWindowName(options: {
       try {
         const parsed = JSON.parse(decodeURIComponent(encoded));
         if (isObjectRecord(parsed)) map = parsed;
-      } catch (_errParse) {}
+      } catch {
+        // Ignore malformed window.name fragments and preserve the remaining parts.
+      }
       continue;
     }
     kept.push(part);
@@ -766,7 +834,7 @@ export function writeSavedPayloadToWindowName(options: {
   let encodedMap = "";
   try {
     encodedMap = encodeURIComponent(JSON.stringify(map));
-  } catch (_errEncode) {
+  } catch {
     return false;
   }
 
@@ -774,16 +842,20 @@ export function writeSavedPayloadToWindowName(options: {
   try {
     win.name = kept.join("&");
     return true;
-  } catch (_errWrite) {
+  } catch {
     return false;
   }
 }
 
-function normalizeTimerModuleViewModeFromUnknown(value: unknown): TimerModuleViewMode {
+function normalizeTimerModuleViewModeFromUnknown(
+  value: unknown,
+): TimerModuleViewMode {
   return value === "hidden" ? "hidden" : "timer";
 }
 
-export function normalizeTimerModuleViewMode(value: unknown): TimerModuleViewMode {
+export function normalizeTimerModuleViewMode(
+  value: unknown,
+): TimerModuleViewMode {
   return normalizeTimerModuleViewModeFromUnknown(value);
 }
 
@@ -856,13 +928,19 @@ export function normalizeHistoryRecordFromContext(options: {
   const source = isObjectRecord(opts.record) ? opts.record : null;
   if (!source) return null;
 
-  const nowIsoProvider = typeof opts.nowIso === "function" ? opts.nowIso : () => new Date().toISOString();
+  const nowIsoProvider =
+    typeof opts.nowIso === "function"
+      ? opts.nowIso
+      : () => new Date().toISOString();
   const idFactory =
     typeof opts.idFactory === "function"
       ? (opts.idFactory as () => string)
       : () => "hist_" + randomBase36(8) + "_" + Date.now().toString(36);
   const now = String(nowIsoProvider() || "");
-  const id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
+  const id =
+    typeof source.id === "string" && source.id.trim()
+      ? source.id.trim()
+      : idFactory();
   const replay = isObjectRecord(source.replay) ? source.replay : null;
 
   let replayString = "";
@@ -871,7 +949,7 @@ export function normalizeHistoryRecordFromContext(options: {
   } else if (replay) {
     try {
       replayString = JSON.stringify(replay);
-    } catch (_err) {
+    } catch {
       replayString = "";
     }
   }
@@ -880,36 +958,55 @@ export function normalizeHistoryRecordFromContext(options: {
     record: source,
     authUserId: opts.authUserId,
     authNickname: opts.authNickname,
-    keyPartMaxLength: opts.ownerKeyPartMaxLength
+    keyPartMaxLength: opts.ownerKeyPartMaxLength,
   });
 
-  const diagnosticsIndexEntries = normalizeHistoryDiagnosticsIndexEntriesFromContext({
-    entries: source.diagnostics_index_entries,
-    maxEntries: opts.maxDiagnosticEntries,
-    maxPayloadKeys: opts.maxDiagnosticPayloadKeys,
-    maxStringLength: opts.maxDiagnosticStringLength,
-    maxArrayItems: opts.maxDiagnosticArrayItems,
-    keyMaxLength: opts.maxDiagnosticKeyLength
-  });
+  const diagnosticsIndexEntries =
+    normalizeHistoryDiagnosticsIndexEntriesFromContext({
+      entries: source.diagnostics_index_entries,
+      maxEntries: opts.maxDiagnosticEntries,
+      maxPayloadKeys: opts.maxDiagnosticPayloadKeys,
+      maxStringLength: opts.maxDiagnosticStringLength,
+      maxArrayItems: opts.maxDiagnosticArrayItems,
+      keyMaxLength: opts.maxDiagnosticKeyLength,
+    });
   const finalBoard = normalizeHistoryBoardMatrix(source.final_board);
   const hasBoardCells = finalBoard.some((row) => row.length > 0);
 
   return {
     id,
-    mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
-    mode_key: typeof source.mode_key === "string" && source.mode_key ? source.mode_key : "unknown",
+    mode:
+      typeof source.mode === "string" && source.mode ? source.mode : "local",
+    mode_key:
+      typeof source.mode_key === "string" && source.mode_key
+        ? source.mode_key
+        : "unknown",
     board_width: normalizeInteger(source.board_width, 4),
     board_height: normalizeInteger(source.board_height, 4),
-    ruleset: typeof source.ruleset === "string" && source.ruleset ? source.ruleset : "pow2",
+    ruleset:
+      typeof source.ruleset === "string" && source.ruleset
+        ? source.ruleset
+        : "pow2",
     undo_enabled: !!source.undo_enabled,
     ranked_bucket:
-      typeof source.ranked_bucket === "string" && source.ranked_bucket ? source.ranked_bucket : "none",
-    mode_family: typeof source.mode_family === "string" && source.mode_family ? source.mode_family : "pow2",
+      typeof source.ranked_bucket === "string" && source.ranked_bucket
+        ? source.ranked_bucket
+        : "none",
+    mode_family:
+      typeof source.mode_family === "string" && source.mode_family
+        ? source.mode_family
+        : "pow2",
     rank_policy:
-      typeof source.rank_policy === "string" && source.rank_policy ? source.rank_policy : "unranked",
-    special_rules_snapshot: isObjectRecord(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
+      typeof source.rank_policy === "string" && source.rank_policy
+        ? source.rank_policy
+        : "unranked",
+    special_rules_snapshot: isObjectRecord(source.special_rules_snapshot)
+      ? source.special_rules_snapshot
+      : {},
     challenge_id:
-      typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
+      typeof source.challenge_id === "string" && source.challenge_id
+        ? source.challenge_id
+        : null,
     score: normalizeInteger(source.score, 0),
     board_sum: hasBoardCells
       ? calculateHistoryBoardSum(finalBoard)
@@ -917,13 +1014,23 @@ export function normalizeHistoryRecordFromContext(options: {
     best_tile: normalizeInteger(source.best_tile, 0),
     duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
     final_board: finalBoard,
-    ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
-    saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
-    end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",
+    ended_at:
+      typeof source.ended_at === "string" && source.ended_at
+        ? source.ended_at
+        : now,
+    saved_at:
+      typeof source.saved_at === "string" && source.saved_at
+        ? source.saved_at
+        : now,
+    end_reason:
+      typeof source.end_reason === "string" && source.end_reason
+        ? source.end_reason
+        : "game_over",
     client_version:
       typeof source.client_version === "string" && source.client_version
         ? source.client_version
-        : typeof opts.defaultClientVersion === "string" && opts.defaultClientVersion
+        : typeof opts.defaultClientVersion === "string" &&
+            opts.defaultClientVersion
           ? opts.defaultClientVersion
           : "1.8",
     replay,
@@ -932,6 +1039,6 @@ export function normalizeHistoryRecordFromContext(options: {
     owner_user_id: ownerMeta.owner_user_id,
     owner_nickname: ownerMeta.owner_nickname,
     owner_key: ownerMeta.owner_key,
-    diagnostics_index_entries: diagnosticsIndexEntries
+    diagnostics_index_entries: diagnosticsIndexEntries,
   };
 }

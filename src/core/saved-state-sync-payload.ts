@@ -1,5 +1,7 @@
 export interface SavedStateSyncPayloadSource {
   ipsInputCount?: unknown;
+  validInputCount?: unknown;
+  invalidInputCount?: unknown;
 }
 
 export interface SavedStateSyncTrimPayload {
@@ -10,6 +12,8 @@ export interface SavedStateSyncTrimPayload {
   session_replay_v3: null;
   replay_string: string;
   ips_input_count: number;
+  valid_input_count: number;
+  invalid_input_count: number;
 }
 
 export interface SavedStateSyncPayloadRuntime {
@@ -30,7 +34,9 @@ function normalizeIpsInputCount(value: unknown): number {
 }
 
 function normalizeRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function resolveSavedAt(saved: Record<string, unknown> | null): number {
@@ -40,7 +46,7 @@ function resolveSavedAt(saved: Record<string, unknown> | null): number {
 }
 
 export function buildSavedStateSyncTrimPayload(
-  source: SavedStateSyncPayloadSource | null | undefined
+  source: SavedStateSyncPayloadSource | null | undefined,
 ): SavedStateSyncTrimPayload {
   return {
     move_history: [],
@@ -49,7 +55,9 @@ export function buildSavedStateSyncTrimPayload(
     replay_compact_log: "",
     session_replay_v3: null,
     replay_string: "",
-    ips_input_count: normalizeIpsInputCount(source?.ipsInputCount)
+    ips_input_count: normalizeIpsInputCount(source?.ipsInputCount),
+    valid_input_count: normalizeIpsInputCount(source?.validInputCount),
+    invalid_input_count: normalizeIpsInputCount(source?.invalidInputCount),
   };
 }
 
@@ -73,31 +81,35 @@ export function parseSavedStateSyncEventPayload(raw: unknown): {
   if (!(savedAt > 0)) savedAt = resolveSavedAt(payload);
   if (!(savedAt > 0)) return null;
   return {
-    sourceClientId: typeof payload.source_client_id === "string" ? payload.source_client_id : "",
+    sourceClientId:
+      typeof payload.source_client_id === "string"
+        ? payload.source_client_id
+        : "",
     savedAt,
-    state
+    state,
   };
 }
 
 export function createSavedStateSyncPayloadRuntime(): SavedStateSyncPayloadRuntime {
   return {
     buildSavedStateSyncTrimPayload,
-    parseSavedStateSyncEventPayload
+    parseSavedStateSyncEventPayload,
   };
 }
 
 export function installSavedStateSyncPayloadRuntime(
-  options: SavedStateSyncPayloadRuntimeInstallOptions = {}
+  options: SavedStateSyncPayloadRuntimeInstallOptions = {},
 ): SavedStateSyncPayloadRuntime | null {
-  const target =
-    options.windowLike === undefined
-      ? typeof window === "undefined"
-        ? null
-        : (window as unknown as SavedStateSyncPayloadWindowLike)
-      : options.windowLike;
+  let target = options.windowLike;
+  if (target === undefined) {
+    if (typeof window === "undefined") return null;
+    // SAFETY: this runtime is published on the browser Window namespace.
+    target = window as unknown as SavedStateSyncPayloadWindowLike;
+  }
   if (!target) return null;
   if (!target.CoreSavedStateSyncPayloadRuntime) {
-    target.CoreSavedStateSyncPayloadRuntime = createSavedStateSyncPayloadRuntime();
+    target.CoreSavedStateSyncPayloadRuntime =
+      createSavedStateSyncPayloadRuntime();
   }
   return target.CoreSavedStateSyncPayloadRuntime;
 }

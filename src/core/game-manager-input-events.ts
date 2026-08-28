@@ -13,7 +13,8 @@ export interface GameMoveInputAttempt {
   feedback: OperationFeedbackInputMetadata | null;
 }
 
-export interface ConfirmedOperationFeedbackResult extends OperationFeedbackInputMetadata {
+export interface ConfirmedOperationFeedbackResult
+  extends OperationFeedbackInputMetadata {
   valid: boolean;
 }
 
@@ -35,7 +36,10 @@ export interface GameManagerInputEventsManagerLike {
 }
 
 export interface GameManagerInputEventsOperations {
-  handleMoveInput?: (manager: GameManagerInputEventsManagerLike, payload: unknown) => void;
+  handleMoveInput?: (
+    manager: GameManagerInputEventsManagerLike,
+    payload: unknown,
+  ) => void;
 }
 
 export interface GameManagerInputEventsRuntime {
@@ -54,7 +58,7 @@ export interface GameManagerInputEventsRuntimeInstallOptions {
 }
 
 function resolvePrototypeKeepPlayingHandler(
-  manager: GameManagerInputEventsManagerLike
+  manager: GameManagerInputEventsManagerLike,
 ): ((this: GameManagerInputEventsManagerLike) => void) | null {
   try {
     const handler = Object.getPrototypeOf(manager)?.keepPlaying;
@@ -74,7 +78,9 @@ function handleKeepPlaying(manager: GameManagerInputEventsManagerLike): void {
   manager.actuator?.continue?.();
 }
 
-function normalizeOperationFeedbackMetadata(value: unknown): OperationFeedbackInputMetadata | null {
+function normalizeOperationFeedbackMetadata(
+  value: unknown,
+): OperationFeedbackInputMetadata | null {
   if (!value || typeof value !== "object") return null;
   const source = value as Partial<OperationFeedbackInputMetadata>;
   if (typeof source.id !== "string" || !source.id) return null;
@@ -83,29 +89,37 @@ function normalizeOperationFeedbackMetadata(value: unknown): OperationFeedbackIn
   return { id: source.id, key: source.key, repeat: source.repeat };
 }
 
-export function normalizeGameMoveInputAttempt(payload: unknown): GameMoveInputAttempt {
+export function normalizeGameMoveInputAttempt(
+  payload: unknown,
+): GameMoveInputAttempt {
   if (!payload || typeof payload !== "object" || !("direction" in payload)) {
     return { direction: payload, feedback: null };
   }
   const source = payload as { direction?: unknown; feedback?: unknown };
   return {
     direction: source.direction,
-    feedback: normalizeOperationFeedbackMetadata(source.feedback)
+    feedback: normalizeOperationFeedbackMetadata(source.feedback),
   };
 }
 
 function incrementInputCount(
   manager: GameManagerInputEventsManagerLike,
-  field: "validInputCount" | "invalidInputCount"
+  field: "validInputCount" | "invalidInputCount",
 ): void {
   const current = Number(manager[field]);
-  manager[field] = (Number.isFinite(current) && current >= 0 ? Math.floor(current) : 0) + 1;
+  manager[field] =
+    (Number.isFinite(current) && current >= 0 ? Math.floor(current) : 0) + 1;
 }
 
-function resolveManagerDocument(manager: GameManagerInputEventsManagerLike): Document | null {
+function resolveManagerDocument(
+  manager: GameManagerInputEventsManagerLike,
+): Document | null {
   try {
     const documentLike = manager.getWindowLike?.()?.document;
-    if (documentLike && typeof (documentLike as Document).dispatchEvent === "function") {
+    if (
+      documentLike &&
+      typeof (documentLike as Document).dispatchEvent === "function"
+    ) {
       return documentLike as Document;
     }
   } catch (_err) {
@@ -117,34 +131,45 @@ function resolveManagerDocument(manager: GameManagerInputEventsManagerLike): Doc
 export function publishConfirmedOperationFeedback(
   manager: GameManagerInputEventsManagerLike,
   attempt: GameMoveInputAttempt,
-  valid: boolean
+  valid: boolean,
 ): boolean {
   const feedback = attempt.feedback;
-  if (!feedback || (feedback.repeat && !valid)) return false;
+  if (!feedback) return false;
   incrementInputCount(manager, valid ? "validInputCount" : "invalidInputCount");
   manager.updateStatsPanel?.();
   const documentLike = resolveManagerDocument(manager);
   const CustomEventConstructor = documentLike?.defaultView?.CustomEvent;
   if (documentLike && CustomEventConstructor) {
     const detail: ConfirmedOperationFeedbackResult = { ...feedback, valid };
-    documentLike.dispatchEvent(new CustomEventConstructor(OPERATION_FEEDBACK_RESULT_EVENT, { detail }));
+    documentLike.dispatchEvent(
+      new CustomEventConstructor(OPERATION_FEEDBACK_RESULT_EVENT, { detail }),
+    );
   }
   return true;
 }
 
-export function publishOperationFeedbackReset(manager: GameManagerInputEventsManagerLike): boolean {
+export function publishOperationFeedbackReset(
+  manager: GameManagerInputEventsManagerLike,
+): boolean {
   const documentLike = resolveManagerDocument(manager);
   const EventConstructor = documentLike?.defaultView?.Event;
   if (!documentLike || !EventConstructor) return false;
-  documentLike.dispatchEvent(new EventConstructor(OPERATION_FEEDBACK_RESET_EVENT));
+  documentLike.dispatchEvent(
+    new EventConstructor(OPERATION_FEEDBACK_RESET_EVENT),
+  );
   return true;
 }
 
 export function bindGameManagerInputEvents(
   manager: GameManagerInputEventsManagerLike | null | undefined,
-  operations: GameManagerInputEventsOperations = {}
+  operations: GameManagerInputEventsOperations = {},
 ): void {
-  if (!manager || !manager.inputManager || typeof manager.inputManager.on !== "function") return;
+  if (
+    !manager ||
+    !manager.inputManager ||
+    typeof manager.inputManager.on !== "function"
+  )
+    return;
   manager.inputManager.on("move", (payload) => {
     operations.handleMoveInput?.(manager, payload);
   });
@@ -164,22 +189,23 @@ export function createGameManagerInputEventsRuntime(): GameManagerInputEventsRun
     bindGameManagerInputEvents,
     normalizeGameMoveInputAttempt,
     publishConfirmedOperationFeedback,
-    publishOperationFeedbackReset
+    publishOperationFeedbackReset,
   };
 }
 
 export function installGameManagerInputEventsRuntime(
-  options: GameManagerInputEventsRuntimeInstallOptions = {}
+  options: GameManagerInputEventsRuntimeInstallOptions = {},
 ): GameManagerInputEventsRuntime | null {
-  const target =
-    options.windowLike === undefined
-      ? typeof window === "undefined"
-        ? null
-        : (window as unknown as GameManagerInputEventsRuntimeWindowLike)
-      : options.windowLike;
+  let target = options.windowLike;
+  if (target === undefined) {
+    if (typeof window === "undefined") return null;
+    // SAFETY: this runtime is installed only on the browser Window namespace.
+    target = window as unknown as GameManagerInputEventsRuntimeWindowLike;
+  }
   if (!target) return null;
   if (!target.CoreGameManagerInputEventsRuntime) {
-    target.CoreGameManagerInputEventsRuntime = createGameManagerInputEventsRuntime();
+    target.CoreGameManagerInputEventsRuntime =
+      createGameManagerInputEventsRuntime();
   }
   return target.CoreGameManagerInputEventsRuntime;
 }

@@ -1,5 +1,6 @@
 (function () {
-  var scriptElementPrototype = window.HTMLScriptElement && window.HTMLScriptElement.prototype;
+  var scriptElementPrototype =
+    window.HTMLScriptElement && window.HTMLScriptElement.prototype;
   if (scriptElementPrototype && "noModule" in scriptElementPrototype) return;
   if (window.__legacyIndexNomoduleLoaderStarted) return;
   window.__legacyIndexNomoduleLoaderStarted = true;
@@ -10,8 +11,16 @@
     var originalAddEventListener = document.addEventListener;
     if (typeof originalAddEventListener !== "function") return;
 
-    document.addEventListener = function patchedAddEventListener(type, listener, options) {
-      if (type === "DOMContentLoaded" && listener && document.readyState !== "loading") {
+    document.addEventListener = function patchedAddEventListener(
+      type,
+      listener,
+      options,
+    ) {
+      if (
+        type === "DOMContentLoaded" &&
+        listener &&
+        document.readyState !== "loading"
+      ) {
         window.setTimeout(function () {
           var event;
           if (typeof Event === "function") {
@@ -35,7 +44,8 @@
   }
 
   function showFallbackError(message) {
-    var container = document.querySelector && document.querySelector(".container");
+    var container =
+      document.querySelector && document.querySelector(".container");
     if (!container) return;
     var node = document.getElementById("legacy-loader-error");
     if (!node) {
@@ -66,7 +76,9 @@
       }
     };
     script.onerror = function () {
-      showFallbackError("当前浏览器加载旧版启动脚本失败，请清理缓存后重试，或改用 Safari / Chrome 打开。");
+      showFallbackError(
+        "当前浏览器加载旧版启动脚本失败，请清理缓存后重试，或改用 Safari / Chrome 打开。",
+      );
     };
     (document.head || document.documentElement).appendChild(script);
   }
@@ -135,6 +147,7 @@
     "core_game_manager_env_helpers_runtime.js",
     "core_game_manager_runtime_call_helpers_runtime.js",
     "core_game_manager_saved_state_helpers_runtime.js",
+    "core_game_manager_saved_state_persistence_runtime.js",
     "core_ranked_checkpoint_local_mirror_fallback_runtime.js",
     "core_game_manager_runtime_accessor_helpers_runtime.js",
     "core_game_manager_stats_ui_helpers_runtime.js",
@@ -158,7 +171,7 @@
     "core_home_startup_host_runtime.js",
     "core_home_page_host_runtime.js",
     "core_undo_action_runtime.js",
-    "application.js"
+    "application.js",
   ];
   coreScripts = ["home_standard_startup_bundle.js"];
 
@@ -228,7 +241,7 @@
     "core_index_ui_page_resolvers_host_runtime.js",
     "core_index_ui_page_actions_host_runtime.js",
     "index_ui.js",
-    "core_i18n_runtime.js"
+    "core_i18n_runtime.js",
   ];
   uiStartupScripts = ["home_standard_deferred_bundle.js"];
 
@@ -239,7 +252,7 @@
     "refresh_scheduler_runtime.js",
     "api_shared_utils.js",
     "admin_rescue_client_runtime.js",
-    "online_leaderboard_runtime.js"
+    "online_leaderboard_runtime.js",
   ];
 
   installLateDomReadyCompatibility();

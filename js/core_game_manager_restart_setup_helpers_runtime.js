@@ -1,18 +1,27 @@
 var restartRandomIdFallbackCounter = 0;
 
 function resolveCoreNoXSelectionRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreNoXSelectionRuntime) {
     return windowLike.CoreNoXSelectionRuntime;
   }
-  if (typeof CoreNoXSelectionRuntime !== "undefined" && CoreNoXSelectionRuntime) {
+  if (
+    typeof CoreNoXSelectionRuntime !== "undefined" &&
+    CoreNoXSelectionRuntime
+  ) {
     return CoreNoXSelectionRuntime;
   }
   return null;
 }
 
 function resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreRankedCheckpointLocalMirrorSetupRuntime) {
     return windowLike.CoreRankedCheckpointLocalMirrorSetupRuntime;
   }
@@ -26,7 +35,10 @@ function resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager) {
 }
 
 function resolveCoreRankedSessionSetupContextRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreRankedSessionSetupContextRuntime) {
     return windowLike.CoreRankedSessionSetupContextRuntime;
   }
@@ -40,18 +52,27 @@ function resolveCoreRankedSessionSetupContextRuntime(manager) {
 }
 
 function resolveCoreSessionReplaySnapshotRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreSessionReplaySnapshotRuntime) {
     return windowLike.CoreSessionReplaySnapshotRuntime;
   }
-  if (typeof CoreSessionReplaySnapshotRuntime !== "undefined" && CoreSessionReplaySnapshotRuntime) {
+  if (
+    typeof CoreSessionReplaySnapshotRuntime !== "undefined" &&
+    CoreSessionReplaySnapshotRuntime
+  ) {
     return CoreSessionReplaySnapshotRuntime;
   }
   return null;
 }
 
 function resolveCoreSetupRestoreInitialBoardStateRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreSetupRestoreInitialBoardStateRuntime) {
     return windowLike.CoreSetupRestoreInitialBoardStateRuntime;
   }
@@ -65,24 +86,39 @@ function resolveCoreSetupRestoreInitialBoardStateRuntime(manager) {
 }
 
 function resolveCoreSetupStateInitializationRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreSetupStateInitializationRuntime) {
     return windowLike.CoreSetupStateInitializationRuntime;
   }
-  if (typeof CoreSetupStateInitializationRuntime !== "undefined" && CoreSetupStateInitializationRuntime) {
+  if (
+    typeof CoreSetupStateInitializationRuntime !== "undefined" &&
+    CoreSetupStateInitializationRuntime
+  ) {
     return CoreSetupStateInitializationRuntime;
   }
   return null;
 }
 
 function resolveCoreSetupGameRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
-  if (windowLike && windowLike.CoreSetupGameRuntime) return windowLike.CoreSetupGameRuntime;
-  return typeof CoreSetupGameRuntime !== "undefined" && CoreSetupGameRuntime ? CoreSetupGameRuntime : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
+  if (windowLike && windowLike.CoreSetupGameRuntime)
+    return windowLike.CoreSetupGameRuntime;
+  return typeof CoreSetupGameRuntime !== "undefined" && CoreSetupGameRuntime
+    ? CoreSetupGameRuntime
+    : null;
 }
 
 function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreResetSetupReplayAndSpawnStateRuntime) {
     return windowLike.CoreResetSetupReplayAndSpawnStateRuntime;
   }
@@ -96,7 +132,10 @@ function resolveCoreResetSetupReplayAndSpawnStateRuntime(manager) {
 }
 
 function resolveCoreRestartGameRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreRestartGameRuntime) {
     return windowLike.CoreRestartGameRuntime;
   }
@@ -108,15 +147,28 @@ function resolveCoreRestartGameRuntime(manager) {
 
 function ensureNoXSelectionOverlayForManager(manager) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
-  if (runtime && typeof runtime.ensureNoXSelectionOverlayForManager === "function") {
+  if (
+    runtime &&
+    typeof runtime.ensureNoXSelectionOverlayForManager === "function"
+  ) {
     runtime.ensureNoXSelectionOverlayForManager(manager);
   }
 }
 
-function resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed) {
+function resolveSetupNoXModeConfig(
+  manager,
+  modeConfig,
+  setupOptions,
+  inputSeed,
+) {
   var runtime = resolveCoreNoXSelectionRuntime(manager);
   if (runtime && typeof runtime.resolveSetupNoXModeConfig === "function") {
-    return runtime.resolveSetupNoXModeConfig(manager, modeConfig, setupOptions, inputSeed);
+    return runtime.resolveSetupNoXModeConfig(
+      manager,
+      modeConfig,
+      setupOptions,
+      inputSeed,
+    );
   }
   return modeConfig;
 }
@@ -129,7 +181,10 @@ function normalizeRestartConfirmLanguagePrefix(value) {
 }
 
 function resolveRestartConfirmLanguageFallback(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   try {
     var i18n = windowLike && windowLike.UII18N;
     if (i18n && typeof i18n.getLanguage === "function") {
@@ -138,19 +193,28 @@ function resolveRestartConfirmLanguageFallback(manager) {
     }
   } catch (_errI18n) {}
   try {
-    var storageLike = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    var fromStorage = storageLike && typeof storageLike.getItem === "function" ? storageLike.getItem("ui_language_v1") : "";
+    var storageLike =
+      windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    var fromStorage =
+      storageLike && typeof storageLike.getItem === "function"
+        ? storageLike.getItem("ui_language_v1")
+        : "";
     var storageLang = normalizeRestartConfirmLanguagePrefix(fromStorage);
     if (storageLang) return storageLang;
   } catch (_errStorage) {}
   try {
-    var documentLike = typeof resolveManagerDocumentLike === "function" ? resolveManagerDocumentLike(manager) : null;
-    var root = documentLike && documentLike.documentElement ? documentLike.documentElement : null;
+    var documentLike =
+      typeof resolveManagerDocumentLike === "function"
+        ? resolveManagerDocumentLike(manager)
+        : null;
+    var root =
+      documentLike && documentLike.documentElement
+        ? documentLike.documentElement
+        : null;
     var fromRoot = root
-      ? (
-          (typeof root.getAttribute === "function" && (root.getAttribute("data-ui-lang") || root.getAttribute("lang"))) ||
-          root.lang
-        )
+      ? (typeof root.getAttribute === "function" &&
+          (root.getAttribute("data-ui-lang") || root.getAttribute("lang"))) ||
+        root.lang
       : "";
     var rootLang = normalizeRestartConfirmLanguagePrefix(fromRoot);
     if (rootLang) return rootLang;
@@ -174,16 +238,26 @@ function resolveRestartConfirmMessage(manager) {
 }
 
 function resolveRestartConfirmOperation() {
-  if (typeof window !== "undefined" && window && typeof window.confirm === "function") {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    typeof window.confirm === "function"
+  ) {
     return window.confirm.bind(window);
   }
   if (typeof confirm === "function") {
-    if (typeof globalThis !== "undefined" && globalThis && globalThis.confirm === confirm) {
+    if (
+      typeof globalThis !== "undefined" &&
+      globalThis &&
+      globalThis.confirm === confirm
+    ) {
       return confirm.bind(globalThis);
     }
     return confirm;
   }
-  return function () { return false; };
+  return function () {
+    return false;
+  };
 }
 
 function resolveRestartConfirmOperationAsync() {
@@ -211,7 +285,7 @@ function restartGame(manager) {
       resolveRestartConfirmMessage: resolveRestartConfirmMessage,
       shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
       createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
-      restartWithBoard: restartWithBoard
+      restartWithBoard: restartWithBoard,
     });
   }
   if (runtime && typeof runtime.restartGame === "function") {
@@ -220,14 +294,20 @@ function restartGame(manager) {
       resolveRestartConfirmMessage: resolveRestartConfirmMessage,
       shouldClearPracticeBoardOnRestart: shouldClearPracticeBoardOnRestart,
       createEmptyPracticeBoardMatrix: createEmptyPracticeBoardMatrix,
-      restartWithBoard: restartWithBoard
+      restartWithBoard: restartWithBoard,
     });
   }
 }
 
 function createEmptyPracticeBoardMatrix(manager) {
-  var width = Number.isInteger(manager && manager.width) && manager.width > 0 ? manager.width : 4;
-  var height = Number.isInteger(manager && manager.height) && manager.height > 0 ? manager.height : width;
+  var width =
+    Number.isInteger(manager && manager.width) && manager.width > 0
+      ? manager.width
+      : 4;
+  var height =
+    Number.isInteger(manager && manager.height) && manager.height > 0
+      ? manager.height
+      : width;
   var board = [];
   for (var y = 0; y < height; y++) {
     var row = [];
@@ -257,7 +337,10 @@ function shouldClearPracticeBoardOnRestart(manager) {
   if (!manager || manager.modeKey !== "practice") return false;
   if (manager.hasGameStarted) return false;
   if (!Array.isArray(manager.practiceRestartBoardMatrix)) return false;
-  return areBoardMatricesEqual(getFinalBoardMatrix(manager), manager.practiceRestartBoardMatrix);
+  return areBoardMatricesEqual(
+    getFinalBoardMatrix(manager),
+    manager.practiceRestartBoardMatrix,
+  );
 }
 
 function restartWithSeed(manager, seed, modeConfig) {
@@ -270,26 +353,39 @@ function createRestartWithBoardSetupArgs(modeConfig, normalizedOptions) {
   var setupOptions = {
     skipStartTiles: true,
     modeConfig: modeConfig,
-    disableStateRestore: true
+    disableStateRestore: true,
   };
-  if (normalizedOptions.skipNoXSelection === true) setupOptions.skipNoXSelection = true;
-  if (normalizedOptions.noXTarget !== undefined) setupOptions.noXTarget = normalizedOptions.noXTarget;
+  if (normalizedOptions.skipNoXSelection === true)
+    setupOptions.skipNoXSelection = true;
+  if (normalizedOptions.noXTarget !== undefined)
+    setupOptions.noXTarget = normalizedOptions.noXTarget;
   return {
     setupSeed: normalizedOptions.asReplay ? 0 : undefined,
-    setupOptions: setupOptions
+    setupOptions: setupOptions,
   };
 }
 
 function shouldPersistPracticeRestartBase(manager, normalizedOptions) {
   if (!manager) return false;
   if (manager.modeKey !== "practice") return false;
-  if (!(normalizedOptions.setPracticeRestartBase || normalizedOptions.preservePracticeRestartBase)) return false;
-  return Array.isArray(manager.initialBoardMatrix) && manager.initialBoardMatrix.length === manager.height;
+  if (
+    !(
+      normalizedOptions.setPracticeRestartBase ||
+      normalizedOptions.preservePracticeRestartBase
+    )
+  )
+    return false;
+  return (
+    Array.isArray(manager.initialBoardMatrix) &&
+    manager.initialBoardMatrix.length === manager.height
+  );
 }
 
 function applyPracticeRestartBaseFromCurrentBoard(manager, modeConfig) {
   if (!manager) return;
-  manager.practiceRestartBoardMatrix = cloneBoardMatrix(manager.initialBoardMatrix);
+  manager.practiceRestartBoardMatrix = cloneBoardMatrix(
+    manager.initialBoardMatrix,
+  );
   manager.practiceRestartModeConfig = modeConfig
     ? manager.clonePlain(modeConfig)
     : manager.clonePlain(manager.modeConfig);
@@ -299,11 +395,18 @@ function restartWithBoard(manager, board, modeConfig, options) {
   if (!manager) return;
   var normalizedOptions = isNonArrayObject(options) ? options : {};
   manager.actuator.continue();
-  var setupArgs = createRestartWithBoardSetupArgs(modeConfig, normalizedOptions);
+  var setupArgs = createRestartWithBoardSetupArgs(
+    modeConfig,
+    normalizedOptions,
+  );
   manager.setup(setupArgs.setupSeed, setupArgs.setupOptions);
   if (manager.rankedSetupBlockedUntilSessionReady) return;
   setBoardFromMatrix(manager, board);
-  if (manager.modeKey === "practice" && !normalizedOptions.asReplay && typeof applyPracticeSetupTimerStateFromBoard === "function") {
+  if (
+    manager.modeKey === "practice" &&
+    !normalizedOptions.asReplay &&
+    typeof applyPracticeSetupTimerStateFromBoard === "function"
+  ) {
     applyPracticeSetupTimerStateFromBoard(manager, board);
   }
   manager.initialBoardMatrix = getFinalBoardMatrix(manager);
@@ -320,7 +423,10 @@ function normalizeFreshSetupSeedValue(value) {
 }
 
 function resolveRestartCryptoRandomRuntime() {
-  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime) {
+  if (
+    typeof CoreCryptoRandomRuntime !== "undefined" &&
+    CoreCryptoRandomRuntime
+  ) {
     return CoreCryptoRandomRuntime;
   }
   return null;
@@ -332,15 +438,26 @@ function createRestartRandomId(prefix, length) {
     return runtime.randomId(prefix, { length: length || 10 });
   }
   restartRandomIdFallbackCounter = (restartRandomIdFallbackCounter + 1) >>> 0;
-  return String(prefix || "id") + "_" + Date.now().toString(36) + "_" +
-    restartRandomIdFallbackCounter.toString(36).padStart(length || 10, "0");
+  return (
+    String(prefix || "id") +
+    "_" +
+    Date.now().toString(36) +
+    "_" +
+    restartRandomIdFallbackCounter.toString(36).padStart(length || 10, "0")
+  );
 }
 
 function resolveFreshSetupCryptoLike(manager) {
   var cryptoLike = null;
   try {
-    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
-    cryptoLike = windowLike && (windowLike.crypto || windowLike.msCrypto) ? (windowLike.crypto || windowLike.msCrypto) : null;
+    var windowLike =
+      manager && typeof manager.getWindowLike === "function"
+        ? manager.getWindowLike()
+        : null;
+    cryptoLike =
+      windowLike && (windowLike.crypto || windowLike.msCrypto)
+        ? windowLike.crypto || windowLike.msCrypto
+        : null;
   } catch (_errWindowCrypto) {}
   if (!cryptoLike) {
     try {
@@ -358,11 +475,17 @@ function resolveCryptoFreshSetupSeed(manager) {
     } catch (_errRuntimeRandomSeed) {}
   }
   var cryptoLike = resolveFreshSetupCryptoLike(manager);
-  if (cryptoLike && typeof cryptoLike.getRandomValues === "function" && typeof Uint32Array !== "undefined") {
+  if (
+    cryptoLike &&
+    typeof cryptoLike.getRandomValues === "function" &&
+    typeof Uint32Array !== "undefined"
+  ) {
     try {
       var values = new Uint32Array(2);
       cryptoLike.getRandomValues(values);
-      return normalizeFreshSetupSeedValue((values[0] & 2097151) * 4294967296 + (values[1] >>> 0));
+      return normalizeFreshSetupSeedValue(
+        (values[0] & 2097151) * 4294967296 + (values[1] >>> 0),
+      );
     } catch (_errRandomValues) {}
   }
   return null;
@@ -371,8 +494,12 @@ function resolveCryptoFreshSetupSeed(manager) {
 function resolveFreshSetupPerformanceNow(manager) {
   var performanceLike = null;
   try {
-    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
-    performanceLike = windowLike && windowLike.performance ? windowLike.performance : null;
+    var windowLike =
+      manager && typeof manager.getWindowLike === "function"
+        ? manager.getWindowLike()
+        : null;
+    performanceLike =
+      windowLike && windowLike.performance ? windowLike.performance : null;
   } catch (_errWindowPerformance) {}
   if (!performanceLike) {
     try {
@@ -396,19 +523,21 @@ function resolveFreshSetupSeedCounter(manager) {
 
 function createFallbackFreshSetupSeedFallback(now, perfNow, counter) {
   var mixedHigh = Math.imul((now >>> 0) ^ (counter >>> 0), 2654435761) >>> 0;
-  var mixedLow = Math.imul((perfNow >>> 0) ^ ((counter * 2246822519) >>> 0), 3266489917) >>> 0;
-  var high = (
-    mixedHigh ^
-    (Math.floor(now / 4294967296) & 2097151) ^
-    (perfNow & 2097151) ^
-    (counter & 2097151)
-  ) & 2097151;
-  var low = (
-    mixedLow ^
-    (now >>> 0) ^
-    ((perfNow * 2654435761) >>> 0) ^
-    ((counter * 2246822519) >>> 0)
-  ) >>> 0;
+  var mixedLow =
+    Math.imul((perfNow >>> 0) ^ ((counter * 2246822519) >>> 0), 3266489917) >>>
+    0;
+  var high =
+    (mixedHigh ^
+      (Math.floor(now / 4294967296) & 2097151) ^
+      (perfNow & 2097151) ^
+      (counter & 2097151)) &
+    2097151;
+  var low =
+    (mixedLow ^
+      (now >>> 0) ^
+      ((perfNow * 2654435761) >>> 0) ^
+      ((counter * 2246822519) >>> 0)) >>>
+    0;
   return high * 4294967296 + low;
 }
 
@@ -418,19 +547,28 @@ function createFallbackFreshSetupSeed(manager) {
   var counter = resolveFreshSetupSeedCounter(manager);
   var runtime = resolveCoreRestartGameRuntime();
   if (runtime && typeof runtime.createFallbackFreshSetupSeed === "function") {
-    return runtime.createFallbackFreshSetupSeed({ nowMs: now, performanceNowMicros: perfNow, counter: counter });
+    return runtime.createFallbackFreshSetupSeed({
+      nowMs: now,
+      performanceNowMicros: perfNow,
+      counter: counter,
+    });
   }
   return createFallbackFreshSetupSeedFallback(now, perfNow, counter);
 }
 
 function resolveFreshSetupSeed(manager) {
   var cryptoSeed = resolveCryptoFreshSetupSeed(manager);
-  return cryptoSeed !== null ? cryptoSeed : createFallbackFreshSetupSeed(manager);
+  return cryptoSeed !== null
+    ? cryptoSeed
+    : createFallbackFreshSetupSeed(manager);
 }
 
 function resolveSetupRankedSessionContext(manager) {
   var runtime = resolveCoreRankedSessionSetupContextRuntime(manager);
-  if (runtime && typeof runtime.resolveSetupRankedSessionContext === "function") {
+  if (
+    runtime &&
+    typeof runtime.resolveSetupRankedSessionContext === "function"
+  ) {
     return runtime.resolveSetupRankedSessionContext(manager);
   }
   return null;
@@ -444,32 +582,45 @@ function hasLegalRankedSetupSeed(manager) {
 function initializeSetupSeedAndReplayState(manager, inputSeed) {
   if (!manager) return { hasInputSeed: false, rankedSessionContext: null };
   var hasInputSeed = typeof inputSeed !== "undefined";
-  var rankedSessionContext = hasInputSeed ? null : resolveSetupRankedSessionContext(manager);
-  if (hasInputSeed && typeof manager.setRuntimeReplayIndex === "function") manager.setRuntimeReplayIndex(0);
+  var rankedSessionContext = hasInputSeed
+    ? null
+    : resolveSetupRankedSessionContext(manager);
+  if (hasInputSeed && typeof manager.setRuntimeReplayIndex === "function")
+    manager.setRuntimeReplayIndex(0);
   manager.initialSeed = hasInputSeed
     ? inputSeed
-    : (rankedSessionContext ? rankedSessionContext.seed : resolveFreshSetupSeed(manager));
+    : rankedSessionContext
+      ? rankedSessionContext.seed
+      : resolveFreshSetupSeed(manager);
   manager.seed = manager.initialSeed;
   manager.replayMode = hasInputSeed;
   if (!hasInputSeed) manager.disableSessionSync = false;
   return {
     hasInputSeed: hasInputSeed,
-    rankedSessionContext: rankedSessionContext
+    rankedSessionContext: rankedSessionContext,
   };
 }
 
 function readSetupWindowChallengeId(manager) {
   var windowLike = manager.getWindowLike();
-  return windowLike && windowLike.GAME_CHALLENGE_CONTEXT && windowLike.GAME_CHALLENGE_CONTEXT.id
+  return windowLike &&
+    windowLike.GAME_CHALLENGE_CONTEXT &&
+    windowLike.GAME_CHALLENGE_CONTEXT.id
     ? windowLike.GAME_CHALLENGE_CONTEXT.id
     : null;
 }
 
-function resolveSetupChallengeIdFallback(manager, normalizedOptions, rankedSessionContext) {
+function resolveSetupChallengeIdFallback(
+  manager,
+  normalizedOptions,
+  rankedSessionContext,
+) {
   if (!manager) return null;
-  var challengeId = typeof normalizedOptions.challengeId === "string" && normalizedOptions.challengeId
-    ? normalizedOptions.challengeId
-    : null;
+  var challengeId =
+    typeof normalizedOptions.challengeId === "string" &&
+    normalizedOptions.challengeId
+      ? normalizedOptions.challengeId
+      : null;
   if (!challengeId && rankedSessionContext && rankedSessionContext.id) {
     challengeId = rankedSessionContext.id;
   }
@@ -477,32 +628,57 @@ function resolveSetupChallengeIdFallback(manager, normalizedOptions, rankedSessi
   return challengeId;
 }
 
-function resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext) {
+function resolveSetupChallengeId(
+  manager,
+  normalizedOptions,
+  rankedSessionContext,
+) {
   var runtime = resolveCoreSetupStateInitializationRuntime(manager);
   if (runtime && typeof runtime.resolveSetupChallengeId === "function") {
-    return runtime.resolveSetupChallengeId(manager, normalizedOptions, rankedSessionContext);
+    return runtime.resolveSetupChallengeId(
+      manager,
+      normalizedOptions,
+      rankedSessionContext,
+    );
   }
-  return resolveSetupChallengeIdFallback(manager, normalizedOptions, rankedSessionContext);
+  return resolveSetupChallengeIdFallback(
+    manager,
+    normalizedOptions,
+    rankedSessionContext,
+  );
 }
 
 function resolveSetupRankedSessionToken(rankedSessionContext) {
-  return rankedSessionContext && typeof rankedSessionContext.ranked_session_token === "string"
+  return rankedSessionContext &&
+    typeof rankedSessionContext.ranked_session_token === "string"
     ? rankedSessionContext.ranked_session_token
     : "";
 }
 
 function resolveSetupSpawnSequenceVersion(rankedSessionContext) {
-  return Number(rankedSessionContext && rankedSessionContext.spawn_sequence_version) === 2 ? 2 : 1;
+  return Number(
+    rankedSessionContext && rankedSessionContext.spawn_sequence_version,
+  ) === 2
+    ? 2
+    : 1;
 }
 
 function initializeSetupSessionReplaySnapshot(manager) {
   var runtime = resolveCoreSessionReplaySnapshotRuntime(manager);
-  if (runtime && typeof runtime.initializeSetupSessionReplaySnapshot === "function") {
+  if (
+    runtime &&
+    typeof runtime.initializeSetupSessionReplaySnapshot === "function"
+  ) {
     runtime.initializeSetupSessionReplaySnapshot(manager);
   }
 }
 
-function resolveReplayV1InitTilesFromBoardMatrixFallback(board, width, height, ruleset) {
+function resolveReplayV1InitTilesFromBoardMatrixFallback(
+  board,
+  width,
+  height,
+  ruleset,
+) {
   if (!Array.isArray(board) || board.length !== height) return null;
   var fib = String(ruleset || "pow2") === "fibonacci";
   var initTiles = [];
@@ -514,37 +690,65 @@ function resolveReplayV1InitTilesFromBoardMatrixFallback(board, width, height, r
       if (value === 0) continue;
       if (fib && value !== 1 && value !== 2) return null;
       if (!fib && value !== 2 && value !== 4) return null;
-      initTiles.push({ cellIndex: y * width + x, valueBit: fib ? (value === 2 ? 1 : 0) : (value === 4 ? 1 : 0) });
+      initTiles.push({
+        cellIndex: y * width + x,
+        valueBit: fib ? (value === 2 ? 1 : 0) : value === 4 ? 1 : 0,
+      });
     }
   }
   return initTiles;
 }
 
-function resolveReplayV1InitTilesFromBoardMatrix(manager, board, width, height, ruleset) {
+function resolveReplayV1InitTilesFromBoardMatrix(
+  manager,
+  board,
+  width,
+  height,
+  ruleset,
+) {
   var runtime = resolveCoreSessionReplaySnapshotRuntime(manager);
-  if (runtime && typeof runtime.resolveReplayV1InitTilesFromBoardMatrix === "function") {
+  if (
+    runtime &&
+    typeof runtime.resolveReplayV1InitTilesFromBoardMatrix === "function"
+  ) {
     return runtime.resolveReplayV1InitTilesFromBoardMatrix({
       board: board,
       width: width,
       height: height,
-      ruleset: ruleset
+      ruleset: ruleset,
     });
   }
-  return resolveReplayV1InitTilesFromBoardMatrixFallback(board, width, height, ruleset);
+  return resolveReplayV1InitTilesFromBoardMatrixFallback(
+    board,
+    width,
+    height,
+    ruleset,
+  );
 }
 
 function syncSetupSessionReplayV1InitTiles(manager) {
   if (!(manager && manager.sessionReplayV1)) return;
-  var board = Array.isArray(manager.initialBoardMatrix) ? manager.initialBoardMatrix : manager.getFinalBoardMatrix();
-  var initTiles = resolveReplayV1InitTilesFromBoardMatrix(manager, board, manager.width, manager.height, manager.ruleset);
+  var board = Array.isArray(manager.initialBoardMatrix)
+    ? manager.initialBoardMatrix
+    : manager.getFinalBoardMatrix();
+  var initTiles = resolveReplayV1InitTilesFromBoardMatrix(
+    manager,
+    board,
+    manager.width,
+    manager.height,
+    manager.ruleset,
+  );
   manager.sessionReplayV1.mode_key = manager.modeKey;
   manager.sessionReplayV1.ruleset = manager.ruleset;
   manager.sessionReplayV1.board_width = manager.width;
   manager.sessionReplayV1.board_height = manager.height;
   manager.sessionReplayV1.challenge_id = manager.challengeId || null;
   manager.sessionReplayV1.seed = manager.initialSeed;
-  manager.sessionReplayV1.spawn_sequence_version = manager.spawnSequenceVersion === 2 ? 2 : 1;
-  manager.sessionReplayV1.init_tiles = Array.isArray(initTiles) ? initTiles : [];
+  manager.sessionReplayV1.spawn_sequence_version =
+    manager.spawnSequenceVersion === 2 ? 2 : 1;
+  manager.sessionReplayV1.init_tiles = Array.isArray(initTiles)
+    ? initTiles
+    : [];
   manager.sessionReplayV1.supported = !!initTiles;
 }
 
@@ -553,18 +757,31 @@ function resetSetupReplayAndSpawnState(manager) {
   if (runtime && typeof runtime.resetSetupReplayAndSpawnState === "function") {
     runtime.resetSetupReplayAndSpawnState(manager, {
       assignManagerClientRecordId:
-        typeof assignManagerClientRecordId === "function" ? assignManagerClientRecordId : undefined
+        typeof assignManagerClientRecordId === "function"
+          ? assignManagerClientRecordId
+          : undefined,
     });
   }
 }
 
 function resetSetupTimerAndInputStateFallback(manager) {
-  if (manager.timerID !== null && typeof manager.timerID !== "undefined" && typeof clearInterval === "function") {
+  if (
+    manager.timerID !== null &&
+    typeof manager.timerID !== "undefined" &&
+    typeof clearInterval === "function"
+  ) {
     clearInterval(manager.timerID);
   }
-  manager.timerStatus = 0; manager.time = 0; manager.accumulatedTime = 0; manager.timerElapsedOffsetMs = 0;
-  manager.startTime = null; manager.timerID = null; manager.timerAnchorLocalMs = null;
-  manager.timerAnchorServerMs = null; manager.pendingTimerAnchorServerMs = null; manager.timerUpdateIntervalMs = null;
+  manager.timerStatus = 0;
+  manager.time = 0;
+  manager.accumulatedTime = 0;
+  manager.timerElapsedOffsetMs = 0;
+  manager.startTime = null;
+  manager.timerID = null;
+  manager.timerAnchorLocalMs = null;
+  manager.timerAnchorServerMs = null;
+  manager.pendingTimerAnchorServerMs = null;
+  manager.timerUpdateIntervalMs = null;
   manager.timerFrozen = false;
   manager.pendingMoveInput = null;
   manager.moveInputFlushScheduled = false;
@@ -576,7 +793,8 @@ function resetSetupTimerAndInputState(manager) {
   var runtime = resolveCoreSetupStateInitializationRuntime(manager);
   if (runtime && typeof runtime.resetSetupTimerAndInputState === "function") {
     runtime.resetSetupTimerAndInputState(manager, {
-      clearInterval: typeof clearInterval === "function" ? clearInterval : undefined
+      clearInterval:
+        typeof clearInterval === "function" ? clearInterval : undefined,
     });
     return;
   }
@@ -602,17 +820,26 @@ function normalizeTimerModuleViewByCore(viewByCore) {
 }
 
 function resolveTimerModuleViewFallback(timerModuleViewMap, mode) {
-  var value = isNonArrayObject(timerModuleViewMap) ? timerModuleViewMap[mode] : null;
+  var value = isNonArrayObject(timerModuleViewMap)
+    ? timerModuleViewMap[mode]
+    : null;
   return value === "hidden" ? "hidden" : "timer";
 }
 
 function resolvePreferredTimerModuleViewForSetup(manager) {
   if (!manager) return "timer";
-  var timerModuleViewMap = manager.readLocalStorageJsonMap(GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY);
-  var timerModuleViewCoreCallResult = callCoreStorageRuntime(manager, "readTimerModuleViewForModeFromMap", {
-    map: timerModuleViewMap,
-    mode: manager.mode
-  }, false);
+  var timerModuleViewMap = manager.readLocalStorageJsonMap(
+    GameManager.TIMER_MODULE_VIEW_SETTINGS_KEY,
+  );
+  var timerModuleViewCoreCallResult = callCoreStorageRuntime(
+    manager,
+    "readTimerModuleViewForModeFromMap",
+    {
+      map: timerModuleViewMap,
+      mode: manager.mode,
+    },
+    false,
+  );
   return manager.resolveNormalizedCoreValueOrFallback(
     timerModuleViewCoreCallResult,
     function (viewByCore) {
@@ -620,22 +847,31 @@ function resolvePreferredTimerModuleViewForSetup(manager) {
     },
     function () {
       return resolveTimerModuleViewFallback(timerModuleViewMap, manager.mode);
-    }
+    },
   );
 }
 
-function shouldTryRestoreSavedStateInSetup(manager, hasInputSeed, normalizedOptions) {
+function shouldTryRestoreSavedStateInSetup(
+  manager,
+  hasInputSeed,
+  normalizedOptions,
+) {
   if (!manager) return false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
-  if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
+  if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore)
+    return false;
   if (shouldForceRankedCheckpointRestoreInSetup(manager)) return false;
   return shouldUseSavedGameState(manager);
 }
 
 function readSetupLocationSearch(manager) {
   try {
-    var windowLike = manager && manager.getWindowLike ? manager.getWindowLike() : null;
-    var search = windowLike && windowLike.location ? String(windowLike.location.search || "") : "";
+    var windowLike =
+      manager && manager.getWindowLike ? manager.getWindowLike() : null;
+    var search =
+      windowLike && windowLike.location
+        ? String(windowLike.location.search || "")
+        : "";
     return search;
   } catch (_err) {
     return "";
@@ -653,13 +889,19 @@ function shouldForceRankedCheckpointRestoreInSetupFallback(manager) {
       params.get("restore_ranked_checkpoint") === "1"
     );
   } catch (_errParams) {
-    return search.indexOf("force_ranked_checkpoint=1") >= 0 || search.indexOf("restore_ranked_checkpoint=1") >= 0;
+    return (
+      search.indexOf("force_ranked_checkpoint=1") >= 0 ||
+      search.indexOf("restore_ranked_checkpoint=1") >= 0
+    );
   }
 }
 
 function shouldForceRankedCheckpointRestoreInSetup(manager) {
   var runtime = resolveCoreSetupRestoreInitialBoardStateRuntime(manager);
-  if (runtime && typeof runtime.shouldForceRankedCheckpointRestoreInSetup === "function") {
+  if (
+    runtime &&
+    typeof runtime.shouldForceRankedCheckpointRestoreInSetup === "function"
+  ) {
     return runtime.shouldForceRankedCheckpointRestoreInSetup(manager) === true;
   }
   return shouldForceRankedCheckpointRestoreInSetupFallback(manager);
@@ -672,7 +914,8 @@ function hasRestorableSavedStateForUnseededRankedSetup(manager) {
   if (typeof resolveSavedStateRestoreDecision !== "function") return false;
   try {
     var saved = resolveLatestSavedPayloadForRestore(manager);
-    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return false;
+    if (!saved || typeof saved !== "object" || Array.isArray(saved))
+      return false;
     var decision = resolveSavedStateRestoreDecision(manager, saved);
     return !!(decision && decision.canRestore === true);
   } catch (_err) {
@@ -688,10 +931,12 @@ function hasRankedCheckpointAuthTokenForSetup(manager) {
     if (authRuntime && typeof authRuntime.getAuthToken === "function") {
       return !!String(authRuntime.getAuthToken() || "").trim();
     }
-    var storage = windowLike && windowLike.localStorage ? windowLike.localStorage : null;
-    var token = storage && typeof storage.getItem === "function"
-      ? String(storage.getItem("2048_auth_token_v1") || "").trim()
-      : "";
+    var storage =
+      windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    var token =
+      storage && typeof storage.getItem === "function"
+        ? String(storage.getItem("2048_auth_token_v1") || "").trim()
+        : "";
     return !!token;
   } catch (_err) {
     return false;
@@ -700,7 +945,10 @@ function hasRankedCheckpointAuthTokenForSetup(manager) {
 
 function hasRankedCheckpointLocalMirrorForSetup(manager) {
   var runtime = resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager);
-  if (runtime && typeof runtime.hasRankedCheckpointLocalMirrorForSetup === "function") {
+  if (
+    runtime &&
+    typeof runtime.hasRankedCheckpointLocalMirrorForSetup === "function"
+  ) {
     return runtime.hasRankedCheckpointLocalMirrorForSetup(manager);
   }
   return false;
@@ -708,16 +956,25 @@ function hasRankedCheckpointLocalMirrorForSetup(manager) {
 
 function readRankedCheckpointLocalMirrorSavedStateForSetup(manager) {
   var runtime = resolveCoreRankedCheckpointLocalMirrorSetupRuntime(manager);
-  if (runtime && typeof runtime.readRankedCheckpointLocalMirrorSavedStateForSetup === "function") {
+  if (
+    runtime &&
+    typeof runtime.readRankedCheckpointLocalMirrorSavedStateForSetup ===
+      "function"
+  ) {
     return runtime.readRankedCheckpointLocalMirrorSavedStateForSetup(manager);
   }
   return null;
 }
 
-function shouldScheduleRankedCheckpointRestoreInSetup(manager, hasInputSeed, normalizedOptions) {
+function shouldScheduleRankedCheckpointRestoreInSetup(
+  manager,
+  hasInputSeed,
+  normalizedOptions,
+) {
   if (!manager || manager.rankPolicy !== "ranked") return false;
   var skipStartTiles = !!normalizedOptions.skipStartTiles;
-  if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore) return false;
+  if (hasInputSeed || skipStartTiles || normalizedOptions.disableStateRestore)
+    return false;
   return hasRankedCheckpointLocalMirrorForSetup(manager);
 }
 
@@ -729,7 +986,12 @@ function seedInitialTilesAndSnapshotBoard(manager) {
 }
 
 function hasStoneCellsForSetup(manager) {
-  return !!(manager && manager.grid && Array.isArray(manager.stoneCellsList) && manager.stoneCellsList.length);
+  return !!(
+    manager &&
+    manager.grid &&
+    Array.isArray(manager.stoneCellsList) &&
+    manager.stoneCellsList.length
+  );
 }
 
 function ensureStoneValueSetForSetup(manager) {
@@ -766,46 +1028,86 @@ function placeStoneTilesForSetup(manager) {
   if (!hasStoneCellsForSetup(manager)) return;
   var stoneValueSet = ensureStoneValueSetForSetup(manager);
   for (var i = 0; i < manager.stoneCellsList.length; i++) {
-    var cell = normalizeStoneCellForSetup(manager.stoneCellsList[i], manager.width, manager.height);
+    var cell = normalizeStoneCellForSetup(
+      manager.stoneCellsList[i],
+      manager.width,
+      manager.height,
+    );
     if (!cell) continue;
     if (!canPlaceStoneCellForSetup(manager, cell)) continue;
     insertStoneTileForSetup(manager, stoneValueSet, cell, i);
   }
 }
 
-function resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions) {
+function resolveSetupRestoreAndInitialBoardState(
+  manager,
+  hasInputSeed,
+  normalizedOptions,
+) {
   var runtime = resolveCoreSetupRestoreInitialBoardStateRuntime(manager);
-  if (runtime && typeof runtime.resolveSetupRestoreAndInitialBoardState === "function") {
-    return runtime.resolveSetupRestoreAndInitialBoardState(manager, hasInputSeed, normalizedOptions, {
-      shouldTryRestoreSavedStateInSetup: shouldTryRestoreSavedStateInSetup,
-      tryRestoreLatestSavedState: typeof tryRestoreLatestSavedState === "function" ? tryRestoreLatestSavedState : undefined,
-      shouldForceRankedCheckpointRestoreInSetup: shouldForceRankedCheckpointRestoreInSetup,
-      readRankedCheckpointLocalMirrorSavedStateForSetup: readRankedCheckpointLocalMirrorSavedStateForSetup,
-      applySavedStateRestore: typeof applySavedStateRestore === "function" ? applySavedStateRestore : undefined,
-      shouldScheduleRankedCheckpointRestoreInSetup: shouldScheduleRankedCheckpointRestoreInSetup,
-      hasRankedCheckpointAuthTokenForSetup: hasRankedCheckpointAuthTokenForSetup,
-      placeStoneTilesForSetup: placeStoneTilesForSetup,
-      seedInitialTilesAndSnapshotBoard: seedInitialTilesAndSnapshotBoard
-    });
+  if (
+    runtime &&
+    typeof runtime.resolveSetupRestoreAndInitialBoardState === "function"
+  ) {
+    return runtime.resolveSetupRestoreAndInitialBoardState(
+      manager,
+      hasInputSeed,
+      normalizedOptions,
+      {
+        shouldTryRestoreSavedStateInSetup: shouldTryRestoreSavedStateInSetup,
+        tryRestoreLatestSavedState:
+          typeof tryRestoreLatestSavedState === "function"
+            ? tryRestoreLatestSavedState
+            : undefined,
+        shouldForceRankedCheckpointRestoreInSetup:
+          shouldForceRankedCheckpointRestoreInSetup,
+        readRankedCheckpointLocalMirrorSavedStateForSetup:
+          readRankedCheckpointLocalMirrorSavedStateForSetup,
+        applySavedStateRestore:
+          typeof applySavedStateRestore === "function"
+            ? applySavedStateRestore
+            : undefined,
+        shouldScheduleRankedCheckpointRestoreInSetup:
+          shouldScheduleRankedCheckpointRestoreInSetup,
+        hasRankedCheckpointAuthTokenForSetup:
+          hasRankedCheckpointAuthTokenForSetup,
+        placeStoneTilesForSetup: placeStoneTilesForSetup,
+        seedInitialTilesAndSnapshotBoard: seedInitialTilesAndSnapshotBoard,
+      },
+    );
   }
   return { restoredFromSavedState: false };
 }
 
 function resolveCoreSetupUiStateRuntime(manager) {
-  var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+  var windowLike =
+    manager && typeof manager.getWindowLike === "function"
+      ? manager.getWindowLike()
+      : null;
   if (windowLike && windowLike.CoreSetupUiStateRuntime) {
     return windowLike.CoreSetupUiStateRuntime;
   }
-  if (typeof CoreSetupUiStateRuntime !== "undefined" && CoreSetupUiStateRuntime) {
+  if (
+    typeof CoreSetupUiStateRuntime !== "undefined" &&
+    CoreSetupUiStateRuntime
+  ) {
     return CoreSetupUiStateRuntime;
   }
   return null;
 }
 
-function finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoredFromSavedState) {
+function finalizeSetupUiAndStatsState(
+  manager,
+  preferredTimerModuleView,
+  restoredFromSavedState,
+) {
   var runtime = resolveCoreSetupUiStateRuntime(manager);
   if (runtime && typeof runtime.finalizeSetupUiAndStatsState === "function") {
-    runtime.finalizeSetupUiAndStatsState(manager, preferredTimerModuleView, restoredFromSavedState);
+    runtime.finalizeSetupUiAndStatsState(
+      manager,
+      preferredTimerModuleView,
+      restoredFromSavedState,
+    );
   }
 }
 
@@ -817,20 +1119,36 @@ function createSetupStateInitializationOperations() {
     resolveSetupRankedSessionToken: resolveSetupRankedSessionToken,
     resolveSetupSpawnSequenceVersion: resolveSetupSpawnSequenceVersion,
     initializeSetupSessionReplaySnapshot: initializeSetupSessionReplaySnapshot,
-    initializeTimerMilestones: typeof initializeTimerMilestones === "function" ? initializeTimerMilestones : undefined,
-    resetRoundStatsState: typeof resetRoundStatsState === "function" ? resetRoundStatsState : undefined,
-    resetTimerUiForSetup: typeof resetTimerUiForSetup === "function" ? resetTimerUiForSetup : undefined,
-    resolvePreferredTimerModuleViewForSetup: resolvePreferredTimerModuleViewForSetup,
-    resolveSetupRestoreAndInitialBoardState: resolveSetupRestoreAndInitialBoardState,
+    initializeTimerMilestones:
+      typeof initializeTimerMilestones === "function"
+        ? initializeTimerMilestones
+        : undefined,
+    resetRoundStatsState:
+      typeof resetRoundStatsState === "function"
+        ? resetRoundStatsState
+        : undefined,
+    resetTimerUiForSetup:
+      typeof resetTimerUiForSetup === "function"
+        ? resetTimerUiForSetup
+        : undefined,
+    resolvePreferredTimerModuleViewForSetup:
+      resolvePreferredTimerModuleViewForSetup,
+    resolveSetupRestoreAndInitialBoardState:
+      resolveSetupRestoreAndInitialBoardState,
     syncSetupSessionReplayV1InitTiles: syncSetupSessionReplayV1InitTiles,
-    finalizeSetupUiAndStatsState: finalizeSetupUiAndStatsState
+    finalizeSetupUiAndStatsState: finalizeSetupUiAndStatsState,
   };
 }
 
 function runSetupStateInitialization(manager, inputSeed, setupOptions) {
   var runtime = resolveCoreSetupStateInitializationRuntime(manager);
   if (runtime && typeof runtime.runSetupStateInitialization === "function") {
-    runtime.runSetupStateInitialization(manager, inputSeed, setupOptions, createSetupStateInitializationOperations());
+    runtime.runSetupStateInitialization(
+      manager,
+      inputSeed,
+      setupOptions,
+      createSetupStateInitializationOperations(),
+    );
   }
 }
 
@@ -849,7 +1167,9 @@ function resolveGlobalSetupModeConfig(manager) {
 function resolveSetupModeConfig(manager, setupOptions, detectedMode) {
   var optionConfig = setupOptions && setupOptions.modeConfig;
   var globalModeConfig = resolveGlobalSetupModeConfig(manager);
-  return optionConfig || globalModeConfig || manager.resolveModeConfig(detectedMode);
+  return (
+    optionConfig || globalModeConfig || manager.resolveModeConfig(detectedMode)
+  );
 }
 
 function resolveSingleModePageLockWindowLike(manager) {
@@ -864,7 +1184,9 @@ function resolveSingleModePageLocalStorage(manager, windowLike) {
     if (byManager) return byManager;
   }
   try {
-    return windowLike && windowLike.localStorage ? windowLike.localStorage : null;
+    return windowLike && windowLike.localStorage
+      ? windowLike.localStorage
+      : null;
   } catch (_err) {
     return null;
   }
@@ -872,7 +1194,9 @@ function resolveSingleModePageLocalStorage(manager, windowLike) {
 
 function resolveSingleModePageSessionStorage(windowLike) {
   try {
-    return windowLike && windowLike.sessionStorage ? windowLike.sessionStorage : null;
+    return windowLike && windowLike.sessionStorage
+      ? windowLike.sessionStorage
+      : null;
   } catch (_err) {
     return null;
   }
@@ -898,7 +1222,8 @@ function writeSingleModePageStorageItemSafe(storageLike, key, value) {
 }
 
 function removeSingleModePageStorageItemSafe(storageLike, key) {
-  if (!(storageLike && typeof storageLike.removeItem === "function")) return false;
+  if (!(storageLike && typeof storageLike.removeItem === "function"))
+    return false;
   try {
     storageLike.removeItem(key);
     return true;
@@ -941,8 +1266,8 @@ function resolveSingleModePageDuplicateMessage() {
 }
 
 function resolveSingleModePageDuplicateRedirectUrl() {
-  return typeof GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL === "string" &&
-    GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL
+  return typeof GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL ===
+    "string" && GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL
     ? GameManager.SINGLE_MODE_PAGE_DUPLICATE_REDIRECT_URL
     : "modes.html";
 }
@@ -976,7 +1301,8 @@ function normalizeSingleModePageLockRecord(value) {
   var tabId = typeof source.tab_id === "string" ? source.tab_id : "";
   var token = typeof source.token === "string" ? source.token : "";
   var modeKey = typeof source.mode_key === "string" ? source.mode_key : "";
-  var instanceId = typeof source.instance_id === "string" ? source.instance_id : "";
+  var instanceId =
+    typeof source.instance_id === "string" ? source.instance_id : "";
   var updatedAt = Math.floor(Number(source.updated_at) || 0);
   if (!(tabId && token && modeKey && updatedAt > 0)) return null;
   return {
@@ -984,7 +1310,7 @@ function normalizeSingleModePageLockRecord(value) {
     token: token,
     modeKey: modeKey,
     instanceId: instanceId,
-    updatedAt: updatedAt
+    updatedAt: updatedAt,
   };
 }
 
@@ -1000,13 +1326,21 @@ function readSingleModePageLockRecord(storageLike, lockKey) {
   return normalizeSingleModePageLockRecord(parsed);
 }
 
-function writeSingleModePageLockRecord(storageLike, lockKey, tabId, token, modeKey, instanceId, nowMs) {
+function writeSingleModePageLockRecord(
+  storageLike,
+  lockKey,
+  tabId,
+  token,
+  modeKey,
+  instanceId,
+  nowMs,
+) {
   var payload = {
     tab_id: tabId,
     token: token,
     mode_key: modeKey,
     instance_id: instanceId,
-    updated_at: nowMs
+    updated_at: nowMs,
   };
   var serialized = "";
   try {
@@ -1021,33 +1355,48 @@ function writeSingleModePageLockRecord(storageLike, lockKey, tabId, token, modeK
 function isSingleModePageLockOwnedBy(record, tabId, token, instanceId) {
   if (!record) return false;
   if (record.tabId !== tabId || record.token !== token) return false;
-  if (!(typeof record.instanceId === "string" && record.instanceId)) return true;
+  if (!(typeof record.instanceId === "string" && record.instanceId))
+    return true;
   return record.instanceId === instanceId;
 }
 
 function isSingleModePageLockFresh(record, nowMs, ttlMs) {
   if (!record) return false;
-  return (nowMs - record.updatedAt) <= ttlMs;
+  return nowMs - record.updatedAt <= ttlMs;
 }
 
 function resolveCoreSingleModePageLockRuntimeForWindow(windowLike) {
-  if (windowLike && windowLike.CoreSingleModePageLockRuntime) return windowLike.CoreSingleModePageLockRuntime;
-  return typeof CoreSingleModePageLockRuntime !== "undefined" && CoreSingleModePageLockRuntime
+  if (windowLike && windowLike.CoreSingleModePageLockRuntime)
+    return windowLike.CoreSingleModePageLockRuntime;
+  return typeof CoreSingleModePageLockRuntime !== "undefined" &&
+    CoreSingleModePageLockRuntime
     ? CoreSingleModePageLockRuntime
     : null;
 }
 
 function resolveSingleModePageTabIdByRuntime(windowLike) {
   var runtime = resolveCoreSingleModePageLockRuntimeForWindow(windowLike);
-  if (!(runtime && typeof runtime.resolveSingleModePageTabId === "function")) return "";
-  var sessionKey = typeof GameManager !== "undefined" && typeof GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY === "string" && GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
-    ? GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
-    : "playModeSinglePageTabId:v1";
-  return runtime.resolveSingleModePageTabId(windowLike, { tabIdSessionKey: sessionKey, createId: createRestartRandomId });
+  if (!(runtime && typeof runtime.resolveSingleModePageTabId === "function"))
+    return "";
+  var sessionKey =
+    typeof GameManager !== "undefined" &&
+    typeof GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY === "string" &&
+    GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
+      ? GameManager.SINGLE_MODE_PAGE_TAB_ID_SESSION_KEY
+      : "playModeSinglePageTabId:v1";
+  return runtime.resolveSingleModePageTabId(windowLike, {
+    tabIdSessionKey: sessionKey,
+    createId: createRestartRandomId,
+  });
 }
 
 function resolveSingleModePageTabIdFallback(windowLike) {
-  if (windowLike && typeof windowLike.__playSinglePageTabId === "string" && windowLike.__playSinglePageTabId) return windowLike.__playSinglePageTabId;
+  if (
+    windowLike &&
+    typeof windowLike.__playSinglePageTabId === "string" &&
+    windowLike.__playSinglePageTabId
+  )
+    return windowLike.__playSinglePageTabId;
   var sessionStorageLike = resolveSingleModePageSessionStorage(windowLike);
   var sessionKey = resolveSingleModePageTabIdSessionKey();
   var tabId = readSingleModePageStorageItemSafe(sessionStorageLike, sessionKey);
@@ -1055,22 +1404,31 @@ function resolveSingleModePageTabIdFallback(windowLike) {
     tabId = createRestartRandomId("tab", 10);
     writeSingleModePageStorageItemSafe(sessionStorageLike, sessionKey, tabId);
   }
-  if (!(typeof tabId === "string" && tabId)) tabId = createRestartRandomId("tab", 10);
+  if (!(typeof tabId === "string" && tabId))
+    tabId = createRestartRandomId("tab", 10);
   if (windowLike) windowLike.__playSinglePageTabId = tabId;
   return tabId;
 }
 
 function resolveSingleModePageTabId(windowLike) {
   var tabId = resolveSingleModePageTabIdByRuntime(windowLike);
-  return typeof tabId === "string" && tabId ? tabId : resolveSingleModePageTabIdFallback(windowLike);
+  return typeof tabId === "string" && tabId
+    ? tabId
+    : resolveSingleModePageTabIdFallback(windowLike);
 }
 
 function resolveCoreSingleModePageLockRuntime(manager) {
-  var windowLike = manager && manager.windowLike ? manager.windowLike : resolveSingleModePageLockWindowLike(manager);
+  var windowLike =
+    manager && manager.windowLike
+      ? manager.windowLike
+      : resolveSingleModePageLockWindowLike(manager);
   if (windowLike && windowLike.CoreSingleModePageLockRuntime) {
     return windowLike.CoreSingleModePageLockRuntime;
   }
-  if (typeof CoreSingleModePageLockRuntime !== "undefined" && CoreSingleModePageLockRuntime) {
+  if (
+    typeof CoreSingleModePageLockRuntime !== "undefined" &&
+    CoreSingleModePageLockRuntime
+  ) {
     return CoreSingleModePageLockRuntime;
   }
   return null;
@@ -1082,13 +1440,16 @@ function createSingleModePageLockRuntimeOptions() {
     tabIdSessionKey: resolveSingleModePageTabIdSessionKey(),
     ttlMs: resolveSingleModePageLockTtlMs(),
     heartbeatMs: resolveSingleModePageHeartbeatMs(),
-    createId: createRestartRandomId
+    createId: createRestartRandomId,
   };
 }
 
 function releaseSingleModePageLockStateObject(lockState) {
   var runtime = resolveCoreSingleModePageLockRuntime(lockState);
-  if (runtime && typeof runtime.releaseSingleModePageLockStateObject === "function") {
+  if (
+    runtime &&
+    typeof runtime.releaseSingleModePageLockStateObject === "function"
+  ) {
     runtime.releaseSingleModePageLockStateObject(lockState);
   }
 }
@@ -1102,8 +1463,12 @@ function releaseSingleModePageLock(manager) {
 
 function ensureSingleModePageLock(manager) {
   var runtime = resolveCoreSingleModePageLockRuntime(manager);
-  if (!(runtime && typeof runtime.ensureSingleModePageLock === "function")) return true;
-  return runtime.ensureSingleModePageLock(manager, createSingleModePageLockRuntimeOptions());
+  if (!(runtime && typeof runtime.ensureSingleModePageLock === "function"))
+    return true;
+  return runtime.ensureSingleModePageLock(
+    manager,
+    createSingleModePageLockRuntimeOptions(),
+  );
 }
 
 function handleSingleModePageDuplicate(manager) {
@@ -1112,7 +1477,8 @@ function handleSingleModePageDuplicate(manager) {
   if (windowLike && typeof windowLike.alert === "function") {
     windowLike.alert(message);
   }
-  var locationLike = windowLike && windowLike.location ? windowLike.location : null;
+  var locationLike =
+    windowLike && windowLike.location ? windowLike.location : null;
   if (locationLike) {
     locationLike.href = resolveSingleModePageDuplicateRedirectUrl();
   }
@@ -1139,7 +1505,8 @@ function readSetupPageAttribute(elementLike, attributeName) {
     }
   } catch (_errAttribute) {}
   try {
-    if (elementLike.dataset && elementLike.dataset.page) return elementLike.dataset.page;
+    if (elementLike.dataset && elementLike.dataset.page)
+      return elementLike.dataset.page;
   } catch (_errDataset) {}
   return "";
 }
@@ -1149,7 +1516,10 @@ function resolveSetupLocationLike(manager, documentLike) {
     if (documentLike && documentLike.location) return documentLike.location;
   } catch (_errDocumentLocation) {}
   try {
-    var windowLike = manager && typeof manager.getWindowLike === "function" ? manager.getWindowLike() : null;
+    var windowLike =
+      manager && typeof manager.getWindowLike === "function"
+        ? manager.getWindowLike()
+        : null;
     if (windowLike && windowLike.location) return windowLike.location;
   } catch (_errWindowLocation) {}
   return null;
@@ -1158,14 +1528,24 @@ function resolveSetupLocationLike(manager, documentLike) {
 function isRankedSeedRequiredForSetup(manager) {
   var documentLike = null;
   try {
-    documentLike = typeof resolveManagerDocumentLike === "function" ? resolveManagerDocumentLike(manager) : null;
+    documentLike =
+      typeof resolveManagerDocumentLike === "function"
+        ? resolveManagerDocumentLike(manager)
+        : null;
   } catch (_errDocument) {}
   var body = documentLike && documentLike.body ? documentLike.body : null;
-  if (normalizeSetupPageIdentity(readSetupPageAttribute(body, "data-page")) === "replay") return false;
+  if (
+    normalizeSetupPageIdentity(readSetupPageAttribute(body, "data-page")) ===
+    "replay"
+  )
+    return false;
   var locationLike = resolveSetupLocationLike(manager, documentLike);
   var pathname = "";
   try {
-    pathname = locationLike && locationLike.pathname ? String(locationLike.pathname) : "";
+    pathname =
+      locationLike && locationLike.pathname
+        ? String(locationLike.pathname)
+        : "";
   } catch (_errPathname) {}
   return normalizeSetupPageIdentity(pathname).indexOf("replay.html") === -1;
 }
@@ -1176,14 +1556,25 @@ function shouldBlockRankedSetupWithoutSeed(manager) {
   try {
     modeKey = String(manager.modeKey || manager.mode || "");
   } catch (_errModeKey) {}
-  var modeConfig = manager.modeConfig && typeof manager.modeConfig === "object" ? manager.modeConfig : null;
+  var modeConfig =
+    manager.modeConfig && typeof manager.modeConfig === "object"
+      ? manager.modeConfig
+      : null;
   var configRankPolicy = "";
   try {
-    configRankPolicy = modeConfig ? String(modeConfig.rank_policy || modeConfig.rankPolicy || "").toLowerCase() : "";
+    configRankPolicy = modeConfig
+      ? String(
+          modeConfig.rank_policy || modeConfig.rankPolicy || "",
+        ).toLowerCase()
+      : "";
   } catch (_errConfigRankPolicy) {}
   if (configRankPolicy && configRankPolicy !== "ranked") return false;
-  var width = Math.floor(Number(manager.width || (modeConfig && modeConfig.board_width)));
-  var height = Math.floor(Number(manager.height || (modeConfig && modeConfig.board_height)));
+  var width = Math.floor(
+    Number(manager.width || (modeConfig && modeConfig.board_width)),
+  );
+  var height = Math.floor(
+    Number(manager.height || (modeConfig && modeConfig.board_height)),
+  );
   var isFourByFour =
     (width === 4 && height === 4) ||
     modeKey === "standard_4x4_pow2_no_undo" ||
@@ -1200,19 +1591,61 @@ function shouldBlockRankedSetupWithoutSeed(manager) {
 
 function createSetupGameOperations() {
   return {
-    applySetupModeConfig: function (manager, cfg) { if (typeof applySetupModeConfig === "function") applySetupModeConfig(manager, cfg); },
+    applySetupModeConfig: function (manager, cfg) {
+      if (typeof applySetupModeConfig === "function")
+        applySetupModeConfig(manager, cfg);
+    },
     clearRankedBlockedBoardView: clearRankedBlockedBoardView,
-    createGrid: function (width, height) { return typeof Grid === "function" ? new Grid(width, height) : { width: width, height: height }; },
-    detectMode: function (manager) { return typeof detectMode === "function" ? detectMode(manager) : ""; },
-    ensureSingleModePageLock: function (manager) { return typeof ensureSingleModePageLock === "function" ? ensureSingleModePageLock(manager) : true; },
-    handleSingleModePageDuplicate: function (manager) { if (typeof handleSingleModePageDuplicate === "function") handleSingleModePageDuplicate(manager); },
-    hasLegalRankedSetupSeed: function (manager) { return hasLegalRankedSetupSeed(manager); },
-    isRankedSeedRequiredForSetup: function (manager) { return isRankedSeedRequiredForSetup(manager); },
-    shouldBlockRankedSetupWithoutSeed: function (manager) { return shouldBlockRankedSetupWithoutSeed(manager); },
-    isNonArrayObject: function (value) { return typeof isNonArrayObject === "function" ? isNonArrayObject(value) : !!value && typeof value === "object" && !Array.isArray(value); },
-    resolveSetupModeConfig: function (manager, setupOptions, detectedMode) { return typeof resolveSetupModeConfig === "function" ? resolveSetupModeConfig(manager, setupOptions, detectedMode) : null; },
-    resolveSetupNoXModeConfig: function (manager, cfg, setupOptions, inputSeed) { return typeof resolveSetupNoXModeConfig === "function" ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed) : cfg; },
-    runSetupStateInitialization: function (manager, inputSeed, setupOptions) { if (typeof runSetupStateInitialization === "function") runSetupStateInitialization(manager, inputSeed, setupOptions); }
+    createGrid: function (width, height) {
+      return typeof Grid === "function"
+        ? new Grid(width, height)
+        : { width: width, height: height };
+    },
+    detectMode: function (manager) {
+      return typeof detectMode === "function" ? detectMode(manager) : "";
+    },
+    ensureSingleModePageLock: function (manager) {
+      return typeof ensureSingleModePageLock === "function"
+        ? ensureSingleModePageLock(manager)
+        : true;
+    },
+    handleSingleModePageDuplicate: function (manager) {
+      if (typeof handleSingleModePageDuplicate === "function")
+        handleSingleModePageDuplicate(manager);
+    },
+    hasLegalRankedSetupSeed: function (manager) {
+      return hasLegalRankedSetupSeed(manager);
+    },
+    isRankedSeedRequiredForSetup: function (manager) {
+      return isRankedSeedRequiredForSetup(manager);
+    },
+    shouldBlockRankedSetupWithoutSeed: function (manager) {
+      return shouldBlockRankedSetupWithoutSeed(manager);
+    },
+    isNonArrayObject: function (value) {
+      return typeof isNonArrayObject === "function"
+        ? isNonArrayObject(value)
+        : !!value && typeof value === "object" && !Array.isArray(value);
+    },
+    resolveSetupModeConfig: function (manager, setupOptions, detectedMode) {
+      return typeof resolveSetupModeConfig === "function"
+        ? resolveSetupModeConfig(manager, setupOptions, detectedMode)
+        : null;
+    },
+    resolveSetupNoXModeConfig: function (
+      manager,
+      cfg,
+      setupOptions,
+      inputSeed,
+    ) {
+      return typeof resolveSetupNoXModeConfig === "function"
+        ? resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed)
+        : cfg;
+    },
+    runSetupStateInitialization: function (manager, inputSeed, setupOptions) {
+      if (typeof runSetupStateInitialization === "function")
+        runSetupStateInitialization(manager, inputSeed, setupOptions);
+    },
   };
 }
 
@@ -1220,8 +1653,15 @@ function setupGameFallback(manager, inputSeed, options) {
   if (!manager) return;
   var setupOptions = isNonArrayObject(options) ? options : {};
   var detectedMode = detectMode(manager);
-  var resolvedModeConfig = resolveSetupModeConfig(manager, setupOptions, detectedMode);
-  var cfg = manager.normalizeModeConfig(resolvedModeConfig && resolvedModeConfig.key, resolvedModeConfig);
+  var resolvedModeConfig = resolveSetupModeConfig(
+    manager,
+    setupOptions,
+    detectedMode,
+  );
+  var cfg = manager.normalizeModeConfig(
+    resolvedModeConfig && resolvedModeConfig.key,
+    resolvedModeConfig,
+  );
   cfg = resolveSetupNoXModeConfig(manager, cfg, setupOptions, inputSeed);
   applySetupModeConfig(manager, cfg);
   manager.singleModePageLockRejected = false;
@@ -1246,23 +1686,30 @@ function setupGameFallback(manager, inputSeed, options) {
   }
   manager.setRuntimeGrid(new Grid(manager.width, manager.height));
   manager.setRuntimeScore(0);
-  manager.over = false; manager.won = false; manager.keepPlaying = false;
+  manager.over = false;
+  manager.won = false;
+  manager.keepPlaying = false;
   runSetupStateInitialization(manager, inputSeed, setupOptions);
 }
 
 function setupGame(manager, inputSeed, options) {
   var setupOptions = isNonArrayObject(options) ? options : {};
-  var previousSavedStateRestoreSkipped = manager && manager.__savedStateRestoreSkippedForCurrentSetup;
+  var previousSavedStateRestoreSkipped =
+    manager && manager.__savedStateRestoreSkippedForCurrentSetup;
   if (manager) {
     manager.__savedStateRestoreSkippedForCurrentSetup = !!(
-      setupOptions.disableStateRestore ||
-      setupOptions.skipStartTiles
+      setupOptions.disableStateRestore || setupOptions.skipStartTiles
     );
   }
   var runtime = resolveCoreSetupGameRuntime(manager);
   try {
     if (runtime && typeof runtime.setupGame === "function") {
-      return runtime.setupGame(manager, inputSeed, options, createSetupGameOperations());
+      return runtime.setupGame(
+        manager,
+        inputSeed,
+        options,
+        createSetupGameOperations(),
+      );
     }
     return setupGameFallback(manager, inputSeed, options);
   } finally {
@@ -1274,7 +1721,8 @@ function setupGame(manager, inputSeed, options) {
           manager.__savedStateRestoreSkippedForCurrentSetup = undefined;
         }
       } else {
-        manager.__savedStateRestoreSkippedForCurrentSetup = previousSavedStateRestoreSkipped;
+        manager.__savedStateRestoreSkippedForCurrentSetup =
+          previousSavedStateRestoreSkipped;
       }
     }
   }

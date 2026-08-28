@@ -30,27 +30,59 @@ CappedInputManager.prototype.listen = function () {
     var el = target.nodeType === 1 ? target : target.parentElement;
     if (!el) return false;
     if (el.isContentEditable) return true;
-    if (el.closest && el.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']")) return true;
+    if (
+      el.closest &&
+      el.closest(
+        "input, textarea, select, [contenteditable=''], [contenteditable='true']",
+      )
+    )
+      return true;
     var tag = String(el.tagName || "").toUpperCase();
     return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
   }
 
-  function createKeyboardMoveAttempt(direction, event) {
-    var arrowKeys = { 38: "arrow-up", 39: "arrow-right", 40: "arrow-down", 37: "arrow-left" };
-    var physicalKeys = {
-      ArrowUp: "arrow-up", ArrowRight: "arrow-right", ArrowDown: "arrow-down", ArrowLeft: "arrow-left"
-    };
-    var code = String(event.code || "");
-    var key = physicalKeys[code] || (code.length === 4 && code.indexOf("Key") === 0
-      ? code.slice(3)
-      : String(event.key || "").toUpperCase());
+  function createSwipeMoveAttempt(direction) {
+    var swipeKeys = ["swipe-up", "swipe-right", "swipe-down", "swipe-left"];
     return {
       direction: direction,
       feedback: {
-        id: "capped-" + (++nextCappedOperationFeedbackInputId),
+        id: "touch-" + ++nextCappedOperationFeedbackInputId,
+        key: swipeKeys[direction] || "swipe",
+        repeat: false,
+      },
+    };
+  }
+
+  function resolveTouchMoveDirection(dx, dy, absDx, absDy) {
+    return absDx > absDy ? (dx > 0 ? 1 : 3) : dy > 0 ? 2 : 0;
+  }
+
+  function createKeyboardMoveAttempt(direction, event) {
+    var arrowKeys = {
+      38: "arrow-up",
+      39: "arrow-right",
+      40: "arrow-down",
+      37: "arrow-left",
+    };
+    var physicalKeys = {
+      ArrowUp: "arrow-up",
+      ArrowRight: "arrow-right",
+      ArrowDown: "arrow-down",
+      ArrowLeft: "arrow-left",
+    };
+    var code = String(event.code || "");
+    var key =
+      physicalKeys[code] ||
+      (code.length === 4 && code.indexOf("Key") === 0
+        ? code.slice(3)
+        : String(event.key || "").toUpperCase());
+    return {
+      direction: direction,
+      feedback: {
+        id: "capped-" + ++nextCappedOperationFeedbackInputId,
         key: arrowKeys[event.which] || key,
-        repeat: event.repeat === true
-      }
+        repeat: event.repeat === true,
+      },
     };
   }
 
@@ -66,15 +98,15 @@ CappedInputManager.prototype.listen = function () {
     87: 0, // W
     68: 1, // D
     83: 2, // S
-    65: 3  // A
+    65: 3, // A
     // No Z key (undo) mapping
   };
 
   document.addEventListener("keydown", function (event) {
     if (isEditableTarget(event.target)) return;
-    var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
-                    event.shiftKey;
-    var mapped    = map[event.which];
+    var modifiers =
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+    var mapped = map[event.which];
 
     if (!modifiers) {
       if (mapped !== undefined) {
@@ -82,7 +114,13 @@ CappedInputManager.prototype.listen = function () {
         self.emit("move", createKeyboardMoveAttempt(mapped, event));
       }
 
-      if (event.key === 'r' || event.key === 'R' || event.code === 'KeyR' || event.which === 82) self.restart.bind(self)(event);
+      if (
+        event.key === "r" ||
+        event.key === "R" ||
+        event.code === "KeyR" ||
+        event.which === 82
+      )
+        self.restart.bind(self)(event);
     }
   });
 
@@ -113,12 +151,20 @@ CappedInputManager.prototype.listen = function () {
     var fallback = 10;
     try {
       var runtime = window.CoreStorageRuntime || null;
-      var storage = runtime && runtime.resolveStorageByName
-        ? runtime.resolveStorageByName({ windowLike: window, storageName: "localStorage" })
-        : null;
-      var value = runtime && runtime.safeReadStorageItem
-        ? runtime.safeReadStorageItem({ storageLike: storage, key: TOUCH_THRESHOLD_STORAGE_KEY })
-        : null;
+      var storage =
+        runtime && runtime.resolveStorageByName
+          ? runtime.resolveStorageByName({
+              windowLike: window,
+              storageName: "localStorage",
+            })
+          : null;
+      var value =
+        runtime && runtime.safeReadStorageItem
+          ? runtime.safeReadStorageItem({
+              storageLike: storage,
+              key: TOUCH_THRESHOLD_STORAGE_KEY,
+            })
+          : null;
       if (value == null || value === "") return fallback;
       var threshold = Number(value);
       if (!Number.isFinite(threshold)) return fallback;
@@ -151,7 +197,10 @@ CappedInputManager.prototype.listen = function () {
 
     if (Math.max(absDx, absDy) > resolveTouchMoveThreshold()) {
       // (right : left) : (down : up)
-      self.emit("move", absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+      self.emit(
+        "move",
+        createSwipeMoveAttempt(resolveTouchMoveDirection(dx, dy, absDx, absDy)),
+      );
     }
   });
 };

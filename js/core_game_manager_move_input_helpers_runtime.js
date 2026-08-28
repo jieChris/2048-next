@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 function isMoveInputRecordObject(value) {
   return !!(value && typeof value === "object");
 }
@@ -7,7 +8,10 @@ function normalizeMoveInputRecordObject(value, fallback) {
 }
 
 function resolveMoveInputCryptoRandomRuntime() {
-  if (typeof CoreCryptoRandomRuntime !== "undefined" && CoreCryptoRandomRuntime) {
+  if (
+    typeof CoreCryptoRandomRuntime !== "undefined" &&
+    CoreCryptoRandomRuntime
+  ) {
     return CoreCryptoRandomRuntime;
   }
   return null;
@@ -39,13 +43,22 @@ function ensureItemInventory(manager) {
   if (!isMoveInputRecordObject(manager.itemInventory)) {
     manager.itemInventory = createEmptyItemInventory();
   }
-  if (!Number.isInteger(manager.itemInventory.hammer) || manager.itemInventory.hammer < 0) {
+  if (
+    !Number.isInteger(manager.itemInventory.hammer) ||
+    manager.itemInventory.hammer < 0
+  ) {
     manager.itemInventory.hammer = 0;
   }
-  if (!Number.isInteger(manager.itemInventory.freeze) || manager.itemInventory.freeze < 0) {
+  if (
+    !Number.isInteger(manager.itemInventory.freeze) ||
+    manager.itemInventory.freeze < 0
+  ) {
     manager.itemInventory.freeze = 0;
   }
-  if (!Number.isInteger(manager.itemInventory.boost4) || manager.itemInventory.boost4 < 0) {
+  if (
+    !Number.isInteger(manager.itemInventory.boost4) ||
+    manager.itemInventory.boost4 < 0
+  ) {
     manager.itemInventory.boost4 = 0;
   }
   return manager.itemInventory;
@@ -91,7 +104,14 @@ function applyHudElementStyle(el, topPx) {
 function resolveOrCreateHudElement(manager, id, topPx) {
   if (!manager) return null;
   var documentLike = resolveManagerDocumentLike(manager);
-  if (!(documentLike && documentLike.body && typeof documentLike.createElement === "function")) return null;
+  if (
+    !(
+      documentLike &&
+      documentLike.body &&
+      typeof documentLike.createElement === "function"
+    )
+  )
+    return null;
   var el = resolveManagerElementById(manager, id);
   if (!el) {
     el = documentLike.createElement("div");
@@ -113,9 +133,12 @@ function updateItemModeHud(manager) {
   var inventory = ensureItemInventory(manager);
   hud.style.display = "";
   hud.textContent =
-    "道具 [1]锤" + inventory.hammer +
-    " [2]冻" + inventory.freeze +
-    " [3]4" + inventory.boost4;
+    "道具 [1]锤" +
+    inventory.hammer +
+    " [2]冻" +
+    inventory.freeze +
+    " [3]4" +
+    inventory.boost4;
 }
 
 function hasMoveTimeoutMode(manager) {
@@ -180,7 +203,14 @@ function checkAndHandleMoveTimeout(manager, nowMs) {
 }
 
 function resolveNoXForbiddenTile(manager) {
-  if (!(manager && manager.specialRules && typeof manager.specialRules === "object")) return null;
+  if (
+    !(
+      manager &&
+      manager.specialRules &&
+      typeof manager.specialRules === "object"
+    )
+  )
+    return null;
   if (manager.specialRules.no_x_enabled !== true) return null;
   var tile = Number(manager.specialRules.no_x_target);
   if (!Number.isInteger(tile) || tile <= 0) return null;
@@ -217,7 +247,8 @@ function grantRandomItemCharge(manager) {
 
 function processItemModeAfterSuccessfulMove(manager) {
   if (!isItemModeEnabled(manager) || manager.replayMode) return;
-  if (!Number.isInteger(manager.itemProgress) || manager.itemProgress < 0) manager.itemProgress = 0;
+  if (!Number.isInteger(manager.itemProgress) || manager.itemProgress < 0)
+    manager.itemProgress = 0;
   manager.itemProgress += 1;
   var grantEveryMoves = resolveItemGrantEveryMoves(manager);
   if (grantEveryMoves > 0 && manager.itemProgress % grantEveryMoves === 0) {
@@ -236,10 +267,15 @@ function consumeItemCharge(manager, key) {
 
 function collectRemovableTilesForHammer(manager) {
   var tiles = [];
-  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) return tiles;
-  manager.grid.eachCell(function (_x, _y, tile) {
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function"))
+    return tiles;
+  manager.grid.eachCell((_x, _y, tile) => {
     if (!tile) return;
-    if (typeof manager.isStoneValue === "function" && manager.isStoneValue(tile.value)) return;
+    if (
+      typeof manager.isStoneValue === "function" &&
+      manager.isStoneValue(tile.value)
+    )
+      return;
     tiles.push(tile);
   });
   return tiles;
@@ -319,7 +355,8 @@ function consumeItemSpawnValueOverride(manager, fallbackValue) {
 }
 
 function normalizeMoveInputAttempt(attempt) {
-  if (attempt && typeof attempt === "object" && "direction" in attempt) return attempt;
+  if (attempt && typeof attempt === "object" && "direction" in attempt)
+    return attempt;
   return { direction: attempt, feedback: null };
 }
 
@@ -328,9 +365,11 @@ function isUndoMoveDirection(direction) {
 }
 
 function isRankCheckpointRestoreActive(manager) {
-  return !!(manager && (
-    manager.rankCheckpointRestorePending === true || manager.rankCheckpointApplying === true
-  ));
+  return !!(
+    manager &&
+    (manager.rankCheckpointRestorePending === true ||
+      manager.rankCheckpointApplying === true)
+  );
 }
 
 function isRankCheckpointReplayExecuting(manager) {
@@ -339,6 +378,9 @@ function isRankCheckpointReplayExecuting(manager) {
 
 function executeImmediateUndoMoveInput(manager, attempt) {
   manager.pendingMoveInput = null;
+  if (Array.isArray(manager.pendingMoveInputQueue))
+    manager.pendingMoveInputQueue.length = 0;
+  manager.pendingMoveInputDelayScheduled = false;
   executeImmediateMoveInput(manager, attempt, Date.now());
 }
 
@@ -354,22 +396,22 @@ function tryHandleMoveInputImmediately(manager, attempt) {
     return true;
   }
   var now = Date.now();
-  if (!manager.moveInputFlushScheduled && (now - manager.lastMoveInputAt) >= throttleMs) {
+  if (
+    !manager.moveInputFlushScheduled &&
+    now - manager.lastMoveInputAt >= throttleMs
+  ) {
     executeImmediateMoveInput(manager, attempt, now);
     return true;
   }
   return false;
 }
 
-function queueMoveInputAttempt(manager, attempt) {
-  manager.pendingMoveInput = attempt;
-  scheduleMoveInputFlush(manager);
-}
-
 function handleMoveInput(manager, attempt) {
   if (!manager) return;
   if (isRankCheckpointRestoreActive(manager)) {
     manager.pendingMoveInput = null;
+    if (Array.isArray(manager.pendingMoveInputQueue))
+      manager.pendingMoveInputQueue.length = 0;
     return;
   }
   var normalizedAttempt = normalizeMoveInputAttempt(attempt);
@@ -378,11 +420,7 @@ function handleMoveInput(manager, attempt) {
 }
 
 function createMoveInputThrottleResolveArgs(manager) {
-  return [
-    manager.replayMode,
-    manager.width,
-    manager.height
-  ];
+  return [manager.replayMode, manager.width, manager.height];
 }
 
 function resolveMoveInputThrottleMsFallback(currentManager) {
@@ -401,19 +439,25 @@ function resolveMoveInputThrottleMs(manager) {
     "resolveMoveInputThrottleMs",
     createMoveInputThrottleResolveArgs(manager),
     0,
-    function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreNumericCallOrFallback(coreCallResult, function () {
-        return resolveMoveInputThrottleMsFallback(currentManager);
-      });
-    }
+    (currentManager, coreCallResult) =>
+      currentManager.resolveCoreNumericCallOrFallback(coreCallResult, () =>
+        resolveMoveInputThrottleMsFallback(currentManager),
+      ),
   );
 }
 
 function resolveOperationFeedbackInputEventsRuntime() {
-  if (typeof CoreGameManagerInputEventsRuntime !== "undefined" && CoreGameManagerInputEventsRuntime) {
+  if (
+    typeof CoreGameManagerInputEventsRuntime !== "undefined" &&
+    CoreGameManagerInputEventsRuntime
+  ) {
     return CoreGameManagerInputEventsRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerInputEventsRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerInputEventsRuntime
+  ) {
     return window.CoreGameManagerInputEventsRuntime;
   }
   return null;
@@ -421,7 +465,10 @@ function resolveOperationFeedbackInputEventsRuntime() {
 
 function publishConfirmedMoveInput(manager, attempt, valid) {
   var runtime = resolveOperationFeedbackInputEventsRuntime();
-  if (runtime && typeof runtime.publishConfirmedOperationFeedback === "function") {
+  if (
+    runtime &&
+    typeof runtime.publishConfirmedOperationFeedback === "function"
+  ) {
     runtime.publishConfirmedOperationFeedback(manager, attempt, valid);
   }
 }
@@ -429,56 +476,126 @@ function publishConfirmedMoveInput(manager, attempt, valid) {
 function executeImmediateMoveInput(manager, attempt, now) {
   if (!manager || isRankCheckpointRestoreActive(manager)) return false;
   var normalizedAttempt = normalizeMoveInputAttempt(attempt);
-  var terminatedBeforeInput = manager.replayMode ? !!manager.over : resolveGameTerminatedFallback(manager);
-  if (!isUndoMoveDirection(normalizedAttempt.direction)) manager.lastMoveInputAt = now;
+  var terminatedBeforeInput = manager.replayMode
+    ? !!manager.over
+    : resolveGameTerminatedFallback(manager);
+  if (!isUndoMoveDirection(normalizedAttempt.direction))
+    manager.lastMoveInputAt = now;
   var valid = manager.move(normalizedAttempt.direction) === true;
-  if (!terminatedBeforeInput) publishConfirmedMoveInput(manager, normalizedAttempt, valid);
+  if (!terminatedBeforeInput)
+    publishConfirmedMoveInput(manager, normalizedAttempt, valid);
   return valid;
 }
 
 function hasPendingMoveInput(manager) {
-  return !(manager.pendingMoveInput === null || typeof manager.pendingMoveInput === "undefined");
+  if (!manager) return false;
+  if (
+    Array.isArray(manager.pendingMoveInputQueue) &&
+    manager.pendingMoveInputQueue.length > 0
+  )
+    return true;
+  return !(
+    manager.pendingMoveInput === null ||
+    typeof manager.pendingMoveInput === "undefined"
+  );
+}
+
+function ensurePendingMoveInputQueue(manager) {
+  if (!manager) return [];
+  if (!Array.isArray(manager.pendingMoveInputQueue))
+    manager.pendingMoveInputQueue = [];
+  return manager.pendingMoveInputQueue;
+}
+
+function queueMoveInputAttempt(manager, attempt) {
+  ensurePendingMoveInputQueue(manager).push(attempt);
+  manager.pendingMoveInput = attempt;
+  scheduleMoveInputFlush(manager);
 }
 
 function scheduleMoveInputFlush(manager) {
-  if (!manager || manager.moveInputFlushScheduled) return;
+  if (
+    !manager ||
+    manager.moveInputFlushScheduled ||
+    manager.pendingMoveInputDelayScheduled
+  )
+    return;
   manager.moveInputFlushScheduled = true;
-  manager.requestAnimationFrame(function () {
+  manager.requestAnimationFrame(() => {
     flushPendingMoveInput(manager);
   });
 }
 
 function scheduleDelayedPendingMoveInput(manager, attempt, wait) {
-  setTimeout(function () {
-    if (manager.pendingMoveInput !== attempt) return;
-    manager.pendingMoveInput = null;
+  manager.pendingMoveInputDelayScheduled = true;
+  setTimeout(() => {
+    var queue = ensurePendingMoveInputQueue(manager);
+    manager.pendingMoveInputDelayScheduled = false;
+    if (queue[0] !== attempt) {
+      if (queue.length > 0) scheduleMoveInputFlush(manager);
+      return;
+    }
+    queue.shift();
+    manager.pendingMoveInput = queue.length > 0 ? queue[0] : null;
     executeImmediateMoveInput(manager, attempt, Date.now());
+    if (queue.length > 0) scheduleMoveInputFlush(manager);
   }, wait);
+}
+
+function enqueueLegacyPendingMoveInput(manager, queue) {
+  if (
+    queue.length === 0 &&
+    manager.pendingMoveInput !== null &&
+    typeof manager.pendingMoveInput !== "undefined"
+  ) {
+    queue.push(manager.pendingMoveInput);
+  }
+}
+
+function clearPendingMoveInputForRestore(manager, queue) {
+  queue.length = 0;
+  manager.pendingMoveInput = null;
+  manager.pendingMoveInputDelayScheduled = false;
+}
+
+function resolvePendingMoveInputWait(manager, now) {
+  var throttleMs = resolveMoveInputThrottleMs(manager);
+  return throttleMs <= 0 ? 0 : throttleMs - (now - manager.lastMoveInputAt);
+}
+
+function executePendingMoveInput(manager, queue, attempt, now) {
+  queue.shift();
+  manager.pendingMoveInput = queue.length > 0 ? queue[0] : null;
+  var result = executeImmediateMoveInput(manager, attempt, now);
+  if (queue.length > 0) scheduleMoveInputFlush(manager);
+  return result;
 }
 
 function flushPendingMoveInput(manager) {
   if (!manager) return;
   manager.moveInputFlushScheduled = false;
-  var attempt = manager.pendingMoveInput;
+  var queue = ensurePendingMoveInputQueue(manager);
+  enqueueLegacyPendingMoveInput(manager, queue);
+  var attempt = queue[0];
   if (attempt === null || typeof attempt === "undefined") return;
   if (isRankCheckpointRestoreActive(manager)) {
-    manager.pendingMoveInput = null;
+    clearPendingMoveInputForRestore(manager, queue);
     return;
   }
-  var throttleMs = resolveMoveInputThrottleMs(manager);
   var now = Date.now();
-  var wait = throttleMs <= 0 ? 0 : throttleMs - (now - manager.lastMoveInputAt);
+  var wait = resolvePendingMoveInputWait(manager, now);
   if (wait > 0) return scheduleDelayedPendingMoveInput(manager, attempt, wait);
-  manager.pendingMoveInput = null;
-  return executeImmediateMoveInput(manager, attempt, now);
+  return executePendingMoveInput(manager, queue, attempt, now);
 }
 
 function shouldAbortMoveBeforeUndo(manager) {
   if (!manager) return true;
   if (
     manager.rankedSetupBlockedUntilSessionReady ||
-    (isRankCheckpointRestoreActive(manager) && !isRankCheckpointReplayExecuting(manager))
-  ) return true;
+    (isRankCheckpointRestoreActive(manager) &&
+      !isRankCheckpointReplayExecuting(manager))
+  )
+    return true;
   if (manager.noXSelectionPending === true) {
     if (typeof ensureNoXSelectionOverlayForManager === "function") {
       ensureNoXSelectionOverlayForManager(manager);
@@ -493,15 +610,23 @@ function shouldAbortMoveBeforePlanning(manager, direction) {
   if (isGameTerminated(manager)) return true;
   if (checkAndHandleMoveTimeout(manager, Date.now())) return true;
   var lockedDirection = resolveLockedDirection(manager);
-  if (shouldSkipMoveByLockedDirection(manager, direction, lockedDirection)) return true;
+  if (shouldSkipMoveByLockedDirection(manager, direction, lockedDirection))
+    return true;
   return false;
 }
 
 function resolveUndoMoveHandlerRuntimeForMove() {
-  if (typeof CoreGameManagerUndoMoveHandlerRuntime !== "undefined" && CoreGameManagerUndoMoveHandlerRuntime) {
+  if (
+    typeof CoreGameManagerUndoMoveHandlerRuntime !== "undefined" &&
+    CoreGameManagerUndoMoveHandlerRuntime
+  ) {
     return CoreGameManagerUndoMoveHandlerRuntime;
   }
-  if (typeof window !== "undefined" && window && window.CoreGameManagerUndoMoveHandlerRuntime) {
+  if (
+    typeof window !== "undefined" &&
+    window &&
+    window.CoreGameManagerUndoMoveHandlerRuntime
+  ) {
     return window.CoreGameManagerUndoMoveHandlerRuntime;
   }
   return null;
@@ -509,12 +634,14 @@ function resolveUndoMoveHandlerRuntimeForMove() {
 
 function createUndoMoveOperationsForMove() {
   return {
-    actuate: actuate, canExecuteRedoMove: canExecuteRedoMove,
-    canExecuteUndoMove: canExecuteUndoMove, executeRedoRestorePipeline: executeRedoRestorePipeline,
+    actuate: actuate,
+    canExecuteRedoMove: canExecuteRedoMove,
+    canExecuteUndoMove: canExecuteUndoMove,
+    executeRedoRestorePipeline: executeRedoRestorePipeline,
     executeUndoRestorePipeline: executeUndoRestorePipeline,
     pushRedoSnapshotBeforeUndo: pushRedoSnapshotBeforeUndo,
     shouldStartTimerAfterRedoRestore: shouldStartTimerAfterRedoRestore,
-    shouldStartTimerAfterUndoRestore: shouldStartTimerAfterUndoRestore
+    shouldStartTimerAfterUndoRestore: shouldStartTimerAfterUndoRestore,
   };
 }
 
@@ -522,7 +649,11 @@ function executeUndoMoveForMove(manager, direction) {
   if (!isUndoMoveDirection(direction)) return { handled: false, valid: false };
   var runtime = resolveUndoMoveHandlerRuntimeForMove();
   if (runtime && typeof runtime.executeUndoMove === "function") {
-    return runtime.executeUndoMove(manager, direction, createUndoMoveOperationsForMove());
+    return runtime.executeUndoMove(
+      manager,
+      direction,
+      createUndoMoveOperationsForMove(),
+    );
   }
   return { handled: handleUndoMove(manager, direction), valid: false };
 }
@@ -544,16 +675,18 @@ function move(manager, direction) {
 
 function shouldSkipMoveByLockedDirection(manager, direction, lockedDirection) {
   if (!manager) return true;
-  if (lockedDirection === null || typeof lockedDirection === "undefined") return false;
+  if (lockedDirection === null || typeof lockedDirection === "undefined")
+    return false;
   if (Number(direction) !== Number(lockedDirection)) return false;
   manager.lockConsumedAtMoveCount = manager.successfulMoveCount;
   return true;
 }
 
 function resetGridMergeStateBeforeMove(manager) {
-  if (!manager || !manager.grid || typeof manager.grid.eachCell !== "function") return;
+  if (!manager || !manager.grid || typeof manager.grid.eachCell !== "function")
+    return;
   // Save the current tile positions and remove merger information
-  manager.grid.eachCell(function (_x, _y, tile) {
+  manager.grid.eachCell((_x, _y, tile) => {
     if (!tile) return;
     tile.mergedFrom = null;
     tile.savePosition();
@@ -569,22 +702,32 @@ function resolveMoveTraversalContext(manager, movePlan, cell) {
   var next = manager.isBlockedCell(positions.next.x, positions.next.y)
     ? null
     : manager.grid.cellContent(positions.next);
-  var mergedValue = next ? getMergedValue(manager, tile.value, next.value) : null;
-  var interaction = planTileInteraction(manager, cell, positions, next, mergedValue);
+  var mergedValue = next
+    ? getMergedValue(manager, tile.value, next.value)
+    : null;
+  var interaction = planTileInteraction(
+    manager,
+    cell,
+    positions,
+    next,
+    mergedValue,
+  );
   return {
     tile: tile,
     next: next,
     mergedValue: mergedValue,
-    interaction: interaction
+    interaction: interaction,
   };
 }
 
 function shouldMergeMoveTraversalContext(context) {
   if (!context || !context.interaction) return false;
-  return context.interaction.kind === "merge" &&
+  return (
+    context.interaction.kind === "merge" &&
     context.next &&
     !context.next.mergedFrom &&
-    context.mergedValue !== null;
+    context.mergedValue !== null
+  );
 }
 
 function applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr) {
@@ -598,9 +741,7 @@ function applyMoveMergeTimerStampEffects(manager, mergeEffects, timeStr) {
     if (!timerEl) continue;
     if (timerId === "timer32768") {
       if (timerEl.innerHTML === "") timerEl.textContent = timeStr;
-    } else {
-      if (timerEl.textContent === "") timerEl.textContent = timeStr;
-    }
+    } else if (timerEl.textContent === "") timerEl.textContent = timeStr;
   }
 }
 
@@ -608,9 +749,14 @@ function applyMoveMergeVisibilityEffects(manager, mergeEffects) {
   if (!manager) return;
   refreshSecondaryTimerRowsVisibility(manager);
   if (!mergeEffects) return;
-  var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows) ? mergeEffects.hideTimerRows : [];
+  var hideTimerRows = Array.isArray(mergeEffects.hideTimerRows)
+    ? mergeEffects.hideTimerRows
+    : [];
   for (var hideIndex = 0; hideIndex < hideTimerRows.length; hideIndex++) {
-    var rowEl = resolveManagerElementById(manager, "timer-row-" + String(hideTimerRows[hideIndex]));
+    var rowEl = resolveManagerElementById(
+      manager,
+      "timer-row-" + String(hideTimerRows[hideIndex]),
+    );
     if (rowEl) rowEl.style.display = "none";
   }
 }
@@ -623,7 +769,9 @@ function addRuntimeScoreDeltaForMove(manager, delta) {
   }
   var baseScore = Number(manager.score);
   var numericDelta = Number(delta);
-  manager.score = (Number.isFinite(baseScore) ? baseScore : 0) + (Number.isFinite(numericDelta) ? numericDelta : 0);
+  manager.score =
+    (Number.isFinite(baseScore) ? baseScore : 0) +
+    (Number.isFinite(numericDelta) ? numericDelta : 0);
 }
 
 function setRuntimeScoreForMove(manager, value) {
@@ -641,7 +789,14 @@ function writeRuntimeGridCellForMove(manager, x, y, tile) {
   if (typeof manager.writeRuntimeGridCell === "function") {
     return manager.writeRuntimeGridCell(x, y, tile);
   }
-  if (!(manager.grid && Array.isArray(manager.grid.cells) && Array.isArray(manager.grid.cells[x]))) return false;
+  if (
+    !(
+      manager.grid &&
+      Array.isArray(manager.grid.cells) &&
+      Array.isArray(manager.grid.cells[x])
+    )
+  )
+    return false;
   manager.grid.cells[x][y] = tile || null;
   return true;
 }
@@ -677,7 +832,9 @@ function resolveUndoHistoryModeConfigForMove(manager) {
   if (!manager) return null;
   try {
     if (typeof manager.resolveModeConfig === "function") {
-      var resolved = manager.resolveModeConfig(manager.modeKey || manager.mode || "");
+      var resolved = manager.resolveModeConfig(
+        manager.modeKey || manager.mode || "",
+      );
       if (resolved && typeof resolved === "object") return resolved;
     }
   } catch (_err) {}
@@ -688,7 +845,8 @@ function resolveUndoHistoryModeConfigForMove(manager) {
 
 function shouldCaptureUndoHistoryForMove(manager) {
   if (!manager) return false;
-  if (manager.replayMode && manager.replayRequiresUndoHistory === true) return true;
+  if (manager.replayMode && manager.replayRequiresUndoHistory === true)
+    return true;
   var modeConfig = resolveUndoHistoryModeConfigForMove(manager);
   if (modeConfig && typeof modeConfig.undo_enabled === "boolean") {
     return modeConfig.undo_enabled;
@@ -710,7 +868,9 @@ function applyMergedTileMutation(manager, movePlan, context) {
   var next = context.next;
   var interaction = context.interaction;
   var merged = new Tile(interaction.target, context.mergedValue);
-  movePlan.undo.tiles.push(manager.createUndoTileSnapshot(tile, interaction.target));
+  movePlan.undo.tiles.push(
+    manager.createUndoTileSnapshot(tile, interaction.target),
+  );
   merged.mergedFrom = [tile, next];
   manager.grid.insertTile(merged);
   manager.grid.removeTile(tile);
@@ -737,7 +897,14 @@ function applyMergedTileEffects(manager, mergedValue, timeStr) {
 }
 
 function applyMergedMoveTraversalContext(manager, movePlan, context) {
-  if (!manager || !movePlan || !context || !context.interaction || context.mergedValue === null) return false;
+  if (
+    !manager ||
+    !movePlan ||
+    !context ||
+    !context.interaction ||
+    context.mergedValue === null
+  )
+    return false;
   var merged = applyMergedTileMutation(manager, movePlan, context);
   var timeStr = manager.pretty(manager.time);
   applyMergedTileEffects(manager, merged.value, timeStr);
@@ -748,9 +915,16 @@ function applyShiftedMoveTraversalContext(manager, movePlan, context) {
   if (!manager || !movePlan || !context || !context.interaction) return false;
   var tile = context.tile;
   var interaction = context.interaction;
-  movePlan.undo.tiles.push(manager.createUndoTileSnapshot(tile, interaction.target));
+  movePlan.undo.tiles.push(
+    manager.createUndoTileSnapshot(tile, interaction.target),
+  );
   clearRuntimeGridCellForMove(manager, tile.x, tile.y);
-  writeRuntimeGridCellForMove(manager, interaction.target.x, interaction.target.y, tile);
+  writeRuntimeGridCellForMove(
+    manager,
+    interaction.target.x,
+    interaction.target.y,
+    tile,
+  );
   tile.updatePosition(interaction.target);
   return interaction.moved === true;
 }
@@ -758,8 +932,15 @@ function applyShiftedMoveTraversalContext(manager, movePlan, context) {
 function processMoveTraversalCell(manager, movePlan, cell) {
   var context = resolveMoveTraversalContext(manager, movePlan, cell);
   if (!context) return { handled: false, moved: false };
-  if (shouldMergeMoveTraversalContext(context)) return { handled: true, moved: applyMergedMoveTraversalContext(manager, movePlan, context) };
-  return { handled: true, moved: applyShiftedMoveTraversalContext(manager, movePlan, context) };
+  if (shouldMergeMoveTraversalContext(context))
+    return {
+      handled: true,
+      moved: applyMergedMoveTraversalContext(manager, movePlan, context),
+    };
+  return {
+    handled: true,
+    moved: applyShiftedMoveTraversalContext(manager, movePlan, context),
+  };
 }
 
 function processMoveTraversals(manager, movePlan, traversals) {
@@ -779,11 +960,18 @@ function processMoveTraversals(manager, movePlan, traversals) {
 
 function appendPostMoveRecordArtifacts(manager, direction) {
   var postMoveRecord = computePostMoveRecord(manager, direction);
-  if (postMoveRecord.shouldRecordMoveHistory) manager.moveHistory.push(direction);
-  if (Number.isInteger(postMoveRecord.compactMoveCode)) appendCompactMoveCode(manager, postMoveRecord.compactMoveCode);
-  if (postMoveRecord.shouldRecordMoveHistory) recordSessionReplayV1Move(manager, direction, manager.lastSpawn);
+  if (postMoveRecord.shouldRecordMoveHistory)
+    manager.moveHistory.push(direction);
+  if (Number.isInteger(postMoveRecord.compactMoveCode))
+    appendCompactMoveCode(manager, postMoveRecord.compactMoveCode);
+  if (postMoveRecord.shouldRecordMoveHistory)
+    recordSessionReplayV1Move(manager, direction, manager.lastSpawn);
   if (postMoveRecord.shouldPushSessionAction && manager.sessionReplayV3) {
-    manager.sessionReplayV3.actions.push(Array.isArray(postMoveRecord.sessionAction) ? postMoveRecord.sessionAction : ["m", direction]);
+    manager.sessionReplayV3.actions.push(
+      Array.isArray(postMoveRecord.sessionAction)
+        ? postMoveRecord.sessionAction
+        : ["m", direction],
+    );
   }
   if (postMoveRecord.shouldResetLastSpawn) manager.lastSpawn = null;
 }
@@ -795,6 +983,16 @@ function applyPostMoveLifecycleEffects(manager, postMoveLifecycle) {
   }
 }
 
+function finalizeMoveUndoState(manager, movePlan) {
+  if (shouldCaptureUndoHistoryForMove(manager))
+    pushRuntimeUndoEntryForMove(
+      manager,
+      manager.normalizeUndoStackEntry(movePlan.undo),
+    );
+  else clearRuntimeUndoStackForMove(manager);
+  clearRuntimeRedoStackForMove(manager);
+}
+
 function finalizeSuccessfulMove(manager, movePlan, direction) {
   if (!manager || !movePlan) return;
   updateIpsInputCountAfterMove(manager);
@@ -803,12 +1001,15 @@ function finalizeSuccessfulMove(manager, movePlan, direction) {
   processItemModeAfterSuccessfulMove(manager);
   var forcedOver = !!manager.over;
   if (!forcedOver) addRandomTile(manager);
-  if (typeof stampCustomSecondaryTimersForBoard === "function") stampCustomSecondaryTimersForBoard(manager, manager.pretty(manager.time));
+  if (typeof stampCustomSecondaryTimersForBoard === "function")
+    stampCustomSecondaryTimersForBoard(manager, manager.pretty(manager.time));
   var hasMovesAvailable = forcedOver ? false : movesAvailable(manager);
-  var postMoveLifecycle = resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver);
-  if (shouldCaptureUndoHistoryForMove(manager)) pushRuntimeUndoEntryForMove(manager, manager.normalizeUndoStackEntry(movePlan.undo));
-  else clearRuntimeUndoStackForMove(manager);
-  clearRuntimeRedoStackForMove(manager);
+  var postMoveLifecycle = resolvePostMoveLifecycle(
+    manager,
+    hasMovesAvailable,
+    forcedOver,
+  );
+  finalizeMoveUndoState(manager, movePlan);
   appendPostMoveRecordArtifacts(manager, direction);
   applyPostMoveLifecycleEffects(manager, postMoveLifecycle);
 }
@@ -819,7 +1020,10 @@ function applyPostMoveScoreFromCoreResult(manager, coreValue) {
   if (Number.isFinite(scoreResult.score)) {
     setRuntimeScoreForMove(manager, Number(scoreResult.score));
   }
-  if (Number.isInteger(scoreResult.comboStreak) && scoreResult.comboStreak >= 0) {
+  if (
+    Number.isInteger(scoreResult.comboStreak) &&
+    scoreResult.comboStreak >= 0
+  ) {
     manager.comboStreak = scoreResult.comboStreak;
   }
 }
@@ -830,7 +1034,9 @@ function applyPostMoveScoreFallback(manager, scoreBeforeMove) {
   if (mergeGain > 0) {
     manager.comboStreak += 1;
     if (manager.comboMultiplier > 1 && manager.comboStreak > 1) {
-      var comboBonus = Math.floor(mergeGain * (manager.comboMultiplier - 1) * (manager.comboStreak - 1));
+      var comboBonus = Math.floor(
+        mergeGain * (manager.comboMultiplier - 1) * (manager.comboStreak - 1),
+      );
       if (comboBonus > 0) {
         addRuntimeScoreDeltaForMove(manager, comboBonus);
       }
@@ -840,65 +1046,106 @@ function applyPostMoveScoreFallback(manager, scoreBeforeMove) {
   }
 }
 
-function applyPostMoveScore(manager, scoreBeforeMove) {
-  if (!manager) return;
-  if (resolveCorePayloadCallWith(manager, "callCoreScoringRuntime", "computePostMoveScore", {
+function createPostMoveScorePayload(manager, scoreBeforeMove) {
+  return {
     scoreBeforeMove: scoreBeforeMove,
     scoreAfterMerge: manager.score,
     comboStreak: manager.comboStreak,
-    comboMultiplier: manager.comboMultiplier
-  }, false, function (currentManager, coreCallResult) {
-    return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
-      applyPostMoveScoreFromCoreResult(currentManager, coreValue);
-    });
-  })) {
-    return;
-  }
+    comboMultiplier: manager.comboMultiplier,
+  };
+}
+
+function resolvePostMoveScoreByCore(manager, scoreBeforeMove) {
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreScoringRuntime",
+    "computePostMoveScore",
+    createPostMoveScorePayload(manager, scoreBeforeMove),
+    false,
+    (currentManager, coreCallResult) =>
+      currentManager.tryHandleCoreRawValue(coreCallResult, (coreValue) => {
+        applyPostMoveScoreFromCoreResult(currentManager, coreValue);
+      }),
+  );
+}
+
+function applyPostMoveScore(manager, scoreBeforeMove) {
+  if (!manager) return;
+  if (resolvePostMoveScoreByCore(manager, scoreBeforeMove)) return;
   applyPostMoveScoreFallback(manager, scoreBeforeMove);
 }
 
 function createPostMoveLifecycleDefaultState() {
   return {
     postMoveResult: null,
-    shouldStartTimer: false
+    shouldStartTimer: false,
   };
 }
 
-function createPostMoveLifecyclePayload(manager, hasMovesAvailable, forcedOver) {
+function createPostMoveLifecyclePayload(
+  manager,
+  hasMovesAvailable,
+  forcedOver,
+) {
   return {
     successfulMoveCount: manager.successfulMoveCount,
     hasMovesAvailable: hasMovesAvailable,
     forcedOver: !!forcedOver,
-    timerStatus: manager.timerStatus
+    timerStatus: manager.timerStatus,
   };
 }
 
 function resolvePostMoveLifecycle(manager, hasMovesAvailable, forcedOver) {
   if (!manager) return createPostMoveLifecycleDefaultState();
-  return resolveCorePayloadCallWith(manager, "callCorePostMoveRuntime", "computePostMoveLifecycle", createPostMoveLifecyclePayload(manager, hasMovesAvailable, forcedOver), undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return applyCorePostMoveLifecycleResult(currentManager, coreValue, hasMovesAvailable, forcedOver);
-    }, function () {
-      return applyFallbackPostMoveLifecycleResult(currentManager, hasMovesAvailable, forcedOver);
-    });
-  });
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCorePostMoveRuntime",
+    "computePostMoveLifecycle",
+    createPostMoveLifecyclePayload(manager, hasMovesAvailable, forcedOver),
+    undefined,
+    (currentManager, coreCallResult) =>
+      currentManager.resolveNormalizedCoreValueOrFallback(
+        coreCallResult,
+        (coreValue) =>
+          applyCorePostMoveLifecycleResult(
+            currentManager,
+            coreValue,
+            hasMovesAvailable,
+            forcedOver,
+          ),
+        () =>
+          applyFallbackPostMoveLifecycleResult(
+            currentManager,
+            hasMovesAvailable,
+            forcedOver,
+          ),
+      ),
+  );
 }
 
 function writePostMoveEndTimerText(manager) {
   if (!manager) return;
   var endTimerEl = resolveManagerElementById(manager, "timer");
-  if (endTimerEl) endTimerEl.textContent = manager.pretty(manager.accumulatedTime);
+  if (endTimerEl)
+    endTimerEl.textContent = manager.pretty(manager.accumulatedTime);
 }
 
 function applyCorePostMoveSuccessfulMoveCount(manager, postMoveResult) {
-  if (Number.isInteger(postMoveResult.successfulMoveCount) && postMoveResult.successfulMoveCount >= 0) {
+  if (
+    Number.isInteger(postMoveResult.successfulMoveCount) &&
+    postMoveResult.successfulMoveCount >= 0
+  ) {
     manager.successfulMoveCount = postMoveResult.successfulMoveCount;
     return;
   }
   manager.successfulMoveCount += 1;
 }
 
-function resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable, forcedOver) {
+function resolveCorePostMoveOverState(
+  postMoveResult,
+  hasMovesAvailable,
+  forcedOver,
+) {
   if (typeof postMoveResult.over === "boolean") {
     return !!postMoveResult.over || !!forcedOver;
   }
@@ -916,26 +1163,42 @@ function resolveCorePostMoveShouldStartTimer(manager, postMoveResult) {
   return manager.timerStatus === 0 && !manager.over;
 }
 
-function applyCorePostMoveLifecycleResult(manager, coreValue, hasMovesAvailable, forcedOver) {
+function applyCorePostMoveLifecycleResult(
+  manager,
+  coreValue,
+  hasMovesAvailable,
+  forcedOver,
+) {
   if (!manager) return createPostMoveLifecycleDefaultState();
   var postMoveResult = normalizeMoveInputRecordObject(coreValue, {});
   applyCorePostMoveSuccessfulMoveCount(manager, postMoveResult);
-  manager.over = resolveCorePostMoveOverState(postMoveResult, hasMovesAvailable, forcedOver);
+  manager.over = resolveCorePostMoveOverState(
+    postMoveResult,
+    hasMovesAvailable,
+    forcedOver,
+  );
   if (shouldCorePostMoveEndTimer(postMoveResult, manager.over)) {
     manager.stopTimer();
     writePostMoveEndTimerText(manager);
   }
   return {
     postMoveResult: postMoveResult,
-    shouldStartTimer: resolveCorePostMoveShouldStartTimer(manager, postMoveResult)
+    shouldStartTimer: resolveCorePostMoveShouldStartTimer(
+      manager,
+      postMoveResult,
+    ),
   };
 }
 
-function applyFallbackPostMoveLifecycleResult(manager, hasMovesAvailable, forcedOver) {
+function applyFallbackPostMoveLifecycleResult(
+  manager,
+  hasMovesAvailable,
+  forcedOver,
+) {
   if (!manager) {
     return {
       postMoveResult: null,
-      shouldStartTimer: false
+      shouldStartTimer: false,
     };
   }
   manager.successfulMoveCount += 1;
@@ -946,7 +1209,7 @@ function applyFallbackPostMoveLifecycleResult(manager, hasMovesAvailable, forced
   }
   return {
     postMoveResult: null,
-    shouldStartTimer: manager.timerStatus === 0 && !manager.over
+    shouldStartTimer: manager.timerStatus === 0 && !manager.over,
   };
 }
 
@@ -959,7 +1222,7 @@ function buildMoveUndoPayload(manager) {
     lockConsumedAtMoveCount: manager.lockConsumedAtMoveCount,
     lockedDirectionTurn: manager.lockedDirectionTurn,
     lockedDirection: manager.lockedDirection,
-    undoUsed: manager.undoUsed
+    undoUsed: manager.undoUsed,
   };
 }
 
@@ -972,7 +1235,7 @@ function createDefaultMoveUndoFallback() {
     lockConsumedAtMoveCount: null,
     lockedDirectionTurn: null,
     lockedDirection: null,
-    undoUsed: 0
+    undoUsed: 0,
   };
 }
 
@@ -985,7 +1248,7 @@ function createMoveUndoFallbackFromState(undoFallbackState) {
     lockConsumedAtMoveCount: undoFallbackState.lockConsumedAtMoveCount,
     lockedDirectionTurn: undoFallbackState.lockedDirectionTurn,
     lockedDirection: undoFallbackState.lockedDirection,
-    undoUsed: undoFallbackState.undoUsed
+    undoUsed: undoFallbackState.undoUsed,
   };
 }
 
@@ -996,15 +1259,50 @@ function buildMoveUndoFallback(manager) {
 }
 
 function normalizeMoveUndoScore(coreSnapshot, undoFallback) {
-  return Number.isFinite(coreSnapshot.score) ? Number(coreSnapshot.score) : undoFallback.score;
+  return Number.isFinite(coreSnapshot.score)
+    ? Number(coreSnapshot.score)
+    : undoFallback.score;
 }
 
 function normalizeMoveUndoTiles(coreSnapshot) {
   return Array.isArray(coreSnapshot.tiles) ? coreSnapshot.tiles : [];
 }
 
+function resolveNonNegativeMoveUndoCount(value, fallback) {
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+function resolveMoveUndoInteger(value, fallback) {
+  return Number.isInteger(value) ? value : fallback;
+}
+
 function normalizeMoveUndoCountFields(coreSnapshot, undoFallback) {
-  return { comboStreak: Number.isInteger(coreSnapshot.comboStreak) && coreSnapshot.comboStreak >= 0 ? coreSnapshot.comboStreak : undoFallback.comboStreak, successfulMoveCount: Number.isInteger(coreSnapshot.successfulMoveCount) && coreSnapshot.successfulMoveCount >= 0 ? coreSnapshot.successfulMoveCount : undoFallback.successfulMoveCount, lockConsumedAtMoveCount: Number.isInteger(coreSnapshot.lockConsumedAtMoveCount) ? coreSnapshot.lockConsumedAtMoveCount : undoFallback.lockConsumedAtMoveCount, lockedDirectionTurn: Number.isInteger(coreSnapshot.lockedDirectionTurn) ? coreSnapshot.lockedDirectionTurn : undoFallback.lockedDirectionTurn, lockedDirection: Number.isInteger(coreSnapshot.lockedDirection) ? coreSnapshot.lockedDirection : undoFallback.lockedDirection, undoUsed: Number.isInteger(coreSnapshot.undoUsed) && coreSnapshot.undoUsed >= 0 ? coreSnapshot.undoUsed : undoFallback.undoUsed };
+  return {
+    comboStreak: resolveNonNegativeMoveUndoCount(
+      coreSnapshot.comboStreak,
+      undoFallback.comboStreak,
+    ),
+    successfulMoveCount: resolveNonNegativeMoveUndoCount(
+      coreSnapshot.successfulMoveCount,
+      undoFallback.successfulMoveCount,
+    ),
+    lockConsumedAtMoveCount: resolveMoveUndoInteger(
+      coreSnapshot.lockConsumedAtMoveCount,
+      undoFallback.lockConsumedAtMoveCount,
+    ),
+    lockedDirectionTurn: resolveMoveUndoInteger(
+      coreSnapshot.lockedDirectionTurn,
+      undoFallback.lockedDirectionTurn,
+    ),
+    lockedDirection: resolveMoveUndoInteger(
+      coreSnapshot.lockedDirection,
+      undoFallback.lockedDirection,
+    ),
+    undoUsed: resolveNonNegativeMoveUndoCount(
+      coreSnapshot.undoUsed,
+      undoFallback.undoUsed,
+    ),
+  };
 }
 
 function normalizeMoveUndoSnapshot(coreValue, undoFallback) {
@@ -1018,19 +1316,25 @@ function normalizeMoveUndoSnapshot(coreValue, undoFallback) {
     lockConsumedAtMoveCount: countFields.lockConsumedAtMoveCount,
     lockedDirectionTurn: countFields.lockedDirectionTurn,
     lockedDirection: countFields.lockedDirection,
-    undoUsed: countFields.undoUsed
+    undoUsed: countFields.undoUsed,
   };
 }
 
 function resolveMoveUndoSnapshot(manager, undoPayload, undoFallback) {
   if (!manager) return undoFallback;
-  return resolveCorePayloadCallWith(manager, "callCoreUndoSnapshotRuntime", "createUndoSnapshot", undoPayload, undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveNormalizedCoreValueOrFallback(coreCallResult, function (coreValue) {
-      return normalizeMoveUndoSnapshot(coreValue, undoFallback);
-    }, function () {
-      return undoFallback;
-    });
-  });
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreUndoSnapshotRuntime",
+    "createUndoSnapshot",
+    undoPayload,
+    undefined,
+    (currentManager, coreCallResult) =>
+      currentManager.resolveNormalizedCoreValueOrFallback(
+        coreCallResult,
+        (coreValue) => normalizeMoveUndoSnapshot(coreValue, undoFallback),
+        () => undoFallback,
+      ),
+  );
 }
 
 function buildMovePlan(manager, direction) {
@@ -1040,7 +1344,7 @@ function buildMovePlan(manager, direction) {
   return {
     vector: getVector(manager, direction),
     scoreBeforeMove: manager.score,
-    undo: resolveMoveUndoSnapshot(manager, undoPayload, undoFallback)
+    undo: resolveMoveUndoSnapshot(manager, undoPayload, undoFallback),
   };
 }
 
@@ -1088,7 +1392,7 @@ function createIpsInputCountPayload(manager) {
     replayIndex: manager.replayIndex,
     ipsInputCount: manager.ipsInputCount,
     ipsInputTimes: ipsInputTimes.slice(),
-    nowMs: nowMs
+    nowMs: nowMs,
   };
 }
 
@@ -1104,7 +1408,8 @@ function applyIpsInputCountFromCoreResult(manager, coreValue) {
   }
   ensureManagerIpsInputTimes(manager, nowMs);
   var nextIps = Number(resolved.nextIpsInputCount);
-  manager.ipsInputCount = Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
+  manager.ipsInputCount =
+    Number.isInteger(nextIps) && nextIps >= 0 ? nextIps : 0;
 }
 
 function applyIpsInputCountFallback(manager) {
@@ -1116,34 +1421,43 @@ function applyIpsInputCountFallback(manager) {
   manager.ipsInputCount = manager.ipsInputTimes.length;
 }
 
-function updateIpsInputCountAfterMove(manager) {
-  if (!manager) return;
-  if (resolveCorePayloadCallWith(
+function resolveIpsInputCountByCore(manager) {
+  return resolveCorePayloadCallWith(
     manager,
     "callCoreReplayExecutionRuntime",
     "resolveNextIpsInputCount",
     createIpsInputCountPayload(manager),
     false,
-    function (currentManager, coreCallResult) {
-      return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
+    (currentManager, coreCallResult) =>
+      currentManager.tryHandleCoreRawValue(coreCallResult, (coreValue) => {
         applyIpsInputCountFromCoreResult(currentManager, coreValue);
-      });
-    }
-  )) {
-    return;
-  }
+      }),
+  );
+}
+
+function updateIpsInputCountAfterMove(manager) {
+  if (!manager) return;
+  if (resolveIpsInputCountByCore(manager)) return;
   applyIpsInputCountFallback(manager);
 }
 
-function createProgressiveCapped64UnlockPayload(mergedValue, unlockedState, isProgressiveCapped64Mode) {
+function createProgressiveCapped64UnlockPayload(
+  mergedValue,
+  unlockedState,
+  isProgressiveCapped64Mode,
+) {
   return {
     isProgressiveCapped64Mode: isProgressiveCapped64Mode,
     value: mergedValue,
-    unlockedState: unlockedState
+    unlockedState: unlockedState,
   };
 }
 
-function applyProgressiveCapped64UnlockFromCoreResult(manager, coreValue, unlockedState) {
+function applyProgressiveCapped64UnlockFromCoreResult(
+  manager,
+  coreValue,
+  unlockedState,
+) {
   var resolved = normalizeMoveInputRecordObject(coreValue, {});
   manager.capped64Unlocked = isMoveInputRecordObject(resolved.nextUnlockedState)
     ? resolved.nextUnlockedState
@@ -1154,23 +1468,40 @@ function applyProgressiveCapped64UnlockFromCoreResult(manager, coreValue, unlock
   }
 }
 
-function applyProgressiveCapped64UnlockByCore(manager, mergedValue, unlockedState, isProgressiveCapped64Mode) {
+function applyProgressiveCapped64UnlockByCore(
+  manager,
+  mergedValue,
+  unlockedState,
+  isProgressiveCapped64Mode,
+) {
   if (!manager) return false;
   return resolveCorePayloadCallWith(
     manager,
     "callCoreModeRuntime",
     "resolveProgressiveCapped64Unlock",
-    createProgressiveCapped64UnlockPayload(mergedValue, unlockedState, isProgressiveCapped64Mode),
+    createProgressiveCapped64UnlockPayload(
+      mergedValue,
+      unlockedState,
+      isProgressiveCapped64Mode,
+    ),
     false,
-    function (currentManager, coreCallResult) {
-      return currentManager.tryHandleCoreRawValue(coreCallResult, function (coreValue) {
-        applyProgressiveCapped64UnlockFromCoreResult(currentManager, coreValue, unlockedState);
-      });
-    }
+    (currentManager, coreCallResult) =>
+      currentManager.tryHandleCoreRawValue(coreCallResult, (coreValue) => {
+        applyProgressiveCapped64UnlockFromCoreResult(
+          currentManager,
+          coreValue,
+          unlockedState,
+        );
+      }),
   );
 }
 
-function applyProgressiveCapped64UnlockFallback(manager, mergedValue, unlockedState, isProgressiveCapped64Mode) {
+function applyProgressiveCapped64UnlockFallback(
+  manager,
+  mergedValue,
+  unlockedState,
+  isProgressiveCapped64Mode,
+) {
   if (!manager || !isProgressiveCapped64Mode) return;
   if (!manager.isProgressiveCapped64UnlockValue(mergedValue)) return;
   if (unlockedState[String(mergedValue)]) return;
@@ -1181,7 +1512,9 @@ function applyProgressiveCapped64UnlockFallback(manager, mergedValue, unlockedSt
 
 function stampMergeMilestoneTimer(manager, mergedValue, timeStr) {
   if (!manager || !Number.isInteger(mergedValue) || mergedValue <= 0) return;
-  var slotId = manager.timerMilestoneSlotByValue ? manager.timerMilestoneSlotByValue[String(mergedValue)] : null;
+  var slotId = manager.timerMilestoneSlotByValue
+    ? manager.timerMilestoneSlotByValue[String(mergedValue)]
+    : null;
   if (!slotId) return;
   var timerMilestoneEl = resolveManagerElementById(manager, "timer" + slotId);
   if (timerMilestoneEl && timerMilestoneEl.textContent === "") {
@@ -1191,16 +1524,36 @@ function stampMergeMilestoneTimer(manager, mergedValue, timeStr) {
 
 function applyProgressiveMergeMilestones(manager, mergedValue, timeStr) {
   if (!manager || !Number.isInteger(mergedValue) || mergedValue <= 0) return;
-  var unlockedState = manager.resolveProgressiveCapped64UnlockedState(manager.capped64Unlocked);
+  var unlockedState = manager.resolveProgressiveCapped64UnlockedState(
+    manager.capped64Unlocked,
+  );
   var milestoneCappedState = manager.resolveCappedModeState();
-  var isProgressiveCapped64Mode = !!milestoneCappedState.isProgressiveCapped64Mode;
-  if (!applyProgressiveCapped64UnlockByCore(manager, mergedValue, unlockedState, isProgressiveCapped64Mode)) {
-    applyProgressiveCapped64UnlockFallback(manager, mergedValue, unlockedState, isProgressiveCapped64Mode);
+  var isProgressiveCapped64Mode =
+    !!milestoneCappedState.isProgressiveCapped64Mode;
+  if (
+    !applyProgressiveCapped64UnlockByCore(
+      manager,
+      mergedValue,
+      unlockedState,
+      isProgressiveCapped64Mode,
+    )
+  ) {
+    applyProgressiveCapped64UnlockFallback(
+      manager,
+      mergedValue,
+      unlockedState,
+      isProgressiveCapped64Mode,
+    );
   }
   stampMergeMilestoneTimer(manager, mergedValue, timeStr);
 }
 
-function tryRecordBaseCappedMergeMilestone(manager, cappedState, milestoneCount, timeStr) {
+function tryRecordBaseCappedMergeMilestone(
+  manager,
+  cappedState,
+  milestoneCount,
+  timeStr,
+) {
   if (!manager || !cappedState || milestoneCount !== 1) return false;
   var capLabel = String(cappedState.cappedTargetValue || 2048);
   var baseTimerEl = resolveManagerElementById(manager, "timer" + capLabel);
@@ -1218,35 +1571,50 @@ function resolveCappedRepeatMilestoneLabel(manager, milestoneCount) {
     "formatCappedRepeatLabel",
     [milestoneCount],
     "",
-    function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreStringCallOrFallback(coreCallResult, function () {
-        return "x" + String(milestoneCount);
-      }, true);
-    }
+    (currentManager, coreCallResult) =>
+      currentManager.resolveCoreStringCallOrFallback(
+        coreCallResult,
+        () => "x" + String(milestoneCount),
+        true,
+      ),
   );
 }
 
-function createCappedPlaceholderSlotResolvePayload(milestoneCount, placeholderValues) {
+function createCappedPlaceholderSlotResolvePayload(
+  milestoneCount,
+  placeholderValues,
+) {
   return {
     repeatCount: milestoneCount,
-    placeholderRowValues: placeholderValues
+    placeholderRowValues: placeholderValues,
   };
 }
 
-function resolveCappedPlaceholderSlotByCore(manager, milestoneCount, placeholderValues) {
-  return Number(resolveCorePayloadCallWith(
-    manager,
-    "callCoreModeRuntime",
-    "resolveCappedPlaceholderSlotByRepeatCount",
-    createCappedPlaceholderSlotResolvePayload(milestoneCount, placeholderValues),
-    undefined,
-    function (currentManager, coreCallResult) {
-      return currentManager.resolveCoreRawCallValueOrUndefined(coreCallResult);
-    }
-  ));
+function resolveCappedPlaceholderSlotByCore(
+  manager,
+  milestoneCount,
+  placeholderValues,
+) {
+  return Number(
+    resolveCorePayloadCallWith(
+      manager,
+      "callCoreModeRuntime",
+      "resolveCappedPlaceholderSlotByRepeatCount",
+      createCappedPlaceholderSlotResolvePayload(
+        milestoneCount,
+        placeholderValues,
+      ),
+      undefined,
+      (currentManager, coreCallResult) =>
+        currentManager.resolveCoreRawCallValueOrUndefined(coreCallResult),
+    ),
+  );
 }
 
-function resolveCappedPlaceholderSlotFallback(milestoneCount, placeholderValues) {
+function resolveCappedPlaceholderSlotFallback(
+  milestoneCount,
+  placeholderValues,
+) {
   var placeholderIndex = milestoneCount - 2; // x2 => first placeholder row
   if (placeholderIndex >= 0 && placeholderIndex < placeholderValues.length) {
     return Number(placeholderValues[placeholderIndex]);
@@ -1259,63 +1627,119 @@ function normalizeCappedPlaceholderSlotValue(slotValue) {
   return String(slotValue);
 }
 
-function resolveCappedPlaceholderSlotValue(manager, cappedState, milestoneCount) {
+function resolveCappedPlaceholderSlotValue(
+  manager,
+  cappedState,
+  milestoneCount,
+) {
   if (!manager || !cappedState) return null;
   if (!Number.isInteger(milestoneCount) || milestoneCount < 2) return null;
   var placeholderValues = manager.getCappedPlaceholderRowValues(cappedState);
-  var slotValue = resolveCappedPlaceholderSlotByCore(manager, milestoneCount, placeholderValues);
+  var slotValue = resolveCappedPlaceholderSlotByCore(
+    manager,
+    milestoneCount,
+    placeholderValues,
+  );
   if (!Number.isInteger(slotValue) || slotValue <= 0) {
-    slotValue = resolveCappedPlaceholderSlotFallback(milestoneCount, placeholderValues);
+    slotValue = resolveCappedPlaceholderSlotFallback(
+      milestoneCount,
+      placeholderValues,
+    );
   }
   return normalizeCappedPlaceholderSlotValue(slotValue);
 }
 
-function applyCappedPlaceholderLegendStyle(manager, legend, cappedState, nextLabel) {
+function applyCappedPlaceholderLegendStyle(
+  manager,
+  legend,
+  cappedState,
+  nextLabel,
+) {
   if (!manager || !legend || !cappedState) return;
-  legend.className = manager.getCappedTimerLegendClass(cappedState.cappedTargetValue);
+  legend.className = manager.getCappedTimerLegendClass(
+    cappedState.cappedTargetValue,
+  );
   legend.textContent = nextLabel;
-  legend.style.fontSize = typeof manager.getCappedTimerLegendFontSize === "function"
-    ? manager.getCappedTimerLegendFontSize(cappedState.cappedTargetValue)
-    : manager.getCappedTimerFontSize(cappedState.cappedTargetValue);
+  legend.style.fontSize =
+    typeof manager.getCappedTimerLegendFontSize === "function"
+      ? manager.getCappedTimerLegendFontSize(cappedState.cappedTargetValue)
+      : manager.getCappedTimerFontSize(cappedState.cappedTargetValue);
 }
 
-function tryWriteCappedPlaceholderMilestoneRow(manager, cappedState, milestoneCount, nextLabel, timeStr) {
+function tryWriteCappedPlaceholderMilestoneRow(
+  manager,
+  cappedState,
+  milestoneCount,
+  nextLabel,
+  timeStr,
+) {
   if (!manager || !cappedState) return false;
-  var placeholderSlotId = resolveCappedPlaceholderSlotValue(manager, cappedState, milestoneCount);
+  var placeholderSlotId = resolveCappedPlaceholderSlotValue(
+    manager,
+    cappedState,
+    milestoneCount,
+  );
   if (!placeholderSlotId) return false;
   var row = manager.getTimerRowEl(placeholderSlotId);
   var timerEl = resolveManagerElementById(manager, "timer" + placeholderSlotId);
   if (!row || !timerEl) return false;
   var legend = row.querySelector(".timertile");
   applyCappedPlaceholderLegendStyle(manager, legend, cappedState, nextLabel);
-  row.style.display = ""; row.style.visibility = ""; row.style.pointerEvents = "";
+  row.style.display = "";
+  row.style.visibility = "";
+  row.style.pointerEvents = "";
   row.setAttribute("data-capped-repeat", String(milestoneCount));
   timerEl.textContent = timeStr;
   return true;
 }
 
-function appendCappedDynamicMilestoneRow(manager, container, cappedState, milestoneCount, nextLabel, timeStr) {
+function appendCappedDynamicMilestoneRow(
+  manager,
+  container,
+  cappedState,
+  milestoneCount,
+  nextLabel,
+  timeStr,
+) {
   if (!manager || !container || !cappedState) return false;
-  var rowDiv = createSavedDynamicTimerRow(manager, {
-    repeat: String(milestoneCount),
-    label: nextLabel,
-    time: timeStr
-  }, cappedState);
+  var rowDiv = createSavedDynamicTimerRow(
+    manager,
+    {
+      repeat: String(milestoneCount),
+      label: nextLabel,
+      time: timeStr,
+    },
+    cappedState,
+  );
   container.appendChild(rowDiv);
   normalizeCappedRepeatLegendClasses(manager, cappedState);
   return true;
 }
 
-function tryRecordCappedRepeatMilestone(manager, cappedState, milestoneCount, timeStr) {
+function tryRecordCappedRepeatMilestone(
+  manager,
+  cappedState,
+  milestoneCount,
+  timeStr,
+) {
   if (!manager || !cappedState) return false;
   var nextLabel = resolveCappedRepeatMilestoneLabel(manager, milestoneCount);
   var wroteToPlaceholder = tryWriteCappedPlaceholderMilestoneRow(
-    manager, cappedState, milestoneCount, nextLabel, timeStr
+    manager,
+    cappedState,
+    milestoneCount,
+    nextLabel,
+    timeStr,
   );
   if (wroteToPlaceholder) return true;
   var container = manager.getCappedOverflowContainer(cappedState);
   return appendCappedDynamicMilestoneRow(
-    manager, container, cappedState, milestoneCount, nextLabel, timeStr
+    manager,
+    container,
+    cappedState,
+    milestoneCount,
+    nextLabel,
+    timeStr,
   );
 }
 
@@ -1325,8 +1749,23 @@ function recordCappedMergeMilestone(manager, timeStr) {
   if (!cappedState.isCappedMode) return;
   manager.cappedMilestoneCount += 1;
   var milestoneCount = manager.cappedMilestoneCount;
-  if (tryRecordBaseCappedMergeMilestone(manager, cappedState, milestoneCount, timeStr)) return;
-  if (tryRecordCappedRepeatMilestone(manager, cappedState, milestoneCount, timeStr)) {
+  if (
+    tryRecordBaseCappedMergeMilestone(
+      manager,
+      cappedState,
+      milestoneCount,
+      timeStr,
+    )
+  )
+    return;
+  if (
+    tryRecordCappedRepeatMilestone(
+      manager,
+      cappedState,
+      milestoneCount,
+      timeStr,
+    )
+  ) {
     manager.callWindowMethod("cappedTimerAutoScroll");
   }
 }
@@ -1335,11 +1774,30 @@ function createGameTerminatedResolvePayload(manager) {
   return {
     over: manager.over,
     won: manager.won,
-    keepPlaying: manager.keepPlaying
+    keepPlaying: manager.keepPlaying,
   };
 }
 function resolveGameTerminatedFallback(manager) {
   return !!manager.over || (!!manager.won && !manager.keepPlaying);
+}
+
+function markGameTerminated(manager) {
+  manager.stopTimer();
+  manager.timerEnd = Date.now();
+}
+
+function resolveGameTerminatedByCore(manager) {
+  return resolveCorePayloadCallWith(
+    manager,
+    "callCoreModeRuntime",
+    "isGameTerminatedState",
+    createGameTerminatedResolvePayload(manager),
+    false,
+    (currentManager, coreCallResult) =>
+      currentManager.resolveCoreBooleanCallOrFallback(coreCallResult, () =>
+        resolveGameTerminatedFallback(currentManager),
+      ),
+  );
 }
 
 function isGameTerminated(manager) {
@@ -1347,27 +1805,29 @@ function isGameTerminated(manager) {
   // Replay must follow the recorded action stream; hitting 2048 should not block replay moves.
   if (manager.replayMode || isRankCheckpointReplayExecuting(manager)) {
     if (!manager.over) return false;
-    manager.stopTimer();
-    manager.timerEnd = Date.now();
+    markGameTerminated(manager);
     return true;
   }
-  var terminated = resolveCorePayloadCallWith(manager, "callCoreModeRuntime", "isGameTerminatedState", createGameTerminatedResolvePayload(manager), false, function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreBooleanCallOrFallback(coreCallResult, function () { return resolveGameTerminatedFallback(currentManager); });
-  });
-  if (!terminated) return false;
-  manager.stopTimer();
-  manager.timerEnd = Date.now();
+  if (!resolveGameTerminatedByCore(manager)) return false;
+  markGameTerminated(manager);
   return true;
 }
 
 function resolveForcedReplaySpawn(manager) {
-  if (!manager || (!manager.replayMode && !isRankCheckpointReplayExecuting(manager))) return null;
+  if (
+    !manager ||
+    (!manager.replayMode && !isRankCheckpointReplayExecuting(manager))
+  )
+    return null;
   return manager.forcedSpawn || null;
 }
 
 function tryInsertForcedReplaySpawn(manager, forcedSpawn) {
   if (!(manager && forcedSpawn)) return false;
-  if (!manager.grid.cellAvailable(forcedSpawn) || manager.isBlockedCell(forcedSpawn.x, forcedSpawn.y)) {
+  if (
+    !manager.grid.cellAvailable(forcedSpawn) ||
+    manager.isBlockedCell(forcedSpawn.x, forcedSpawn.y)
+  ) {
     return true;
   }
   var forcedTile = new Tile(forcedSpawn, forcedSpawn.value);
@@ -1390,9 +1850,14 @@ function resolveSpawnStepCount(manager) {
 }
 
 function resolveSpawnActionCount(manager) {
-  var moveHistoryCount = Array.isArray(manager && manager.moveHistory) ? manager.moveHistory.length : 0;
-  var replayActionCount = Number(manager && manager.sessionReplayV1 && manager.sessionReplayV1.action_count);
-  if (!Number.isInteger(replayActionCount) || replayActionCount < 0) replayActionCount = 0;
+  var moveHistoryCount = Array.isArray(manager && manager.moveHistory)
+    ? manager.moveHistory.length
+    : 0;
+  var replayActionCount = Number(
+    manager && manager.sessionReplayV1 && manager.sessionReplayV1.action_count,
+  );
+  if (!Number.isInteger(replayActionCount) || replayActionCount < 0)
+    replayActionCount = 0;
   return Math.max(moveHistoryCount, replayActionCount);
 }
 
@@ -1424,8 +1889,12 @@ function createSeededReplayFallbackRandomSource(manager, stepCount) {
   var cursor = 0;
   var seed = Math.floor(Number(manager && manager.seed) || 0);
   var normalizedStepCount = Math.floor(Number(stepCount) || 0);
-  return function () {
-    var value = createRankedDeterministicHash(seed, normalizedStepCount, "replay:" + String(cursor));
+  return () => {
+    var value = createRankedDeterministicHash(
+      seed,
+      normalizedStepCount,
+      "replay:" + String(cursor),
+    );
     cursor += 1;
     return value / 4294967296;
   };
@@ -1433,7 +1902,9 @@ function createSeededReplayFallbackRandomSource(manager, stepCount) {
 
 function createSeededReplayRandomSource(manager, stepCount) {
   var rng = primeSeededRandomByStepCount(manager, stepCount);
-  return typeof rng === "function" ? rng : createSeededReplayFallbackRandomSource(manager, stepCount);
+  return typeof rng === "function"
+    ? rng
+    : createSeededReplayFallbackRandomSource(manager, stepCount);
 }
 
 function resolveSeededReplaySpawnTableTotalWeight(table) {
@@ -1447,7 +1918,7 @@ function resolveSeededReplaySpawnTableTotalWeight(table) {
 
 function resolveSeededReplaySpawnValueByWeight(table, totalWeight, rng) {
   var list = Array.isArray(table) ? table : [];
-  var randomSource = typeof rng === "function" ? rng : function () { return 0; };
+  var randomSource = typeof rng === "function" ? rng : () => 0;
   var pick = randomSource() * totalWeight;
   var running = 0;
   for (var index = 0; index < list.length; index++) {
@@ -1458,7 +1929,8 @@ function resolveSeededReplaySpawnValueByWeight(table, totalWeight, rng) {
 }
 
 function resolveSeededReplaySpawnValue(manager, rng) {
-  var table = manager && Array.isArray(manager.spawnTable) ? manager.spawnTable : [];
+  var table =
+    manager && Array.isArray(manager.spawnTable) ? manager.spawnTable : [];
   if (!table.length) return 2;
   var totalWeight = resolveSeededReplaySpawnTableTotalWeight(table);
   if (totalWeight <= 0) return table[0].value;
@@ -1467,8 +1939,14 @@ function resolveSeededReplaySpawnValue(manager, rng) {
 
 function insertSeededRandomSpawnTile(manager, available) {
   if (!(manager && Array.isArray(available) && available.length > 0)) return;
-  var randomSource = createSeededReplayRandomSource(manager, resolveSpawnStepCount(manager));
-  var value = consumeItemSpawnValueOverride(manager, resolveSeededReplaySpawnValue(manager, randomSource));
+  var randomSource = createSeededReplayRandomSource(
+    manager,
+    resolveSpawnStepCount(manager),
+  );
+  var value = consumeItemSpawnValueOverride(
+    manager,
+    resolveSeededReplaySpawnValue(manager, randomSource),
+  );
   var cell = available[Math.floor(randomSource() * available.length)];
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
@@ -1486,7 +1964,12 @@ function resolveRankedDeterministicSeed(manager) {
 }
 
 function createRankedDeterministicHash(seed, stepCount, channel) {
-  var text = String(Math.floor(seed)) + "|" + String(Math.floor(stepCount)) + "|" + String(channel || "");
+  var text =
+    String(Math.floor(seed)) +
+    "|" +
+    String(Math.floor(stepCount)) +
+    "|" +
+    String(channel || "");
   var hash = 0x811c9dc5;
   for (var i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i);
@@ -1511,12 +1994,21 @@ function resolveRankedSpawnFallbackValue(manager) {
 function resolveRankedSpawnTable(manager) {
   var sustainableTable = resolveSustainableUndoSpawnTable(manager);
   if (sustainableTable) return sustainableTable;
-  if (Array.isArray(manager && manager.spawnTable) && manager.spawnTable.length) {
+  if (
+    Array.isArray(manager && manager.spawnTable) &&
+    manager.spawnTable.length
+  ) {
     return manager.spawnTable;
   }
   return (manager && manager.ruleset) === "fibonacci"
-    ? [{ value: 1, weight: 90 }, { value: 2, weight: 10 }]
-    : [{ value: 2, weight: 90 }, { value: 4, weight: 10 }];
+    ? [
+        { value: 1, weight: 90 },
+        { value: 2, weight: 10 },
+      ]
+    : [
+        { value: 2, weight: 90 },
+        { value: 4, weight: 10 },
+      ];
 }
 
 function resolveRankedSpawnWeight(item) {
@@ -1524,20 +2016,29 @@ function resolveRankedSpawnWeight(item) {
 }
 
 function resolveRankedSpawnValueOrFallback(manager, item) {
-  return Math.floor(Number(item && item.value) || 0) || resolveRankedSpawnFallbackValue(manager);
+  return (
+    Math.floor(Number(item && item.value) || 0) ||
+    resolveRankedSpawnFallbackValue(manager)
+  );
 }
 
 function resolveRankedDeterministicSpawnValue(manager, seed, stepCount) {
   var table = resolveRankedSpawnTable(manager);
   var totalWeight = 0;
-  for (var i = 0; i < table.length; i++) totalWeight += resolveRankedSpawnWeight(table[i]);
+  for (var i = 0; i < table.length; i++)
+    totalWeight += resolveRankedSpawnWeight(table[i]);
   if (!(totalWeight > 0)) return resolveRankedSpawnFallbackValue(manager);
-  var cursor = Math.min(resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:value"), 0.9999999999999999) * totalWeight;
+  var cursor =
+    Math.min(
+      resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:value"),
+      0.9999999999999999,
+    ) * totalWeight;
   var running = 0;
   for (var j = 0; j < table.length; j++) {
     var item = table[j];
     running += resolveRankedSpawnWeight(item);
-    if (cursor < running) return resolveRankedSpawnValueOrFallback(manager, item);
+    if (cursor < running)
+      return resolveRankedSpawnValueOrFallback(manager, item);
   }
   var fallback = table[table.length - 1];
   return resolveRankedSpawnValueOrFallback(manager, fallback);
@@ -1557,12 +2058,23 @@ function insertRankedDeterministicSpawnTile(manager, available) {
   var seed = resolveRankedDeterministicSeed(manager);
   if (seed === null) return;
   var stepCount = resolveSpawnStepCount(manager);
-  var cellRoll = resolveRankedDeterministicUnitFloat(seed, stepCount, "spawn:cell");
-  var cell = available[Math.min(available.length - 1, Math.floor(cellRoll * available.length))];
+  var cellRoll = resolveRankedDeterministicUnitFloat(
+    seed,
+    stepCount,
+    "spawn:cell",
+  );
+  var cell =
+    available[
+      Math.min(available.length - 1, Math.floor(cellRoll * available.length))
+    ];
   var sustainableValue = resolveSustainableUndoSpawnValue(manager, cell);
-  var value = sustainableValue === null
-    ? consumeItemSpawnValueOverride(manager, resolveRankedDeterministicSpawnValue(manager, seed, stepCount))
-    : sustainableValue;
+  var value =
+    sustainableValue === null
+      ? consumeItemSpawnValueOverride(
+          manager,
+          resolveRankedDeterministicSpawnValue(manager, seed, stepCount),
+        )
+      : sustainableValue;
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
   manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
@@ -1574,13 +2086,16 @@ function resolveMasterSpawnValueByDefault() {
 }
 
 function resolveSustainableSpawnBaseValues(manager) {
-  return String(manager && manager.ruleset || "").toLowerCase() === "fibonacci"
+  return String((manager && manager.ruleset) || "").toLowerCase() ===
+    "fibonacci"
     ? [1, 2]
     : [2, 4];
 }
 
 function hasStandardSustainableSpawnTable(manager) {
-  var table = Array.isArray(manager && manager.spawnTable) ? manager.spawnTable : [];
+  var table = Array.isArray(manager && manager.spawnTable)
+    ? manager.spawnTable
+    : [];
   if (!table.length) return true;
   var baseValues = resolveSustainableSpawnBaseValues(manager);
   var totalWeight = 0;
@@ -1593,11 +2108,13 @@ function hasStandardSustainableSpawnTable(manager) {
     totalWeight += weight;
     if (value === baseValues[1]) secondaryWeight += weight;
   }
-  return totalWeight > 0 && Math.abs(secondaryWeight / totalWeight - 0.1) < 0.0000001;
+  return (
+    totalWeight > 0 && Math.abs(secondaryWeight / totalWeight - 0.1) < 0.0000001
+  );
 }
 
 function shouldUseSustainableUndoSpawn(manager) {
-  var ruleset = String(manager && manager.ruleset || "").toLowerCase();
+  var ruleset = String((manager && manager.ruleset) || "").toLowerCase();
   return !!(
     manager &&
     !manager.replayMode &&
@@ -1620,10 +2137,15 @@ function countBigIntBinaryOnes(value) {
 
 function collectSustainableSpawnBoardState(manager) {
   var state = { values: [], playable: 0, minValue: null, valid: true };
-  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function")) state.valid = false;
+  if (!(manager && manager.grid && typeof manager.grid.eachCell === "function"))
+    state.valid = false;
   if (!state.valid) return state;
-  manager.grid.eachCell(function (x, y, tile) {
-    if (typeof manager.isBlockedCell === "function" && manager.isBlockedCell(x, y)) return;
+  manager.grid.eachCell((x, y, tile) => {
+    if (
+      typeof manager.isBlockedCell === "function" &&
+      manager.isBlockedCell(x, y)
+    )
+      return;
     state.playable += 1;
     if (!tile) return;
     var value = Number(tile.value);
@@ -1632,7 +2154,8 @@ function collectSustainableSpawnBoardState(manager) {
       return;
     }
     state.values.push(value);
-    if (state.minValue === null || value < state.minValue) state.minValue = value;
+    if (state.minValue === null || value < state.minValue)
+      state.minValue = value;
   });
   return state;
 }
@@ -1645,7 +2168,8 @@ function isSafePowerOfTwo(value) {
 
 function resolvePow2CapacitySpawnValue(state) {
   var threshold = state.playable - 1;
-  if (!state.valid || threshold < 1 || state.values.length !== threshold) return null;
+  if (!state.valid || threshold < 1 || state.values.length !== threshold)
+    return null;
   var sum = 0n;
   for (var i = 0; i < state.values.length; i++) {
     if (!isSafePowerOfTwo(state.values[i])) return null;
@@ -1667,7 +2191,11 @@ function resolveUnlockedFibonacciSpawnValues(manager) {
   var current = 2;
   while (true) {
     var next = previous + current;
-    if (!Number.isSafeInteger(next) || resolveSpawnValueCount(manager, next) <= 0) break;
+    if (
+      !Number.isSafeInteger(next) ||
+      resolveSpawnValueCount(manager, next) <= 0
+    )
+      break;
     values.push(next);
     previous = current;
     current = next;
@@ -1681,18 +2209,19 @@ function resolveUnlockedPow2SpawnValues(manager) {
   var seen = {};
   if (!(counts && typeof counts === "object")) return values;
   for (var key in counts) {
-    if (!Object.prototype.hasOwnProperty.call(counts, key) || !(Number(counts[key]) > 0)) continue;
+    if (!Object.hasOwn(counts, key) || !(Number(counts[key]) > 0)) continue;
     var value = Number(key);
     if (value <= 4 || !isSafePowerOfTwo(value) || seen[String(value)]) continue;
     seen[String(value)] = true;
     values.push(value);
   }
-  values.sort(function (a, b) { return a - b; });
+  values.sort((a, b) => a - b);
   return values;
 }
 
 function resolveUnlockedSustainableSpawnValues(manager) {
-  return String(manager && manager.ruleset || "").toLowerCase() === "fibonacci"
+  return String((manager && manager.ruleset) || "").toLowerCase() ===
+    "fibonacci"
     ? resolveUnlockedFibonacciSpawnValues(manager)
     : resolveUnlockedPow2SpawnValues(manager);
 }
@@ -1702,14 +2231,18 @@ function resolveSustainableUndoSpawnTable(manager) {
   var baseValues = resolveSustainableSpawnBaseValues(manager);
   var unlocked = resolveUnlockedSustainableSpawnValues(manager);
   if (!unlocked.length) {
-    return [{ value: baseValues[0], weight: 90 }, { value: baseValues[1], weight: 10 }];
+    return [
+      { value: baseValues[0], weight: 90 },
+      { value: baseValues[1], weight: 10 },
+    ];
   }
   var scale = unlocked.length;
   var table = [
     { value: baseValues[0], weight: 87 * scale },
-    { value: baseValues[1], weight: 10 * scale }
+    { value: baseValues[1], weight: 10 * scale },
   ];
-  for (var i = 0; i < unlocked.length; i++) table.push({ value: unlocked[i], weight: 3 });
+  for (var i = 0; i < unlocked.length; i++)
+    table.push({ value: unlocked[i], weight: 3 });
   return table;
 }
 
@@ -1725,22 +2258,30 @@ function buildFibonacciValuesThroughRank(rank) {
 
 function resolveFibonacciCapacitySpawnValue(manager, state) {
   var threshold = state.playable - 1;
-  if (!state.valid || threshold < 1 || state.values.length !== threshold) return null;
-  var highestDirectRank = 2 + resolveUnlockedFibonacciSpawnValues(manager).length;
+  if (!state.valid || threshold < 1 || state.values.length !== threshold)
+    return null;
+  var highestDirectRank =
+    2 + resolveUnlockedFibonacciSpawnValues(manager).length;
   var highestFrontierRank = highestDirectRank + 2 * threshold;
   var fibonacciValues = buildFibonacciValuesThroughRank(highestFrontierRank);
   if (!fibonacciValues) return null;
-  var boardValues = state.values.slice().sort(function (a, b) { return a - b; });
+  var boardValues = state.values.slice().sort((a, b) => a - b);
   for (var i = 0; i < threshold; i++) {
-    if (boardValues[i] !== fibonacciValues[highestDirectRank + 2 * (i + 1)]) return null;
+    if (boardValues[i] !== fibonacciValues[highestDirectRank + 2 * (i + 1)])
+      return null;
   }
   return fibonacciValues[highestDirectRank + 1];
 }
 
 function resolveSustainableUndoSpawnValue(manager, cell) {
   if (!shouldUseSustainableUndoSpawn(manager)) return null;
-  if (!(cell && Number.isInteger(cell.x) && Number.isInteger(cell.y))) return null;
-  if (!(manager.grid && typeof manager.grid.cellContent === "function") || manager.grid.cellContent(cell)) return null;
+  if (!(cell && Number.isInteger(cell.x) && Number.isInteger(cell.y)))
+    return null;
+  if (
+    !(manager.grid && typeof manager.grid.cellContent === "function") ||
+    manager.grid.cellContent(cell)
+  )
+    return null;
   var state = collectSustainableSpawnBoardState(manager);
   return String(manager.ruleset || "").toLowerCase() === "fibonacci"
     ? resolveFibonacciCapacitySpawnValue(manager, state)
@@ -1750,7 +2291,8 @@ function resolveSustainableUndoSpawnValue(manager, cell) {
 function resolveSpawnValueByUnitRoll(table, unitRoll, fallbackValue) {
   var list = Array.isArray(table) ? table : [];
   var totalWeight = 0;
-  for (var i = 0; i < list.length; i++) totalWeight += Math.max(0, Number(list[i] && list[i].weight) || 0);
+  for (var i = 0; i < list.length; i++)
+    totalWeight += Math.max(0, Number(list[i] && list[i].weight) || 0);
   if (!(totalWeight > 0)) return fallbackValue;
   var roll = Number(unitRoll);
   if (!Number.isFinite(roll)) roll = 0;
@@ -1781,7 +2323,7 @@ function buildSpawnTableWeightSummary(table) {
     totalWeight: 0,
     twoWeight: 0,
     fourWeight: 0,
-    hasNonPow2Value: false
+    hasNonPow2Value: false,
   };
   var list = Array.isArray(table) ? table : [];
   for (var i = 0; i < list.length; i++) {
@@ -1799,7 +2341,11 @@ function isClassicPow2SpawnDistribution(summary) {
 
 function shouldUseModeSpawnValue(manager) {
   if (!manager) return false;
-  if (typeof manager.isFibonacciMode === "function" && manager.isFibonacciMode()) return true;
+  if (
+    typeof manager.isFibonacciMode === "function" &&
+    manager.isFibonacciMode()
+  )
+    return true;
   var summary = buildSpawnTableWeightSummary(manager.spawnTable);
   return !isClassicPow2SpawnDistribution(summary);
 }
@@ -1810,17 +2356,28 @@ function resolveSpawnValueByCoreRule(manager) {
     var fallbackValue = resolveSustainableSpawnBaseValues(manager)[0];
     return consumeItemSpawnValueOverride(
       manager,
-      resolveSpawnValueByUnitRoll(sustainableTable, resolveMoveInputRandomUnitFloat(), fallbackValue)
+      resolveSpawnValueByUnitRoll(
+        sustainableTable,
+        resolveMoveInputRandomUnitFloat(),
+        fallbackValue,
+      ),
     );
   }
   if (shouldUseModeSpawnValue(manager)) {
     return consumeItemSpawnValueOverride(manager, pickSpawnValue(manager));
   }
-  return consumeItemSpawnValueOverride(manager, resolveMasterSpawnValueByDefault());
+  return consumeItemSpawnValueOverride(
+    manager,
+    resolveMasterSpawnValueByDefault(),
+  );
 }
 
 function shouldUseFilteredModeCellsForSpawn(manager) {
-  return !!(manager && Array.isArray(manager.blockedCellsList) && manager.blockedCellsList.length > 0);
+  return !!(
+    manager &&
+    Array.isArray(manager.blockedCellsList) &&
+    manager.blockedCellsList.length > 0
+  );
 }
 
 function pickRandomCellFromAvailableList(available) {
@@ -1830,19 +2387,32 @@ function pickRandomCellFromAvailableList(available) {
 
 function resolveMasterSpawnCell(manager) {
   if (!(manager && manager.grid)) return null;
-  if (!shouldUseFilteredModeCellsForSpawn(manager) && typeof manager.grid.randomAvailableCell === "function") {
+  if (
+    !shouldUseFilteredModeCellsForSpawn(manager) &&
+    typeof manager.grid.randomAvailableCell === "function"
+  ) {
     return manager.grid.randomAvailableCell();
   }
   return pickRandomCellFromAvailableList(getAvailableCells(manager));
 }
 
 function insertMasterRandomSpawnTile(manager) {
-  if (!(manager && manager.grid && typeof manager.grid.cellsAvailable === "function")) return;
+  if (
+    !(
+      manager &&
+      manager.grid &&
+      typeof manager.grid.cellsAvailable === "function"
+    )
+  )
+    return;
   if (!manager.grid.cellsAvailable()) return;
   var cell = resolveMasterSpawnCell(manager);
   if (!cell) return;
   var sustainableValue = resolveSustainableUndoSpawnValue(manager, cell);
-  var value = sustainableValue === null ? resolveSpawnValueByCoreRule(manager) : sustainableValue;
+  var value =
+    sustainableValue === null
+      ? resolveSpawnValueByCoreRule(manager)
+      : sustainableValue;
   var tile = new Tile(cell, value);
   manager.grid.insertTile(tile);
   manager.lastSpawn = { x: cell.x, y: cell.y, value: value };
@@ -1851,7 +2421,8 @@ function insertMasterRandomSpawnTile(manager) {
 
 function addRandomTile(manager) {
   if (!manager) return;
-  if (tryInsertForcedReplaySpawn(manager, resolveForcedReplaySpawn(manager))) return;
+  if (tryInsertForcedReplaySpawn(manager, resolveForcedReplaySpawn(manager)))
+    return;
   if (consumeItemSpawnSuppression(manager)) return;
   if (shouldUseReplaySeededSpawn(manager)) {
     var available = getAvailableCells(manager);
@@ -1869,32 +2440,44 @@ function addRandomTile(manager) {
 }
 
 function buildLockedDirectionCoreArgs(manager, availableDirections) {
-  return [{
-    directionLockRules: manager.directionLockRules,
-    successfulMoveCount: manager.successfulMoveCount,
-    lockConsumedAtMoveCount: manager.lockConsumedAtMoveCount,
-    lockedDirectionTurn: manager.lockedDirectionTurn,
-    lockedDirection: manager.lockedDirection,
-    initialSeed: manager.initialSeed,
-    availableDirections: availableDirections
-  }, function (seed) {
-    return (new Math.seedrandom(seed))();
-  }];
+  return [
+    {
+      directionLockRules: manager.directionLockRules,
+      successfulMoveCount: manager.successfulMoveCount,
+      lockConsumedAtMoveCount: manager.lockConsumedAtMoveCount,
+      lockedDirectionTurn: manager.lockedDirectionTurn,
+      lockedDirection: manager.lockedDirection,
+      initialSeed: manager.initialSeed,
+      availableDirections: availableDirections,
+    },
+    (seed) => new Math.seedrandom(seed)(),
+  ];
 }
 
 function resolveLockedDirectionStateByCore(manager) {
   if (!manager) return undefined;
-  var availableDirections = typeof manager.getActiveMoveDirections === "function"
-    ? manager.getActiveMoveDirections()
-    : [0, 1, 2, 3];
+  var availableDirections =
+    typeof manager.getActiveMoveDirections === "function"
+      ? manager.getActiveMoveDirections()
+      : [0, 1, 2, 3];
   var args = buildLockedDirectionCoreArgs(manager, availableDirections);
-  return resolveCoreArgsCallWith(manager, "callCoreDirectionLockRuntime", "getLockedDirectionState", args, undefined, function (currentManager, coreCallResult) {
-    return currentManager.resolveCoreRawCallValueOrUndefined(coreCallResult);
-  });
+  return resolveCoreArgsCallWith(
+    manager,
+    "callCoreDirectionLockRuntime",
+    "getLockedDirectionState",
+    args,
+    undefined,
+    (currentManager, coreCallResult) =>
+      currentManager.resolveCoreRawCallValueOrUndefined(coreCallResult),
+  );
 }
 
-function resolveActiveLockedDirectionFromCoreState(manager, lockedDirectionStateByCore) {
-  if (!manager || typeof lockedDirectionStateByCore === "undefined") return null;
+function resolveActiveLockedDirectionFromCoreState(
+  manager,
+  lockedDirectionStateByCore,
+) {
+  if (!manager || typeof lockedDirectionStateByCore === "undefined")
+    return null;
   var state = normalizeMoveInputRecordObject(lockedDirectionStateByCore, {});
   if (Number.isInteger(state.lockedDirection)) {
     manager.lockedDirection = state.lockedDirection;
@@ -1913,28 +2496,41 @@ function resolveDirectionLockEveryKMoves(rules) {
 
 function shouldActivateDirectionLockFallback(manager, everyK) {
   if (!manager || !(Number.isInteger(everyK) && everyK > 0)) return false;
-  if (!(manager.successfulMoveCount > 0 && manager.successfulMoveCount % everyK === 0)) return false;
-  if (manager.lockConsumedAtMoveCount === manager.successfulMoveCount) return false;
+  if (
+    !(
+      manager.successfulMoveCount > 0 &&
+      manager.successfulMoveCount % everyK === 0
+    )
+  )
+    return false;
+  if (manager.lockConsumedAtMoveCount === manager.successfulMoveCount)
+    return false;
   return true;
 }
 
 function refreshFallbackLockedDirection(manager, everyK) {
   if (!manager || !Number.isInteger(everyK) || everyK <= 0) return;
   if (manager.lockedDirectionTurn === manager.successfulMoveCount) return;
-  var directions = typeof manager.getActiveMoveDirections === "function"
-    ? manager.getActiveMoveDirections()
-    : [0, 1, 2, 3];
-  if (!Array.isArray(directions) || !directions.length) directions = [0, 1, 2, 3];
+  var directions =
+    typeof manager.getActiveMoveDirections === "function"
+      ? manager.getActiveMoveDirections()
+      : [0, 1, 2, 3];
+  if (!Array.isArray(directions) || !directions.length)
+    directions = [0, 1, 2, 3];
   var phase = Math.floor(manager.successfulMoveCount / everyK);
   var rng = new Math.seedrandom(String(manager.initialSeed) + ":lock:" + phase);
-  manager.lockedDirection = directions[Math.floor(rng() * directions.length)] || directions[0];
+  manager.lockedDirection =
+    directions[Math.floor(rng() * directions.length)] || directions[0];
   manager.lockedDirectionTurn = manager.successfulMoveCount;
 }
 
 function resolveLockedDirection(manager) {
   if (!manager) return null;
   var lockedDirectionStateByCore = resolveLockedDirectionStateByCore(manager);
-  var lockedDirectionFromCore = resolveActiveLockedDirectionFromCoreState(manager, lockedDirectionStateByCore);
+  var lockedDirectionFromCore = resolveActiveLockedDirectionFromCoreState(
+    manager,
+    lockedDirectionStateByCore,
+  );
   if (lockedDirectionFromCore !== null) return lockedDirectionFromCore;
   var everyK = resolveDirectionLockEveryKMoves(manager.directionLockRules);
   if (!shouldActivateDirectionLockFallback(manager, everyK)) return null;

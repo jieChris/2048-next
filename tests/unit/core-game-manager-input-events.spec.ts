@@ -11,7 +11,7 @@ import {
   publishConfirmedOperationFeedback,
   publishOperationFeedbackReset,
   type ConfirmedOperationFeedbackResult,
-  type GameManagerInputEventsRuntime
+  type GameManagerInputEventsRuntime,
 } from "../../src/core/game-manager-input-events";
 
 function createInputManagerStub(): {
@@ -25,97 +25,133 @@ function createInputManagerStub(): {
     }),
     emit(event: string, data?: unknown) {
       for (const callback of events.get(event) || []) callback(data);
-    }
+    },
   };
 }
 
 describe("core game manager input events runtime", () => {
   it("normalizes legacy directions and preserves valid keyboard feedback metadata", () => {
-    expect(normalizeGameMoveInputAttempt(2)).toEqual({ direction: 2, feedback: null });
+    expect(normalizeGameMoveInputAttempt(2)).toEqual({
+      direction: 2,
+      feedback: null,
+    });
     expect(
       normalizeGameMoveInputAttempt({
         direction: 6,
-        feedback: { id: "key-1", key: "Z", repeat: false }
-      })
+        feedback: { id: "key-1", key: "Z", repeat: false },
+      }),
     ).toEqual({
       direction: 6,
-      feedback: { id: "key-1", key: "Z", repeat: false }
+      feedback: { id: "key-1", key: "Z", repeat: false },
     });
   });
 
-  it("filters repeated invalid input before counting or publishing it", () => {
+  it("counts and publishes repeated invalid input", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>");
     const events: ConfirmedOperationFeedbackResult[] = [];
-    dom.window.document.addEventListener(OPERATION_FEEDBACK_RESULT_EVENT, (event) => {
-      events.push((event as CustomEvent<ConfirmedOperationFeedbackResult>).detail);
-    });
+    dom.window.document.addEventListener(
+      OPERATION_FEEDBACK_RESULT_EVENT,
+      (event) => {
+        events.push(
+          (event as CustomEvent<ConfirmedOperationFeedbackResult>).detail,
+        );
+      },
+    );
     const manager = {
       validInputCount: 0,
       invalidInputCount: 0,
-      getWindowLike: () => dom.window
+      getWindowLike: () => dom.window,
     };
 
     expect(
       publishConfirmedOperationFeedback(
         manager,
         { direction: 0, feedback: { id: "key-1", key: "W", repeat: true } },
-        false
-      )
-    ).toBe(false);
-    expect(manager.invalidInputCount).toBe(0);
-    expect(events).toEqual([]);
+        false,
+      ),
+    ).toBe(true);
+    expect(manager.invalidInputCount).toBe(1);
+    expect(events).toEqual([
+      { id: "key-1", key: "W", repeat: true, valid: false },
+    ]);
   });
 
   it("counts and publishes a single invalid input", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>");
     const events: ConfirmedOperationFeedbackResult[] = [];
     const panelSnapshots: Array<[number, number]> = [];
-    dom.window.document.addEventListener(OPERATION_FEEDBACK_RESULT_EVENT, (event) => {
-      events.push((event as CustomEvent<ConfirmedOperationFeedbackResult>).detail);
-    });
+    dom.window.document.addEventListener(
+      OPERATION_FEEDBACK_RESULT_EVENT,
+      (event) => {
+        events.push(
+          (event as CustomEvent<ConfirmedOperationFeedbackResult>).detail,
+        );
+      },
+    );
     const manager = {
       validInputCount: 0,
       invalidInputCount: 0,
       updateStatsPanel: vi.fn(() => {
-        panelSnapshots.push([manager.validInputCount, manager.invalidInputCount]);
+        panelSnapshots.push([
+          manager.validInputCount,
+          manager.invalidInputCount,
+        ]);
       }),
-      getWindowLike: () => dom.window
+      getWindowLike: () => dom.window,
     };
 
     expect(
       publishConfirmedOperationFeedback(
         manager,
-        { direction: 0, feedback: { id: "key-2", key: "arrow-up", repeat: false } },
-        false
-      )
+        {
+          direction: 0,
+          feedback: { id: "key-2", key: "arrow-up", repeat: false },
+        },
+        false,
+      ),
     ).toBe(true);
     expect(manager.invalidInputCount).toBe(1);
     expect(manager.updateStatsPanel).toHaveBeenCalledTimes(1);
     expect(panelSnapshots).toEqual([[0, 1]]);
-    expect(events.at(-1)).toEqual({ id: "key-2", key: "arrow-up", repeat: false, valid: false });
+    expect(events.at(-1)).toEqual({
+      id: "key-2",
+      key: "arrow-up",
+      repeat: false,
+      valid: false,
+    });
   });
 
   it("counts and publishes every repeated input that actually moves", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>");
     const events: ConfirmedOperationFeedbackResult[] = [];
-    dom.window.document.addEventListener(OPERATION_FEEDBACK_RESULT_EVENT, (event) => {
-      events.push((event as CustomEvent<ConfirmedOperationFeedbackResult>).detail);
-    });
+    dom.window.document.addEventListener(
+      OPERATION_FEEDBACK_RESULT_EVENT,
+      (event) => {
+        events.push(
+          (event as CustomEvent<ConfirmedOperationFeedbackResult>).detail,
+        );
+      },
+    );
     const manager = {
       validInputCount: 0,
       invalidInputCount: 0,
-      getWindowLike: () => dom.window
+      getWindowLike: () => dom.window,
     };
 
     expect(
       publishConfirmedOperationFeedback(
         manager,
         { direction: 0, feedback: { id: "key-3", key: "W", repeat: true } },
-        true
-      )
+        true,
+      ),
     ).toBe(true);
     expect(manager.validInputCount).toBe(1);
-    expect(events.at(-1)).toEqual({ id: "key-3", key: "W", repeat: true, valid: true });
+    expect(events.at(-1)).toEqual({
+      id: "key-3",
+      key: "W",
+      repeat: true,
+      valid: true,
+    });
   });
 
   it("does nothing without a manager input manager", () => {
@@ -137,7 +173,7 @@ describe("core game manager input events runtime", () => {
     const manager = {
       inputManager,
       useItem: originalUseItem,
-      restart: originalRestart
+      restart: originalRestart,
     };
 
     bindGameManagerInputEvents(manager, { handleMoveInput });
@@ -151,7 +187,7 @@ describe("core game manager input events runtime", () => {
       "move",
       "item",
       "restart",
-      "keepPlaying"
+      "keepPlaying",
     ]);
     expect(handleMoveInput).toHaveBeenCalledWith(manager, 2);
     expect(originalUseItem).not.toHaveBeenCalled();
@@ -163,9 +199,14 @@ describe("core game manager input events runtime", () => {
   it("publishes a current-round reset lifecycle event", () => {
     const dom = new JSDOM("<!doctype html><html><body></body></html>");
     const resetListener = vi.fn();
-    dom.window.document.addEventListener(OPERATION_FEEDBACK_RESET_EVENT, resetListener);
+    dom.window.document.addEventListener(
+      OPERATION_FEEDBACK_RESET_EVENT,
+      resetListener,
+    );
 
-    expect(publishOperationFeedbackReset({ getWindowLike: () => dom.window })).toBe(true);
+    expect(
+      publishOperationFeedbackReset({ getWindowLike: () => dom.window }),
+    ).toBe(true);
     expect(resetListener).toHaveBeenCalledTimes(1);
   });
 
@@ -183,7 +224,7 @@ describe("core game manager input events runtime", () => {
 
     expect(keepPlaying).toHaveBeenCalledWith();
     expect(keepPlaying.mock.instances[0]).toBe(manager);
-    expect(Object.prototype.hasOwnProperty.call(manager, "keepPlaying")).toBe(false);
+    expect(Object.hasOwn(manager, "keepPlaying")).toBe(false);
   });
 
   it("falls back to keep-playing state and actuator continue without a prototype handler", () => {
@@ -193,8 +234,8 @@ describe("core game manager input events runtime", () => {
       inputManager,
       keepPlaying: false,
       actuator: {
-        continue: continueGame
-      }
+        continue: continueGame,
+      },
     };
 
     bindGameManagerInputEvents(manager, { handleMoveInput: vi.fn() });
@@ -207,23 +248,31 @@ describe("core game manager input events runtime", () => {
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createGameManagerInputEventsRuntime();
     expect(runtime.bindGameManagerInputEvents).toBe(bindGameManagerInputEvents);
-    expect(runtime.normalizeGameMoveInputAttempt).toBe(normalizeGameMoveInputAttempt);
-    expect(runtime.publishConfirmedOperationFeedback).toBe(publishConfirmedOperationFeedback);
-    expect(runtime.publishOperationFeedbackReset).toBe(publishOperationFeedbackReset);
+    expect(runtime.normalizeGameMoveInputAttempt).toBe(
+      normalizeGameMoveInputAttempt,
+    );
+    expect(runtime.publishConfirmedOperationFeedback).toBe(
+      publishConfirmedOperationFeedback,
+    );
+    expect(runtime.publishOperationFeedbackReset).toBe(
+      publishOperationFeedbackReset,
+    );
 
-    const windowLike: { CoreGameManagerInputEventsRuntime?: GameManagerInputEventsRuntime } = {};
+    const windowLike: {
+      CoreGameManagerInputEventsRuntime?: GameManagerInputEventsRuntime;
+    } = {};
     expect(installGameManagerInputEventsRuntime({ windowLike })).toBe(
-      windowLike.CoreGameManagerInputEventsRuntime
+      windowLike.CoreGameManagerInputEventsRuntime,
     );
-    expect(windowLike.CoreGameManagerInputEventsRuntime?.bindGameManagerInputEvents).toBe(
-      bindGameManagerInputEvents
-    );
+    expect(
+      windowLike.CoreGameManagerInputEventsRuntime?.bindGameManagerInputEvents,
+    ).toBe(bindGameManagerInputEvents);
 
     const existing = { bindGameManagerInputEvents: vi.fn() };
     expect(
       installGameManagerInputEventsRuntime({
-        windowLike: { CoreGameManagerInputEventsRuntime: existing }
-      })
+        windowLike: { CoreGameManagerInputEventsRuntime: existing },
+      }),
     ).toBe(existing);
   });
 });

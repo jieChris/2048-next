@@ -5,13 +5,13 @@ import {
   initializeGameManagerRuntimeState,
   installGameManagerRuntimeStateRuntime,
   resetRoundStatsState,
-  type GameManagerRuntimeStateRuntime
+  type GameManagerRuntimeStateRuntime,
 } from "../../src/core/game-manager-runtime-state";
 
 function createOperations() {
   return {
     detectMode: vi.fn(() => "timer"),
-    createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 1 }))
+    createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 1 })),
   };
 }
 
@@ -37,13 +37,13 @@ describe("core game manager runtime state", () => {
       nextSpawnSuppressed: true,
       nextSpawnValueOverride: 4,
       undoEnabled: false,
-      loadUndoSettingForMode: vi.fn(() => true)
+      loadUndoSettingForMode: vi.fn(() => true),
     };
     const operations = {
       createEmptyItemInventory: vi.fn(() => ({ hammer: 0, swap: 0 })),
       updateItemModeHud: vi.fn(),
       updateMoveTimeoutHud: vi.fn(),
-      nowMs: 12345
+      nowMs: 12345,
     };
 
     resetRoundStatsState(manager, operations);
@@ -56,6 +56,10 @@ describe("core game manager runtime state", () => {
       invalidInputCount: 0,
       ipsInputCount: 0,
       ipsInputTimes: [],
+      pendingMoveInput: null,
+      pendingMoveInputQueue: [],
+      pendingMoveInputDelayScheduled: false,
+      moveInputFlushScheduled: false,
       undoUsed: 0,
       lockConsumedAtMoveCount: -1,
       lockedDirectionTurn: null,
@@ -67,16 +71,19 @@ describe("core game manager runtime state", () => {
       itemInventory: { hammer: 0, swap: 0 },
       nextSpawnSuppressed: false,
       nextSpawnValueOverride: null,
-      undoEnabled: true
+      undoEnabled: true,
     });
     expect(manager.loadUndoSettingForMode).toHaveBeenCalledWith("practice");
     expect(operations.updateItemModeHud).toHaveBeenCalledWith(manager);
-    expect(operations.updateMoveTimeoutHud).toHaveBeenCalledWith(manager, 12345);
+    expect(operations.updateMoveTimeoutHud).toHaveBeenCalledWith(
+      manager,
+      12345,
+    );
   });
 
   it("initializes the game manager runtime defaults through injected legacy operations", () => {
     const manager: Record<string, unknown> = {
-      existing: "preserved"
+      existing: "preserved",
     };
     const operations = createOperations();
 
@@ -95,7 +102,7 @@ describe("core game manager runtime state", () => {
       disableSessionSync: false,
       spawnTable: [
         { value: 2, weight: 90 },
-        { value: 4, weight: 10 }
+        { value: 4, weight: 10 },
       ],
       sessionSubmitDone: false,
       sessionReplayV3: null,
@@ -107,6 +114,8 @@ describe("core game manager runtime state", () => {
       validInputCount: 0,
       invalidInputCount: 0,
       pendingMoveInput: null,
+      pendingMoveInputQueue: [],
+      pendingMoveInputDelayScheduled: false,
       moveInputFlushScheduled: false,
       lastMoveInputAt: 0,
       allowedDirections: [0, 1, 2, 3],
@@ -136,31 +145,39 @@ describe("core game manager runtime state", () => {
       lastRankedCheckpointSignature: "",
       lastRankedCheckpointSavedAt: 0,
       lastRankedCheckpointSaveError: "",
-      singleModePageLockState: null
+      singleModePageLockState: null,
     });
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createGameManagerRuntimeStateRuntime();
-    expect(runtime.initializeGameManagerRuntimeState).toBe(initializeGameManagerRuntimeState);
+    expect(runtime.initializeGameManagerRuntimeState).toBe(
+      initializeGameManagerRuntimeState,
+    );
     expect(runtime.resetRoundStatsState).toBe(resetRoundStatsState);
 
-    const windowLike: { CoreGameManagerRuntimeStateRuntime?: GameManagerRuntimeStateRuntime } = {};
+    const windowLike: {
+      CoreGameManagerRuntimeStateRuntime?: GameManagerRuntimeStateRuntime;
+    } = {};
     expect(installGameManagerRuntimeStateRuntime({ windowLike })).toBe(
+      windowLike.CoreGameManagerRuntimeStateRuntime,
+    );
+    expect(
       windowLike.CoreGameManagerRuntimeStateRuntime
-    );
-    expect(windowLike.CoreGameManagerRuntimeStateRuntime?.initializeGameManagerRuntimeState).toBe(
-      initializeGameManagerRuntimeState
-    );
-    expect(windowLike.CoreGameManagerRuntimeStateRuntime?.resetRoundStatsState).toBe(
-      resetRoundStatsState
-    );
+        ?.initializeGameManagerRuntimeState,
+    ).toBe(initializeGameManagerRuntimeState);
+    expect(
+      windowLike.CoreGameManagerRuntimeStateRuntime?.resetRoundStatsState,
+    ).toBe(resetRoundStatsState);
 
-    const existing = { initializeGameManagerRuntimeState: vi.fn(), resetRoundStatsState: vi.fn() };
+    const existing = {
+      initializeGameManagerRuntimeState: vi.fn(),
+      resetRoundStatsState: vi.fn(),
+    };
     expect(
       installGameManagerRuntimeStateRuntime({
-        windowLike: { CoreGameManagerRuntimeStateRuntime: existing }
-      })
+        windowLike: { CoreGameManagerRuntimeStateRuntime: existing },
+      }),
     ).toBe(existing);
   });
 });

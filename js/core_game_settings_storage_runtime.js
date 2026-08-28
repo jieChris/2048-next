@@ -21,12 +21,31 @@
     return true;
   }
 
+  function isMobileSafariLike(windowLike) {
+    var userAgent =
+      windowLike && windowLike.navigator
+        ? windowLike.navigator.userAgent || ""
+        : "";
+    if (isMobileSafariUserAgent(userAgent)) return true;
+    var maxTouchPoints = Number(
+      windowLike && windowLike.navigator && windowLike.navigator.maxTouchPoints,
+    );
+    return (
+      /Macintosh/i.test(userAgent) &&
+      Number.isFinite(maxTouchPoints) &&
+      maxTouchPoints > 1
+    );
+  }
+
   function resolveModeKey(options) {
     var opts = options || {};
     if (typeof opts.modeKey === "string" && opts.modeKey) return opts.modeKey;
-    if (typeof opts.currentModeKey === "string" && opts.currentModeKey) return opts.currentModeKey;
-    if (typeof opts.currentMode === "string" && opts.currentMode) return opts.currentMode;
-    if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey) return opts.defaultModeKey;
+    if (typeof opts.currentModeKey === "string" && opts.currentModeKey)
+      return opts.currentModeKey;
+    if (typeof opts.currentMode === "string" && opts.currentMode)
+      return opts.currentMode;
+    if (typeof opts.defaultModeKey === "string" && opts.defaultModeKey)
+      return opts.defaultModeKey;
     return "";
   }
 
@@ -112,7 +131,10 @@
     var out = [];
     for (var i = 0; i < source.length; i++) {
       if (out.length >= options.maxArrayItems) break;
-      var normalized = normalizeHistoryDiagnosticPayloadArrayValue(source[i], options.maxStringLength);
+      var normalized = normalizeHistoryDiagnosticPayloadArrayValue(
+        source[i],
+        options.maxStringLength,
+      );
       if (normalized === null) continue;
       out.push(normalized);
     }
@@ -142,7 +164,10 @@
       if (accepted >= options.maxPayloadKeys) break;
       var key = keys[i].slice(0, options.keyMaxLength);
       if (!key) continue;
-      var value = normalizeHistoryDiagnosticPayloadValue(payload[keys[i]], options);
+      var value = normalizeHistoryDiagnosticPayloadValue(
+        payload[keys[i]],
+        options,
+      );
       if (value === null) continue;
       out[key] = value;
       accepted += 1;
@@ -154,14 +179,22 @@
     var opts = options || {};
     var source = isObjectRecord(opts.record) ? opts.record : {};
     var keyPartMaxLength = normalizePositiveInteger(opts.keyPartMaxLength, 64);
-    var ownerTypeRaw = typeof source.owner_type === "string" ? source.owner_type.trim().toLowerCase() : "";
-    var ownerUserId = source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
-    var ownerNickname = source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
-    var ownerKey = typeof source.owner_key === "string" ? source.owner_key.trim() : "";
+    var ownerTypeRaw =
+      typeof source.owner_type === "string"
+        ? source.owner_type.trim().toLowerCase()
+        : "";
+    var ownerUserId =
+      source.owner_user_id == null ? "" : String(source.owner_user_id).trim();
+    var ownerNickname =
+      source.owner_nickname == null ? "" : String(source.owner_nickname).trim();
+    var ownerKey =
+      typeof source.owner_key === "string" ? source.owner_key.trim() : "";
 
     if (!ownerTypeRaw && !ownerUserId && !ownerNickname) {
-      ownerUserId = opts.authUserId == null ? "" : String(opts.authUserId).trim();
-      ownerNickname = opts.authNickname == null ? "" : String(opts.authNickname).trim();
+      ownerUserId =
+        opts.authUserId == null ? "" : String(opts.authUserId).trim();
+      ownerNickname =
+        opts.authNickname == null ? "" : String(opts.authNickname).trim();
     }
 
     var ownerType = ownerTypeRaw === "guest" ? "guest" : "user";
@@ -175,9 +208,13 @@
       if (ownerType === "guest") {
         ownerKey = "guest";
       } else if (ownerUserId) {
-        ownerKey = "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
+        ownerKey =
+          "user:" + normalizeHistoryOwnerKeyPart(ownerUserId, keyPartMaxLength);
       } else {
-        var normalizedNickname = normalizeHistoryOwnerKeyPart(ownerNickname, keyPartMaxLength);
+        var normalizedNickname = normalizeHistoryOwnerKeyPart(
+          ownerNickname,
+          keyPartMaxLength,
+        );
         ownerKey = normalizedNickname ? "nick:" + normalizedNickname : "guest";
       }
     }
@@ -186,7 +223,7 @@
       owner_type: ownerType,
       owner_user_id: ownerUserId || null,
       owner_nickname: ownerNickname,
-      owner_key: ownerKey || "guest"
+      owner_key: ownerKey || "guest",
     };
   }
 
@@ -203,7 +240,8 @@
       if (out.length >= maxEntries) break;
       var entry = source[i];
       if (!isObjectRecord(entry)) continue;
-      var key = typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
+      var key =
+        typeof entry.key === "string" ? entry.key.slice(0, keyMaxLength) : "";
       if (!key) continue;
       var schemaVersion = Number(entry.schemaVersion);
       if (!Number.isInteger(schemaVersion) || schemaVersion < 1) continue;
@@ -211,13 +249,13 @@
         maxPayloadKeys: maxPayloadKeys,
         keyMaxLength: keyMaxLength,
         maxArrayItems: maxArrayItems,
-        maxStringLength: maxStringLength
+        maxStringLength: maxStringLength,
       });
       if (!payload) continue;
       out.push({
         key: key,
         schemaVersion: schemaVersion,
-        payload: payload
+        payload: payload,
       });
     }
     return out;
@@ -283,7 +321,8 @@
       payload.practice_restart_mode_config !== undefined &&
       payload.practice_restart_mode_config !== null;
     var hasFallbackPracticeModeConfig =
-      opts.practiceRestartModeConfig !== undefined && opts.practiceRestartModeConfig !== null;
+      opts.practiceRestartModeConfig !== undefined &&
+      opts.practiceRestartModeConfig !== null;
     var practiceRestartModeConfig = hasPayloadPracticeModeConfig
       ? safeClonePlain(payload.practice_restart_mode_config, null)
       : hasFallbackPracticeModeConfig
@@ -306,9 +345,12 @@
       initial_seed: Number.isFinite(Number(payload.initial_seed))
         ? Number(payload.initial_seed)
         : fallbackInitialSeed,
-      seed: Number.isFinite(Number(payload.seed)) ? Number(payload.seed) : fallbackSeed,
+      seed: Number.isFinite(Number(payload.seed))
+        ? Number(payload.seed)
+        : fallbackSeed,
       ips_input_count:
-        Number.isInteger(payload.ips_input_count) && Number(payload.ips_input_count) >= 0
+        Number.isInteger(payload.ips_input_count) &&
+        Number(payload.ips_input_count) >= 0
           ? Number(payload.ips_input_count)
           : 0,
       timer_status: payload.timer_status === 1 ? 1 : 0,
@@ -333,12 +375,24 @@
         ? Number(payload.capped_milestone_count)
         : 0,
       capped64_unlocked: null,
-      combo_streak: Number.isInteger(payload.combo_streak) ? Number(payload.combo_streak) : 0,
+      combo_streak: Number.isInteger(payload.combo_streak)
+        ? Number(payload.combo_streak)
+        : 0,
       successful_move_count: Number.isInteger(payload.successful_move_count)
         ? Number(payload.successful_move_count)
         : 0,
-      undo_used: Number.isInteger(payload.undo_used) ? Number(payload.undo_used) : 0,
-      lock_consumed_at_move_count: Number.isInteger(payload.lock_consumed_at_move_count)
+      undo_used: Number.isInteger(payload.undo_used)
+        ? Number(payload.undo_used)
+        : 0,
+      valid_input_count: Number.isInteger(payload.valid_input_count)
+        ? Number(payload.valid_input_count)
+        : 0,
+      invalid_input_count: Number.isInteger(payload.invalid_input_count)
+        ? Number(payload.invalid_input_count)
+        : 0,
+      lock_consumed_at_move_count: Number.isInteger(
+        payload.lock_consumed_at_move_count,
+      )
         ? Number(payload.lock_consumed_at_move_count)
         : -1,
       locked_direction_turn: Number.isInteger(payload.locked_direction_turn)
@@ -347,7 +401,7 @@
       locked_direction: Number.isInteger(payload.locked_direction)
         ? Number(payload.locked_direction)
         : null,
-      challenge_id: payload.challenge_id || null
+      challenge_id: payload.challenge_id || null,
     };
   }
 
@@ -369,7 +423,8 @@
     var opts = options || {};
     var key = typeof opts.key === "string" ? opts.key : "";
     var trueValue = typeof opts.trueValue === "string" ? opts.trueValue : "1";
-    var falseValue = typeof opts.falseValue === "string" ? opts.falseValue : "0";
+    var falseValue =
+      typeof opts.falseValue === "string" ? opts.falseValue : "0";
     if (!key) return false;
     var storage = resolveLocalStorage(opts.windowLike);
     if (!storage || typeof storage.setItem !== "function") return false;
@@ -491,10 +546,13 @@
     var storages = [];
     var localStorage = win.localStorage || null;
     var sessionStorage = win.sessionStorage || null;
-    var userAgent = win && win.navigator ? win.navigator.userAgent || "" : "";
-    var shouldSkipSessionStorage = isMobileSafariUserAgent(userAgent);
+    var shouldSkipSessionStorage = isMobileSafariLike(win);
     if (localStorage) storages.push(localStorage);
-    if (!shouldSkipSessionStorage && sessionStorage && sessionStorage !== localStorage) {
+    if (
+      !shouldSkipSessionStorage &&
+      sessionStorage &&
+      sessionStorage !== localStorage
+    ) {
       storages.push(sessionStorage);
     }
     return storages;
@@ -580,7 +638,8 @@
     }
     if (!raw) return null;
 
-    var windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+    var windowNameKey =
+      typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
     if (!windowNameKey) return null;
     var marker = windowNameKey + "=";
 
@@ -617,7 +676,8 @@
     var modeKey = resolveModeKey(opts);
     if (!modeKey) return false;
 
-    var windowNameKey = typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
+    var windowNameKey =
+      typeof opts.windowNameKey === "string" ? opts.windowNameKey : "";
     if (!windowNameKey) return false;
     var marker = windowNameKey + "=";
 
@@ -694,7 +754,8 @@
     var mode = typeof opts.mode === "string" ? opts.mode : "";
     var fallbackEnabled = opts.fallbackEnabled !== false;
     if (!mode) return fallbackEnabled;
-    if (!Object.prototype.hasOwnProperty.call(map, mode)) return fallbackEnabled;
+    if (!Object.prototype.hasOwnProperty.call(map, mode))
+      return fallbackEnabled;
     return !!map[mode];
   }
 
@@ -717,8 +778,12 @@
       return global.CoreCryptoRandomRuntime.randomId("hist", { length: 8 });
     }
     historyRecordIdFallbackCounter = (historyRecordIdFallbackCounter + 1) >>> 0;
-    return "hist_" + Date.now().toString(36) + "_" +
-      historyRecordIdFallbackCounter.toString(36).padStart(8, "0");
+    return (
+      "hist_" +
+      Date.now().toString(36) +
+      "_" +
+      historyRecordIdFallbackCounter.toString(36).padStart(8, "0")
+    );
   }
 
   function normalizeHistoryRecordFromContext(options) {
@@ -726,16 +791,26 @@
     var source = isObjectRecord(opts.record) ? opts.record : null;
     if (!source) return null;
 
-    var nowIsoProvider = typeof opts.nowIso === "function" ? opts.nowIso : function () { return new Date().toISOString(); };
-    var idFactory = typeof opts.idFactory === "function"
-      ? opts.idFactory
-      : createHistoryRecordIdFallback;
+    var nowIsoProvider =
+      typeof opts.nowIso === "function"
+        ? opts.nowIso
+        : function () {
+            return new Date().toISOString();
+          };
+    var idFactory =
+      typeof opts.idFactory === "function"
+        ? opts.idFactory
+        : createHistoryRecordIdFallback;
     var now = String(nowIsoProvider() || "");
-    var id = typeof source.id === "string" && source.id.trim() ? source.id.trim() : idFactory();
+    var id =
+      typeof source.id === "string" && source.id.trim()
+        ? source.id.trim()
+        : idFactory();
     var replay = isObjectRecord(source.replay) ? source.replay : null;
 
     var replayString = "";
-    if (typeof source.replay_string === "string") replayString = source.replay_string;
+    if (typeof source.replay_string === "string")
+      replayString = source.replay_string;
     else if (replay) {
       try {
         replayString = JSON.stringify(replay);
@@ -748,33 +823,57 @@
       record: source,
       authUserId: opts.authUserId,
       authNickname: opts.authNickname,
-      keyPartMaxLength: opts.ownerKeyPartMaxLength
+      keyPartMaxLength: opts.ownerKeyPartMaxLength,
     });
 
-    var diagnosticsIndexEntries = normalizeHistoryDiagnosticsIndexEntriesFromContext({
-      entries: source.diagnostics_index_entries,
-      maxEntries: opts.maxDiagnosticEntries,
-      maxPayloadKeys: opts.maxDiagnosticPayloadKeys,
-      maxStringLength: opts.maxDiagnosticStringLength,
-      maxArrayItems: opts.maxDiagnosticArrayItems,
-      keyMaxLength: opts.maxDiagnosticKeyLength
-    });
+    var diagnosticsIndexEntries =
+      normalizeHistoryDiagnosticsIndexEntriesFromContext({
+        entries: source.diagnostics_index_entries,
+        maxEntries: opts.maxDiagnosticEntries,
+        maxPayloadKeys: opts.maxDiagnosticPayloadKeys,
+        maxStringLength: opts.maxDiagnosticStringLength,
+        maxArrayItems: opts.maxDiagnosticArrayItems,
+        keyMaxLength: opts.maxDiagnosticKeyLength,
+      });
     var finalBoard = normalizeHistoryBoardMatrix(source.final_board);
-    var hasBoardCells = finalBoard.some(function (row) { return row.length > 0; });
+    var hasBoardCells = finalBoard.some(function (row) {
+      return row.length > 0;
+    });
 
     return {
       id: id,
-      mode: typeof source.mode === "string" && source.mode ? source.mode : "local",
-      mode_key: typeof source.mode_key === "string" && source.mode_key ? source.mode_key : "unknown",
+      mode:
+        typeof source.mode === "string" && source.mode ? source.mode : "local",
+      mode_key:
+        typeof source.mode_key === "string" && source.mode_key
+          ? source.mode_key
+          : "unknown",
       board_width: normalizeInteger(source.board_width, 4),
       board_height: normalizeInteger(source.board_height, 4),
-      ruleset: typeof source.ruleset === "string" && source.ruleset ? source.ruleset : "pow2",
+      ruleset:
+        typeof source.ruleset === "string" && source.ruleset
+          ? source.ruleset
+          : "pow2",
       undo_enabled: !!source.undo_enabled,
-      ranked_bucket: typeof source.ranked_bucket === "string" && source.ranked_bucket ? source.ranked_bucket : "none",
-      mode_family: typeof source.mode_family === "string" && source.mode_family ? source.mode_family : "pow2",
-      rank_policy: typeof source.rank_policy === "string" && source.rank_policy ? source.rank_policy : "unranked",
-      special_rules_snapshot: isObjectRecord(source.special_rules_snapshot) ? source.special_rules_snapshot : {},
-      challenge_id: typeof source.challenge_id === "string" && source.challenge_id ? source.challenge_id : null,
+      ranked_bucket:
+        typeof source.ranked_bucket === "string" && source.ranked_bucket
+          ? source.ranked_bucket
+          : "none",
+      mode_family:
+        typeof source.mode_family === "string" && source.mode_family
+          ? source.mode_family
+          : "pow2",
+      rank_policy:
+        typeof source.rank_policy === "string" && source.rank_policy
+          ? source.rank_policy
+          : "unranked",
+      special_rules_snapshot: isObjectRecord(source.special_rules_snapshot)
+        ? source.special_rules_snapshot
+        : {},
+      challenge_id:
+        typeof source.challenge_id === "string" && source.challenge_id
+          ? source.challenge_id
+          : null,
       score: normalizeInteger(source.score, 0),
       board_sum: hasBoardCells
         ? calculateHistoryBoardSum(finalBoard)
@@ -782,53 +881,79 @@
       best_tile: normalizeInteger(source.best_tile, 0),
       duration_ms: normalizeNonNegativeInteger(source.duration_ms, 0),
       final_board: finalBoard,
-      ended_at: typeof source.ended_at === "string" && source.ended_at ? source.ended_at : now,
-      saved_at: typeof source.saved_at === "string" && source.saved_at ? source.saved_at : now,
-      end_reason: typeof source.end_reason === "string" && source.end_reason ? source.end_reason : "game_over",
+      ended_at:
+        typeof source.ended_at === "string" && source.ended_at
+          ? source.ended_at
+          : now,
+      saved_at:
+        typeof source.saved_at === "string" && source.saved_at
+          ? source.saved_at
+          : now,
+      end_reason:
+        typeof source.end_reason === "string" && source.end_reason
+          ? source.end_reason
+          : "game_over",
       client_version:
         typeof source.client_version === "string" && source.client_version
           ? source.client_version
-          : (typeof opts.defaultClientVersion === "string" && opts.defaultClientVersion ? opts.defaultClientVersion : "1.8"),
+          : typeof opts.defaultClientVersion === "string" &&
+              opts.defaultClientVersion
+            ? opts.defaultClientVersion
+            : "1.8",
       replay: replay,
       replay_string: replayString,
       owner_type: ownerMeta.owner_type,
       owner_user_id: ownerMeta.owner_user_id,
       owner_nickname: ownerMeta.owner_nickname,
       owner_key: ownerMeta.owner_key,
-      diagnostics_index_entries: diagnosticsIndexEntries
+      diagnostics_index_entries: diagnosticsIndexEntries,
     };
   }
 
-  global.CoreGameSettingsStorageRuntime = global.CoreGameSettingsStorageRuntime || {};
-  global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext = readStorageFlagFromContext;
-  global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext = writeStorageFlagFromContext;
-  global.CoreGameSettingsStorageRuntime.readStorageTextFromContext = readStorageTextFromContext;
-  global.CoreGameSettingsStorageRuntime.writeStorageTextFromContext = writeStorageTextFromContext;
-  global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey = resolveSavedGameStateStorageKey;
+  global.CoreGameSettingsStorageRuntime =
+    global.CoreGameSettingsStorageRuntime || {};
+  global.CoreGameSettingsStorageRuntime.readStorageFlagFromContext =
+    readStorageFlagFromContext;
+  global.CoreGameSettingsStorageRuntime.writeStorageFlagFromContext =
+    writeStorageFlagFromContext;
+  global.CoreGameSettingsStorageRuntime.readStorageTextFromContext =
+    readStorageTextFromContext;
+  global.CoreGameSettingsStorageRuntime.writeStorageTextFromContext =
+    writeStorageTextFromContext;
+  global.CoreGameSettingsStorageRuntime.resolveSavedGameStateStorageKey =
+    resolveSavedGameStateStorageKey;
   global.CoreGameSettingsStorageRuntime.shouldUseSavedGameStateFromContext =
     shouldUseSavedGameStateFromContext;
   global.CoreGameSettingsStorageRuntime.buildLiteSavedGameStatePayload =
     buildLiteSavedGameStatePayload;
-  global.CoreGameSettingsStorageRuntime.readStorageJsonMapFromContext = readStorageJsonMapFromContext;
-  global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext = writeStorageJsonMapFromContext;
+  global.CoreGameSettingsStorageRuntime.readStorageJsonMapFromContext =
+    readStorageJsonMapFromContext;
+  global.CoreGameSettingsStorageRuntime.writeStorageJsonMapFromContext =
+    writeStorageJsonMapFromContext;
   global.CoreGameSettingsStorageRuntime.writeStorageJsonPayloadFromContext =
     writeStorageJsonPayloadFromContext;
   global.CoreGameSettingsStorageRuntime.writeSavedPayloadToStorages =
     writeSavedPayloadToStorages;
   global.CoreGameSettingsStorageRuntime.getSavedGameStateStoragesFromContext =
     getSavedGameStateStoragesFromContext;
-  global.CoreGameSettingsStorageRuntime.removeKeysFromStorages = removeKeysFromStorages;
+  global.CoreGameSettingsStorageRuntime.removeKeysFromStorages =
+    removeKeysFromStorages;
   global.CoreGameSettingsStorageRuntime.readSavedPayloadByKeyFromStorages =
     readSavedPayloadByKeyFromStorages;
   global.CoreGameSettingsStorageRuntime.readSavedPayloadFromWindowName =
     readSavedPayloadFromWindowName;
   global.CoreGameSettingsStorageRuntime.writeSavedPayloadToWindowName =
     writeSavedPayloadToWindowName;
-  global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode = normalizeTimerModuleViewMode;
-  global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap = readTimerModuleViewForModeFromMap;
-  global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap = writeTimerModuleViewForModeToMap;
-  global.CoreGameSettingsStorageRuntime.readUndoEnabledForModeFromMap = readUndoEnabledForModeFromMap;
-  global.CoreGameSettingsStorageRuntime.writeUndoEnabledForModeToMap = writeUndoEnabledForModeToMap;
+  global.CoreGameSettingsStorageRuntime.normalizeTimerModuleViewMode =
+    normalizeTimerModuleViewMode;
+  global.CoreGameSettingsStorageRuntime.readTimerModuleViewForModeFromMap =
+    readTimerModuleViewForModeFromMap;
+  global.CoreGameSettingsStorageRuntime.writeTimerModuleViewForModeToMap =
+    writeTimerModuleViewForModeToMap;
+  global.CoreGameSettingsStorageRuntime.readUndoEnabledForModeFromMap =
+    readUndoEnabledForModeFromMap;
+  global.CoreGameSettingsStorageRuntime.writeUndoEnabledForModeToMap =
+    writeUndoEnabledForModeToMap;
   global.CoreGameSettingsStorageRuntime.normalizeHistoryOwnerMetaFromContext =
     normalizeHistoryOwnerMetaFromContext;
   global.CoreGameSettingsStorageRuntime.normalizeHistoryDiagnosticsIndexEntriesFromContext =

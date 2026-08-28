@@ -5,60 +5,71 @@ import { collectFunctionRanges } from "./audit-utils.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const GAME_MANAGER_PATH = path.resolve(__dirname, "..", "js", "game_manager.js");
+const GAME_MANAGER_PATH = path.resolve(
+  __dirname,
+  "..",
+  "js",
+  "game_manager.js",
+);
 const COMMON_RUNTIME_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_common_runtime.js"
+  "core_game_manager_common_runtime.js",
 );
 const STATIC_RUNTIME_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_static_runtime.js"
+  "core_game_manager_static_runtime.js",
 );
 const BINDINGS_RUNTIME_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_bindings_runtime.js"
+  "core_game_manager_bindings_runtime.js",
 );
 const RUNTIME_CALL_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_runtime_call_helpers_runtime.js"
+  "core_game_manager_runtime_call_helpers_runtime.js",
 );
 const RUNTIME_ACCESSOR_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_runtime_accessor_helpers_runtime.js"
+  "core_game_manager_runtime_accessor_helpers_runtime.js",
 );
 const MODE_RULES_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_mode_rules_helpers_runtime.js"
+  "core_game_manager_mode_rules_helpers_runtime.js",
 );
 const REPLAY_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_replay_helpers_runtime.js"
+  "core_game_manager_replay_helpers_runtime.js",
 );
 const SAVED_STATE_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_saved_state_helpers_runtime.js"
+  "core_game_manager_saved_state_helpers_runtime.js",
+);
+const SAVED_STATE_PERSISTENCE_RUNTIME_PATH = path.resolve(
+  __dirname,
+  "..",
+  "js",
+  "core_game_manager_saved_state_persistence_runtime.js",
 );
 const MOVE_INPUT_HELPERS_PATH = path.resolve(
   __dirname,
   "..",
   "js",
-  "core_game_manager_move_input_helpers_runtime.js"
+  "core_game_manager_move_input_helpers_runtime.js",
 );
 const GAME_MANAGER_JS_DIR = path.resolve(__dirname, "..", "js");
 const MAX_GAME_MANAGER_LINES = 80;
@@ -68,43 +79,44 @@ const MAX_RUNTIME_CALL_HELPERS_LINES = 550;
 const MAX_RUNTIME_ACCESSOR_HELPERS_LINES = 320;
 const MAX_MODE_RULES_HELPERS_LINES = 1200;
 const MAX_SAVED_STATE_HELPERS_LINES = 1500;
+const MAX_SAVED_STATE_PERSISTENCE_RUNTIME_LINES = 1200;
 const MAX_RUNTIME_HELPER_FUNCTION_LINES = 19;
 const REPLAY_RUNTIME_WRITE_BOUNDARY_RULES = [
   {
     label: "manager.replayIndex",
     pattern: /\bmanager\.replayIndex\s*=/g,
-    allowedOwnerNames: ["setRuntimeReplayIndexForReplay"]
+    allowedOwnerNames: ["setRuntimeReplayIndexForReplay"],
   },
   {
     label: "manager.replayMoves",
     pattern: /\bmanager\.replayMoves\s*=/g,
-    allowedOwnerNames: ["setRuntimeReplayMovesForReplay"]
+    allowedOwnerNames: ["setRuntimeReplayMovesForReplay"],
   },
   {
     label: "manager.replaySpawns",
     pattern: /\bmanager\.replaySpawns\s*=/g,
-    allowedOwnerNames: ["setRuntimeReplaySpawnsForReplay"]
+    allowedOwnerNames: ["setRuntimeReplaySpawnsForReplay"],
   },
   {
     label: "manager.replayMovesV2",
     pattern: /\bmanager\.replayMovesV2\s*=/g,
-    allowedOwnerNames: ["setRuntimeReplayMovesV2ForReplay"]
+    allowedOwnerNames: ["setRuntimeReplayMovesV2ForReplay"],
   },
   {
     label: "manager.undoEnabled",
     pattern: /\bmanager\.undoEnabled\s*=/g,
-    allowedOwnerNames: ["setRuntimeUndoEnabledForReplay"]
+    allowedOwnerNames: ["setRuntimeUndoEnabledForReplay"],
   },
   {
     label: "manager.disableSessionSync",
     pattern: /\bmanager\.disableSessionSync\s*=/g,
-    allowedOwnerNames: ["setRuntimeDisableSessionSyncForReplay"]
+    allowedOwnerNames: ["setRuntimeDisableSessionSyncForReplay"],
   },
   {
     label: "manager.replayDelay",
     pattern: /\bmanager\.replayDelay\s*=/g,
-    allowedOwnerNames: ["setRuntimeReplayDelayForReplay"]
-  }
+    allowedOwnerNames: ["setRuntimeReplayDelayForReplay"],
+  },
 ];
 const PAGE_FILES = [
   "index.html",
@@ -112,7 +124,7 @@ const PAGE_FILES = [
   "replay.html",
   "undo_2048.html",
   "capped_2048.html",
-  "Practice_board.html"
+  "Practice_board.html",
 ];
 const MODULE_ENTRY_BY_PAGE_FILE = {
   "index.html": "index.ts",
@@ -120,13 +132,14 @@ const MODULE_ENTRY_BY_PAGE_FILE = {
   "replay.html": "replay.ts",
   "undo_2048.html": "undo.ts",
   "capped_2048.html": "capped.ts",
-  "Practice_board.html": "practice-board.ts"
+  "Practice_board.html": "practice-board.ts",
 };
 const EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN = [
   "core_game_manager_base_helpers_runtime.js",
   "core_game_manager_env_helpers_runtime.js",
   "core_game_manager_runtime_call_helpers_runtime.js",
   "core_game_manager_saved_state_helpers_runtime.js",
+  "core_game_manager_saved_state_persistence_runtime.js",
   "core_game_manager_runtime_accessor_helpers_runtime.js",
   "core_game_manager_stats_ui_helpers_runtime.js",
   "core_game_manager_move_input_helpers_runtime.js",
@@ -141,7 +154,7 @@ const EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN = [
   "core_game_manager_mode_rules_helpers_runtime.js",
   "core_game_manager_static_runtime.js",
   "core_game_manager_bindings_runtime.js",
-  "game_manager.js"
+  "game_manager.js",
 ];
 
 function fail(message) {
@@ -159,7 +172,7 @@ function extractBoundPrototypeMethodNames(bindingsContent) {
     /bindGameManagerPrototypeForward\(\s*"([A-Za-z0-9_]+)"\s*,/g,
     /bindGameManagerPrototypeManagerForward\(\s*"([A-Za-z0-9_]+)"\s*,/g,
     /bindGameManagerPrototypeCappedStateFieldGetter\(\s*"([A-Za-z0-9_]+)"\s*,/g,
-    /bindGameManagerPrototypeElementByIdResolver\(\s*"([A-Za-z0-9_]+)"\s*,/g
+    /bindGameManagerPrototypeElementByIdResolver\(\s*"([A-Za-z0-9_]+)"\s*,/g,
   ];
   for (const pattern of directBindPatterns) {
     let match = pattern.exec(bindingsContent);
@@ -168,7 +181,8 @@ function extractBoundPrototypeMethodNames(bindingsContent) {
       match = pattern.exec(bindingsContent);
     }
   }
-  const batchBindingPattern = /\[\s*"([A-Za-z0-9_]+)"\s*,\s*[A-Za-z0-9_]+\s*\]/g;
+  const batchBindingPattern =
+    /\[\s*"([A-Za-z0-9_]+)"\s*,\s*[A-Za-z0-9_]+\s*\]/g;
   let batchMatch = batchBindingPattern.exec(bindingsContent);
   while (batchMatch) {
     names.push(batchMatch[1]);
@@ -182,16 +196,16 @@ function findDuplicateEntries(items) {
   for (const item of items) {
     counts.set(item, (counts.get(item) || 0) + 1);
   }
-  return [...counts.entries()].filter((entry) => entry[1] > 1).map((entry) => entry[0]);
+  return [...counts.entries()]
+    .filter((entry) => entry[1] > 1)
+    .map((entry) => entry[0]);
 }
 
 function hasOrderedRuntimeScripts(htmlContent) {
-  const orderedPatternSource = EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN
-    .map(
-      (fileName) =>
-        `<script src="js/${escapeRegexLiteral(fileName)}\\?v=[^"]*"><\\/script>`
-    )
-    .join("\\s*");
+  const orderedPatternSource = EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN.map(
+    (fileName) =>
+      `<script src="js/${escapeRegexLiteral(fileName)}\\?v=[^"]*"><\\/script>`,
+  ).join("\\s*");
   const orderedPattern = new RegExp(orderedPatternSource);
   return orderedPattern.test(htmlContent);
 }
@@ -199,7 +213,7 @@ function hasOrderedRuntimeScripts(htmlContent) {
 function hasModuleEntryScript(htmlContent, entryFileName) {
   const escapedEntry = escapeRegexLiteral(entryFileName);
   const pattern = new RegExp(
-    `<script\\s+type=\"module\"\\s+src=\"\\./src/entries/${escapedEntry}\"><\\/script>`
+    `<script\\s+type="module"\\s+src="\\./src/entries/${escapedEntry}"><\\/script>`,
   );
   return pattern.test(htmlContent);
 }
@@ -227,7 +241,7 @@ function extractFunctionDeclarations(content) {
   while (match) {
     out.push({
       name: match[1],
-      index: match.index
+      index: match.index,
     });
     match = pattern.exec(content);
   }
@@ -260,7 +274,7 @@ function findRegexMatchesWithLineNumbers(content, regex) {
   while (match) {
     out.push({
       line: resolveLineNumber(content, match.index),
-      snippet: match[0]
+      snippet: match[0],
     });
     match = globalRegex.exec(content);
   }
@@ -297,7 +311,7 @@ function verifyCommonRuntimeCoreCallBoundaries(commonContent) {
       violations.push({
         owner: owner || "<global>",
         line: resolveLineNumber(commonContent, callIndex),
-        snippet: match[0]
+        snippet: match[0],
       });
     }
     match = callPattern.exec(commonContent);
@@ -308,7 +322,7 @@ function verifyCommonRuntimeCoreCallBoundaries(commonContent) {
       .join(", ");
     fail(
       "[game-manager-audit] common runtime business functions must not call manager.callCore*Runtime directly; " +
-        `violations: ${details}`
+        `violations: ${details}`,
     );
   }
 }
@@ -316,12 +330,12 @@ function verifyCommonRuntimeCoreCallBoundaries(commonContent) {
 function verifyCommonRuntimeNoDirectManagerCoreCalls(commonContent) {
   const directCallLines = findRegexMatchLineNumbers(
     commonContent,
-    /manager\.callCore[A-Za-z0-9_]+Runtime\s*\(/g
+    /manager\.callCore[A-Za-z0-9_]+Runtime\s*\(/g,
   );
   if (directCallLines.length > 0) {
     fail(
       "[game-manager-audit] common runtime must not directly use manager.callCore*Runtime(); " +
-        `found at lines: ${directCallLines.join(", ")}`
+        `found at lines: ${directCallLines.join(", ")}`,
     );
   }
 }
@@ -346,7 +360,7 @@ function verifyNoDirectDocumentMethodCalls(filePath, content) {
     /document\.querySelector\s*\(/g,
     /document\.querySelectorAll\s*\(/g,
     /document\.createElement\s*\(/g,
-    /document\.body\b/g
+    /document\.body\b/g,
   ];
   for (const pattern of patterns) {
     const lines = findRegexMatchLineNumbers(content, pattern);
@@ -358,39 +372,51 @@ function verifyNoDirectDocumentMethodCalls(filePath, content) {
   violations.sort((a, b) => a - b);
   fail(
     `[game-manager-audit] direct document.* call is not allowed in ${path.basename(filePath)}; ` +
-      `use manager.getWindowLike().document resolver helpers instead (lines: ${violations.join(", ")})`
+      `use manager.getWindowLike().document resolver helpers instead (lines: ${violations.join(", ")})`,
   );
 }
 
 function verifyNoInlineWindowDocumentFallback(filePath, content) {
-  if (path.basename(filePath) === "core_game_manager_env_helpers_runtime.js") return;
-  const violations = findRegexMatchLineNumbers(content, /windowLike && windowLike\.document/g);
+  if (path.basename(filePath) === "core_game_manager_env_helpers_runtime.js")
+    return;
+  const violations = findRegexMatchLineNumbers(
+    content,
+    /windowLike && windowLike\.document/g,
+  );
   if (violations.length <= 0) return;
   fail(
     `[game-manager-audit] inline windowLike.document fallback is not allowed in ${path.basename(filePath)}; ` +
-      `use resolveManagerDocumentLike() from env helpers (lines: ${violations.join(", ")})`
+      `use resolveManagerDocumentLike() from env helpers (lines: ${violations.join(", ")})`,
   );
 }
 
 function verifyNoDocumentLikeElementByIdInScopedHelpers(filePath, content) {
-  if (path.basename(filePath) === "core_game_manager_env_helpers_runtime.js") return;
-  const violations = findRegexMatchLineNumbers(content, /documentLike\.getElementById\s*\(/g);
+  if (path.basename(filePath) === "core_game_manager_env_helpers_runtime.js")
+    return;
+  const violations = findRegexMatchLineNumbers(
+    content,
+    /documentLike\.getElementById\s*\(/g,
+  );
   if (violations.length <= 0) return;
   fail(
     "[game-manager-audit] runtime helper must not use documentLike.getElementById(); " +
       `use resolveManagerElementById() wrapper in ${path.basename(filePath)} ` +
-      `(lines: ${violations.join(", ")})`
+      `(lines: ${violations.join(", ")})`,
   );
 }
 
 function verifyBindingsNoDirectPrototypeAssignments(bindingsContent) {
-  const directBindingPattern = /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/g;
-  const directBindingLines = findRegexMatchLineNumbers(bindingsContent, directBindingPattern);
+  const directBindingPattern =
+    /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/g;
+  const directBindingLines = findRegexMatchLineNumbers(
+    bindingsContent,
+    directBindingPattern,
+  );
   if (directBindingLines.length <= 0) return;
   fail(
     "[game-manager-audit] direct prototype assignment is not allowed in bindings runtime; " +
       "use bindGameManagerPrototype* helper wrappers " +
-      `(lines: ${directBindingLines.join(", ")})`
+      `(lines: ${directBindingLines.join(", ")})`,
   );
 }
 
@@ -401,10 +427,13 @@ function verifyRuntimeHelperFunctionHotspots(fileLabel, content) {
   if (hotspots.length <= 0) return;
   const summary = hotspots
     .slice(0, 10)
-    .map((hotspot) => `${hotspot.name}@L${hotspot.startLine}(${hotspot.lineCount})`)
+    .map(
+      (hotspot) =>
+        `${hotspot.name}@L${hotspot.startLine}(${hotspot.lineCount})`,
+    )
     .join(", ");
   fail(
-    `[game-manager-audit] ${fileLabel} has ${hotspots.length} function hotspots > ${MAX_RUNTIME_HELPER_FUNCTION_LINES} lines: ${summary}`
+    `[game-manager-audit] ${fileLabel} has ${hotspots.length} function hotspots > ${MAX_RUNTIME_HELPER_FUNCTION_LINES} lines: ${summary}`,
   );
 }
 
@@ -412,7 +441,8 @@ function resolveOwnerFunctionNameByLine(functionRanges, line) {
   if (!Array.isArray(functionRanges)) return null;
   for (const range of functionRanges) {
     if (!range) continue;
-    if (!Number.isInteger(range.startLine) || !Number.isInteger(range.endLine)) continue;
+    if (!Number.isInteger(range.startLine) || !Number.isInteger(range.endLine))
+      continue;
     if (line >= range.startLine && line <= range.endLine) {
       return range.name || null;
     }
@@ -425,15 +455,20 @@ function collectReplayRuntimeWriteBoundaryViolations(replayContent) {
   const violations = [];
   for (const rule of REPLAY_RUNTIME_WRITE_BOUNDARY_RULES) {
     const allowedOwnerNames = new Set(rule.allowedOwnerNames || []);
-    const matches = findRegexMatchesWithLineNumbers(replayContent, rule.pattern);
+    const matches = findRegexMatchesWithLineNumbers(
+      replayContent,
+      rule.pattern,
+    );
     for (const match of matches) {
-      const owner = resolveOwnerFunctionNameByLine(functionRanges, match.line) || "<global>";
+      const owner =
+        resolveOwnerFunctionNameByLine(functionRanges, match.line) ||
+        "<global>";
       if (allowedOwnerNames.has(owner)) continue;
       violations.push({
         field: rule.label,
         owner,
         line: match.line,
-        snippet: match.snippet
+        snippet: match.snippet,
       });
     }
   }
@@ -449,14 +484,15 @@ function verifyReplayRuntimeWriteBoundaries(replayContent) {
     .join(", ");
   fail(
     "[game-manager-audit] replay helper state writes must go through setRuntime*ForReplay wrappers; " +
-      `violations: ${summary}`
+      `violations: ${summary}`,
   );
 }
 
 async function verifyHtmlScriptOrder(projectRoot) {
-  const expectedScriptChainText = EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN
-    .map((fileName) => fileName.replace(/_runtime\.js$/, ""))
-    .join(" -> ");
+  const expectedScriptChainText =
+    EXPECTED_GAME_MANAGER_RUNTIME_SCRIPT_CHAIN.map((fileName) =>
+      fileName.replace(/_runtime\.js$/, ""),
+    ).join(" -> ");
   for (const fileName of PAGE_FILES) {
     const filePath = path.resolve(projectRoot, fileName);
     const content = await readFile(filePath, "utf8");
@@ -467,7 +503,7 @@ async function verifyHtmlScriptOrder(projectRoot) {
     if (!hasOrderedRuntimeScripts(content)) {
       fail(
         `[game-manager-audit] ${fileName}: missing or unordered runtime script chain ` +
-          `(expected ${expectedScriptChainText})`
+          `(expected ${expectedScriptChainText})`,
       );
     }
   }
@@ -475,135 +511,203 @@ async function verifyHtmlScriptOrder(projectRoot) {
 
 async function main() {
   const projectRoot = path.resolve(__dirname, "..");
-  const coreGameManagerRuntimePaths = await resolveCoreGameManagerRuntimeFilePaths();
+  const coreGameManagerRuntimePaths =
+    await resolveCoreGameManagerRuntimeFilePaths();
   const gameManagerContent = await readFile(GAME_MANAGER_PATH, "utf8");
   const commonContent = await readFile(COMMON_RUNTIME_PATH, "utf8");
   const staticContent = await readFile(STATIC_RUNTIME_PATH, "utf8");
   const bindingsContent = await readFile(BINDINGS_RUNTIME_PATH, "utf8");
-  const runtimeCallHelpersContent = await readFile(RUNTIME_CALL_HELPERS_PATH, "utf8");
-  const runtimeAccessorHelpersContent = await readFile(RUNTIME_ACCESSOR_HELPERS_PATH, "utf8");
-  const modeRulesHelpersContent = await readFile(MODE_RULES_HELPERS_PATH, "utf8");
+  const runtimeCallHelpersContent = await readFile(
+    RUNTIME_CALL_HELPERS_PATH,
+    "utf8",
+  );
+  const runtimeAccessorHelpersContent = await readFile(
+    RUNTIME_ACCESSOR_HELPERS_PATH,
+    "utf8",
+  );
+  const modeRulesHelpersContent = await readFile(
+    MODE_RULES_HELPERS_PATH,
+    "utf8",
+  );
   const replayHelpersContent = await readFile(REPLAY_HELPERS_PATH, "utf8");
-  const savedStateHelpersContent = await readFile(SAVED_STATE_HELPERS_PATH, "utf8");
-  const moveInputHelpersContent = await readFile(MOVE_INPUT_HELPERS_PATH, "utf8");
+  const savedStateHelpersContent = await readFile(
+    SAVED_STATE_HELPERS_PATH,
+    "utf8",
+  );
+  const savedStatePersistenceRuntimeContent = await readFile(
+    SAVED_STATE_PERSISTENCE_RUNTIME_PATH,
+    "utf8",
+  );
+  const moveInputHelpersContent = await readFile(
+    MOVE_INPUT_HELPERS_PATH,
+    "utf8",
+  );
 
   const gameManagerLineCount = gameManagerContent.split(/\r?\n/).length;
   if (gameManagerLineCount > MAX_GAME_MANAGER_LINES) {
     fail(
       `[game-manager-audit] game_manager.js too large: ${gameManagerLineCount} lines ` +
-        `(max=${MAX_GAME_MANAGER_LINES})`
+        `(max=${MAX_GAME_MANAGER_LINES})`,
     );
   }
   const commonLineCount = commonContent.split(/\r?\n/).length;
   if (commonLineCount > MAX_COMMON_RUNTIME_LINES) {
     fail(
       `[game-manager-audit] common runtime too large: ${commonLineCount} lines ` +
-        `(max=${MAX_COMMON_RUNTIME_LINES})`
+        `(max=${MAX_COMMON_RUNTIME_LINES})`,
     );
   }
-  const commonFunctionMatches = commonContent.match(/function\s+[A-Za-z0-9_]+\s*\(/g) || [];
+  const commonFunctionMatches =
+    commonContent.match(/function\s+[A-Za-z0-9_]+\s*\(/g) || [];
   if (commonFunctionMatches.length > 0) {
     fail(
       "[game-manager-audit] common runtime must remain shell-only " +
-        `(found ${commonFunctionMatches.length} function declarations)`
+        `(found ${commonFunctionMatches.length} function declarations)`,
     );
   }
   const bindingsLineCount = bindingsContent.split(/\r?\n/).length;
   if (bindingsLineCount > MAX_BINDINGS_RUNTIME_LINES) {
     fail(
       `[game-manager-audit] bindings runtime too large: ${bindingsLineCount} lines ` +
-        `(max=${MAX_BINDINGS_RUNTIME_LINES})`
+        `(max=${MAX_BINDINGS_RUNTIME_LINES})`,
     );
   }
-  const runtimeCallHelpersLineCount = runtimeCallHelpersContent.split(/\r?\n/).length;
+  const runtimeCallHelpersLineCount =
+    runtimeCallHelpersContent.split(/\r?\n/).length;
   if (runtimeCallHelpersLineCount > MAX_RUNTIME_CALL_HELPERS_LINES) {
     fail(
       `[game-manager-audit] runtime call helpers too large: ${runtimeCallHelpersLineCount} lines ` +
-        `(max=${MAX_RUNTIME_CALL_HELPERS_LINES})`
+        `(max=${MAX_RUNTIME_CALL_HELPERS_LINES})`,
     );
   }
-  const runtimeAccessorHelpersLineCount = runtimeAccessorHelpersContent.split(/\r?\n/).length;
+  const runtimeAccessorHelpersLineCount =
+    runtimeAccessorHelpersContent.split(/\r?\n/).length;
   if (runtimeAccessorHelpersLineCount > MAX_RUNTIME_ACCESSOR_HELPERS_LINES) {
     fail(
       `[game-manager-audit] runtime accessor helpers too large: ${runtimeAccessorHelpersLineCount} lines ` +
-        `(max=${MAX_RUNTIME_ACCESSOR_HELPERS_LINES})`
+        `(max=${MAX_RUNTIME_ACCESSOR_HELPERS_LINES})`,
     );
   }
-  const modeRulesHelpersLineCount = modeRulesHelpersContent.split(/\r?\n/).length;
+  const modeRulesHelpersLineCount =
+    modeRulesHelpersContent.split(/\r?\n/).length;
   if (modeRulesHelpersLineCount > MAX_MODE_RULES_HELPERS_LINES) {
     fail(
       `[game-manager-audit] mode rules helpers too large: ${modeRulesHelpersLineCount} lines ` +
-        `(max=${MAX_MODE_RULES_HELPERS_LINES})`
+        `(max=${MAX_MODE_RULES_HELPERS_LINES})`,
     );
   }
   verifyRuntimeHelperFunctionHotspots("replay helpers", replayHelpersContent);
   verifyReplayRuntimeWriteBoundaries(replayHelpersContent);
-  const savedStateHelpersLineCount = savedStateHelpersContent.split(/\r?\n/).length;
+  const savedStateHelpersLineCount =
+    savedStateHelpersContent.split(/\r?\n/).length;
   if (savedStateHelpersLineCount > MAX_SAVED_STATE_HELPERS_LINES) {
     fail(
       `[game-manager-audit] saved-state helpers too large: ${savedStateHelpersLineCount} lines ` +
-        `(max=${MAX_SAVED_STATE_HELPERS_LINES})`
+        `(max=${MAX_SAVED_STATE_HELPERS_LINES})`,
     );
   }
-  verifyRuntimeHelperFunctionHotspots("move-input helpers", moveInputHelpersContent);
-  if (!/function\s+GameManager\s*\(/.test(gameManagerContent)) {
-    fail("[game-manager-audit] missing GameManager constructor in game_manager.js");
+  const savedStatePersistenceRuntimeLineCount =
+    savedStatePersistenceRuntimeContent.split(/\r?\n/).length;
+  if (
+    savedStatePersistenceRuntimeLineCount >
+    MAX_SAVED_STATE_PERSISTENCE_RUNTIME_LINES
+  ) {
+    fail(
+      `[game-manager-audit] saved-state persistence runtime too large: ${savedStatePersistenceRuntimeLineCount} lines ` +
+        `(max=${MAX_SAVED_STATE_PERSISTENCE_RUNTIME_LINES})`,
+    );
   }
-  const shellFunctionMatches = gameManagerContent.match(/function\s+[A-Za-z0-9_]+\s*\(/g) || [];
+  verifyRuntimeHelperFunctionHotspots(
+    "move-input helpers",
+    moveInputHelpersContent,
+  );
+  if (!/function\s+GameManager\s*\(/.test(gameManagerContent)) {
+    fail(
+      "[game-manager-audit] missing GameManager constructor in game_manager.js",
+    );
+  }
+  const shellFunctionMatches =
+    gameManagerContent.match(/function\s+[A-Za-z0-9_]+\s*\(/g) || [];
   if (shellFunctionMatches.length !== 1) {
     fail(
       "[game-manager-audit] game_manager.js must remain constructor-only " +
-        `(found ${shellFunctionMatches.length} function declarations)`
+        `(found ${shellFunctionMatches.length} function declarations)`,
     );
   }
-  if (/GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(gameManagerContent)) {
+  if (
+    /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(
+      gameManagerContent,
+    )
+  ) {
     fail(
-      "[game-manager-audit] prototype bindings detected in game_manager.js; expected shell-only file"
+      "[game-manager-audit] prototype bindings detected in game_manager.js; expected shell-only file",
     );
   }
   if (!/applyGameManagerStaticConfiguration\(\);/.test(gameManagerContent)) {
-    fail("[game-manager-audit] missing applyGameManagerStaticConfiguration() call");
+    fail(
+      "[game-manager-audit] missing applyGameManagerStaticConfiguration() call",
+    );
   }
   if (!/bindGameManagerPrototypeRuntime\(\);/.test(gameManagerContent)) {
     fail("[game-manager-audit] missing bindGameManagerPrototypeRuntime() call");
   }
-  if (/function\s+applyGameManagerStaticConfiguration\s*\(/.test(bindingsContent)) {
+  if (
+    /function\s+applyGameManagerStaticConfiguration\s*\(/.test(bindingsContent)
+  ) {
     fail(
-      "[game-manager-audit] applyGameManagerStaticConfiguration() should not be declared in bindings runtime"
+      "[game-manager-audit] applyGameManagerStaticConfiguration() should not be declared in bindings runtime",
     );
   }
-  if (!/function\s+applyGameManagerStaticConfiguration\s*\(/.test(staticContent)) {
+  if (
+    !/function\s+applyGameManagerStaticConfiguration\s*\(/.test(staticContent)
+  ) {
     fail(
-      "[game-manager-audit] missing applyGameManagerStaticConfiguration() in static runtime"
+      "[game-manager-audit] missing applyGameManagerStaticConfiguration() in static runtime",
     );
   }
-  if (/GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(staticContent)) {
+  if (
+    /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(staticContent)
+  ) {
     fail(
-      "[game-manager-audit] prototype bindings detected in static runtime; expected config-only file"
+      "[game-manager-audit] prototype bindings detected in static runtime; expected config-only file",
     );
   }
-  if (!/function\s+bindGameManagerPrototypeRuntime\s*\(/.test(bindingsContent)) {
+  if (
+    !/function\s+bindGameManagerPrototypeRuntime\s*\(/.test(bindingsContent)
+  ) {
     fail(
-      "[game-manager-audit] missing bindGameManagerPrototypeRuntime() in bindings runtime"
+      "[game-manager-audit] missing bindGameManagerPrototypeRuntime() in bindings runtime",
     );
   }
   if (/function\s+bindGameManagerPrototypeRuntime\s*\(/.test(staticContent)) {
     fail(
-      "[game-manager-audit] bindGameManagerPrototypeRuntime() should not be declared in static runtime"
+      "[game-manager-audit] bindGameManagerPrototypeRuntime() should not be declared in static runtime",
     );
   }
-  if (!/registerCoreRuntimeAccessors\(GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS\);/.test(bindingsContent)) {
-    fail("[game-manager-audit] missing runtime accessor registration in bindings runtime");
+  if (
+    !/registerCoreRuntimeAccessors\(GAME_MANAGER_CORE_RUNTIME_ACCESSOR_DEFS\);/.test(
+      bindingsContent,
+    )
+  ) {
+    fail(
+      "[game-manager-audit] missing runtime accessor registration in bindings runtime",
+    );
   }
   verifyBindingsNoDirectPrototypeAssignments(bindingsContent);
-  if (/GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(commonContent)) {
+  if (
+    /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(commonContent)
+  ) {
     fail(
-      "[game-manager-audit] prototype bindings detected in common runtime; expected logic-only file"
+      "[game-manager-audit] prototype bindings detected in common runtime; expected logic-only file",
     );
   }
-  if (/GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(runtimeCallHelpersContent)) {
+  if (
+    /GameManager\.prototype\.[A-Za-z0-9_]+\s*=\s*function/.test(
+      runtimeCallHelpersContent,
+    )
+  ) {
     fail(
-      "[game-manager-audit] prototype bindings detected in runtime call helpers; expected helper-only file"
+      "[game-manager-audit] prototype bindings detected in runtime call helpers; expected helper-only file",
     );
   }
   verifyCommonRuntimeNoDirectManagerCoreCalls(commonContent);
@@ -612,26 +716,31 @@ async function main() {
     const runtimeContent = await readFile(runtimeFilePath, "utf8");
     verifyNoDirectDocumentMethodCalls(runtimeFilePath, runtimeContent);
     verifyNoInlineWindowDocumentFallback(runtimeFilePath, runtimeContent);
-    verifyNoDocumentLikeElementByIdInScopedHelpers(runtimeFilePath, runtimeContent);
+    verifyNoDocumentLikeElementByIdInScopedHelpers(
+      runtimeFilePath,
+      runtimeContent,
+    );
   }
   const duplicatePrototypeNames = findDuplicateEntries(
-    extractBoundPrototypeMethodNames(bindingsContent)
+    extractBoundPrototypeMethodNames(bindingsContent),
   );
   if (duplicatePrototypeNames.length > 0) {
     fail(
       "[game-manager-audit] duplicate prototype bindings in bindings runtime: " +
-        duplicatePrototypeNames.join(", ")
+        duplicatePrototypeNames.join(", "),
     );
   }
 
   await verifyHtmlScriptOrder(projectRoot);
   console.log(
-    "[game-manager-audit] PASS: shell + common/static/bindings + runtime helpers layout verified"
+    "[game-manager-audit] PASS: shell + common/static/bindings + runtime helpers layout verified",
   );
 }
 
 function isDirectCliExecution() {
-  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+  return Boolean(
+    process.argv[1] && path.resolve(process.argv[1]) === __filename,
+  );
 }
 
 if (isDirectCliExecution()) {
@@ -648,5 +757,5 @@ export {
   hasOrderedRuntimeScripts,
   collectReplayRuntimeWriteBoundaryViolations,
   isDirectCliExecution,
-  shouldEnforceRuntimeScriptChain
+  shouldEnforceRuntimeScriptChain,
 };

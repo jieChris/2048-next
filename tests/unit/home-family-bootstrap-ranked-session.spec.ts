@@ -28,44 +28,47 @@ describe("home family bootstrap ranked session ordering", () => {
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
-      resolvePageDescriptor: () => ({ id: "index" })
+      resolvePageDescriptor: () => ({ id: "index" }),
     }));
     vi.doMock("../../src/bootstrap/engine-facade-host", () => ({
-      registerEngineFacade: vi.fn()
+      registerEngineFacade: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/ranked-session", () => ({
-      bootstrapRankedSessionForHomeFamilyPage: vi.fn(() => rankedSessionReady)
+      bootstrapRankedSessionForHomeFamilyPage: vi.fn(() => rankedSessionReady),
     }));
     vi.doMock("../../src/bootstrap/storage", () => ({
       resolveStorageByName: () => null,
-      safeReadStorageItem: () => ""
+      safeReadStorageItem: () => "",
     }));
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
-      bindHomeUserDisplay: vi.fn()
+      bindHomeUserDisplay: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/access-gate", () => ({
       runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
-      shouldRunBetaAccessGate: vi.fn(() => true)
+      shouldRunBetaAccessGate: vi.fn(() => true),
+      isBetaAccessGateOpen: vi.fn(() => true),
     }));
     vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
-      installPreAccessorManagerForwardBindingsRuntime: vi.fn()
+      installPreAccessorManagerForwardBindingsRuntime: vi.fn(),
     }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async (scripts: string[]) => {
         loadCalls.push(scripts);
-      })
+      }),
     }));
     vi.doMock("../../src/entries/runtime-manifest", () => ({
       getPageManifest: () => ({
         id: "index",
-        capabilities: ["core", "standard-startup"]
-      })
+        capabilities: ["core", "standard-startup"],
+      }),
     }));
     vi.doMock("../../src/entries/home-family-shared", () => ({
-      resolveHomeFamilyScriptsByCapabilities: () => ["mock-runtime.js"]
+      resolveHomeFamilyScriptsByCapabilities: () => ["mock-runtime.js"],
     }));
 
-    const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
+    const { bootstrapHomeFamilyPage } = await import(
+      "../../src/entries/home-family-bootstrap"
+    );
     const pendingBootstrap = bootstrapHomeFamilyPage("index");
 
     await Promise.resolve();
@@ -74,7 +77,9 @@ describe("home family bootstrap ranked session ordering", () => {
     releaseRankedSession?.();
     await pendingBootstrap;
 
-    expect(loadCalls).toEqual([["./js/home_standard_startup_bundle.js?v=20260803-operation-feedback"]]);
+    expect(loadCalls).toEqual([
+      ["./js/home_standard_startup_bundle.js?v=20260803-operation-feedback"],
+    ]);
   });
 
   it("keeps the modern index bootstrap boundary without the removed deferred bundle", async () => {
@@ -85,7 +90,9 @@ describe("home family bootstrap ranked session ordering", () => {
     const installIndexUiStartupHostRuntime = vi.fn();
     const applyIndexUiBootstrapFromTsRuntime = vi.fn();
     const startupOrder: string[] = [];
-    const initOperationFeedbackSettingsUI = vi.fn(() => startupOrder.push("feedback"));
+    const initOperationFeedbackSettingsUI = vi.fn(() =>
+      startupOrder.push("feedback"),
+    );
     const applyIndexUiPageBootstrap = vi.fn();
     const indexUiBootstrapResolvers = {
       exportReplay: vi.fn(),
@@ -102,7 +109,7 @@ describe("home family bootstrap ranked session ordering", () => {
       requestResponsiveGameRelayout: vi.fn(),
       syncMobileTimerboxUI: vi.fn(),
       syncMobileHintUI: vi.fn(),
-      syncMobileUndoTopButtonAvailability: vi.fn()
+      syncMobileUndoTopButtonAvailability: vi.fn(),
     };
 
     vi.stubGlobal("document", {
@@ -110,16 +117,16 @@ describe("home family bootstrap ranked session ordering", () => {
       body: {
         clientHeight: 800,
         getAttribute: vi.fn(() => "game"),
-        scrollHeight: 800
+        scrollHeight: 800,
       },
       documentElement: {
         clientHeight: 800,
         removeAttribute: vi.fn(),
         scrollHeight: 800,
-        setAttribute: vi.fn()
+        setAttribute: vi.fn(),
       },
       getElementById: vi.fn(() => null),
-      querySelector: vi.fn(() => null)
+      querySelector: vi.fn(() => null),
     });
     vi.stubGlobal("navigator", { userAgent: "" });
     vi.stubGlobal("window", {
@@ -129,76 +136,91 @@ describe("home family bootstrap ranked session ordering", () => {
         idleCallbacks.push(callback);
         return 1;
       }),
-      setTimeout: vi.fn()
+      setTimeout: vi.fn(),
     });
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
-      resolvePageDescriptor: () => ({ id: "index" })
+      resolvePageDescriptor: () => ({ id: "index" }),
     }));
     vi.doMock("../../src/bootstrap/engine-facade-host", () => ({
-      registerEngineFacade: vi.fn()
+      registerEngineFacade: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/ranked-session", () => ({
-      bootstrapRankedSessionForHomeFamilyPage: vi.fn(async () => {})
+      bootstrapRankedSessionForHomeFamilyPage: vi.fn(async () => {}),
     }));
     vi.doMock("../../src/bootstrap/storage", () => ({
       resolveStorageByName: () => null,
-      safeReadStorageItem: () => ""
+      safeReadStorageItem: () => "",
     }));
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
-      bindHomeUserDisplay: vi.fn()
+      bindHomeUserDisplay: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/access-gate", () => ({
       runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
-      shouldRunBetaAccessGate: vi.fn(() => true)
+      shouldRunBetaAccessGate: vi.fn(() => true),
+      isBetaAccessGateOpen: vi.fn(() => true),
     }));
     vi.doMock("../../src/bootstrap/settings-modal-host", () => ({
-      installSettingsModalHostRuntime
+      installSettingsModalHostRuntime,
     }));
     vi.doMock("../../src/bootstrap/settings-modal-page-host", () => ({
-      installSettingsModalPageHostRuntime
+      installSettingsModalPageHostRuntime,
     }));
     vi.doMock("../../src/bootstrap/operation-feedback-settings", () => ({
-      initOperationFeedbackSettingsUI
+      initOperationFeedbackSettingsUI,
     }));
     vi.doMock("../../src/bootstrap/index-ui-startup-host", () => ({
-      installIndexUiStartupHostRuntime
+      installIndexUiStartupHostRuntime,
     }));
-    vi.doMock("../../src/bootstrap/index-ui-runtime-contract", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("../../src/bootstrap/index-ui-runtime-contract")>();
-      const contracts = {
-        modalContracts: {},
-        coreContracts: {
-          gameOverUndoHostRuntime: {},
-          indexUiStartupHostRuntime: {},
-          prettyTimeRuntime: {},
-          topActionBindingsHostRuntime: {}
-        }
-      };
-      return {
-        ...actual,
-        resolveIndexUiRuntimeContracts: vi.fn(() => contracts),
-        resolveIndexUiRuntimeContractsCompat: vi.fn(() => contracts)
-      };
-    });
-    vi.doMock("../../src/bootstrap/index-ui-page-host", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("../../src/bootstrap/index-ui-page-host")>();
-      return {
-        ...actual,
-        applyIndexUiPageBootstrap,
-        createIndexUiBootstrapResolvers: vi.fn(() => indexUiBootstrapResolvers),
-        createIndexUiTryUndoHandler: vi.fn(() => vi.fn(() => false))
-      };
-    });
+    vi.doMock(
+      "../../src/bootstrap/index-ui-runtime-contract",
+      async (importOriginal) => {
+        const actual =
+          await importOriginal<
+            typeof import("../../src/bootstrap/index-ui-runtime-contract")
+          >();
+        const contracts = {
+          modalContracts: {},
+          coreContracts: {
+            gameOverUndoHostRuntime: {},
+            indexUiStartupHostRuntime: {},
+            prettyTimeRuntime: {},
+            topActionBindingsHostRuntime: {},
+          },
+        };
+        return {
+          ...actual,
+          resolveIndexUiRuntimeContracts: vi.fn(() => contracts),
+          resolveIndexUiRuntimeContractsCompat: vi.fn(() => contracts),
+        };
+      },
+    );
+    vi.doMock(
+      "../../src/bootstrap/index-ui-page-host",
+      async (importOriginal) => {
+        const actual =
+          await importOriginal<
+            typeof import("../../src/bootstrap/index-ui-page-host")
+          >();
+        return {
+          ...actual,
+          applyIndexUiPageBootstrap,
+          createIndexUiBootstrapResolvers: vi.fn(
+            () => indexUiBootstrapResolvers,
+          ),
+          createIndexUiTryUndoHandler: vi.fn(() => vi.fn(() => false)),
+        };
+      },
+    );
     vi.doMock("../../src/entries/index-ui-bootstrap", () => ({
-      applyIndexUiBootstrapFromTsRuntime
+      applyIndexUiBootstrapFromTsRuntime,
     }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
       loadLegacyScriptsSequentially: vi.fn(async (scripts: string[]) => {
         loadCalls.push(scripts);
         startupOrder.push(`load:${scripts.join(",")}`);
-      })
+      }),
     }));
     vi.doMock("../../src/entries/runtime-manifest", () => ({
       getPageManifest: () => ({
@@ -211,31 +233,42 @@ describe("home family bootstrap ranked session ordering", () => {
           "top-button-style",
           "index-tail",
           "leaderboard",
-          "i18n"
-        ]
-      })
+          "i18n",
+        ],
+      }),
     }));
     vi.doMock("../../src/entries/home-family-shared", () => ({
       resolveHomeFamilyScriptsByCapabilities: (capabilities: string[]) =>
         capabilities.flatMap((capability) => {
           if (capability === "settings-and-panel") {
-            return ["./js/core_bgm_runtime.js", "./js/core_night_mode_runtime.js"];
+            return [
+              "./js/core_bgm_runtime.js",
+              "./js/core_night_mode_runtime.js",
+            ];
           }
-          if (capability === "top-button-style") return ["./js/core_top_button_style_runtime.js"];
+          if (capability === "top-button-style")
+            return ["./js/core_top_button_style_runtime.js"];
           if (capability === "i18n") return ["./js/core_i18n_runtime.js"];
           if (capability === "index-tail") {
-            return ["./js/core_top_action_bindings_host_runtime.js", "./js/index_ui.js"];
+            return [
+              "./js/core_top_action_bindings_host_runtime.js",
+              "./js/index_ui.js",
+            ];
           }
           return [`runtime:${capability}`];
-        })
+        }),
     }));
 
-    const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
+    const { bootstrapHomeFamilyPage } = await import(
+      "../../src/entries/home-family-bootstrap"
+    );
 
     await bootstrapHomeFamilyPage("index");
     expect(startupOrder.indexOf("feedback")).toBeGreaterThanOrEqual(0);
     expect(startupOrder.indexOf("feedback")).toBeLessThan(
-      startupOrder.findIndex((item) => item.includes("home_standard_startup_bundle.js"))
+      startupOrder.findIndex((item) =>
+        item.includes("home_standard_startup_bundle.js"),
+      ),
     );
     for (const callback of idleCallbacks) callback();
     await vi.waitFor(() => {
@@ -250,7 +283,9 @@ describe("home family bootstrap ranked session ordering", () => {
     expect(loadedScriptText).toContain("core_bgm_runtime.js");
     expect(loadedScriptText).toContain("core_night_mode_runtime.js");
     expect(loadedScriptText).toContain("core_top_button_style_runtime.js");
-    expect(loadedScriptText).toContain("core_top_action_bindings_host_runtime.js");
+    expect(loadedScriptText).toContain(
+      "core_top_action_bindings_host_runtime.js",
+    );
     expect(loadedScriptText).toContain("core_i18n_runtime.js");
     expect(loadedScriptText).not.toContain("index_ui.js");
   });
@@ -280,118 +315,132 @@ describe("home family bootstrap ranked session ordering", () => {
 
     vi.doMock("../../src/bootstrap/page-bootstrap", () => ({
       createBootstrapPipeline: () => [],
-      resolvePageDescriptor: () => ({ id: "play" })
+      resolvePageDescriptor: () => ({ id: "play" }),
     }));
     vi.doMock("../../src/bootstrap/engine-facade-host", () => ({
-      registerEngineFacade: vi.fn()
+      registerEngineFacade: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/ranked-session", () => ({
-      bootstrapRankedSessionForHomeFamilyPage: vi.fn(async () => {})
+      bootstrapRankedSessionForHomeFamilyPage: vi.fn(async () => {}),
     }));
     vi.doMock("../../src/bootstrap/storage", () => ({
       resolveStorageByName: () => null,
-      safeReadStorageItem: () => ""
+      safeReadStorageItem: () => "",
     }));
     vi.doMock("../../src/bootstrap/home-user-display", () => ({
-      bindHomeUserDisplay: vi.fn()
+      bindHomeUserDisplay: vi.fn(),
     }));
     vi.doMock("../../src/bootstrap/access-gate", () => ({
       runBetaAccessGate: vi.fn(async () => ({ allowed: true })),
-      shouldRunBetaAccessGate: vi.fn(() => true)
+      shouldRunBetaAccessGate: vi.fn(() => true),
+      isBetaAccessGateOpen: vi.fn(() => true),
     }));
     vi.doMock("../../src/core/pre-accessor-manager-forward-bindings", () => ({
-      installPreAccessorManagerForwardBindingsRuntime
+      installPreAccessorManagerForwardBindingsRuntime,
     }));
     vi.doMock("../../src/core/saved-manager-timer-state", () => ({
-      installSavedManagerTimerStateRuntime
+      installSavedManagerTimerStateRuntime,
     }));
     vi.doMock("../../src/core/saved-payload-candidate", () => ({
-      installSavedPayloadCandidateRuntime
+      installSavedPayloadCandidateRuntime,
     }));
     vi.doMock("../../src/core/saved-payload-persist-fallback", () => ({
-      installSavedPayloadPersistFallbackRuntime
+      installSavedPayloadPersistFallbackRuntime,
     }));
     vi.doMock("../../src/core/saved-payload-richness", () => ({
-      installSavedPayloadRichnessRuntime
+      installSavedPayloadRichnessRuntime,
     }));
     vi.doMock("../../src/core/saved-state-persist-timestamps", () => ({
-      installSavedStatePersistTimestampsRuntime
+      installSavedStatePersistTimestampsRuntime,
     }));
     vi.doMock("../../src/core/saved-state-sync-payload", () => ({
-      installSavedStateSyncPayloadRuntime
+      installSavedStateSyncPayloadRuntime,
     }));
     vi.doMock("../../src/core/setup-timer-row-normalize", () => ({
-      installSetupTimerRowNormalizeRuntime
+      installSetupTimerRowNormalizeRuntime,
     }));
     vi.doMock("../../src/core/stats-panel-copy", () => ({
-      installStatsPanelCopyRuntime
+      installStatsPanelCopyRuntime,
     }));
     vi.doMock("../../src/core/game-manager-input-events", () => ({
-      installGameManagerInputEventsRuntime
+      installGameManagerInputEventsRuntime,
     }));
     vi.doMock("../../src/core/game-manager-actuator-payload-state", () => ({
-      installGameManagerActuatorPayloadStateRuntime
+      installGameManagerActuatorPayloadStateRuntime,
     }));
     vi.doMock("../../src/core/game-manager-runtime-state", () => ({
-      installGameManagerRuntimeStateRuntime
+      installGameManagerRuntimeStateRuntime,
     }));
-    vi.doMock("../../src/core/game-manager-saved-state-persistence-binding", () => ({
-      installGameManagerSavedStatePersistenceBindingRuntime
-    }));
+    vi.doMock(
+      "../../src/core/game-manager-saved-state-persistence-binding",
+      () => ({
+        installGameManagerSavedStatePersistenceBindingRuntime,
+      }),
+    );
     vi.doMock("../../src/core/game-manager-redo-restore-state", () => ({
-      installGameManagerRedoRestoreStateRuntime
+      installGameManagerRedoRestoreStateRuntime,
     }));
     vi.doMock("../../src/core/game-manager-timer-elapsed", () => ({
-      installGameManagerTimerElapsedRuntime
+      installGameManagerTimerElapsedRuntime,
     }));
     vi.doMock("../../src/core/game-manager-timer-row-visible-state", () => ({
-      installGameManagerTimerRowVisibleStateRuntime
+      installGameManagerTimerRowVisibleStateRuntime,
     }));
     vi.doMock("../../src/core/game-manager-undo-move-handler", () => ({
-      installGameManagerUndoMoveHandlerRuntime
+      installGameManagerUndoMoveHandlerRuntime,
     }));
     vi.doMock("../../src/core/game-manager-undo-restored-tiles", () => ({
-      installGameManagerUndoRestoredTilesRuntime
+      installGameManagerUndoRestoredTilesRuntime,
     }));
     vi.doMock("../../src/core/saved-manager-base-state", () => ({
-      installSavedManagerBaseStateRuntime
+      installSavedManagerBaseStateRuntime,
     }));
     vi.doMock("../../src/core/saved-manager-replay-state", () => ({
-      installSavedManagerReplayStateRuntime
+      installSavedManagerReplayStateRuntime,
     }));
     vi.doMock("../../src/core/saved-manager-progress-state", () => ({
-      installSavedManagerProgressStateRuntime
+      installSavedManagerProgressStateRuntime,
     }));
     vi.doMock("../../src/entries/legacy-loader", () => ({
-      loadLegacyScriptsSequentially: vi.fn(async () => {})
+      loadLegacyScriptsSequentially: vi.fn(async () => {}),
     }));
     vi.doMock("../../src/entries/runtime-manifest", () => ({
       getPageManifest: () => ({
         id: "play",
-        capabilities: ["core", "standard-startup"]
-      })
+        capabilities: ["core", "standard-startup"],
+      }),
     }));
     vi.doMock("../../src/entries/home-family-shared", () => ({
-      resolveHomeFamilyScriptsByCapabilities: () => ["mock-runtime.js"]
+      resolveHomeFamilyScriptsByCapabilities: () => ["mock-runtime.js"],
     }));
 
-    const { bootstrapHomeFamilyPage } = await import("../../src/entries/home-family-bootstrap");
+    const { bootstrapHomeFamilyPage } = await import(
+      "../../src/entries/home-family-bootstrap"
+    );
 
     await bootstrapHomeFamilyPage("play");
 
     expect(installGameManagerInputEventsRuntime).toHaveBeenCalledTimes(1);
-    expect(installGameManagerActuatorPayloadStateRuntime).toHaveBeenCalledTimes(1);
+    expect(installGameManagerActuatorPayloadStateRuntime).toHaveBeenCalledTimes(
+      1,
+    );
     expect(installGameManagerRuntimeStateRuntime).toHaveBeenCalledTimes(1);
-    expect(installGameManagerSavedStatePersistenceBindingRuntime).toHaveBeenCalledTimes(1);
+    expect(
+      installGameManagerSavedStatePersistenceBindingRuntime,
+    ).toHaveBeenCalledTimes(1);
     expect(installGameManagerRedoRestoreStateRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerTimerElapsedRuntime).toHaveBeenCalledTimes(1);
-    expect(installGameManagerTimerRowVisibleStateRuntime).toHaveBeenCalledTimes(1);
+    expect(installGameManagerTimerRowVisibleStateRuntime).toHaveBeenCalledTimes(
+      1,
+    );
     expect(installGameManagerUndoMoveHandlerRuntime).toHaveBeenCalledTimes(1);
     expect(installGameManagerUndoRestoredTilesRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerBaseStateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerReplayStateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedManagerProgressStateRuntime).toHaveBeenCalledTimes(1);
-    expect(installPreAccessorManagerForwardBindingsRuntime).toHaveBeenCalledTimes(1);
+    expect(
+      installPreAccessorManagerForwardBindingsRuntime,
+    ).toHaveBeenCalledTimes(1);
     expect(installSavedManagerTimerStateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedPayloadCandidateRuntime).toHaveBeenCalledTimes(1);
     expect(installSavedPayloadPersistFallbackRuntime).toHaveBeenCalledTimes(1);

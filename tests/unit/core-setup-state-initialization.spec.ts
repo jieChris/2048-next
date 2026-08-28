@@ -6,7 +6,7 @@ import {
   resetSetupTimerAndInputState,
   resolveSetupChallengeId,
   runSetupStateInitialization,
-  type SetupStateInitializationRuntime
+  type SetupStateInitializationRuntime,
 } from "../../src/core/setup-state-initialization";
 
 function createOperations(calls: string[] = []) {
@@ -15,7 +15,10 @@ function createOperations(calls: string[] = []) {
       calls.push("seed");
       return {
         hasInputSeed: false,
-        rankedSessionContext: { id: "rch_daily", ranked_session_token: "token" }
+        rankedSessionContext: {
+          id: "rch_daily",
+          ranked_session_token: "token",
+        },
       };
     }),
     resetSetupRuntimeState: vi.fn(() => calls.push("reset-runtime")),
@@ -27,7 +30,9 @@ function createOperations(calls: string[] = []) {
       calls.push("ranked-token");
       return "token";
     }),
-    initializeSetupSessionReplaySnapshot: vi.fn(() => calls.push("replay-snapshot")),
+    initializeSetupSessionReplaySnapshot: vi.fn(() =>
+      calls.push("replay-snapshot"),
+    ),
     initializeTimerMilestones: vi.fn(() => calls.push("timer-milestones")),
     resetRoundStatsState: vi.fn(() => calls.push("round-stats")),
     resetTimerUiForSetup: vi.fn(() => calls.push("timer-ui")),
@@ -39,8 +44,10 @@ function createOperations(calls: string[] = []) {
       calls.push("restore-state");
       return { restoredFromSavedState: true };
     }),
-    syncSetupSessionReplayV1InitTiles: vi.fn(() => calls.push("sync-replay-v1")),
-    finalizeSetupUiAndStatsState: vi.fn(() => calls.push("finalize-ui"))
+    syncSetupSessionReplayV1InitTiles: vi.fn(() =>
+      calls.push("sync-replay-v1"),
+    ),
+    finalizeSetupUiAndStatsState: vi.fn(() => calls.push("finalize-ui")),
   };
 }
 
@@ -49,15 +56,21 @@ describe("core setup state initialization runtime", () => {
     const manager = {
       getWindowLike: () => ({
         GAME_CHALLENGE_CONTEXT: {
-          id: "rch_window"
-        }
-      })
+          id: "rch_window",
+        },
+      }),
     };
 
-    expect(resolveSetupChallengeId(manager, { challengeId: "rch_options" }, { id: "rch_ranked" })).toBe(
-      "rch_options"
+    expect(
+      resolveSetupChallengeId(
+        manager,
+        { challengeId: "rch_options" },
+        { id: "rch_ranked" },
+      ),
+    ).toBe("rch_options");
+    expect(resolveSetupChallengeId(manager, {}, { id: "rch_ranked" })).toBe(
+      "rch_ranked",
     );
-    expect(resolveSetupChallengeId(manager, {}, { id: "rch_ranked" })).toBe("rch_ranked");
     expect(resolveSetupChallengeId(manager, {}, null)).toBe("rch_window");
   });
 
@@ -68,11 +81,11 @@ describe("core setup state initialization runtime", () => {
         {
           getWindowLike: () => {
             throw new Error("window unavailable");
-          }
+          },
         },
         {},
-        {}
-      )
+        {},
+      ),
     ).toBeNull();
   });
 
@@ -91,9 +104,11 @@ describe("core setup state initialization runtime", () => {
       timerUpdateIntervalMs: 250,
       timerFrozen: true,
       pendingMoveInput: { direction: 1, feedback: { id: 7 } },
+      pendingMoveInputQueue: [{ direction: 1 }],
+      pendingMoveInputDelayScheduled: true,
       moveInputFlushScheduled: true,
       lastMoveInputAt: 123,
-      moveDeadlineAt: 456
+      moveDeadlineAt: 456,
     };
 
     resetSetupTimerAndInputState(manager, { clearInterval });
@@ -112,16 +127,18 @@ describe("core setup state initialization runtime", () => {
       timerUpdateIntervalMs: null,
       timerFrozen: false,
       pendingMoveInput: null,
+      pendingMoveInputQueue: [],
+      pendingMoveInputDelayScheduled: false,
       moveInputFlushScheduled: false,
       lastMoveInputAt: 0,
-      moveDeadlineAt: null
+      moveDeadlineAt: null,
     });
   });
 
   it("invokes clear interval as an unbound callback", () => {
     const observedThisValues: unknown[] = [];
     const manager = {
-      timerID: 99
+      timerID: 99,
     };
     const clearInterval = function (this: unknown, _timerId: unknown) {
       observedThisValues.push(this);
@@ -152,7 +169,7 @@ describe("core setup state initialization runtime", () => {
       "timer-view",
       "restore-state",
       "sync-replay-v1",
-      "finalize-ui"
+      "finalize-ui",
     ]);
     expect(manager.challengeId).toBe("rch_daily");
     expect(manager.rankedSessionToken).toBe("token");
@@ -160,21 +177,23 @@ describe("core setup state initialization runtime", () => {
     expect(operations.resolveSetupChallengeId).toHaveBeenCalledWith(
       manager,
       setupOptions,
-      { id: "rch_daily", ranked_session_token: "token" }
+      { id: "rch_daily", ranked_session_token: "token" },
     );
-    expect(operations.resolveSetupRestoreAndInitialBoardState).toHaveBeenCalledWith(
+    expect(
+      operations.resolveSetupRestoreAndInitialBoardState,
+    ).toHaveBeenCalledWith(manager, false, setupOptions);
+    expect(operations.finalizeSetupUiAndStatsState).toHaveBeenCalledWith(
       manager,
-      false,
-      setupOptions
+      "timer",
+      true,
     );
-    expect(operations.finalizeSetupUiAndStatsState).toHaveBeenCalledWith(manager, "timer", true);
   });
 
   it("uses v2 only for a fresh game without a legacy replay or session context", () => {
     const freshOperations = createOperations();
     freshOperations.initializeSetupSeedAndReplayState.mockReturnValue({
       hasInputSeed: false,
-      rankedSessionContext: null
+      rankedSessionContext: null,
     });
     const freshManager: Record<string, unknown> = {};
 
@@ -184,7 +203,7 @@ describe("core setup state initialization runtime", () => {
     const replayOperations = createOperations();
     replayOperations.initializeSetupSeedAndReplayState.mockReturnValue({
       hasInputSeed: true,
-      rankedSessionContext: null
+      rankedSessionContext: null,
     });
     const replayManager: Record<string, unknown> = {};
 
@@ -201,9 +220,11 @@ describe("core setup state initialization runtime", () => {
     expect(operations.resolveSetupChallengeId).toHaveBeenCalledWith(
       manager,
       {},
-      { id: "rch_daily", ranked_session_token: "token" }
+      { id: "rch_daily", ranked_session_token: "token" },
     );
-    expect(operations.resolveSetupRestoreAndInitialBoardState).toHaveBeenCalledWith(manager, false, {});
+    expect(
+      operations.resolveSetupRestoreAndInitialBoardState,
+    ).toHaveBeenCalledWith(manager, false, {});
   });
 
   it("schedules ranked checkpoint restore after setup when required", () => {
@@ -214,15 +235,17 @@ describe("core setup state initialization runtime", () => {
       getWindowLike() {
         return {
           OnlineLeaderboardRuntime: {
-            scheduleRankedCheckpointRestore
-          }
+            scheduleRankedCheckpointRestore,
+          },
         };
-      }
+      },
     };
 
     runSetupStateInitialization(manager, undefined, {}, operations);
 
-    expect(scheduleRankedCheckpointRestore).toHaveBeenCalledWith(manager, { reason: "setup" });
+    expect(scheduleRankedCheckpointRestore).toHaveBeenCalledWith(manager, {
+      reason: "setup",
+    });
   });
 
   it("swallows ranked checkpoint scheduling errors", () => {
@@ -231,41 +254,51 @@ describe("core setup state initialization runtime", () => {
       needsRankedCheckpointRestore: true,
       getWindowLike() {
         throw new Error("window unavailable");
-      }
+      },
     };
 
-    expect(() => runSetupStateInitialization(manager, undefined, {}, operations)).not.toThrow();
+    expect(() =>
+      runSetupStateInitialization(manager, undefined, {}, operations),
+    ).not.toThrow();
   });
 
   it("creates and installs the legacy runtime shape without replacing an existing runtime", () => {
     const runtime = createSetupStateInitializationRuntime();
-    expect(runtime.runSetupStateInitialization).toBe(runSetupStateInitialization);
-    expect(runtime.resetSetupTimerAndInputState).toBe(resetSetupTimerAndInputState);
+    expect(runtime.runSetupStateInitialization).toBe(
+      runSetupStateInitialization,
+    );
+    expect(runtime.resetSetupTimerAndInputState).toBe(
+      resetSetupTimerAndInputState,
+    );
     expect(runtime.resolveSetupChallengeId).toBe(resolveSetupChallengeId);
 
-    const windowLike: { CoreSetupStateInitializationRuntime?: SetupStateInitializationRuntime } = {};
+    const windowLike: {
+      CoreSetupStateInitializationRuntime?: SetupStateInitializationRuntime;
+    } = {};
     expect(installSetupStateInitializationRuntime({ windowLike })).toBe(
+      windowLike.CoreSetupStateInitializationRuntime,
+    );
+    expect(
       windowLike.CoreSetupStateInitializationRuntime
-    );
-    expect(windowLike.CoreSetupStateInitializationRuntime?.runSetupStateInitialization).toBe(
-      runSetupStateInitialization
-    );
-    expect(windowLike.CoreSetupStateInitializationRuntime?.resetSetupTimerAndInputState).toBe(
-      resetSetupTimerAndInputState
-    );
-    expect(windowLike.CoreSetupStateInitializationRuntime?.resolveSetupChallengeId).toBe(
-      resolveSetupChallengeId
-    );
+        ?.runSetupStateInitialization,
+    ).toBe(runSetupStateInitialization);
+    expect(
+      windowLike.CoreSetupStateInitializationRuntime
+        ?.resetSetupTimerAndInputState,
+    ).toBe(resetSetupTimerAndInputState);
+    expect(
+      windowLike.CoreSetupStateInitializationRuntime?.resolveSetupChallengeId,
+    ).toBe(resolveSetupChallengeId);
 
     const existing = {
       runSetupStateInitialization: vi.fn(),
       resetSetupTimerAndInputState: vi.fn(),
-      resolveSetupChallengeId: vi.fn()
+      resolveSetupChallengeId: vi.fn(),
     };
     expect(
       installSetupStateInitializationRuntime({
-        windowLike: { CoreSetupStateInitializationRuntime: existing }
-      })
+        windowLike: { CoreSetupStateInitializationRuntime: existing },
+      }),
     ).toBe(existing);
   });
 });

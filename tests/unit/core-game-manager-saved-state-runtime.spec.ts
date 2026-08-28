@@ -14,9 +14,16 @@ function createElement(options?: {
   visibility?: string;
   pointerEvents?: string;
   attributes?: Record<string, string>;
-  legend?: { text?: string; className?: string; color?: string; fontSize?: string } | null;
+  legend?: {
+    text?: string;
+    className?: string;
+    color?: string;
+    fontSize?: string;
+  } | null;
 }) {
-  const attrs = new Map<string, string>(Object.entries(options?.attributes || {}));
+  const attrs = new Map<string, string>(
+    Object.entries(options?.attributes || {}),
+  );
   const legendOptions = options?.legend || null;
   const legend = legendOptions
     ? {
@@ -24,8 +31,8 @@ function createElement(options?: {
         className: legendOptions.className || "timertile",
         style: {
           color: legendOptions.color || "",
-          fontSize: legendOptions.fontSize || ""
-        }
+          fontSize: legendOptions.fontSize || "",
+        },
       }
     : null;
 
@@ -33,7 +40,7 @@ function createElement(options?: {
     style: {
       display: options?.display || "",
       visibility: options?.visibility || "",
-      pointerEvents: options?.pointerEvents || ""
+      pointerEvents: options?.pointerEvents || "",
     },
     textContent: "",
     getAttribute(name: string) {
@@ -48,26 +55,37 @@ function createElement(options?: {
     querySelector(selector: string) {
       if (selector === ".timertile") return legend;
       return null;
-    }
+    },
   };
 }
 
-function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, unknown>) {
+function loadSavedStateRuntime(
+  slotIds: number[],
+  extraContext?: Record<string, unknown>,
+) {
   const clientRecordScriptPath = path.resolve(
     process.cwd(),
-    "js/core_game_manager_client_record_id_runtime.js"
+    "js/core_game_manager_client_record_id_runtime.js",
   );
-  const scriptPath = path.resolve(process.cwd(), "js/core_game_manager_saved_state_helpers_runtime.js");
+  const scriptPath = path.resolve(
+    process.cwd(),
+    "js/core_game_manager_saved_state_helpers_runtime.js",
+  );
+  const persistenceScriptPath = path.resolve(
+    process.cwd(),
+    "js/core_game_manager_saved_state_persistence_runtime.js",
+  );
   const clientRecordScript = readFileSync(clientRecordScriptPath, "utf8");
   const script = readFileSync(scriptPath, "utf8");
-    const context = {
-      console,
-      GameManager: {
+  const persistenceScript = readFileSync(persistenceScriptPath, "utf8");
+  const context = {
+    console,
+    GameManager: {
       TIMER_SLOT_IDS: slotIds,
       SAVED_GAME_STATE_VERSION: 1,
       SAVED_GAME_STATE_KEY_PREFIX: "savedGameStateByMode:v1:",
       SAVED_GAME_STATE_LITE_KEY_PREFIX: "savedGameStateLiteByMode:v1:",
-      SAVED_GAME_STATE_WINDOW_NAME_KEY: "__gm_saved_state_v1__"
+      SAVED_GAME_STATE_WINDOW_NAME_KEY: "__gm_saved_state_v1__",
     },
     isNonArrayObject(value: unknown) {
       return !!value && typeof value === "object" && !Array.isArray(value);
@@ -77,7 +95,9 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     },
     resolveManagerElementById(manager: Record<string, unknown>, id: string) {
       const elements = (manager.elements || {}) as Record<string, unknown>;
-      return Object.prototype.hasOwnProperty.call(elements, id) ? elements[id] : null;
+      return Object.prototype.hasOwnProperty.call(elements, id)
+        ? elements[id]
+        : null;
     },
     resolveManagerDocumentLike() {
       return null;
@@ -86,73 +106,120 @@ function loadSavedStateRuntime(slotIds: number[], extraContext?: Record<string, 
     CoreSavedManagerReplayStateRuntime: createSavedManagerReplayStateRuntime(),
     CoreSavedManagerTimerStateRuntime: createSavedManagerTimerStateRuntime(),
     CoreSavedPayloadRichnessRuntime: createSavedPayloadRichnessRuntime(),
-    ...(extraContext || {})
+    ...(extraContext || {}),
   } as Record<string, unknown>;
 
   vm.runInNewContext(clientRecordScript, context);
   vm.runInNewContext(script, context);
+  vm.runInNewContext(persistenceScript, context);
   return context as {
-    applySavedTimerFixedRowsState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
-    applySavedDynamicTimerRowsState: (manager: Record<string, unknown>, container: Record<string, unknown>, rowsState: unknown[], cappedState: Record<string, unknown>) => void;
-    applySavedTimerPostRestoreState: (manager: Record<string, unknown>, saved: Record<string, unknown>, cappedState: Record<string, unknown>) => void;
-    applySavedTimerSubState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
-    applySavedManagerReplayState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
-    applySavedManagerProgressState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
-    applySavedManagerBaseState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
-    collectSavedTimerFixedRowsState: (manager: Record<string, unknown>) => Record<string, unknown>;
-    buildSavedGameStateDiagnosticsPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
-    buildSavedGameStateTimerCorePayload: (manager: Record<string, unknown>) => Record<string, unknown>;
-    applySavedManagerTimerState: (manager: Record<string, unknown>, saved: Record<string, unknown>) => void;
+    applySavedTimerFixedRowsState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+      cappedState: Record<string, unknown>,
+    ) => void;
+    applySavedDynamicTimerRowsState: (
+      manager: Record<string, unknown>,
+      container: Record<string, unknown>,
+      rowsState: unknown[],
+      cappedState: Record<string, unknown>,
+    ) => void;
+    applySavedTimerPostRestoreState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+      cappedState: Record<string, unknown>,
+    ) => void;
+    applySavedTimerSubState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+    ) => void;
+    applySavedManagerReplayState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+    ) => void;
+    applySavedManagerProgressState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+    ) => void;
+    applySavedManagerBaseState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+    ) => void;
+    collectSavedTimerFixedRowsState: (
+      manager: Record<string, unknown>,
+    ) => Record<string, unknown>;
+    buildSavedGameStateDiagnosticsPayload: (
+      manager: Record<string, unknown>,
+    ) => Record<string, unknown>;
+    buildSavedGameStateTimerCorePayload: (
+      manager: Record<string, unknown>,
+    ) => Record<string, unknown>;
+    applySavedManagerTimerState: (
+      manager: Record<string, unknown>,
+      saved: Record<string, unknown>,
+    ) => void;
     normalizeCappedRepeatLegendClasses: (
       manager: Record<string, unknown>,
-      cappedState: Record<string, unknown>
+      cappedState: Record<string, unknown>,
     ) => void;
-    buildSavedGameStateProgressPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
-    buildSavedGameStateNoXSelectionPayload: (manager: Record<string, unknown>) => Record<string, unknown>;
+    buildSavedGameStateProgressPayload: (
+      manager: Record<string, unknown>,
+    ) => Record<string, unknown>;
+    buildSavedGameStateNoXSelectionPayload: (
+      manager: Record<string, unknown>,
+    ) => Record<string, unknown>;
     applySavedNoXSelectionState: (
       manager: Record<string, unknown>,
-      saved: Record<string, unknown>
+      saved: Record<string, unknown>,
     ) => void;
-    buildSavedGameStatePayload: (manager: Record<string, unknown>, now: number) => Record<string, unknown> | null;
+    buildSavedGameStatePayload: (
+      manager: Record<string, unknown>,
+      now: number,
+    ) => Record<string, unknown> | null;
     resolveReplayStringForSavedPayload: (
       manager: Record<string, unknown>,
       now: number,
-      saveOptions?: Record<string, unknown>
+      saveOptions?: Record<string, unknown>,
     ) => string;
     collectSavedTimerSubState: (
       manager: Record<string, unknown>,
-      documentLike: Record<string, unknown> | null
+      documentLike: Record<string, unknown> | null,
     ) => Record<string, unknown>;
-    resolveLegacySecondaryTimerSubStateFromRows: (rows: unknown) => Record<string, unknown>;
+    resolveLegacySecondaryTimerSubStateFromRows: (
+      rows: unknown,
+    ) => Record<string, unknown>;
     buildLiteSavedGameStatePayloadFallback: (
       manager: Record<string, unknown>,
-      payload: Record<string, unknown>
+      payload: Record<string, unknown>,
     ) => Record<string, unknown> | null;
     buildLiteSavedGameStatePayload: (
       manager: Record<string, unknown>,
-      payload: Record<string, unknown>
+      payload: Record<string, unknown>,
     ) => Record<string, unknown> | null;
-    clearSavedGameState: (manager: Record<string, unknown>, modeKey?: string) => void;
+    clearSavedGameState: (
+      manager: Record<string, unknown>,
+      modeKey?: string,
+    ) => void;
     resolveSavedPayloadRichnessScore: (payload: unknown) => number;
     resolveSavedStateRestoreDecision: (
       manager: Record<string, unknown>,
-      saved: Record<string, unknown>
+      saved: Record<string, unknown>,
     ) => { canRestore: boolean; shouldClearSavedState: boolean };
     resolveLatestSavedPayloadCandidate: (
-      candidates: Array<Record<string, unknown> | null | undefined>
+      candidates: Array<Record<string, unknown> | null | undefined>,
     ) => Record<string, unknown> | null;
     applySavedGameStatePersistTimestamps: (
       manager: Record<string, unknown>,
       persistPlan: Record<string, unknown>,
       persistResult: Record<string, unknown>,
-      now: number
+      now: number,
     ) => void;
     persistSavedPayloadWithLiteFallback: (
       manager: Record<string, unknown>,
       key: string,
       liteKey: string,
       fullPayload: Record<string, unknown> | null,
-      litePayload: Record<string, unknown>
+      litePayload: Record<string, unknown>,
     ) => Record<string, unknown>;
   };
 }
@@ -169,13 +236,16 @@ describe("core game manager saved state runtime", () => {
       },
       applySecondaryTimerRowsState() {
         calls.push("rows");
-      }
+      },
     });
 
-    runtime.applySavedTimerSubState({}, {
-      custom_secondary_timer_rule_text: "32\n32+2",
-      timer_secondary_rows: [{ rule: "32+2", time: "1.234" }]
-    });
+    runtime.applySavedTimerSubState(
+      {},
+      {
+        custom_secondary_timer_rule_text: "32\n32+2",
+        timer_secondary_rows: [{ rule: "32+2", time: "1.234" }],
+      },
+    );
 
     expect(calls).toEqual(["rules:32\n32+2", "collapsed", "rows"]);
   });
@@ -184,11 +254,11 @@ describe("core game manager saved state runtime", () => {
     const resolveSavedPayloadRichnessScore = vi.fn(() => 7);
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedPayloadRichnessRuntime: {
-        resolveSavedPayloadRichnessScore
-      }
+        resolveSavedPayloadRichnessScore,
+      },
     });
     const payload = {
-      replay_string: "REPLAY_v1RPL_B64_saved"
+      replay_string: "REPLAY_v1RPL_B64_saved",
     };
 
     expect(runtime.resolveSavedPayloadRichnessScore(payload)).toBe(7);
@@ -199,24 +269,26 @@ describe("core game manager saved state runtime", () => {
     const resolveLatestSavedPayloadCandidate = vi.fn(() => ({ saved_at: 2 }));
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedPayloadCandidateRuntime: {
-        resolveLatestSavedPayloadCandidate
-      }
+        resolveLatestSavedPayloadCandidate,
+      },
     });
     const candidates = [{ saved_at: 1 }, { saved_at: 2 }];
 
-    expect(runtime.resolveLatestSavedPayloadCandidate(candidates)).toEqual({ saved_at: 2 });
+    expect(runtime.resolveLatestSavedPayloadCandidate(candidates)).toEqual({
+      saved_at: 2,
+    });
     expect(resolveLatestSavedPayloadCandidate).toHaveBeenCalledWith(candidates);
   });
 
   it("delegates saved payload persist fallback sequencing to the TypeScript runtime", () => {
     const persistSavedPayloadWithLiteFallback = vi.fn(() => ({
       persisted: true,
-      persistedFull: false
+      persistedFull: false,
     }));
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedPayloadPersistFallbackRuntime: {
-        persistSavedPayloadWithLiteFallback
-      }
+        persistSavedPayloadWithLiteFallback,
+      },
     });
     const manager = { modeKey: "practice" };
     const fullPayload = { saved_at: 1 };
@@ -228,42 +300,50 @@ describe("core game manager saved state runtime", () => {
         "full-key",
         "lite-key",
         fullPayload,
-        litePayload
-      )
+        litePayload,
+      ),
     ).toEqual({ persisted: true, persistedFull: false });
     expect(persistSavedPayloadWithLiteFallback).toHaveBeenCalledWith(
-      { manager, key: "full-key", liteKey: "lite-key", fullPayload, litePayload },
+      {
+        manager,
+        key: "full-key",
+        liteKey: "lite-key",
+        fullPayload,
+        litePayload,
+      },
       expect.objectContaining({
         persistPayload: expect.any(Function),
-        clearSavedState: expect.any(Function)
-      })
+        clearSavedState: expect.any(Function),
+      }),
     );
   });
 
   it("delegates saved payload replay string resolution to the TypeScript runtime", () => {
-    const resolveReplayStringForSavedPayload = vi.fn(() => "REPLAY_v1RPL_B64_runtime");
+    const resolveReplayStringForSavedPayload = vi.fn(
+      () => "REPLAY_v1RPL_B64_runtime",
+    );
     const serializeReplay = vi.fn(() => "REPLAY_v1RPL_B64_live");
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedPayloadReplayStringRuntime: {
-        resolveReplayStringForSavedPayload
+        resolveReplayStringForSavedPayload,
       },
-      serializeReplay
+      serializeReplay,
     });
     const manager = {
-      rescueReplayString: "REPLAY_v1RPL_B64_rescue"
+      rescueReplayString: "REPLAY_v1RPL_B64_rescue",
     };
     const saveOptions = { force: true };
 
-    expect(runtime.resolveReplayStringForSavedPayload(manager, 10_000, saveOptions)).toBe(
-      "REPLAY_v1RPL_B64_runtime"
-    );
+    expect(
+      runtime.resolveReplayStringForSavedPayload(manager, 10_000, saveOptions),
+    ).toBe("REPLAY_v1RPL_B64_runtime");
     expect(resolveReplayStringForSavedPayload).toHaveBeenCalledWith(
       manager,
       10_000,
       saveOptions,
       expect.objectContaining({
-        serializeReplay: expect.any(Function)
-      })
+        serializeReplay: expect.any(Function),
+      }),
     );
   });
 
@@ -271,16 +351,16 @@ describe("core game manager saved state runtime", () => {
     const applySavedManagerBaseState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerBaseStateRuntime: {
-        applySavedManagerBaseState
-      }
+        applySavedManagerBaseState,
+      },
     });
     const manager = {
       setRuntimeScore: vi.fn(),
-      clonePlain: vi.fn((value) => ({ cloned: value }))
+      clonePlain: vi.fn((value) => ({ cloned: value })),
     };
     const saved = {
       score: 128,
-      client_record_id: "rec_saved"
+      client_record_id: "rec_saved",
     };
 
     runtime.applySavedManagerBaseState(manager, saved);
@@ -291,8 +371,8 @@ describe("core game manager saved state runtime", () => {
       expect.objectContaining({
         setRuntimeScore: expect.any(Function),
         clonePlain: expect.any(Function),
-        assignClientRecordId: expect.any(Function)
-      })
+        assignClientRecordId: expect.any(Function),
+      }),
     );
   });
 
@@ -300,8 +380,8 @@ describe("core game manager saved state runtime", () => {
     const applySavedStatePersistTimestamps = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedStatePersistTimestampsRuntime: {
-        applySavedStatePersistTimestamps
-      }
+        applySavedStatePersistTimestamps,
+      },
     });
     const manager = {};
     const fullPayload = { saved_at: 123 };
@@ -310,13 +390,13 @@ describe("core game manager saved state runtime", () => {
       manager,
       { fullPayload },
       { persistedFull: true },
-      1234
+      1234,
     );
 
     expect(applySavedStatePersistTimestamps).toHaveBeenCalledWith(manager, {
       now: 1234,
       hasFullPayload: true,
-      persistedFull: true
+      persistedFull: true,
     });
   });
 
@@ -324,17 +404,17 @@ describe("core game manager saved state runtime", () => {
     const applySavedManagerReplayState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerReplayStateRuntime: {
-        applySavedManagerReplayState
-      }
+        applySavedManagerReplayState,
+      },
     });
     const manager = {
       moveHistory: [],
       setRuntimeUndoStack: vi.fn(),
-      setRuntimeRedoStack: vi.fn()
+      setRuntimeRedoStack: vi.fn(),
     };
     const saved = {
       move_history: [0, 1],
-      replay_compact_log: "compact"
+      replay_compact_log: "compact",
     };
 
     runtime.applySavedManagerReplayState(manager, saved);
@@ -343,8 +423,8 @@ describe("core game manager saved state runtime", () => {
       manager,
       saved,
       expect.objectContaining({
-        shouldRestoreSavedStateUndoHistory: expect.any(Function)
-      })
+        shouldRestoreSavedStateUndoHistory: expect.any(Function),
+      }),
     );
   });
 
@@ -352,15 +432,15 @@ describe("core game manager saved state runtime", () => {
     const applySavedManagerProgressState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerProgressStateRuntime: {
-        applySavedManagerProgressState
-      }
+        applySavedManagerProgressState,
+      },
     });
     const manager = {
-      moveHistory: [0, -1]
+      moveHistory: [0, -1],
     };
     const saved = {
       successful_move_count: 0,
-      undo_used: 0
+      undo_used: 0,
     };
 
     runtime.applySavedManagerProgressState(manager, saved);
@@ -372,17 +452,16 @@ describe("core game manager saved state runtime", () => {
     const applySavedManagerTimerState = vi.fn();
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerTimerStateRuntime: {
-        applySavedManagerTimerState
-      }
+        applySavedManagerTimerState,
+      },
     });
     const manager = {
-      accumulatedTime: 0
-      ,
+      accumulatedTime: 0,
       setRuntimeUndoStack: vi.fn(),
-      setRuntimeRedoStack: vi.fn()
+      setRuntimeRedoStack: vi.fn(),
     };
     const saved = {
-      duration_ms: 1234
+      duration_ms: 1234,
     };
 
     runtime.applySavedManagerTimerState(manager, saved);
@@ -396,9 +475,9 @@ describe("core game manager saved state runtime", () => {
     const resolveManagerDocumentLike = vi.fn(() => documentLike);
     const runtime = loadSavedStateRuntime([32768], {
       CoreCappedRepeatLegendRuntime: {
-        normalizeCappedRepeatLegendClasses
+        normalizeCappedRepeatLegendClasses,
       },
-      resolveManagerDocumentLike
+      resolveManagerDocumentLike,
     });
     const manager = { id: "manager" };
     const cappedState = { isCappedMode: true };
@@ -409,10 +488,11 @@ describe("core game manager saved state runtime", () => {
       manager,
       cappedState,
       expect.objectContaining({
-        resolveManagerDocumentLike: expect.any(Function)
-      })
+        resolveManagerDocumentLike: expect.any(Function),
+      }),
     );
-    const operations = normalizeCappedRepeatLegendClasses.mock.calls[0]?.[2] as {
+    const operations = normalizeCappedRepeatLegendClasses.mock
+      .calls[0]?.[2] as {
       resolveManagerDocumentLike: (manager: Record<string, unknown>) => unknown;
     };
     expect(operations.resolveManagerDocumentLike(manager)).toBe(documentLike);
@@ -423,32 +503,38 @@ describe("core game manager saved state runtime", () => {
     const resolved = {
       timer_sub_8192: "0:08.192",
       timer_sub_16384: "0:16.384",
-      timer_sub_visible: true
+      timer_sub_visible: true,
     };
     const resolveLegacySecondaryTimerSubStateFromRows = vi.fn(() => resolved);
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerTimerStateRuntime: {
         applySavedManagerTimerState: vi.fn(),
-        resolveLegacySecondaryTimerSubStateFromRows
-      }
+        resolveLegacySecondaryTimerSubStateFromRows,
+      },
     });
-    const rows = [{ parent: 32768, child: 8192, time: "0:08.192", display: "block" }];
+    const rows = [
+      { parent: 32768, child: 8192, time: "0:08.192", display: "block" },
+    ];
 
-    expect(runtime.resolveLegacySecondaryTimerSubStateFromRows(rows)).toBe(resolved);
-    expect(resolveLegacySecondaryTimerSubStateFromRows).toHaveBeenCalledWith(rows);
+    expect(runtime.resolveLegacySecondaryTimerSubStateFromRows(rows)).toBe(
+      resolved,
+    );
+    expect(resolveLegacySecondaryTimerSubStateFromRows).toHaveBeenCalledWith(
+      rows,
+    );
   });
 
   it("persists and restores selected NO X target without reopening selection", () => {
     const buildSavedGameStateNoXSelectionPayload = vi.fn(() => ({
       no_x_target: 256,
-      no_x_selection_pending: false
+      no_x_selection_pending: false,
     }));
     const applySavedNoXSelectionState = vi.fn();
     const runtime = loadSavedStateRuntime([], {
       CoreNoXSelectionRuntime: {
         buildSavedGameStateNoXSelectionPayload,
-        applySavedNoXSelectionState
-      }
+        applySavedNoXSelectionState,
+      },
     });
     const manager = {
       modeKey: "nox_4x4_pow2_no_undo",
@@ -456,14 +542,14 @@ describe("core game manager saved state runtime", () => {
       specialRules: { no_x_enabled: true, no_x_target: 256 },
       modeConfig: {
         key: "nox_4x4_pow2_no_undo",
-        special_rules: { no_x_enabled: true, no_x_target: 256 }
+        special_rules: { no_x_enabled: true, no_x_target: 256 },
       },
-      noXSelectionPending: false
+      noXSelectionPending: false,
     };
 
     expect(runtime.buildSavedGameStateNoXSelectionPayload(manager)).toEqual({
       no_x_target: 256,
-      no_x_selection_pending: false
+      no_x_selection_pending: false,
     });
     const restoredManager = {
       modeKey: "nox_4x4_pow2_no_undo",
@@ -471,19 +557,24 @@ describe("core game manager saved state runtime", () => {
       specialRules: { no_x_enabled: true, no_x_target: 8192 },
       modeConfig: {
         key: "nox_4x4_pow2_no_undo",
-        special_rules: { no_x_enabled: true, no_x_target: 8192 }
+        special_rules: { no_x_enabled: true, no_x_target: 8192 },
       },
-      noXSelectionPending: true
+      noXSelectionPending: true,
     };
     const saved = {
       no_x_target: 256,
-      no_x_selection_pending: false
+      no_x_selection_pending: false,
     };
 
     runtime.applySavedNoXSelectionState(restoredManager, saved);
 
-    expect(buildSavedGameStateNoXSelectionPayload).toHaveBeenCalledWith(manager);
-    expect(applySavedNoXSelectionState).toHaveBeenCalledWith(restoredManager, saved);
+    expect(buildSavedGameStateNoXSelectionPayload).toHaveBeenCalledWith(
+      manager,
+    );
+    expect(applySavedNoXSelectionState).toHaveBeenCalledWith(
+      restoredManager,
+      saved,
+    );
   });
 
   it("delegates saved timer sub-state composition to the TypeScript runtime", () => {
@@ -494,33 +585,44 @@ describe("core game manager saved state runtime", () => {
       timer_secondary_expanded_parents: expandedParents,
       timer_sub_8192: "0:08.192",
       timer_sub_16384: "",
-      timer_sub_visible: false
+      timer_sub_visible: false,
     };
     const buildSavedTimerSubState = vi.fn(() => resolved);
     const runtime = loadSavedStateRuntime([32768], {
       CoreSavedManagerTimerStateRuntime: {
         applySavedManagerTimerState: vi.fn(),
-        buildSavedTimerSubState
+        buildSavedTimerSubState,
       },
       collectSecondaryTimerRowsState: vi.fn(() => secondaryRows),
-      collectSecondaryTimerExpandedParents: vi.fn(() => expandedParents)
+      collectSecondaryTimerExpandedParents: vi.fn(() => expandedParents),
     });
     const manager = { id: "manager" };
 
     expect(runtime.collectSavedTimerSubState(manager, {})).toBe(resolved);
-    expect(buildSavedTimerSubState).toHaveBeenCalledWith({ secondaryRows, expandedParents });
+    expect(buildSavedTimerSubState).toHaveBeenCalledWith({
+      secondaryRows,
+      expandedParents,
+    });
   });
 
   it("does not persist scroll-hidden fixed timer rows as business-hidden", () => {
     const runtime = loadSavedStateRuntime([32768, 65536]);
     const row32k = createElement({
       display: "",
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "13px" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "13px",
+      },
     });
     const row64k = createElement({
       display: "none",
       attributes: { "data-scroll-hidden": "1" },
-      legend: { text: "65536", className: "timertile timer-legend-65536", fontSize: "12px" }
+      legend: {
+        text: "65536",
+        className: "timertile timer-legend-65536",
+        fontSize: "12px",
+      },
     });
     const manager = {
       getTimerRowEl(slotId: string) {
@@ -528,27 +630,37 @@ describe("core game manager saved state runtime", () => {
       },
       elements: {
         timer32768: { textContent: "1:23.456" },
-        timer65536: { textContent: "2:34.567" }
-      }
+        timer65536: { textContent: "2:34.567" },
+      },
     };
 
     const snapshot = runtime.collectSavedTimerFixedRowsState(manager);
 
     expect((snapshot["32768"] as Record<string, unknown>).display).toBe("");
     expect((snapshot["65536"] as Record<string, unknown>).display).toBe("");
-    expect((snapshot["65536"] as Record<string, unknown>).timerText).toBe("2:34.567");
+    expect((snapshot["65536"] as Record<string, unknown>).timerText).toBe(
+      "2:34.567",
+    );
   });
 
   it("ignores legacy scroll-hidden display:none when restoring fixed timer rows", () => {
     const runtime = loadSavedStateRuntime([32768, 65536]);
     const row32k = createElement({
       display: "",
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "13px" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "13px",
+      },
     });
     const row64k = createElement({
       display: "none",
       attributes: { "data-scroll-hidden": "1" },
-      legend: { text: "65536", className: "timertile timer-legend-65536", fontSize: "12px" }
+      legend: {
+        text: "65536",
+        className: "timertile timer-legend-65536",
+        fontSize: "12px",
+      },
     });
     const timer32k = { textContent: "" };
     const timer64k = { textContent: "" };
@@ -558,11 +670,11 @@ describe("core game manager saved state runtime", () => {
       },
       elements: {
         timer32768: timer32k,
-        timer65536: timer64k
+        timer65536: timer64k,
       },
       getCappedTimerLegendClass() {
         return "timertile";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -577,7 +689,7 @@ describe("core game manager saved state runtime", () => {
             timerText: "3:21.000",
             legendText: "32768",
             legendClass: "timertile timer-legend-32768",
-            legendFontSize: "13px"
+            legendFontSize: "13px",
           },
           "65536": {
             display: "none",
@@ -587,11 +699,11 @@ describe("core game manager saved state runtime", () => {
             timerText: "6:42.000",
             legendText: "65536",
             legendClass: "timertile timer-legend-65536",
-            legendFontSize: "12px"
-          }
-        }
+            legendFontSize: "12px",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(row32k.style.display).toBe("");
@@ -603,22 +715,34 @@ describe("core game manager saved state runtime", () => {
   it("uses client fixed timer legend font size when saved size is empty", () => {
     const runtime = loadSavedStateRuntime([4096, 32768]);
     const row4096 = createElement({
-      legend: { text: "4096", className: "timertile timer-legend-4096", fontSize: "14px" }
+      legend: {
+        text: "4096",
+        className: "timertile timer-legend-4096",
+        fontSize: "14px",
+      },
     });
     const row32768 = createElement({
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "13px" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "13px",
+      },
     });
     const manager = {
       getTimerRowEl(slotId: string) {
-        return slotId === "4096" ? row4096 : slotId === "32768" ? row32768 : null;
+        return slotId === "4096"
+          ? row4096
+          : slotId === "32768"
+            ? row32768
+            : null;
       },
       elements: {
         timer4096: { textContent: "" },
-        timer32768: { textContent: "" }
+        timer32768: { textContent: "" },
       },
       getCappedTimerLegendClass() {
         return "timertile";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -629,17 +753,17 @@ describe("core game manager saved state runtime", () => {
             timerText: "15:51.578",
             legendText: "4096",
             legendClass: "timertile timer-legend-4096",
-            legendFontSize: ""
+            legendFontSize: "",
           },
           "32768": {
             timerText: "1:39:11.334",
             legendText: "32768",
             legendClass: "timertile timer-legend-32768",
-            legendFontSize: ""
-          }
-        }
+            legendFontSize: "",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(row4096.querySelector(".timertile")?.style.fontSize).toBe("14px");
@@ -649,10 +773,18 @@ describe("core game manager saved state runtime", () => {
   it("self-heals empty restored fixed timer legend font size for five digit labels", () => {
     const runtime = loadSavedStateRuntime([32768, 65536]);
     const row32768 = createElement({
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "",
+      },
     });
     const row65536 = createElement({
-      legend: { text: "65536", className: "timertile timer-legend-65536", fontSize: "" }
+      legend: {
+        text: "65536",
+        className: "timertile timer-legend-65536",
+        fontSize: "",
+      },
     });
     const manager = {
       getTimerRowEl(slotId: string) {
@@ -662,11 +794,11 @@ describe("core game manager saved state runtime", () => {
       },
       elements: {
         timer32768: { textContent: "" },
-        timer65536: { textContent: "" }
+        timer65536: { textContent: "" },
       },
       getCappedTimerLegendClass() {
         return "timertile";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -677,17 +809,17 @@ describe("core game manager saved state runtime", () => {
             timerText: "1:39:11.334",
             legendText: "32768",
             legendClass: "timertile timer-legend-32768",
-            legendFontSize: ""
+            legendFontSize: "",
           },
           "65536": {
             timerText: "2:00:00.000",
             legendText: "65536",
             legendClass: "timertile timer-legend-65536",
-            legendFontSize: ""
-          }
-        }
+            legendFontSize: "",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
@@ -697,10 +829,18 @@ describe("core game manager saved state runtime", () => {
   it("self-heals legacy oversized restored fixed timer legend font size for five digit labels", () => {
     const runtime = loadSavedStateRuntime([16384, 32768]);
     const row16384 = createElement({
-      legend: { text: "16384", className: "timertile timer-legend-16384", fontSize: "" }
+      legend: {
+        text: "16384",
+        className: "timertile timer-legend-16384",
+        fontSize: "",
+      },
     });
     const row32768 = createElement({
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "",
+      },
     });
     const manager = {
       getTimerRowEl(slotId: string) {
@@ -710,11 +850,11 @@ describe("core game manager saved state runtime", () => {
       },
       elements: {
         timer16384: { textContent: "" },
-        timer32768: { textContent: "" }
+        timer32768: { textContent: "" },
       },
       getCappedTimerLegendClass() {
         return "timertile";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -725,17 +865,17 @@ describe("core game manager saved state runtime", () => {
             timerText: "48:00.000",
             legendText: "16384",
             legendClass: "timertile timer-legend-16384",
-            legendFontSize: "13px"
+            legendFontSize: "13px",
           },
           "32768": {
             timerText: "1:39:11.334",
             legendText: "32768",
             legendClass: "timertile timer-legend-32768",
-            legendFontSize: "12px"
-          }
-        }
+            legendFontSize: "12px",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(row16384.querySelector(".timertile")?.style.fontSize).toBe("11px");
@@ -743,7 +883,9 @@ describe("core game manager saved state runtime", () => {
   });
 
   it("ignores restored fixed timer row presentation styles and uses client rendering rules", () => {
-    const runtime = loadSavedStateRuntime([1024, 2048, 4096, 8192, 16384, 32768]);
+    const runtime = loadSavedStateRuntime([
+      1024, 2048, 4096, 8192, 16384, 32768,
+    ]);
     const rows: Record<string, ReturnType<typeof createElement>> = {};
     const timers: Record<string, { textContent: string }> = {};
     for (const slotId of ["1024", "2048", "4096", "8192", "16384", "32768"]) {
@@ -751,7 +893,11 @@ describe("core game manager saved state runtime", () => {
         display: "",
         visibility: "",
         pointerEvents: "",
-        legend: { text: slotId, className: `timertile timer-legend-${slotId}`, fontSize: "" }
+        legend: {
+          text: slotId,
+          className: `timertile timer-legend-${slotId}`,
+          fontSize: "",
+        },
       });
       timers[`timer${slotId}`] = { textContent: "" };
     }
@@ -762,37 +908,93 @@ describe("core game manager saved state runtime", () => {
       elements: timers,
       getCappedTimerLegendClass() {
         return "timertile timer-legend-32768";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
       manager,
       {
         timer_fixed_rows: {
-          "1024": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "1.000", legendText: "1024", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
-          "2048": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "2.000", legendText: "2048", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
-          "4096": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "3.000", legendText: "4096", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
-          "8192": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "4.000", legendText: "8192", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
-          "16384": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "5.000", legendText: "16384", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" },
-          "32768": { display: "none", visibility: "hidden", pointerEvents: "none", timerText: "6.000", legendText: "32768", legendClass: "timertile timer-legend-bad", legendFontSize: "40px" }
-        }
+          "1024": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "1.000",
+            legendText: "1024",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+          "2048": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "2.000",
+            legendText: "2048",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+          "4096": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "3.000",
+            legendText: "4096",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+          "8192": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "4.000",
+            legendText: "8192",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+          "16384": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "5.000",
+            legendText: "16384",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+          "32768": {
+            display: "none",
+            visibility: "hidden",
+            pointerEvents: "none",
+            timerText: "6.000",
+            legendText: "32768",
+            legendClass: "timertile timer-legend-bad",
+            legendFontSize: "40px",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     for (const slotId of ["1024", "2048", "4096", "8192"]) {
       expect(rows[slotId].style.display).toBe("");
       expect(rows[slotId].style.visibility).toBe("");
       expect(rows[slotId].style.pointerEvents).toBe("");
-      expect(rows[slotId].querySelector(".timertile")?.className).toBe(`timertile timer-legend-${slotId}`);
-      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe("14px");
+      expect(rows[slotId].querySelector(".timertile")?.className).toBe(
+        `timertile timer-legend-${slotId}`,
+      );
+      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe(
+        "14px",
+      );
     }
     for (const slotId of ["16384", "32768"]) {
       expect(rows[slotId].style.display).toBe("");
       expect(rows[slotId].style.visibility).toBe("");
       expect(rows[slotId].style.pointerEvents).toBe("");
-      expect(rows[slotId].querySelector(".timertile")?.className).toBe(`timertile timer-legend-${slotId}`);
-      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe("11px");
+      expect(rows[slotId].querySelector(".timertile")?.className).toBe(
+        `timertile timer-legend-${slotId}`,
+      );
+      expect(rows[slotId].querySelector(".timertile")?.style.fontSize).toBe(
+        "11px",
+      );
     }
     expect(timers.timer32768.textContent).toBe("6.000");
   });
@@ -800,18 +1002,22 @@ describe("core game manager saved state runtime", () => {
   it("uses the legend font-size API for left timer labels without touching right timer values", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const row32768 = createElement({
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "",
+      },
     });
     const timer32768 = {
       textContent: "",
-      style: { fontSize: "19px" }
+      style: { fontSize: "19px" },
     };
     const manager = {
       getTimerRowEl(slotId: string) {
         return slotId === "32768" ? row32768 : null;
       },
       elements: {
-        timer32768
+        timer32768,
       },
       getCappedTimerLegendClass() {
         return "timertile timer-legend-32768";
@@ -820,8 +1026,10 @@ describe("core game manager saved state runtime", () => {
         return "11px";
       },
       getCappedTimerFontSize() {
-        throw new Error("right timer font-size API must not be used for legend labels");
-      }
+        throw new Error(
+          "right timer font-size API must not be used for legend labels",
+        );
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -831,14 +1039,16 @@ describe("core game manager saved state runtime", () => {
           "32768": {
             repeat: "2",
             timerText: "6.000",
-            legendText: "32768"
-          }
-        }
+            legendText: "32768",
+          },
+        },
       },
-      { isCappedMode: true, cappedTargetValue: 32768 }
+      { isCappedMode: true, cappedTargetValue: 32768 },
     );
 
-    expect(row32768.querySelector(".timertile")?.className).toBe("timertile timer-legend-32768");
+    expect(row32768.querySelector(".timertile")?.className).toBe(
+      "timertile timer-legend-32768",
+    );
     expect(row32768.querySelector(".timertile")?.style.fontSize).toBe("11px");
     expect(timer32768.textContent).toBe("6.000");
     expect(timer32768.style.fontSize).toBe("19px");
@@ -856,7 +1066,11 @@ describe("core game manager saved state runtime", () => {
       getAttribute(name: string): string | null;
     };
     function createFakeElement(): FakeElement {
-      const style = { color: "", fontSize: "" } as { cssText: string; color: string; fontSize: string };
+      const style = { color: "", fontSize: "" } as {
+        cssText: string;
+        color: string;
+        fontSize: string;
+      };
       Object.defineProperty(style, "cssText", {
         get() {
           return `color: ${style.color}; font-size: ${style.fontSize};`;
@@ -866,7 +1080,7 @@ describe("core game manager saved state runtime", () => {
           const fontMatch = String(value).match(/font-size:\s*([^;]+)/);
           if (colorMatch) style.color = colorMatch[1].trim();
           if (fontMatch) style.fontSize = fontMatch[1].trim();
-        }
+        },
       });
       return {
         children: [],
@@ -882,17 +1096,14 @@ describe("core game manager saved state runtime", () => {
         },
         getAttribute(name: string) {
           return this.attributes.get(name) || null;
-        }
+        },
       };
     }
-    const runtime = loadSavedStateRuntime(
-      [32768],
-      {
-        resolveManagerDocumentLike() {
-          return { createElement: createFakeElement };
-        }
-      }
-    );
+    const runtime = loadSavedStateRuntime([32768], {
+      resolveManagerDocumentLike() {
+        return { createElement: createFakeElement };
+      },
+    });
     const container = createFakeElement();
     const manager = {
       resolveProvidedCappedModeState() {
@@ -905,8 +1116,10 @@ describe("core game manager saved state runtime", () => {
         return "11px";
       },
       getCappedTimerFontSize() {
-        throw new Error("right timer font-size API must not be used for dynamic legend labels");
-      }
+        throw new Error(
+          "right timer font-size API must not be used for dynamic legend labels",
+        );
+      },
     };
 
     runtime.applySavedDynamicTimerRowsState(
@@ -918,10 +1131,10 @@ describe("core game manager saved state runtime", () => {
           label: "32768",
           labelClass: "timertile timer-legend-bad",
           labelFontSize: "40px",
-          time: "1:39:11.334"
-        }
+          time: "1:39:11.334",
+        },
       ],
-      { isCappedMode: false, cappedTargetValue: 32768 }
+      { isCappedMode: false, cappedTargetValue: 32768 },
     );
 
     const row = container.children[0];
@@ -937,7 +1150,11 @@ describe("core game manager saved state runtime", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const row32k = createElement({
       display: "none",
-      legend: { text: "32768", className: "timertile timer-legend-32768", fontSize: "13px" }
+      legend: {
+        text: "32768",
+        className: "timertile timer-legend-32768",
+        fontSize: "13px",
+      },
     });
     const timer32k = { textContent: "" };
     const manager = {
@@ -945,11 +1162,11 @@ describe("core game manager saved state runtime", () => {
         return row32k;
       },
       elements: {
-        timer32768: timer32k
+        timer32768: timer32k,
       },
       getCappedTimerLegendClass() {
         return "timertile";
-      }
+      },
     };
 
     runtime.applySavedTimerFixedRowsState(
@@ -964,11 +1181,11 @@ describe("core game manager saved state runtime", () => {
             timerText: "",
             legendText: "32768",
             legendClass: "timertile timer-legend-32768",
-            legendFontSize: "13px"
-          }
-        }
+            legendFontSize: "13px",
+          },
+        },
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(row32k.style.display).toBe("none");
@@ -978,14 +1195,16 @@ describe("core game manager saved state runtime", () => {
     const runtime = loadSavedStateRuntime([32768]);
     const optionSnapshots: Array<Record<string, unknown>> = [];
     const manager = {
-      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(options: Record<string, unknown>) {
+      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(
+        options: Record<string, unknown>,
+      ) {
         optionSnapshots.push({ ...options });
         return {
           key: "secondaryTimerPlacement",
           schemaVersion: 1,
-          payload: { placed: 1 }
+          payload: { placed: 1 },
         };
-      }
+      },
     };
 
     expect(runtime.buildSavedGameStateDiagnosticsPayload(manager)).toEqual({
@@ -993,34 +1212,37 @@ describe("core game manager saved state runtime", () => {
         {
           key: "secondaryTimerPlacement",
           schemaVersion: 1,
-          payload: { placed: 1 }
-        }
-      ]
+          payload: { placed: 1 },
+        },
+      ],
     });
     expect(optionSnapshots).toEqual([
       {
         failureOnly: false,
         includeWhenNoActivity: false,
-        maxDedupeKeys: 3
-      }
+        maxDedupeKeys: 3,
+      },
     ]);
   });
 
   it("falls back to global diagnostics entry resolver when manager helper is unavailable", () => {
     const runtime = loadSavedStateRuntime([32768], {
-      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(manager: Record<string, unknown>, options: Record<string, unknown>) {
+      resolveSecondaryTimerPlacementDiagnosticsIndexEntry(
+        manager: Record<string, unknown>,
+        options: Record<string, unknown>,
+      ) {
         return {
           key: "secondaryTimerPlacement",
           schemaVersion: 1,
           payload: {
             mode: manager.modeKey || "unknown",
-            options
-          }
+            options,
+          },
         };
-      }
+      },
     });
     const manager = {
-      modeKey: "classic"
+      modeKey: "classic",
     };
 
     expect(runtime.buildSavedGameStateDiagnosticsPayload(manager)).toEqual({
@@ -1033,11 +1255,11 @@ describe("core game manager saved state runtime", () => {
             options: {
               failureOnly: false,
               includeWhenNoActivity: false,
-              maxDedupeKeys: 3
-            }
-          }
-        }
-      ]
+              maxDedupeKeys: 3,
+            },
+          },
+        },
+      ],
     });
   });
 
@@ -1082,7 +1304,7 @@ describe("core game manager saved state runtime", () => {
           [2, 0, 0, 0],
           [0, 0, 0, 0],
           [0, 0, 0, 0],
-          [0, 0, 0, 0]
+          [0, 0, 0, 0],
         ];
       },
       safeClonePlain(value: unknown, fallback: unknown) {
@@ -1099,29 +1321,35 @@ describe("core game manager saved state runtime", () => {
         return {
           key: "secondaryTimerPlacement",
           schemaVersion: 1,
-          payload: { validPlacementDescriptors: 2 }
+          payload: { validPlacementDescriptors: 2 },
         };
-      }
+      },
     };
 
-    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
+    const fullPayload = runtime.buildSavedGameStatePayload(
+      manager,
+      1000,
+    ) as Record<string, unknown>;
     expect(fullPayload.custom_secondary_timer_rule_text).toBe("32\n32+2");
     expect(fullPayload.custom_secondary_timer_rule_family).toBe("pow2");
     expect(fullPayload.diagnostics_index_entries).toEqual([
       {
         key: "secondaryTimerPlacement",
         schemaVersion: 1,
-        payload: { validPlacementDescriptors: 2 }
-      }
+        payload: { validPlacementDescriptors: 2 },
+      },
     ]);
 
-    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(manager, fullPayload) as Record<string, unknown>;
+    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(
+      manager,
+      fullPayload,
+    ) as Record<string, unknown>;
     expect(litePayload.diagnostics_index_entries).toEqual([
       {
         key: "secondaryTimerPlacement",
         schemaVersion: 1,
-        payload: { validPlacementDescriptors: 2 }
-      }
+        payload: { validPlacementDescriptors: 2 },
+      },
     ]);
   });
 
@@ -1138,13 +1366,13 @@ describe("core game manager saved state runtime", () => {
       seed: 7,
       init_tiles: [
         { cellIndex: 0, valueBit: 0 },
-        { cellIndex: 5, valueBit: 1 }
+        { cellIndex: 5, valueBit: 1 },
       ],
       records: [
-        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 50 }
+        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 50 },
       ],
       last_event_at_ms: 150,
-      supported: true
+      supported: true,
     };
     const manager = {
       modeKey: "classic_4x4_pow2_undo",
@@ -1185,7 +1413,7 @@ describe("core game manager saved state runtime", () => {
           [2, 0, 0, 0],
           [0, 4, 0, 0],
           [0, 0, 0, 0],
-          [0, 0, 0, 0]
+          [0, 0, 0, 0],
         ];
       },
       safeClonePlain(value: unknown, fallback: unknown) {
@@ -1199,14 +1427,20 @@ describe("core game manager saved state runtime", () => {
         return JSON.parse(JSON.stringify(value));
       },
       setRuntimeUndoStack: vi.fn(),
-      setRuntimeRedoStack: vi.fn()
+      setRuntimeRedoStack: vi.fn(),
     };
 
-    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000) as Record<string, unknown>;
+    const fullPayload = runtime.buildSavedGameStatePayload(
+      manager,
+      1000,
+    ) as Record<string, unknown>;
     expect(fullPayload.session_replay_v1).toEqual(sessionReplayV1);
     expect(fullPayload.session_replay_v1).not.toBe(sessionReplayV1);
 
-    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(manager, fullPayload) as Record<string, unknown>;
+    const litePayload = runtime.buildLiteSavedGameStatePayloadFallback(
+      manager,
+      fullPayload,
+    ) as Record<string, unknown>;
     expect(litePayload.session_replay_v1).toEqual(sessionReplayV1);
     expect(litePayload.session_replay_v1).not.toBe(sessionReplayV1);
   });
@@ -1215,19 +1449,19 @@ describe("core game manager saved state runtime", () => {
     const buildLiteSavedGameStatePayload = vi.fn(() => ({
       v: 1,
       board: [[2]],
-      session_replay_v1: null
+      session_replay_v1: null,
     }));
     const runtime = loadSavedStateRuntime([32768], {
       callCoreStorageRuntime(
         _manager: Record<string, unknown>,
         method: string,
-        payload: Record<string, unknown>
+        payload: Record<string, unknown>,
       ) {
         if (method === "buildLiteSavedGameStatePayload") {
           return buildLiteSavedGameStatePayload(payload);
         }
         return undefined;
-      }
+      },
     });
     const manager = {
       modeKey: "standard_4x4_pow2_no_undo",
@@ -1252,7 +1486,7 @@ describe("core game manager saved state runtime", () => {
       },
       isNonArrayObject(value: unknown) {
         return !!value && typeof value === "object" && !Array.isArray(value);
-      }
+      },
     };
     const sourcePayload = {
       saved_at: 1,
@@ -1261,8 +1495,8 @@ describe("core game manager saved state runtime", () => {
         board_width: 4,
         board_height: 4,
         init_tiles: [],
-        records: []
-      }
+        records: [],
+      },
     };
 
     runtime.buildLiteSavedGameStatePayload(manager, sourcePayload);
@@ -1279,8 +1513,8 @@ describe("core game manager saved state runtime", () => {
         initialSeed: 11,
         seed: 22,
         durationMs: 3000,
-        finalBoardMatrix: [[2, 0, 0, 0]]
-      })
+        finalBoardMatrix: [[2, 0, 0, 0]],
+      }),
     );
   });
 
@@ -1315,7 +1549,7 @@ describe("core game manager saved state runtime", () => {
           [2, 0, 0, 0],
           [0, 4, 0, 0],
           [0, 0, 0, 0],
-          [0, 0, 0, 0]
+          [0, 0, 0, 0],
         ];
       },
       safeClonePlain(value: unknown, fallback: unknown) {
@@ -1327,10 +1561,12 @@ describe("core game manager saved state runtime", () => {
       },
       clonePlain(value: unknown) {
         return JSON.parse(JSON.stringify(value));
-      }
+      },
     };
 
-    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000, { force: true }) as Record<string, unknown>;
+    const fullPayload = runtime.buildSavedGameStatePayload(manager, 1000, {
+      force: true,
+    }) as Record<string, unknown>;
 
     expect(fullPayload.replay_string).toBe("REPLAY_v1RPL_B64_rescue_saved");
   });
@@ -1342,7 +1578,7 @@ describe("core game manager saved state runtime", () => {
       saved_at: savedAt,
       mode_key: "practice",
       board: [[2, 0, 0, 0]],
-      replay_compact_log: ""
+      replay_compact_log: "",
     };
     const fullWindowPayload = {
       saved_at: savedAt,
@@ -1352,11 +1588,15 @@ describe("core game manager saved state runtime", () => {
       timer_fixed_rows: {},
       timer_dynamic_rows_capped: [],
       timer_dynamic_rows_overflow: [],
-      timer_secondary_rows: []
+      timer_secondary_rows: [],
     };
 
     expect(
-      runtime.resolveLatestSavedPayloadCandidate([null, litePayload, fullWindowPayload])
+      runtime.resolveLatestSavedPayloadCandidate([
+        null,
+        litePayload,
+        fullWindowPayload,
+      ]),
     ).toEqual(fullWindowPayload);
   });
 
@@ -1369,16 +1609,14 @@ describe("core game manager saved state runtime", () => {
         [16, 64, 128, 32768],
         [8, 2, 2, 0],
         [4, 0, 0, 0],
-        [0, 2, 0, 0]
+        [0, 2, 0, 0],
       ],
       move_history: [0, 1, 2],
       replay_string: "REPLAY_v1RPL_B64_rescue",
       timer_fixed_rows: {
-        "32768": { timerText: "1:23.456", legendText: "32768" }
+        "32768": { timerText: "1:23.456", legendText: "32768" },
       },
-      timer_secondary_rows: [
-        { parent: 32768, child: 8192, time: "1:20.000" }
-      ]
+      timer_secondary_rows: [{ parent: 32768, child: 8192, time: "1:20.000" }],
     };
     const newerLitePayload = {
       saved_at: 1700000001000,
@@ -1387,16 +1625,19 @@ describe("core game manager saved state runtime", () => {
         [16, 64, 128, 32768],
         [8, 2, 2, 0],
         [4, 0, 0, 0],
-        [0, 2, 0, 0]
+        [0, 2, 0, 0],
       ],
       move_history: [],
       replay_string: "",
       timer_fixed_rows: undefined,
-      timer_secondary_rows: undefined
+      timer_secondary_rows: undefined,
     };
 
     expect(
-      runtime.resolveLatestSavedPayloadCandidate([fullRescuePayload, newerLitePayload])
+      runtime.resolveLatestSavedPayloadCandidate([
+        fullRescuePayload,
+        newerLitePayload,
+      ]),
     ).toEqual(fullRescuePayload);
   });
 
@@ -1410,16 +1651,14 @@ describe("core game manager saved state runtime", () => {
         [16, 64, 128, 32768],
         [8, 2, 2, 0],
         [4, 0, 0, 0],
-        [0, 2, 0, 0]
+        [0, 2, 0, 0],
       ],
       move_history: [0, 1, 2],
       replay_string: "REPLAY_v1RPL_B64_rescue",
       timer_fixed_rows: {
-        "32768": { timerText: "1:23.456", legendText: "32768" }
+        "32768": { timerText: "1:23.456", legendText: "32768" },
       },
-      timer_secondary_rows: [
-        { parent: 32768, child: 8192, time: "1:20.000" }
-      ]
+      timer_secondary_rows: [{ parent: 32768, child: 8192, time: "1:20.000" }],
     };
     const newerLitePayload = {
       saved_at: 1700000001000,
@@ -1429,16 +1668,19 @@ describe("core game manager saved state runtime", () => {
         [16, 64, 128, 32768],
         [8, 4, 0, 0],
         [4, 0, 0, 0],
-        [0, 2, 0, 2]
+        [0, 2, 0, 2],
       ],
       move_history: [],
       replay_string: "",
       timer_fixed_rows: undefined,
-      timer_secondary_rows: undefined
+      timer_secondary_rows: undefined,
     };
 
     expect(
-      runtime.resolveLatestSavedPayloadCandidate([fullRescuePayload, newerLitePayload])
+      runtime.resolveLatestSavedPayloadCandidate([
+        fullRescuePayload,
+        newerLitePayload,
+      ]),
     ).toEqual(newerLitePayload);
   });
 
@@ -1450,24 +1692,32 @@ describe("core game manager saved state runtime", () => {
       resolveSavedGameStateStorageKey(
         manager: Record<string, unknown>,
         keyPrefix: string,
-        modeKey?: string
+        modeKey?: string,
       ) {
-        return keyPrefix + String(modeKey || manager.modeKey || manager.mode || "");
+        return (
+          keyPrefix + String(modeKey || manager.modeKey || manager.mode || "")
+        );
       },
       getSavedGameStateStorages(manager: Record<string, unknown>) {
         const windowLike =
           typeof manager.getWindowLike === "function"
             ? (manager.getWindowLike as () => Record<string, unknown>)()
             : null;
-        return windowLike && windowLike.localStorage ? [windowLike.localStorage] : [];
+        return windowLike && windowLike.localStorage
+          ? [windowLike.localStorage]
+          : [];
       },
       resolveSavedStatePathname(windowLike: Record<string, unknown> | null) {
-        const locationLike = windowLike?.location as Record<string, unknown> | undefined;
-        return typeof locationLike?.pathname === "string" ? locationLike.pathname : "";
+        const locationLike = windowLike?.location as
+          | Record<string, unknown>
+          | undefined;
+        return typeof locationLike?.pathname === "string"
+          ? locationLike.pathname
+          : "";
       },
       writeWindowNameSavedPayload() {
         return true;
-      }
+      },
     });
     const removedKeys: string[] = [];
     const manager = {
@@ -1486,11 +1736,14 @@ describe("core game manager saved state runtime", () => {
           localStorage: {
             removeItem(key: string) {
               removedKeys.push(key);
-            }
-          }
+            },
+          },
         };
       },
-      resolveCoreBooleanCallOrFallback(value: unknown, fallback: () => boolean) {
+      resolveCoreBooleanCallOrFallback(
+        value: unknown,
+        fallback: () => boolean,
+      ) {
         return typeof value === "boolean" ? value : fallback();
       },
       createCoreModeContextPayload(payload: Record<string, unknown>) {
@@ -1499,20 +1752,20 @@ describe("core game manager saved state runtime", () => {
       resolveNormalizedCoreValueOrFallbackAllowNull(
         value: unknown,
         _normalizer: (payload: unknown) => unknown,
-        fallback: () => unknown
+        fallback: () => unknown,
       ) {
         return typeof value === "undefined" ? fallback() : value;
       },
       resolveNormalizedCoreValueOrFallback(
         value: unknown,
         _normalizer: (payload: unknown) => unknown,
-        fallback: () => unknown
+        fallback: () => unknown,
       ) {
         return typeof value === "undefined" ? fallback() : value;
       },
       isNonArrayObject(value: unknown) {
         return !!value && typeof value === "object" && !Array.isArray(value);
-      }
+      },
     } as Record<string, unknown>;
 
     runtime.clearSavedGameState(manager, "classic_4x4_pow2_undo");
@@ -1524,7 +1777,7 @@ describe("core game manager saved state runtime", () => {
     expect(manager.lastReplayStringSavedAt).toBe(0);
     expect(removedKeys).toEqual([
       "savedGameStateByMode:v1:classic_4x4_pow2_undo",
-      "savedGameStateLiteByMode:v1:classic_4x4_pow2_undo"
+      "savedGameStateLiteByMode:v1:classic_4x4_pow2_undo",
     ]);
   });
 
@@ -1534,15 +1787,19 @@ describe("core game manager saved state runtime", () => {
       comboStreak: 1,
       successfulMoveCount: 2,
       undoUsed: 0,
+      validInputCount: 4,
+      invalidInputCount: 2,
       challengeId: "ranked-active",
       rankedSessionToken: "ranked-token",
       lockConsumedAtMoveCount: -1,
       lockedDirectionTurn: null,
-      lockedDirection: null
+      lockedDirection: null,
     });
 
     expect(payload.challenge_id).toBe("ranked-active");
     expect(payload.ranked_session_token).toBe("ranked-token");
+    expect(payload.valid_input_count).toBe(4);
+    expect(payload.invalid_input_count).toBe(2);
   });
 
   it("allows ranked saved-state restore when active session identity matches", () => {
@@ -1558,14 +1815,14 @@ describe("core game manager saved state runtime", () => {
         [2, 0, 0, 0],
         [0, 4, 0, 0],
         [0, 0, 0, 0],
-        [0, 0, 0, 0]
+        [0, 0, 0, 0],
       ],
       over: false,
       won: false,
       keep_playing: false,
       initial_seed: 101,
       challenge_id: "ranked-active",
-      ranked_session_token: "ranked-token"
+      ranked_session_token: "ranked-token",
     };
     const manager = {
       modeKey,
@@ -1577,12 +1834,12 @@ describe("core game manager saved state runtime", () => {
       ruleset: "pow2",
       initialSeed: 101,
       challengeId: "ranked-active",
-      rankedSessionToken: "ranked-token"
+      rankedSessionToken: "ranked-token",
     };
 
     expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
       canRestore: true,
-      shouldClearSavedState: true
+      shouldClearSavedState: true,
     });
   });
 
@@ -1599,14 +1856,14 @@ describe("core game manager saved state runtime", () => {
         [2, 0, 0, 0],
         [0, 4, 0, 0],
         [0, 0, 0, 0],
-        [0, 0, 0, 0]
+        [0, 0, 0, 0],
       ],
       over: false,
       won: false,
       keep_playing: false,
       initial_seed: 101,
       challenge_id: "old-ranked",
-      ranked_session_token: "old-token"
+      ranked_session_token: "old-token",
     };
     const manager = {
       modeKey,
@@ -1618,12 +1875,12 @@ describe("core game manager saved state runtime", () => {
       ruleset: "pow2",
       initialSeed: 202,
       challengeId: "new-ranked",
-      rankedSessionToken: "new-token"
+      rankedSessionToken: "new-token",
     };
 
     expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
       canRestore: false,
-      shouldClearSavedState: true
+      shouldClearSavedState: true,
     });
   });
 
@@ -1640,14 +1897,14 @@ describe("core game manager saved state runtime", () => {
         [2, 0, 0, 0],
         [0, 4, 0, 0],
         [0, 0, 0, 0],
-        [0, 0, 0, 0]
+        [0, 0, 0, 0],
       ],
       over: false,
       won: false,
       keep_playing: false,
       initial_seed: 101,
       challenge_id: "ranked-active",
-      ranked_session_token: "ranked-token"
+      ranked_session_token: "ranked-token",
     };
     const manager = {
       modeKey,
@@ -1665,16 +1922,16 @@ describe("core game manager saved state runtime", () => {
           RankedSessionRuntime: {
             getCurrentContext() {
               return null;
-            }
+            },
           },
-          GAME_CHALLENGE_CONTEXT: null
+          GAME_CHALLENGE_CONTEXT: null,
         };
-      }
+      },
     };
 
     expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
       canRestore: true,
-      shouldClearSavedState: true
+      shouldClearSavedState: true,
     });
   });
 
@@ -1691,14 +1948,14 @@ describe("core game manager saved state runtime", () => {
         [1024, 1024, 0, 0],
         [512, 256, 128, 64],
         [32, 16, 8, 4],
-        [2, 0, 0, 0]
+        [2, 0, 0, 0],
       ],
       over: false,
       won: false,
       keep_playing: false,
       initial_seed: 101,
       challenge_id: null,
-      ranked_session_token: null
+      ranked_session_token: null,
     };
     const manager = {
       modeKey,
@@ -1716,16 +1973,16 @@ describe("core game manager saved state runtime", () => {
           RankedSessionRuntime: {
             getCurrentContext() {
               return null;
-            }
+            },
           },
-          GAME_CHALLENGE_CONTEXT: null
+          GAME_CHALLENGE_CONTEXT: null,
         };
-      }
+      },
     };
 
     expect(runtime.resolveSavedStateRestoreDecision(manager, saved)).toEqual({
       canRestore: true,
-      shouldClearSavedState: true
+      shouldClearSavedState: true,
     });
   });
 
@@ -1739,7 +1996,7 @@ describe("core game manager saved state runtime", () => {
       hasGameStarted: true,
       getDurationMs() {
         return 1234;
-      }
+      },
     });
 
     expect(payload).toEqual({
@@ -1750,7 +2007,7 @@ describe("core game manager saved state runtime", () => {
       timer_anchor_local_ms: null,
       timer_anchor_server_ms: null,
       has_game_started: true,
-      timer_frozen: true
+      timer_frozen: true,
     });
   });
 
@@ -1768,7 +2025,7 @@ describe("core game manager saved state runtime", () => {
       timerAnchorServerMs: 20_000,
       getDurationMs() {
         return 7_500;
-      }
+      },
     });
 
     expect(payload).toEqual({
@@ -1779,7 +2036,7 @@ describe("core game manager saved state runtime", () => {
       timer_anchor_local_ms: 10_000,
       timer_anchor_server_ms: 20_000,
       has_game_started: true,
-      timer_frozen: false
+      timer_frozen: false,
     });
   });
 
@@ -1792,7 +2049,7 @@ describe("core game manager saved state runtime", () => {
       time: 0,
       startTime: new Date(1),
       timerStatus: 1,
-      timerFrozen: false
+      timerFrozen: false,
     };
 
     runtime.applySavedManagerTimerState(manager, {
@@ -1804,7 +2061,7 @@ describe("core game manager saved state runtime", () => {
       over: false,
       won: false,
       keep_playing: false,
-      timer_frozen: false
+      timer_frozen: false,
     });
 
     expect(manager.accumulatedTime).toBe(16_000);
@@ -1832,7 +2089,7 @@ describe("core game manager saved state runtime", () => {
       },
       setRuntimeRedoStack(value: unknown) {
         this.redoStack = value;
-      }
+      },
     };
 
     runtime.applySavedManagerReplayState(manager, {
@@ -1845,12 +2102,14 @@ describe("core game manager saved state runtime", () => {
         init_tiles: [],
         records: [],
         last_event_at_ms: 12_345,
-        supported: true
+        supported: true,
       },
-      session_replay_v3: null
+      session_replay_v3: null,
     });
 
-    expect((manager.sessionReplayV1 as Record<string, unknown>).last_event_at_ms).toBe(12_345);
+    expect(
+      (manager.sessionReplayV1 as Record<string, unknown>).last_event_at_ms,
+    ).toBe(12_345);
     vi.useRealTimers();
   });
 
@@ -1868,7 +2127,7 @@ describe("core game manager saved state runtime", () => {
       },
       setRuntimeRedoStack(value: unknown) {
         this.redoStack = value;
-      }
+      },
     };
 
     runtime.applySavedManagerReplayState(manager, {
@@ -1876,7 +2135,7 @@ describe("core game manager saved state runtime", () => {
       replay_compact_log: "",
       replay_string: "REPLAY_v1RPL_B64_restored",
       session_replay_v1: null,
-      session_replay_v3: null
+      session_replay_v3: null,
     });
 
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_restored");
@@ -1889,9 +2148,11 @@ describe("core game manager saved state runtime", () => {
       board_width: 4,
       board_height: 4,
       init_tiles: [{ cellIndex: 0, valueBit: 0 }],
-      records: [{ kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 16 }],
+      records: [
+        { kind: "move", dir: 1, spawnIndex: 2, spawnValueBit: 0, deltaMs: 16 },
+      ],
       last_event_at_ms: 12_345,
-      supported: true
+      supported: true,
     };
     const manager = {
       moveHistory: [1],
@@ -1906,7 +2167,7 @@ describe("core game manager saved state runtime", () => {
       },
       setRuntimeRedoStack(value: unknown) {
         this.redoStack = value;
-      }
+      },
     };
 
     runtime.applySavedManagerReplayState(manager, {
@@ -1914,7 +2175,7 @@ describe("core game manager saved state runtime", () => {
       replay_compact_log: "",
       replay_string: "",
       session_replay_v1: null,
-      session_replay_v3: null
+      session_replay_v3: null,
     });
 
     expect(manager.rescueReplayString).toBe("REPLAY_v1RPL_B64_existing");
@@ -1933,21 +2194,21 @@ describe("core game manager saved state runtime", () => {
       timerModuleView: "timer",
       elements: {
         timer: {
-          textContent: ""
-        }
+          textContent: "",
+        },
       },
       resolveProvidedCappedModeState() {
         return {
           isCappedMode: false,
           cappedTargetValue: null,
-          isProgressiveCapped64Mode: false
+          isProgressiveCapped64Mode: false,
         };
       },
       pretty(value: number) {
         return String(value);
       },
       callWindowMethod() {},
-      startTimer
+      startTimer,
     };
 
     runtime.applySavedTimerPostRestoreState(
@@ -1955,14 +2216,16 @@ describe("core game manager saved state runtime", () => {
       {
         timer_module_view: "timer",
         timer_status: 1,
-        timer_frozen: true
+        timer_frozen: true,
       },
-      { isCappedMode: false }
+      { isCappedMode: false },
     );
 
     expect(manager.timerFrozen).toBe(true);
     expect(startTimer).not.toHaveBeenCalled();
-    expect((manager.elements.timer as { textContent: string }).textContent).toBe("4321");
+    expect(
+      (manager.elements.timer as { textContent: string }).textContent,
+    ).toBe("4321");
   });
 
   it("restores session replay v1 and preserves its idle timer after refresh", () => {
@@ -1982,7 +2245,7 @@ describe("core game manager saved state runtime", () => {
       spawnFours: 0,
       undoEnabled: true,
       modeConfig: {
-        undo_enabled: true
+        undo_enabled: true,
       },
       clonePlain(value: unknown) {
         return JSON.parse(JSON.stringify(value));
@@ -1992,7 +2255,7 @@ describe("core game manager saved state runtime", () => {
       },
       setRuntimeRedoStack(value: unknown) {
         this.redoStack = value;
-      }
+      },
     };
 
     runtime.applySavedManagerReplayState(manager, {
@@ -2012,19 +2275,25 @@ describe("core game manager saved state runtime", () => {
         seed: 9,
         init_tiles: [
           { cellIndex: 0, valueBit: 0 },
-          { cellIndex: 1, valueBit: 0 }
+          { cellIndex: 1, valueBit: 0 },
         ],
         records: [
-          { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }
+          {
+            kind: "move",
+            dir: 1,
+            spawnIndex: 3,
+            spawnValueBit: 0,
+            deltaMs: 40,
+          },
         ],
         last_event_at_ms: savedLastEventAt,
-        supported: true
+        supported: true,
       },
       session_replay_v3: {
         v: 3,
-        actions: [["m", 1]]
+        actions: [["m", 1]],
       },
-      spawn_value_counts: { "2": 2, "4": 1 }
+      spawn_value_counts: { "2": 2, "4": 1 },
     });
 
     expect(manager.moveHistory).toEqual([0, 1, 2]);
@@ -2040,15 +2309,18 @@ describe("core game manager saved state runtime", () => {
       board_width: 4,
       board_height: 4,
       seed: 9,
-      supported: true
+      supported: true,
     });
-    expect((manager.sessionReplayV1 as { last_event_at_ms: number }).last_event_at_ms).toBe(savedLastEventAt);
-    expect((manager.sessionReplayV1 as { records: unknown[] }).records).toEqual([
-      { kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }
-    ]);
+    expect(
+      (manager.sessionReplayV1 as { last_event_at_ms: number })
+        .last_event_at_ms,
+    ).toBe(savedLastEventAt);
+    expect((manager.sessionReplayV1 as { records: unknown[] }).records).toEqual(
+      [{ kind: "move", dir: 1, spawnIndex: 3, spawnValueBit: 0, deltaMs: 40 }],
+    );
     expect(manager.sessionReplayV3).toEqual({
       v: 3,
-      actions: [["m", 1]]
+      actions: [["m", 1]],
     });
     expect(manager.spawnValueCounts).toEqual({ "2": 2, "4": 1 });
     expect(manager.spawnTwos).toBe(2);
@@ -2069,17 +2341,17 @@ describe("core game manager saved state runtime", () => {
       },
       clonePlain(value: unknown) {
         return JSON.parse(JSON.stringify(value));
-      }
+      },
     };
 
     runtime.applySavedManagerReplayState(manager, {
       move_history: [0, 1, -1, 2],
       replay_compact_log: "",
-      spawn_value_counts: {}
+      spawn_value_counts: {},
     });
     runtime.applySavedManagerProgressState(manager, {
       successful_move_count: 0,
-      undo_used: 0
+      undo_used: 0,
     });
 
     expect(manager.successfulMoveCount).toBe(3);
@@ -2092,7 +2364,7 @@ describe("core game manager saved state runtime", () => {
       modeKey: "standard_4x4_pow2_no_undo",
       width: 4,
       height: 4,
-      ruleset: "pow2"
+      ruleset: "pow2",
     };
 
     expect(
@@ -2106,13 +2378,13 @@ describe("core game manager saved state runtime", () => {
           [2048, 2, 4, 8],
           [16, 32, 64, 128],
           [256, 512, 1024, 2],
-          [4, 8, 16, 32]
+          [4, 8, 16, 32],
         ],
         score: 800000,
         over: false,
         won: true,
-        keep_playing: false
-      })
+        keep_playing: false,
+      }),
     ).toEqual({ canRestore: true, shouldClearSavedState: true });
   });
 });

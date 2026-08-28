@@ -25,23 +25,60 @@ KeyboardInputManager.prototype.emit = function (event, data) {
 KeyboardInputManager.prototype.listen = function () {
   var self = this;
 
-  function createKeyboardMoveAttempt(direction, event) {
-    var arrowKeys = { 38: "arrow-up", 39: "arrow-right", 40: "arrow-down", 37: "arrow-left" };
-    var physicalKeys = {
-      ArrowUp: "arrow-up", ArrowRight: "arrow-right", ArrowDown: "arrow-down", ArrowLeft: "arrow-left",
-      Backspace: "backspace"
-    };
-    var code = String(event.code || "");
-    var key = physicalKeys[code] || (code.length === 4 && code.indexOf("Key") === 0
-      ? code.slice(3)
-      : event.which === 8 ? "backspace" : String(event.key || "").toUpperCase());
+  function createSwipeMoveAttempt(direction) {
+    var swipeKeys = [
+      "swipe-up",
+      "swipe-right",
+      "swipe-down",
+      "swipe-left",
+      "swipe-up-right",
+      "swipe-down-right",
+      "swipe-down-left",
+      "swipe-up-left",
+    ];
     return {
       direction: direction,
       feedback: {
-        id: "keyboard-" + (++nextKeyboardOperationFeedbackInputId),
+        id: "touch-" + ++nextKeyboardOperationFeedbackInputId,
+        key: swipeKeys[direction] || "swipe",
+        repeat: false,
+      },
+    };
+  }
+
+  function resolveTouchMoveDirection(dx, dy, absDx, absDy) {
+    return absDx > absDy ? (dx > 0 ? 1 : 3) : dy > 0 ? 2 : 0;
+  }
+
+  function createKeyboardMoveAttempt(direction, event) {
+    var arrowKeys = {
+      38: "arrow-up",
+      39: "arrow-right",
+      40: "arrow-down",
+      37: "arrow-left",
+    };
+    var physicalKeys = {
+      ArrowUp: "arrow-up",
+      ArrowRight: "arrow-right",
+      ArrowDown: "arrow-down",
+      ArrowLeft: "arrow-left",
+      Backspace: "backspace",
+    };
+    var code = String(event.code || "");
+    var key =
+      physicalKeys[code] ||
+      (code.length === 4 && code.indexOf("Key") === 0
+        ? code.slice(3)
+        : event.which === 8
+          ? "backspace"
+          : String(event.key || "").toUpperCase());
+    return {
+      direction: direction,
+      feedback: {
+        id: "keyboard-" + ++nextKeyboardOperationFeedbackInputId,
         key: arrowKeys[event.which] || key,
-        repeat: event.repeat === true
-      }
+        repeat: event.repeat === true,
+      },
     };
   }
 
@@ -65,47 +102,60 @@ KeyboardInputManager.prototype.listen = function () {
     99: 5, // Numpad 3
     97: 6, // Numpad 1
     103: 7, // Numpad 7
-    85:-1, // U (undo)
-    89:-2, // Y (redo undo, practice page only)
-    8:-1,  // Backspace (undo)
+    85: -1, // U (undo)
+    89: -2, // Y (redo undo, practice page only)
+    8: -1, // Backspace (undo)
   };
   var itemMap = {
     49: "hammer", // 1
     50: "freeze", // 2
-    51: "boost4"  // 3
+    51: "boost4", // 3
   };
 
   function isDiagonalModeEnabled() {
     var body = document.body;
-    var modeId = body && body.getAttribute ? body.getAttribute("data-mode-id") : "";
-    if (typeof modeId === "string" && modeId.indexOf("diag_") === 0) return true;
+    var modeId =
+      body && body.getAttribute ? body.getAttribute("data-mode-id") : "";
+    if (typeof modeId === "string" && modeId.indexOf("diag_") === 0)
+      return true;
     var manager = typeof window !== "undefined" ? window.game_manager : null;
-    var rules = manager && manager.modeConfig && manager.modeConfig.special_rules;
+    var rules =
+      manager && manager.modeConfig && manager.modeConfig.special_rules;
     if (
       rules &&
       (rules.allow_diagonal_moves === true ||
-        (Array.isArray(rules.movement_directions) && rules.movement_directions.indexOf(4) !== -1))
+        (Array.isArray(rules.movement_directions) &&
+          rules.movement_directions.indexOf(4) !== -1))
     ) {
       return true;
     }
     if (manager && typeof manager.isDirectionAllowed === "function") {
       return !!manager.isDirectionAllowed(4);
     }
-    if (manager && Array.isArray(manager.allowedDirections) && manager.allowedDirections.indexOf(4) !== -1) {
+    if (
+      manager &&
+      Array.isArray(manager.allowedDirections) &&
+      manager.allowedDirections.indexOf(4) !== -1
+    ) {
       return true;
     }
     return false;
   }
 
   function isCompactViewport() {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return false;
     return !!window.matchMedia("(max-width: 980px)").matches;
   }
 
   function isMobileTouchDevice() {
     if (typeof window === "undefined") return false;
     if ("ontouchstart" in window) return true;
-    if (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) return true;
+    if (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0)
+      return true;
     if (typeof window.matchMedia === "function") {
       return !!window.matchMedia("(pointer: coarse)").matches;
     }
@@ -114,7 +164,10 @@ KeyboardInputManager.prototype.listen = function () {
 
   function isZhLocale() {
     var htmlLang = document.documentElement && document.documentElement.lang;
-    if (typeof htmlLang === "string" && htmlLang.toLowerCase().indexOf("zh") === 0) {
+    if (
+      typeof htmlLang === "string" &&
+      htmlLang.toLowerCase().indexOf("zh") === 0
+    ) {
       return true;
     }
     var i18n = typeof window !== "undefined" ? window.UII18N : null;
@@ -130,7 +183,9 @@ KeyboardInputManager.prototype.listen = function () {
     if (!el) return false;
     if (el.isContentEditable) return true;
     if (el.closest) {
-      var editable = el.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']");
+      var editable = el.closest(
+        "input, textarea, select, [contenteditable=''], [contenteditable='true']",
+      );
       if (editable) return true;
     }
     var tag = String(el.tagName || "").toUpperCase();
@@ -164,15 +219,18 @@ KeyboardInputManager.prototype.listen = function () {
       return;
     }
 
-    var modifiers = event.altKey || event.ctrlKey || event.metaKey ||
-                    event.shiftKey;
-    var mapped    = map[event.which];
+    var modifiers =
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+    var mapped = map[event.which];
 
     if (!modifiers) {
       if (event.which === 90) {
         var useDiagonalZ = isDiagonalModeEnabled();
         event.preventDefault();
-        self.emit("move", createKeyboardMoveAttempt(useDiagonalZ ? 6 : -1, event));
+        self.emit(
+          "move",
+          createKeyboardMoveAttempt(useDiagonalZ ? 6 : -1, event),
+        );
         return;
       }
       if (mapped !== undefined) {
@@ -189,7 +247,13 @@ KeyboardInputManager.prototype.listen = function () {
       }
 
       if (event.which === 32) self.restart.bind(self)(event);
-      if (event.key === 'r' || event.key === 'R' || event.code === 'KeyR' || event.which === 82) self.restart.bind(self)(event);
+      if (
+        event.key === "r" ||
+        event.key === "R" ||
+        event.code === "KeyR" ||
+        event.which === 82
+      )
+        self.restart.bind(self)(event);
     }
   });
 
@@ -220,12 +284,20 @@ KeyboardInputManager.prototype.listen = function () {
     var fallback = 10;
     try {
       var runtime = window.CoreStorageRuntime || null;
-      var storage = runtime && runtime.resolveStorageByName
-        ? runtime.resolveStorageByName({ windowLike: window, storageName: "localStorage" })
-        : null;
-      var value = runtime && runtime.safeReadStorageItem
-        ? runtime.safeReadStorageItem({ storageLike: storage, key: TOUCH_THRESHOLD_STORAGE_KEY })
-        : null;
+      var storage =
+        runtime && runtime.resolveStorageByName
+          ? runtime.resolveStorageByName({
+              windowLike: window,
+              storageName: "localStorage",
+            })
+          : null;
+      var value =
+        runtime && runtime.safeReadStorageItem
+          ? runtime.safeReadStorageItem({
+              storageLike: storage,
+              key: TOUCH_THRESHOLD_STORAGE_KEY,
+            })
+          : null;
       if (value == null || value === "") return fallback;
       var threshold = Number(value);
       if (!Number.isFinite(threshold)) return fallback;
@@ -243,7 +315,10 @@ KeyboardInputManager.prototype.listen = function () {
     }
     if (diagonalAssistButton) {
       diagonalAssistButton.classList.toggle("is-active", nextActive);
-      diagonalAssistButton.setAttribute("aria-pressed", nextActive ? "true" : "false");
+      diagonalAssistButton.setAttribute(
+        "aria-pressed",
+        nextActive ? "true" : "false",
+      );
     }
   }
 
@@ -265,9 +340,9 @@ KeyboardInputManager.prototype.listen = function () {
     if (angle < 0) angle += 360;
     var options = [
       { angle: 315, dir: 4 }, // up-right
-      { angle: 45, dir: 5 },  // down-right
+      { angle: 45, dir: 5 }, // down-right
       { angle: 135, dir: 6 }, // down-left
-      { angle: 225, dir: 7 }  // up-left
+      { angle: 225, dir: 7 }, // up-left
     ];
     var best = options[0];
     var bestDistance = 360;
@@ -318,7 +393,8 @@ KeyboardInputManager.prototype.listen = function () {
 
   function syncDiagonalAssistVisibility() {
     if (!diagonalAssistButton) return;
-    var visible = isDiagonalModeEnabled() && (isMobileTouchDevice() || isCompactViewport());
+    var visible =
+      isDiagonalModeEnabled() && (isMobileTouchDevice() || isCompactViewport());
     diagonalAssistButton.style.display = visible ? "inline-flex" : "none";
     if (visible) {
       syncDiagonalAssistButtonLayout();
@@ -333,13 +409,19 @@ KeyboardInputManager.prototype.listen = function () {
       diagonalAssistButton = document.createElement("button");
       diagonalAssistButton.type = "button";
       diagonalAssistButton.className = "diagonal-assist-touch-btn";
-      diagonalAssistButton.setAttribute("aria-label", zhLocale ? "\u6309\u4f4f\u659c\u5411\u8f85\u52a9" : "Hold for diagonal assist");
+      diagonalAssistButton.setAttribute(
+        "aria-label",
+        zhLocale
+          ? "\u6309\u4f4f\u659c\u5411\u8f85\u52a9"
+          : "Hold for diagonal assist",
+      );
       diagonalAssistButton.setAttribute("aria-pressed", "false");
       diagonalAssistButton.textContent = "";
       document.body.appendChild(diagonalAssistButton);
 
       var pressStart = function (event) {
-        if (event && typeof event.preventDefault === "function") event.preventDefault();
+        if (event && typeof event.preventDefault === "function")
+          event.preventDefault();
         if (event && event.touches && event.touches.length > 0) {
           diagonalAssistTouchId = event.touches[0].identifier;
         }
@@ -355,9 +437,15 @@ KeyboardInputManager.prototype.listen = function () {
         }
         setDiagonalAssistActive(false);
       };
-      diagonalAssistButton.addEventListener("touchstart", pressStart, { passive: false });
-      diagonalAssistButton.addEventListener("touchend", pressEnd, { passive: true });
-      diagonalAssistButton.addEventListener("touchcancel", pressEnd, { passive: true });
+      diagonalAssistButton.addEventListener("touchstart", pressStart, {
+        passive: false,
+      });
+      diagonalAssistButton.addEventListener("touchend", pressEnd, {
+        passive: true,
+      });
+      diagonalAssistButton.addEventListener("touchcancel", pressEnd, {
+        passive: true,
+      });
       diagonalAssistButton.addEventListener("mousedown", pressStart);
       diagonalAssistButton.addEventListener("mouseup", pressEnd);
       diagonalAssistButton.addEventListener("mouseleave", pressEnd);
@@ -369,8 +457,13 @@ KeyboardInputManager.prototype.listen = function () {
 
     if (typeof window !== "undefined") {
       window.addEventListener("resize", syncDiagonalAssistVisibility);
-      window.addEventListener("orientationchange", syncDiagonalAssistVisibility);
-      window.addEventListener("scroll", syncDiagonalAssistButtonLayout, { passive: true });
+      window.addEventListener(
+        "orientationchange",
+        syncDiagonalAssistVisibility,
+      );
+      window.addEventListener("scroll", syncDiagonalAssistButtonLayout, {
+        passive: true,
+      });
       window.setTimeout(syncDiagonalAssistVisibility, 0);
       window.setTimeout(syncDiagonalAssistVisibility, 120);
       window.setTimeout(syncDiagonalAssistVisibility, 480);
@@ -381,7 +474,7 @@ KeyboardInputManager.prototype.listen = function () {
       });
       modeObserver.observe(document.body, {
         attributes: true,
-        attributeFilter: ["data-mode-id"]
+        attributeFilter: ["data-mode-id"],
       });
     }
   }
@@ -420,22 +513,33 @@ KeyboardInputManager.prototype.listen = function () {
     if (Math.max(absDx, absDy) > touchMoveThreshold) {
       var diagonalModeEnabled = isDiagonalModeEnabled();
       if (diagonalAssistActive && diagonalModeEnabled) {
-        var forcedDiagonalDirection = resolveNearestDiagonalDirection(dx, dy, touchMoveThreshold);
+        var forcedDiagonalDirection = resolveNearestDiagonalDirection(
+          dx,
+          dy,
+          touchMoveThreshold,
+        );
         if (forcedDiagonalDirection != null) {
-          self.emit("move", forcedDiagonalDirection);
+          self.emit("move", createSwipeMoveAttempt(forcedDiagonalDirection));
         }
         touchStartPointerId = null;
         return;
       }
       if (diagonalModeEnabled) {
-        var diagonalDirection = resolveDiagonalDirectionByDelta(dx, dy, touchMoveThreshold);
+        var diagonalDirection = resolveDiagonalDirectionByDelta(
+          dx,
+          dy,
+          touchMoveThreshold,
+        );
         if (diagonalDirection != null) {
-          self.emit("move", diagonalDirection);
+          self.emit("move", createSwipeMoveAttempt(diagonalDirection));
           touchStartPointerId = null;
           return;
         }
       }
-      self.emit("move", absDx > absDy ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+      self.emit(
+        "move",
+        createSwipeMoveAttempt(resolveTouchMoveDirection(dx, dy, absDx, absDy)),
+      );
     }
     touchStartPointerId = null;
   });

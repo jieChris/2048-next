@@ -16,6 +16,8 @@ export interface GameManagerRuntimeStateManagerLike {
   timerUpdateIntervalMs?: number;
   lastStatsPanelUpdateAt?: number;
   pendingMoveInput?: unknown;
+  pendingMoveInputQueue?: unknown[];
+  pendingMoveInputDelayScheduled?: boolean;
   moveInputFlushScheduled?: boolean;
   lastMoveInputAt?: number;
   allowedDirections?: number[];
@@ -68,7 +70,10 @@ export interface GameManagerRuntimeStateOperations {
   detectMode?: (manager: GameManagerRuntimeStateManagerLike) => unknown;
   createEmptyItemInventory?: () => unknown;
   updateItemModeHud?: (manager: GameManagerRuntimeStateManagerLike) => void;
-  updateMoveTimeoutHud?: (manager: GameManagerRuntimeStateManagerLike, nowMs: number) => void;
+  updateMoveTimeoutHud?: (
+    manager: GameManagerRuntimeStateManagerLike,
+    nowMs: number,
+  ) => void;
   nowMs?: number;
 }
 
@@ -87,7 +92,7 @@ export interface GameManagerRuntimeStateRuntimeInstallOptions {
 
 export function initializeGameManagerRuntimeState(
   manager: GameManagerRuntimeStateManagerLike | null | undefined,
-  operations: GameManagerRuntimeStateOperations = {}
+  operations: GameManagerRuntimeStateOperations = {},
 ): void {
   if (!manager) return;
   manager.startTiles = 2;
@@ -99,7 +104,7 @@ export function initializeGameManagerRuntimeState(
   manager.disableSessionSync = false;
   manager.spawnTable = [
     { value: 2, weight: 90 },
-    { value: 4, weight: 10 }
+    { value: 4, weight: 10 },
   ];
   manager.spawnSequenceVersion = 1;
   manager.sessionSubmitDone = false;
@@ -112,6 +117,8 @@ export function initializeGameManagerRuntimeState(
   manager.validInputCount = 0;
   manager.invalidInputCount = 0;
   manager.pendingMoveInput = null;
+  manager.pendingMoveInputQueue = [];
+  manager.pendingMoveInputDelayScheduled = false;
   manager.moveInputFlushScheduled = false;
   manager.lastMoveInputAt = 0;
   manager.allowedDirections = [0, 1, 2, 3];
@@ -147,7 +154,7 @@ export function initializeGameManagerRuntimeState(
 
 export function resetRoundStatsState(
   manager: GameManagerRuntimeStateManagerLike | null | undefined,
-  operations: GameManagerRuntimeStateOperations = {}
+  operations: GameManagerRuntimeStateOperations = {},
 ): void {
   if (!manager) return;
   manager.comboStreak = 0;
@@ -156,6 +163,12 @@ export function resetRoundStatsState(
   manager.invalidInputCount = 0;
   manager.ipsInputCount = 0;
   manager.ipsInputTimes = [];
+  manager.pendingMoveInput = null;
+  if (Array.isArray(manager.pendingMoveInputQueue))
+    manager.pendingMoveInputQueue.length = 0;
+  else manager.pendingMoveInputQueue = [];
+  manager.pendingMoveInputDelayScheduled = false;
+  manager.moveInputFlushScheduled = false;
   manager.undoUsed = 0;
   manager.lockConsumedAtMoveCount = -1;
   manager.lockedDirectionTurn = null;
@@ -175,22 +188,23 @@ export function resetRoundStatsState(
 export function createGameManagerRuntimeStateRuntime(): GameManagerRuntimeStateRuntime {
   return {
     initializeGameManagerRuntimeState,
-    resetRoundStatsState
+    resetRoundStatsState,
   };
 }
 
 export function installGameManagerRuntimeStateRuntime(
-  options: GameManagerRuntimeStateRuntimeInstallOptions = {}
+  options: GameManagerRuntimeStateRuntimeInstallOptions = {},
 ): GameManagerRuntimeStateRuntime | null {
-  const target =
-    options.windowLike === undefined
-      ? typeof window === "undefined"
-        ? null
-        : (window as unknown as GameManagerRuntimeStateWindowLike)
-      : options.windowLike;
+  let target = options.windowLike;
+  if (target === undefined) {
+    if (typeof window === "undefined") return null;
+    // SAFETY: this runtime is published on the browser Window namespace.
+    target = window as unknown as GameManagerRuntimeStateWindowLike;
+  }
   if (!target) return null;
   if (!target.CoreGameManagerRuntimeStateRuntime) {
-    target.CoreGameManagerRuntimeStateRuntime = createGameManagerRuntimeStateRuntime();
+    target.CoreGameManagerRuntimeStateRuntime =
+      createGameManagerRuntimeStateRuntime();
   }
   return target.CoreGameManagerRuntimeStateRuntime;
 }
