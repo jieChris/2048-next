@@ -60,6 +60,14 @@ git log --oneline --left-right main...origin/main
 - 回滚优先切换到已知 release/tag 或已核实的历史 commit，先备份并检查数据迁移影响；不得用回滚代码覆盖或删除业务数据。
 - 遇到必须偏离计划的极端情况，立即在对应 `.trellis/tasks/*/execution-notes.md` 的 `Route Deviation` 中记录原因、影响、保守替代方案和恢复条件。
 
+### Web 发布边界
+
+- `main` push 只触发 `.github/workflows/smoke.yml` 的 Smoke/重构门禁，不直接部署生产。
+- 生产部署只能手动运行 `Deploy Self Hosted (Manual)`，并且部署 job 必须从 `refs/heads/main` 执行；手动运行必须填写待部署的完整 40 位 `expected_sha` 并确认 `confirm_production`。
+- 手动部署前必须确认本次要部署的 commit、Smoke、`npm run verify:release` 和 build 均通过；`production` environment 审批仍然有效。
+- `push`、CI 通过和服务器生效是三个不同状态；部署后必须通过线上健康检查、版本文件或等价资产证据核对实际版本。
+- 修改发布工作流本身属于 release-tooling 变更：必须同步更新相关测试、发布指南和提交分批规则，并在本地验证后才允许提交；所有第三方 GitHub Actions 必须固定到完整 commit SHA。
+
 ### 交付报告
 
 每次完成任务都要明确报告：修改文件、验证结果、是否 commit、是否 push、是否 deploy，以及本地 `HEAD`、`origin/main` 和服务器实际运行 commit。没有执行的动作写“未执行”，不得用“已更新”含糊代替。

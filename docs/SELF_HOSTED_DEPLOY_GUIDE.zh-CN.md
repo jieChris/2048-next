@@ -2,7 +2,8 @@
 
 ## 1. 目标
 
-- 代码合入 `main` 后，由 GitHub Actions 自动执行构建并部署。
+- 代码推送到 `main` 后，GitHub Actions 自动运行 Smoke 和重构门禁，但不会自动部署生产环境。
+- 生产部署必须由维护者在 GitHub Actions 中手动触发，并明确选择 `main` 分支。
 - 服务器只发布 `dist/` 构建产物，不直接暴露仓库源码。
 - 发布采用 `releases/<release_id> + current` 软链，便于快速回滚。
 
@@ -77,25 +78,29 @@ ssh -p <port> <deploy_user>@<server_ip>
 
 - `DEPLOY_KEEP_RELEASES`：保留历史版本数量，默认 `5`
 
-## 5. 自动部署触发
+## 5. 发布触发
 
 工作流文件：`.github/workflows/deploy-self-hosted.yml`
 
-触发条件：
+### 5.1 推送后的自动检查
 
-- push 到 `main`
-- 手动 `Run workflow`
+推送到 `main` 后，`.github/workflows/smoke.yml` 会自动运行 Smoke 和重构门禁。
+这一步只负责验证代码，不会上传文件、切换服务器 `current` 软链，也不会重启线上站点。
 
-部署流程：
+### 5.2 手动生产部署
 
-1. `npm ci`
-2. `npm run verify:release-ready`
-3. `npm run build`
-4. 将 `dist/` 打包为 `dist-<release_id>.tar.gz`
-5. 上传到服务器 `/tmp`
-6. 解包到 `${DEPLOY_ROOT}/releases/<release_id>`
-7. 软链 `${DEPLOY_ROOT}/current` 指向新版本
-8. 清理超出保留数量的旧版本
+生产部署需要在 GitHub Actions 页面手动运行 `Deploy Self Hosted (Manual)` 工作流：
+
+1. 在 `Run workflow` 页面选择 `main` 分支；
+2. 将要部署的 `main` commit 完整 40 位 SHA 填入 `expected_sha`；
+3. 确认 `confirm_production`；
+4. 确认本次要部署的 commit 已经位于 `main`，且 SHA 与所选工作流版本完全一致；
+5. 等待 Smoke、`npm run verify:release` 和构建步骤全部通过；
+6. 确认 `production` environment 的审批要求（如果仓库配置了审批人）；
+7. 批准并执行 `Deploy To Server`；
+8. 部署结束后检查线上健康状态和实际运行版本。
+
+工作流会拒绝从非 `main` 分支执行生产部署，也会拒绝与 `expected_sha` 不一致的工作流版本。工作流使用的第三方 Actions 固定到完整 commit SHA，避免上游可变标签被重新指向。
 
 ## 6. 回滚
 
@@ -116,8 +121,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 7. 首次上线前检查
 
-- `main` 最新提交在 GitHub Actions 上通过构建与发布前检查；
-- `deploy-self-hosted` workflow 成功；
+- `main` 推送后的 Smoke 和发布前检查通过；
+- 手动运行 `Deploy Self Hosted (Manual)` 工作流并成功；
 - 线上访问验证：
   - `/index.html`
   - `/play.html`

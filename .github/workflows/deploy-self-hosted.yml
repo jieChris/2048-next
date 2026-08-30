@@ -1,10 +1,19 @@
-name: Deploy Self Hosted
+name: Deploy Self Hosted (Manual)
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "要部署的 main 完整 commit SHA（40 位）"
+        required: true
+        type: string
+      confirm_production:
+        description: "确认这是生产环境部署"
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-self-hosted-main
@@ -14,10 +23,38 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  validate-release:
+    name: Validate Production Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+    steps:
+      - name: Validate selected commit
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main" || {
+            echo "Production deploys must run from refs/heads/main; selected ${GITHUB_REF}." >&2
+            exit 1
+          }
+          test "${CONFIRM_PRODUCTION}" = "true" || {
+            echo "Production confirmation was not accepted." >&2
+            exit 1
+          }
+          [[ "${EXPECTED_SHA}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "expected_sha must be a full 40-character lowercase commit SHA." >&2
+            exit 1
+          }
+          test "${GITHUB_SHA}" = "${EXPECTED_SHA}" || {
+            echo "Selected commit ${GITHUB_SHA} does not match expected_sha ${EXPECTED_SHA}." >&2
+            exit 1
+          }
+
   smoke:
     name: Full Smoke Gate
+    needs: validate-release
     uses: ./.github/workflows/smoke.yml
-    secrets: inherit
 
   build:
     name: Build Release Package
@@ -29,10 +66,12 @@ jobs:
       artifact_name: ${{ steps.meta.outputs.artifact_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -60,12 +99,14 @@ jobs:
           echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
 
       - name: Archive dist bundle
+        env:
+          ARTIFACT_NAME: ${{ steps.meta.outputs.artifact_name }}
         run: |
           test -d dist
-          tar -czf "${{ steps.meta.outputs.artifact_name }}" -C dist .
+          tar -czf "${ARTIFACT_NAME}" -C dist .
 
       - name: Upload release package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.meta.outputs.artifact_name }}
           path: ${{ steps.meta.outputs.artifact_name }}
@@ -102,16 +143,18 @@ jobs:
           test -n "${DEPLOY_PORT}" || { echo "Missing secret: DEPLOY_PORT" >&2; exit 1; }
 
       - name: Checkout deployment config
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Download release package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: artifact
 
       - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
 
