@@ -191,6 +191,10 @@ test.describe("Legacy Multi-Page Smoke", () => {
         window.localStorage.removeItem("online_pending_record_submit_signature_v1");
         window.localStorage.setItem("__smoke_persist_record_seeded__", "1");
       }
+      const retryAfterReload =
+        window.sessionStorage.getItem("__smoke_persist_retry_after_reload__") ===
+        "1";
+      (window as any).__DISABLE_ONLINE_LEADERBOARD__ = !retryAfterReload;
       (window as any).GAME_API_REQUEST_TIMEOUT_MS = 120;
     });
 
@@ -250,8 +254,12 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await page.evaluate(async (recordId) => {
       const store = (window as any).LocalHistoryStore;
       await store.updateRecordAsync(recordId, {
-        next_retry_at: new Date(Date.now() - 1000).toISOString()
+        next_retry_at: new Date(Date.now() - 1000).toISOString(),
       });
+      window.sessionStorage.setItem(
+        "__smoke_persist_retry_after_reload__",
+        "1",
+      );
     }, firstRecord?.id);
     await expect.poll(async () => {
       const record = await readLatestDurableRecord(page);

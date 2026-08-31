@@ -333,6 +333,9 @@ test.describe("Account palette draft outbox", () => {
     await page.goto("/palette.html#appearance-settings", {
       waitUntil: "domcontentloaded",
     });
+    await expect(
+      page.locator('.palette-item[data-palette-id="p-cloud"]'),
+    ).toBeVisible();
     await page.locator("#palette-name-input").fill("账号 42 草稿");
     await page.locator("#palette-rename-btn").click();
     await page.locator("#palette-save-btn").click();

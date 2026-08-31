@@ -2,7 +2,14 @@
 
 test.describe("Legacy Multi-Page Smoke", () => {
   async function openRecordsTab(page: import("@playwright/test").Page) {
-    await page.locator("#user-tab-records").click();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-page-system",
+      "unified-page-system",
+    );
+    const tab = page.locator("#user-tab-records");
+    await expect(tab).toBeVisible();
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
     await expect(page.locator("#user-panel-records")).toBeVisible();
   }
 

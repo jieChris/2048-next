@@ -54,6 +54,9 @@ export const BATCH_DEFS = {
       /^tests\/smoke\/pages-(announcement-settings|play-modes|replay-runtime)\.smoke\.spec\.ts$/u.test(
         file,
       ) ||
+      /^tests\/smoke\/pages-(palette-outbox|user-profile-title|online-submit-persist-retry|contracts-saved-session)\.smoke\.spec\.ts$/u.test(
+        file,
+      ) ||
       /^tests\/unit\/bootstrap-(index-ui-page-actions-host|index-ui-page-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.spec\.ts$/u.test(
         file,
       ) ||
@@ -67,6 +70,7 @@ export const BATCH_DEFS = {
         "AGENTS.md",
         ".github/workflows/deploy-self-hosted.yml",
         ".github/workflows/smoke.yml",
+        ".trellis/spec/smoke-testing.md",
         "tests/unit/nginx-cache-policy.spec.ts",
         "playwright.config.ts",
         "package.json",

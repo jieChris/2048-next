@@ -1399,10 +1399,34 @@ test.describe("Legacy Multi-Page Smoke", () => {
           initial_seed: 101,
           seed: 101,
           duration_ms: 3000,
-          has_game_started: true
-        }
-      }
+          has_game_started: true,
+        },
+      },
     };
+
+    await page.route("**/api/auth/refresh", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          token: "smoke_token",
+          user: {
+            id: 1,
+            public_profile_id: 1,
+            nickname: "SmokeUser",
+          },
+        }),
+      });
+    });
+
+    await page.route("**/api/ranked-session/attempt", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, accepted: true }),
+      });
+    });
 
     await page.route("**/api/ranked-checkpoint**", async (route) => {
       const request = route.request();
@@ -1525,12 +1549,19 @@ test.describe("Legacy Multi-Page Smoke", () => {
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeVisible();
     await page.locator("#game-dialog-confirm").click();
     await expect(page.locator("#game-dialog-overlay.is-open")).toBeHidden();
-    const clearMarkerWritten = await page.evaluate(() =>
-      !!window.localStorage.getItem(
-        "ranked_checkpoint_cleared_at:v1:user:1:standard_4x4_pow2_no_undo"
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const manager = (window as any).game_manager;
+            return {
+              blocked: manager?.rankedRestartBlockedUntilSessionReady === true,
+              preparing: manager?.rankedRestartPreparing === true,
+            };
+          }),
+        { timeout: 12_000 },
       )
-    );
-    expect(clearMarkerWritten).toBe(true);
+      .toEqual({ blocked: false, preparing: false });
 
     const reloadResponse = await page.reload({ waitUntil: "domcontentloaded" });
     expect(reloadResponse, "Reloaded ranked play response should exist").not.toBeNull();
@@ -1614,7 +1645,7 @@ test.describe("Legacy Multi-Page Smoke", () => {
       let mirror: Record<string, unknown> | null = null;
       try {
         mirror = rawMirror ? (JSON.parse(rawMirror) as Record<string, unknown>) : null;
-      } catch (_err) {
+      } catch {
         mirror = null;
       }
       return {
