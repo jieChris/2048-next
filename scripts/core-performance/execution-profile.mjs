@@ -1,6 +1,9 @@
 import {
+  FIXED_EXECUTION_POLICIES,
   GITHUB_ACTIONS_LINUX_X64_EXECUTION_PROFILE,
   REFERENCE_EXECUTION_PROFILE,
+  RELATIVE_RATCHET_THRESHOLD,
+  RESOURCE_METRICS,
 } from "./policy.mjs";
 
 function resolveCorePerformanceExecutionProfile(
@@ -24,7 +27,7 @@ function resolveCorePerformanceExecutionProfile(
 function assertSupportedExecutionProfile(executionProfile) {
   if (
     executionProfile !== REFERENCE_EXECUTION_PROFILE &&
-    executionProfile !== GITHUB_ACTIONS_LINUX_X64_EXECUTION_PROFILE
+    !Object.hasOwn(FIXED_EXECUTION_POLICIES, executionProfile)
   ) {
     throw new Error(
       `unsupported core performance execution profile: ${executionProfile}`,
@@ -32,41 +35,19 @@ function assertSupportedExecutionProfile(executionProfile) {
   }
 }
 
-function hasExecutionBaseline(config, executionProfile) {
+function resolveExecutionThresholdMode(executionProfile, metric) {
   assertSupportedExecutionProfile(executionProfile);
-  if (executionProfile === REFERENCE_EXECUTION_PROFILE) return true;
-  return Boolean(config?.executionBaselines?.[executionProfile]);
-}
-
-function resolvePerformanceConfigForExecution(config, executionProfile) {
-  assertSupportedExecutionProfile(executionProfile);
-  if (executionProfile === REFERENCE_EXECUTION_PROFILE) return config;
-  const executionBaseline = config?.executionBaselines?.[executionProfile];
-  if (!executionBaseline) {
-    throw new Error(
-      `missing core performance execution baseline: ${executionProfile}`,
-    );
+  if (executionProfile === REFERENCE_EXECUTION_PROFILE) {
+    return RELATIVE_RATCHET_THRESHOLD;
   }
-  const scenarios = Object.fromEntries(
-    Object.entries(config.scenarios || {}).map(([scenario, owner]) => {
-      const baselineMetrics = executionBaseline[scenario] || {};
-      const metrics = Object.fromEntries(
-        Object.entries(owner.metrics || {}).map(([metric, budget]) => [
-          metric,
-          Object.hasOwn(baselineMetrics, metric)
-            ? { ...budget, baselineP75: baselineMetrics[metric] }
-            : budget,
-        ]),
-      );
-      return [scenario, { ...owner, metrics }];
-    }),
-  );
-  return { ...config, scenarios };
+  const policy = FIXED_EXECUTION_POLICIES[executionProfile];
+  return RESOURCE_METRICS.includes(metric)
+    ? policy.resourceThreshold
+    : policy.timingAndInteractionThreshold;
 }
 
 export {
   assertSupportedExecutionProfile,
-  hasExecutionBaseline,
   resolveCorePerformanceExecutionProfile,
-  resolvePerformanceConfigForExecution,
+  resolveExecutionThresholdMode,
 };

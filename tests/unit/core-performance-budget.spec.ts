@@ -4,7 +4,6 @@ import {
   FIXED_POLICIES,
   FIXED_PROFILE,
   IMMUTABLE_METRIC_POLICIES,
-  REQUIRED_EXECUTION_BASELINE_METRICS,
   REQUIRED_SCENARIO_METRICS,
   REQUIRED_SCENARIO_POLICY,
   computeEffectiveThreshold,
@@ -89,33 +88,54 @@ function validConfig() {
       },
     ]),
   );
-  const executionBaselines = Object.fromEntries(
-    Object.entries(REQUIRED_EXECUTION_BASELINE_METRICS).map(
-      ([executionProfile, profileScenarios]) => [
-        executionProfile,
-        Object.fromEntries(
-          Object.entries(profileScenarios).map(([scenario, metrics]) => [
-            scenario,
-            Object.fromEntries(
-              metrics.map((metricName) => [
-                metricName,
-                metricFor(scenario as ScenarioName, metricName).baselineP75,
-              ]),
-            ),
-          ]),
-        ),
-      ],
-    ),
-  );
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     sampleCount: 5,
     distPath: "dist",
     profile: structuredClone(FIXED_PROFILE),
     policies: structuredClone(FIXED_POLICIES),
-    executionBaselines,
+    executionPolicies: {
+      "github-actions-linux-x64": {
+        timingAndInteractionThreshold: "immutable-absolute",
+        resourceThreshold: "relative-ratchet",
+      },
+    },
     scenarios,
   };
+}
+
+function legacySchema2Config() {
+  const config = structuredClone(validConfig()) as any;
+  config.schemaVersion = 2;
+  delete config.executionPolicies;
+  config.executionBaselines = {
+    "github-actions-linux-x64": {
+      homeCold: {
+        longTaskTotalMs: 10,
+        longTaskMaxMs: 10,
+        readyMs: 10,
+      },
+      playCold: {
+        longTaskTotalMs: 10,
+        longTaskMaxMs: 10,
+        readyMs: 10,
+      },
+      moveInteraction: { moveLatencyMs: 10 },
+      warmSaveRestore: {
+        longTaskTotalMs: 10,
+        longTaskMaxMs: 10,
+        restoreReadyLatencyMs: 10,
+      },
+      replayColdImportStep: {
+        longTaskTotalMs: 10,
+        longTaskMaxMs: 10,
+        readyMs: 10,
+        replayImportLatencyMs: 10,
+        replayStepLatencyMs: 10,
+      },
+    },
+  };
+  return config;
 }
 
 function metricValue(metricName: string, value: number) {
@@ -471,51 +491,49 @@ describe("core performance config and anti-laundering", () => {
     );
   });
 
-  it("keeps GitHub Actions CPU baselines isolated from the reference profile", () => {
-    const config = validConfig() as ReturnType<typeof validConfig> & {
-      executionBaselines: Record<
-        string,
-        Record<string, Record<string, number>>
-      >;
+  it("uses absolute timing caps on GitHub Actions without relaxing reference ratchets", () => {
+    const config = validConfig();
+    config.scenarios.homeCold.metrics.cls = {
+      baselineP75: 0.01,
+      relativeTolerance: 0,
+      additiveTolerance: 0,
+      absoluteMax: 0.1,
     };
-    config.schemaVersion = 2;
-    config.executionBaselines = {
-      "github-actions-linux-x64": {
-        homeCold: {
-          longTaskTotalMs: 925,
-          longTaskMaxMs: 436,
-          readyMs: 1918.8,
-        },
-        playCold: {
-          longTaskTotalMs: 983,
-          longTaskMaxMs: 421,
-          readyMs: 2258.3,
-        },
-        moveInteraction: { moveLatencyMs: 50.2 },
-        warmSaveRestore: {
-          longTaskTotalMs: 860,
-          longTaskMaxMs: 415,
-          restoreReadyLatencyMs: 2271,
-        },
-        replayColdImportStep: {
-          longTaskTotalMs: 180,
-          longTaskMaxMs: 73,
-          readyMs: 1441.2,
-          replayImportLatencyMs: 125.8,
-          replayStepLatencyMs: 44.8,
-        },
+    const observed = {
+      homeCold: {
+        ttfbMs: 100,
+        fcpMs: 100,
+        lcpMs: 100,
+        cls: 0.05,
+        longTaskTotalMs: 630,
+        longTaskMaxMs: 313,
+        readyMs: 1671.8,
+      },
+      playCold: {
+        longTaskTotalMs: 679,
+        longTaskMaxMs: 322,
+        readyMs: 2082.3,
+      },
+      moveInteraction: { moveLatencyMs: 35 },
+      warmSaveRestore: {
+        longTaskTotalMs: 414,
+        longTaskMaxMs: 219,
+        restoreReadyLatencyMs: 1928,
+      },
+      replayColdImportStep: {
+        longTaskTotalMs: 0,
+        longTaskMaxMs: 0,
+        readyMs: 1242,
+        replayImportLatencyMs: 77.5,
+        replayStepLatencyMs: 30.5,
       },
     };
     const samples = validSamples(5);
     for (const current of samples) {
       if (Object.hasOwn(current.metrics, "cls")) current.metrics.cls = 0.01;
-      Object.assign(
-        current.metrics,
-        config.executionBaselines["github-actions-linux-x64"][
-          current.scenario
-        ] || {},
-      );
+      Object.assign(current.metrics, observed[current.scenario] || {});
     }
+
     const referenceResult = evaluatePerformanceBudget({
       config,
       repositoryConfig: config,
@@ -528,99 +546,114 @@ describe("core performance config and anti-laundering", () => {
       referenceResult.violations.filter(
         (violation) => violation.code === "performance-budget-exceeded",
       ),
-    ).toHaveLength(15);
+    ).toHaveLength(17);
 
-    const legacyRepositoryConfig = structuredClone(config) as Partial<
-      typeof config
-    >;
-    legacyRepositoryConfig.schemaVersion = 1;
-    delete legacyRepositoryConfig.executionBaselines;
     const githubResult = evaluatePerformanceBudget({
       config,
-      repositoryConfig: legacyRepositoryConfig,
+      repositoryConfig: legacySchema2Config(),
       samples,
       exceptions: EMPTY_EXCEPTIONS,
       executionProfile: "github-actions-linux-x64",
       now: new Date("2026-09-05T00:00:00Z"),
     });
-    expect(
-      githubResult.violations.filter(
-        (violation) =>
-          violation.code === "performance-budget-exceeded" ||
-          violation.code === "invalid-config",
-      ),
-    ).toEqual([]);
-  });
+    expect(githubResult.violations).toEqual([]);
 
-  it("locks execution baseline shape, caps, ratchet, and bootstrap headroom", () => {
-    const executionProfile = "github-actions-linux-x64";
-    const repositoryConfig = validConfig();
-
-    const raised = structuredClone(repositoryConfig);
-    raised.executionBaselines[executionProfile].homeCold.longTaskTotalMs += 1;
-    expect(
-      evaluate(raised, validSamples(), repositoryConfig).violations,
-    ).toContainEqual(
-      expect.objectContaining({
-        code: "performance-baseline-raised",
-        executionProfile,
-        scenario: "homeCold",
-        metric: "longTaskTotalMs",
-      }),
-    );
-
-    const removed = structuredClone(repositoryConfig);
-    delete removed.executionBaselines[executionProfile].playCold.longTaskMaxMs;
-    const removedViolations = evaluate(
-      removed,
-      validSamples(),
-      repositoryConfig,
-    ).violations;
-    expect(removedViolations).toContainEqual(
-      expect.objectContaining({
-        code: "performance-scope-narrowed",
-        executionProfile,
-        scenario: "playCold",
-        metric: "longTaskMaxMs",
-      }),
-    );
-    expect(removedViolations).toContainEqual(
-      expect.objectContaining({ code: "invalid-config" }),
-    );
-
-    const aboveCap = structuredClone(repositoryConfig);
-    aboveCap.executionBaselines[executionProfile].homeCold.longTaskMaxMs = 501;
-    expect(validatePerformanceConfig(aboveCap)).toContainEqual(
-      expect.objectContaining({
-        code: "invalid-config",
-        executionProfile,
-        scenario: "homeCold",
-        metric: "longTaskMaxMs",
-      }),
-    );
-
-    const bootstrap = structuredClone(repositoryConfig);
-    bootstrap.executionBaselines[executionProfile].homeCold.longTaskTotalMs =
-      126;
-    const legacyRepositoryConfig = structuredClone(repositoryConfig) as Partial<
-      typeof repositoryConfig
-    >;
-    legacyRepositoryConfig.schemaVersion = 1;
-    delete legacyRepositoryConfig.executionBaselines;
+    const overAbsoluteCap = structuredClone(samples);
+    for (const current of overAbsoluteCap.filter(
+      (item) => item.scenario === "moveInteraction",
+    )) {
+      current.metrics.moveLatencyMs = 201;
+    }
     expect(
       evaluatePerformanceBudget({
-        config: bootstrap,
-        repositoryConfig: legacyRepositoryConfig,
-        samples: validSamples(100),
+        config,
+        repositoryConfig: legacySchema2Config(),
+        samples: overAbsoluteCap,
         exceptions: EMPTY_EXCEPTIONS,
-        executionProfile,
-        now: new Date("2026-09-05T00:00:00Z"),
+        executionProfile: "github-actions-linux-x64",
       }).violations,
     ).toContainEqual(
       expect.objectContaining({
-        code: "bootstrap-baseline-headroom",
-        scenario: "homeCold",
-        metric: "longTaskTotalMs",
+        code: "performance-budget-exceeded",
+        scenario: "moveInteraction",
+        metric: "moveLatencyMs",
+        threshold: 200,
+      }),
+    );
+
+    for (const [metric, value, threshold] of [
+      ["requestCount", 11, 10],
+      ["transferBytes", 12, 11],
+      ["decodedBodyBytes", 12, 11],
+    ] as const) {
+      const resourceGrowth = structuredClone(samples);
+      for (const current of resourceGrowth.filter(
+        (item) => item.scenario === "homeCold",
+      )) {
+        current.metrics[metric] = value;
+      }
+      expect(
+        evaluatePerformanceBudget({
+          config,
+          repositoryConfig: legacySchema2Config(),
+          samples: resourceGrowth,
+          exceptions: EMPTY_EXCEPTIONS,
+          executionProfile: "github-actions-linux-x64",
+        }).violations,
+      ).toContainEqual(
+        expect.objectContaining({
+          code: "performance-budget-exceeded",
+          scenario: "homeCold",
+          metric,
+          threshold,
+        }),
+      );
+    }
+  });
+
+  it("locks execution policy after the one-time schema 2 migration", () => {
+    const executionProfile = "github-actions-linux-x64";
+    const repositoryConfig = validConfig();
+    const changed = structuredClone(repositoryConfig);
+    changed.executionPolicies[executionProfile].timingAndInteractionThreshold =
+      "relative-ratchet";
+    expect(validatePerformanceConfig(changed)).toContainEqual(
+      expect.objectContaining({ code: "invalid-config" }),
+    );
+    expect(
+      evaluate(changed, validSamples(), repositoryConfig).violations,
+    ).toContainEqual(
+      expect.objectContaining({ code: "performance-policy-changed" }),
+    );
+
+    const legacyRepositoryConfig = legacySchema2Config();
+    expect(
+      evaluatePerformanceBudget({
+        config: repositoryConfig,
+        repositoryConfig: legacyRepositoryConfig,
+        samples: validSamples(),
+        exceptions: EMPTY_EXCEPTIONS,
+        executionProfile: "reference",
+      }).violations.filter((violation) => violation.code === "invalid-config"),
+    ).toEqual([]);
+    expect(validatePerformanceConfig(legacyRepositoryConfig)).toContainEqual(
+      expect.objectContaining({ code: "invalid-config" }),
+    );
+
+    const schema1RepositoryConfig = legacySchema2Config();
+    schema1RepositoryConfig.schemaVersion = 1;
+    expect(
+      evaluatePerformanceBudget({
+        config: repositoryConfig,
+        repositoryConfig: schema1RepositoryConfig,
+        samples: validSamples(),
+        exceptions: EMPTY_EXCEPTIONS,
+        executionProfile: "reference",
+      }).violations,
+    ).toContainEqual(
+      expect.objectContaining({
+        code: "invalid-config",
+        path: "repository:config/core-performance-budgets.json",
       }),
     );
   });

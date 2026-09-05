@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createCorePerformanceFailurePayload,
+  createPerformanceThresholds,
   deterministicApiPayload,
   fingerprintDistManifest,
   installDeterministicContext,
@@ -128,6 +129,51 @@ describe("core performance CLI and Git baseline", () => {
         {},
       ),
     ).toThrow(/unknown core performance option/u);
+  });
+
+  it("builds evidence thresholds with the same execution modes as evaluation", async () => {
+    const config = JSON.parse(
+      await readFile("config/core-performance-budgets.json", "utf8"),
+    );
+    const githubThresholds = createPerformanceThresholds(
+      config,
+      "github-actions-linux-x64",
+    );
+    expect(githubThresholds.homeCold.ttfbMs).toMatchObject({
+      thresholdMode: "immutable-absolute",
+      effectiveMax: 800,
+    });
+    expect(githubThresholds.homeCold.fcpMs).toMatchObject({
+      thresholdMode: "immutable-absolute",
+      relativeMax: 560,
+      effectiveMax: 1800,
+    });
+    expect(githubThresholds.homeCold.cls).toMatchObject({
+      thresholdMode: "immutable-absolute",
+      effectiveMax: 0.1,
+    });
+    expect(githubThresholds.homeCold.requestCount).toMatchObject({
+      thresholdMode: "relative-ratchet",
+      effectiveMax: 49,
+    });
+    expect(githubThresholds.homeCold.transferBytes).toMatchObject({
+      thresholdMode: "relative-ratchet",
+      effectiveMax: 847737,
+    });
+    expect(githubThresholds.homeCold.decodedBodyBytes).toMatchObject({
+      thresholdMode: "relative-ratchet",
+      effectiveMax: 2404202,
+    });
+
+    const referenceThresholds = createPerformanceThresholds(
+      config,
+      "reference",
+    );
+    expect(referenceThresholds.homeCold.fcpMs).toMatchObject({
+      thresholdMode: "relative-ratchet",
+      relativeMax: 560,
+      effectiveMax: 560,
+    });
   });
 
   it("rejects an empty baseline ref and emits a valid JSON failure", async () => {

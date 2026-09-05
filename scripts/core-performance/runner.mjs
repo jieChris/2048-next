@@ -20,7 +20,7 @@ import { runBrowserMeasurements } from "./browser.mjs";
 import { fingerprintDistManifest } from "./dist-fingerprint.mjs";
 import {
   resolveCorePerformanceExecutionProfile,
-  resolvePerformanceConfigForExecution,
+  resolveExecutionThresholdMode,
 } from "./execution-profile.mjs";
 import {
   readCorePerformanceContext,
@@ -437,22 +437,25 @@ async function withPreviewServer(
   }
 }
 
-function createThresholds(config, executionProfile) {
-  const effectiveConfig = resolvePerformanceConfigForExecution(
-    config,
-    executionProfile,
-  );
+function createPerformanceThresholds(config, executionProfile) {
   return Object.fromEntries(
-    Object.entries(effectiveConfig.scenarios || {}).map(([scenario, owner]) => [
+    Object.entries(config.scenarios || {}).map(([scenario, owner]) => [
       scenario,
       Object.fromEntries(
-        Object.entries(owner.metrics || {}).map(([metric, budget]) => [
-          metric,
-          {
-            ...budget,
-            ...computeEffectiveThreshold(budget),
-          },
-        ]),
+        Object.entries(owner.metrics || {}).map(([metric, budget]) => {
+          const thresholdMode = resolveExecutionThresholdMode(
+            executionProfile,
+            metric,
+          );
+          return [
+            metric,
+            {
+              ...budget,
+              thresholdMode,
+              ...computeEffectiveThreshold(budget, thresholdMode),
+            },
+          ];
+        }),
       ),
     ]),
   );
@@ -693,7 +696,7 @@ async function runCorePerformanceGate({
       sampleCount,
       samples: browserResult.samples,
       summaries: evaluation.summaries,
-      thresholds: createThresholds(config, executionProfile),
+      thresholds: createPerformanceThresholds(config, executionProfile),
       activeExceptions: evaluation.activeExceptions,
       appliedExceptions: evaluation.appliedExceptions,
       violations,
@@ -764,6 +767,7 @@ export {
   DEFAULT_STARTUP_TIMEOUT_MS,
   PROJECT_ROOT,
   createCorePerformanceFailurePayload,
+  createPerformanceThresholds,
   fingerprintDistManifest,
   parseCorePerformanceCliOptions,
   printPayload,
