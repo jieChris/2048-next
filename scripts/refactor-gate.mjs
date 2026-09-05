@@ -4,6 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  ownedSpawnOptions,
+  terminateOwnedProcessTree,
+} from "./process-tree.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -43,7 +48,8 @@ const STEP_TIMEOUT_BY_NAME_MS = {
   "engine-audit": 60_000,
   unit: 300_000,
   smoke: 300_000,
-  build: 180_000
+  build: 180_000,
+  "core-performance": 900_000,
 };
 const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
   "game-manager-audit": "REFACTOR_GATE_TIMEOUT_GAME_MANAGER_AUDIT_MS",
@@ -56,24 +62,50 @@ const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
   "engine-audit": "REFACTOR_GATE_TIMEOUT_ENGINE_AUDIT_MS",
   unit: "REFACTOR_GATE_TIMEOUT_UNIT_MS",
   smoke: "REFACTOR_GATE_TIMEOUT_SMOKE_MS",
-  build: "REFACTOR_GATE_TIMEOUT_BUILD_MS"
+  build: "REFACTOR_GATE_TIMEOUT_BUILD_MS",
+  "core-performance": "REFACTOR_GATE_TIMEOUT_CORE_PERFORMANCE_MS",
 };
 
 const STEPS = [
-  { name: "game-manager-audit", cmd: "node", args: ["scripts/game-manager-audit.mjs"] },
-  { name: "entry-manifest-audit", cmd: "node", args: ["scripts/entry-manifest-audit.mjs"] },
+  {
+    name: "game-manager-audit",
+    cmd: "node",
+    args: ["scripts/game-manager-audit.mjs"],
+  },
+  {
+    name: "entry-manifest-audit",
+    cmd: "node",
+    args: ["scripts/entry-manifest-audit.mjs"],
+  },
   {
     name: "page-legacy-runtime-boundary-audit",
     cmd: "node",
-    args: ["scripts/page-legacy-runtime-boundary-audit.mjs"]
+    args: ["scripts/page-legacy-runtime-boundary-audit.mjs"],
   },
-  { name: "legacy-boundary-audit", cmd: "node", args: ["scripts/legacy-boundary-audit.mjs"] },
-  { name: "service-boundary-audit", cmd: "node", args: ["scripts/service-boundary-audit.mjs"] },
-  { name: "contracts-matrix-audit", cmd: "node", args: ["scripts/contracts-matrix-audit.mjs"] },
+  {
+    name: "legacy-boundary-audit",
+    cmd: "node",
+    args: ["scripts/legacy-boundary-audit.mjs"],
+  },
+  {
+    name: "service-boundary-audit",
+    cmd: "node",
+    args: ["scripts/service-boundary-audit.mjs"],
+  },
+  {
+    name: "contracts-matrix-audit",
+    cmd: "node",
+    args: ["scripts/contracts-matrix-audit.mjs"],
+  },
   { name: "engine-audit", cmd: "node", args: ["scripts/engine-audit.mjs"] },
   { name: "unit", cmd: "npm", args: ["run", "test:unit"] },
   { name: "smoke", cmd: "npm", args: ["run", smokeScript] },
-  { name: "build", cmd: "npm", args: ["run", "build"] }
+  { name: "build", cmd: "npm", args: ["run", "build"] },
+  {
+    name: "core-performance",
+    cmd: "npm",
+    args: ["run", "test:performance:core"],
+  },
 ];
 
 function isSmokeScriptName(name) {
@@ -93,7 +125,9 @@ function parsePositiveInteger(value) {
 }
 
 function resolveLogMode(value) {
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
   return normalized === "verbose" ? "verbose" : "compact";
 }
 
@@ -114,13 +148,15 @@ function toProjectRelativePath(filePath) {
 
 function resolveSummaryJsonPath() {
   const env = process.env || {};
-  const configured = env[SUMMARY_JSON_PATH_ENV_KEY] || DEFAULT_SUMMARY_JSON_REL_PATH;
+  const configured =
+    env[SUMMARY_JSON_PATH_ENV_KEY] || DEFAULT_SUMMARY_JSON_REL_PATH;
   return path.resolve(PROJECT_ROOT, configured);
 }
 
 function resolveSummaryMarkdownPath() {
   const env = process.env || {};
-  const configured = env[SUMMARY_MARKDOWN_PATH_ENV_KEY] || DEFAULT_SUMMARY_MARKDOWN_REL_PATH;
+  const configured =
+    env[SUMMARY_MARKDOWN_PATH_ENV_KEY] || DEFAULT_SUMMARY_MARKDOWN_REL_PATH;
   return path.resolve(PROJECT_ROOT, configured);
 }
 
@@ -140,7 +176,7 @@ function createTailState(maxLines = DEFAULT_STEP_OUTPUT_TAIL_LINES) {
   return {
     carry: "",
     lines: [],
-    maxLines
+    maxLines,
   };
 }
 
@@ -175,8 +211,11 @@ function formatDuration(ms) {
 }
 
 function resolveHeadlessShellPathFromChromiumPath(chromiumExecutable) {
-  if (typeof chromiumExecutable !== "string" || !chromiumExecutable) return null;
-  const match = chromiumExecutable.match(/(.*)\/chromium-(\d+)\/chrome-linux64\/chrome$/);
+  if (typeof chromiumExecutable !== "string" || !chromiumExecutable)
+    return null;
+  const match = chromiumExecutable.match(
+    /(.*)\/chromium-(\d+)\/chrome-linux64\/chrome$/,
+  );
   if (!match) return null;
   const [, prefix, revision] = match;
   return `${prefix}/chromium_headless_shell-${revision}/chrome-headless-shell-linux64/chrome-headless-shell`;
@@ -186,20 +225,20 @@ function validateChromiumExecutable(
   executable,
   {
     timeoutMs = DEFAULT_CHROMIUM_VALIDATE_TIMEOUT_MS,
-    args = ["--version"]
-  } = {}
+    args = ["--version"],
+  } = {},
 ) {
   const result = spawnSync(executable, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: timeoutMs
+    timeout: timeoutMs,
   });
   if (result.status === 0) return { ok: true, timedOut: false };
   if (result.error && result.error.code === "ETIMEDOUT") {
     return {
       ok: false,
       timedOut: true,
-      reason: `executable validation timed out after ${String(timeoutMs)}ms`
+      reason: `executable validation timed out after ${String(timeoutMs)}ms`,
     };
   }
 
@@ -207,7 +246,9 @@ function validateChromiumExecutable(
   return {
     ok: false,
     timedOut: false,
-    reason: errorOutput || `chromium validation failed with status=${String(result.status)}`
+    reason:
+      errorOutput ||
+      `chromium validation failed with status=${String(result.status)}`,
   };
 }
 
@@ -228,7 +269,7 @@ async function checkSmokePrecondition() {
       return {
         ok: false,
         executable: chromiumExecutable || null,
-        reason: "Playwright chromium executable is missing"
+        reason: "Playwright chromium executable is missing",
       };
     }
 
@@ -241,17 +282,19 @@ async function checkSmokePrecondition() {
       return {
         ok: false,
         executable: chromiumExecutable,
-        reason: validation.reason || "Playwright chromium executable is not runnable"
+        reason:
+          validation.reason || "Playwright chromium executable is not runnable",
       };
     }
 
-    const headlessShellPath = resolveHeadlessShellPathFromChromiumPath(chromiumExecutable);
+    const headlessShellPath =
+      resolveHeadlessShellPathFromChromiumPath(chromiumExecutable);
     if (headlessShellPath) {
       if (!fs.existsSync(headlessShellPath)) {
         return {
           ok: false,
           executable: headlessShellPath,
-          reason: "Playwright chromium headless shell executable is missing"
+          reason: "Playwright chromium headless shell executable is missing",
         };
       }
       const headlessValidation = validateChromiumExecutable(headlessShellPath);
@@ -261,14 +304,18 @@ async function checkSmokePrecondition() {
           executable: headlessShellPath,
           reason:
             headlessValidation.reason ||
-            "Playwright chromium headless shell executable is not runnable"
+            "Playwright chromium headless shell executable is not runnable",
         };
       }
     }
 
     return { ok: true, executable: chromiumExecutable };
   } catch (err) {
-    return { ok: false, executable: null, reason: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      executable: null,
+      reason: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -281,7 +328,9 @@ function resolveStepTimeoutMs(stepName) {
       return parsedStepTimeout;
     }
   }
-  const parsedDefaultTimeout = parsePositiveInteger(env[STEP_TIMEOUT_DEFAULT_ENV_KEY]);
+  const parsedDefaultTimeout = parsePositiveInteger(
+    env[STEP_TIMEOUT_DEFAULT_ENV_KEY],
+  );
   if (parsedDefaultTimeout !== null) {
     return parsedDefaultTimeout;
   }
@@ -293,21 +342,32 @@ function runStep(
   {
     logMode = "compact",
     stepLogDir = STEP_LOG_DIR,
-    tailLines = DEFAULT_STEP_OUTPUT_TAIL_LINES
-  } = {}
+    tailLines = DEFAULT_STEP_OUTPUT_TAIL_LINES,
+    spawnImpl = spawn,
+    terminateImpl = terminateOwnedProcessTree,
+    timeoutMsOverride = null,
+  } = {},
 ) {
   return new Promise((resolve) => {
     const startedAt = performance.now();
     let settled = false;
     ensureDirectory(stepLogDir);
-    const stepLogPath = path.resolve(stepLogDir, sanitizeStepLogFileName(step.name));
+    const stepLogPath = path.resolve(
+      stepLogDir,
+      sanitizeStepLogFileName(step.name),
+    );
     const logStream = fs.createWriteStream(stepLogPath, { flags: "w" });
     const outputTailState = createTailState(tailLines);
-    const child = spawn(step.cmd, step.args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32"
-    });
-    const timeoutMs = resolveStepTimeoutMs(step.name);
+    const child = spawnImpl(
+      step.cmd,
+      step.args,
+      ownedSpawnOptions({
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: process.platform === "win32",
+      }),
+    );
+    const timeoutMs = timeoutMsOverride || resolveStepTimeoutMs(step.name);
+    let timedOut = false;
 
     function finalize(result) {
       if (settled) return;
@@ -321,20 +381,21 @@ function runStep(
         timeoutMs,
         durationMs,
         logPath: stepLogPath,
-        outputTail: finalizeTailState(outputTailState)
+        outputTail: finalizeTailState(outputTailState),
       });
     }
 
     const timeoutHandle = setTimeout(() => {
-      const killed = child.kill();
-      if (!killed) {
-        child.kill("SIGKILL");
-      }
-      finalize({
-        ok: false,
-        code: null,
-        signal: "TIMEOUT"
-      });
+      timedOut = true;
+      void Promise.resolve(terminateImpl(child))
+        .catch(() => {})
+        .finally(() => {
+          finalize({
+            ok: false,
+            code: null,
+            signal: "TIMEOUT",
+          });
+        });
     }, timeoutMs);
 
     if (child.stdout) {
@@ -363,15 +424,16 @@ function runStep(
       finalize({
         ok: false,
         code: null,
-        signal: "SPAWN_ERROR"
+        signal: "SPAWN_ERROR",
       });
     });
 
     child.on("close", (code, signal) => {
+      if (timedOut) return;
       finalize({
         ok: code === 0,
         code: typeof code === "number" ? code : null,
-        signal: signal || null
+        signal: signal || null,
       });
     });
   });
@@ -385,7 +447,13 @@ function printStepOutputTail(stepResult) {
   }
 }
 
-function createSummaryPayload({ results, totalMs, smokeScriptName, logMode, outputTailLines }) {
+function createSummaryPayload({
+  results,
+  totalMs,
+  smokeScriptName,
+  logMode,
+  outputTailLines,
+}) {
   const failed = results.find((result) => !result.ok) || null;
   return {
     generatedAt: new Date().toISOString(),
@@ -404,8 +472,8 @@ function createSummaryPayload({ results, totalMs, smokeScriptName, logMode, outp
       timeoutMs: result.timeoutMs,
       durationMs: result.durationMs,
       duration: formatDuration(result.durationMs),
-      logPath: toProjectRelativePath(result.logPath)
-    }))
+      logPath: toProjectRelativePath(result.logPath),
+    })),
   };
 }
 
@@ -418,15 +486,19 @@ function renderSummaryMarkdown(summary) {
     `- SmokeScript: ${summary.smokeScript}`,
     `- LogMode: ${summary.logMode}`,
     `- OutputTailLines: ${String(summary.outputTailLines)}`,
-    `- Total: ${summary.totalDuration}`
+    `- Total: ${summary.totalDuration}`,
   ];
   if (summary.failedStep) {
     lines.push(`- FailedStep: ${summary.failedStep}`);
   }
-  lines.push("", "| Step | Status | Duration | Code | Signal | Log |", "| --- | --- | --- | --- | --- | --- |");
+  lines.push(
+    "",
+    "| Step | Status | Duration | Code | Signal | Log |",
+    "| --- | --- | --- | --- | --- | --- |",
+  );
   for (const step of summary.steps) {
     lines.push(
-      `| ${step.name} | ${step.status} | ${step.duration} | ${String(step.code)} | ${String(step.signal)} | ${step.logPath || "-"} |`
+      `| ${step.name} | ${step.status} | ${step.duration} | ${String(step.code)} | ${String(step.signal)} | ${step.logPath || "-"} |`,
     );
   }
   lines.push("");
@@ -444,15 +516,19 @@ function writeSummaryArtifacts(summary) {
     jsonPath,
     markdownPath,
     jsonRelativePath: toProjectRelativePath(jsonPath),
-    markdownRelativePath: toProjectRelativePath(markdownPath)
+    markdownRelativePath: toProjectRelativePath(markdownPath),
   };
 }
 
 function printFailureTriageHint(failedStepName) {
   if (failedStepName === "smoke") {
     console.error("[verify:refactor] triage priority:");
-    console.error("[verify:refactor]   1) inspect Playwright outputs first (playwright-report + test-results)");
-    console.error("[verify:refactor]   2) if needed, re-run smoke subset for failing suite");
+    console.error(
+      "[verify:refactor]   1) inspect Playwright outputs first (playwright-report + test-results)",
+    );
+    console.error(
+      "[verify:refactor]   2) if needed, re-run smoke subset for failing suite",
+    );
     return;
   }
   if (
@@ -463,20 +539,38 @@ function printFailureTriageHint(failedStepName) {
     failedStepName === "engine-audit"
   ) {
     console.error("[verify:refactor] triage priority:");
-    console.error("[verify:refactor]   1) fix audit contract violation from the failing audit step");
-    console.error("[verify:refactor]   2) re-run verify:refactor after audit passes");
+    console.error(
+      "[verify:refactor]   1) fix audit contract violation from the failing audit step",
+    );
+    console.error(
+      "[verify:refactor]   2) re-run verify:refactor after audit passes",
+    );
     return;
   }
   if (failedStepName === "unit") {
     console.error("[verify:refactor] triage priority:");
     console.error("[verify:refactor]   1) fix failing unit tests");
-    console.error("[verify:refactor]   2) re-run unit and then full verify:refactor");
+    console.error(
+      "[verify:refactor]   2) re-run unit and then full verify:refactor",
+    );
     return;
   }
   if (failedStepName === "build") {
     console.error("[verify:refactor] triage priority:");
     console.error("[verify:refactor]   1) fix compile/bundle error");
-    console.error("[verify:refactor]   2) re-run build and then full verify:refactor");
+    console.error(
+      "[verify:refactor]   2) re-run build and then full verify:refactor",
+    );
+    return;
+  }
+  if (failedStepName === "core-performance") {
+    console.error("[verify:refactor] triage priority:");
+    console.error(
+      "[verify:refactor]   1) inspect artifacts/core-performance/latest.json for scenario/metric p75 and browser errors",
+    );
+    console.error(
+      "[verify:refactor]   2) re-run test:performance:core against the already-built dist with the same baseline ref",
+    );
   }
 }
 
@@ -485,7 +579,9 @@ async function main() {
   const results = [];
   const env = process.env || {};
   const logMode = resolveLogMode(env[STEP_LOG_MODE_ENV_KEY]);
-  const outputTailLines = resolveStepOutputTailLines(env[STEP_OUTPUT_TAIL_LINES_ENV_KEY]);
+  const outputTailLines = resolveStepOutputTailLines(
+    env[STEP_OUTPUT_TAIL_LINES_ENV_KEY],
+  );
 
   console.log("[verify:refactor] start");
   console.log(`[verify:refactor] smoke script: ${smokeScript}`);
@@ -497,14 +593,20 @@ async function main() {
       if (!precondition.ok) {
         console.error("[verify:refactor] smoke precondition check failed");
         if (precondition.executable) {
-          console.error(`[verify:refactor] chromium path: ${precondition.executable}`);
+          console.error(
+            `[verify:refactor] chromium path: ${precondition.executable}`,
+          );
         }
         if (precondition.reason) {
           console.error(`[verify:refactor] reason: ${precondition.reason}`);
         }
         console.error("[verify:refactor] fix:");
-        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
-        console.error("[verify:refactor]   npx playwright install-deps chromium");
+        console.error(
+          "[verify:refactor]   npx playwright install chromium chromium-headless-shell",
+        );
+        console.error(
+          "[verify:refactor]   npx playwright install-deps chromium",
+        );
         results.push({
           name: "smoke",
           ok: false,
@@ -512,41 +614,51 @@ async function main() {
           signal: null,
           timeoutMs: resolveStepTimeoutMs("smoke"),
           durationMs: 0,
-          logPath: null
+          logPath: null,
         });
         break;
       }
     }
 
     const timeoutMs = resolveStepTimeoutMs(step.name);
-    console.log(`[verify:refactor] running ${step.name} (timeout=${String(timeoutMs)}ms)...`);
+    console.log(
+      `[verify:refactor] running ${step.name} (timeout=${String(timeoutMs)}ms)...`,
+    );
     const result = await runStep(step, { logMode, tailLines: outputTailLines });
     results.push(result);
     if (!result.ok) {
       console.error(
         `[verify:refactor] ${result.name} failed ` +
           `(code=${String(result.code)}, signal=${String(result.signal)}) ` +
-          `after ${formatDuration(result.durationMs)}`
+          `after ${formatDuration(result.durationMs)}`,
       );
       if (result.logPath) {
-        console.error(`[verify:refactor] ${result.name} log: ${toProjectRelativePath(result.logPath)}`);
+        console.error(
+          `[verify:refactor] ${result.name} log: ${toProjectRelativePath(result.logPath)}`,
+        );
       }
       printStepOutputTail(result);
       if (result.signal === "TIMEOUT") {
         console.error(
-          `[verify:refactor] ${result.name} timeout hint: exceeded ${String(result.timeoutMs)}ms step budget`
+          `[verify:refactor] ${result.name} timeout hint: exceeded ${String(result.timeoutMs)}ms step budget`,
         );
       }
       if (result.name === "smoke") {
-        console.error("[verify:refactor] smoke hint: ensure browser binary and Linux deps are installed:");
-        console.error("[verify:refactor]   npx playwright install chromium chromium-headless-shell");
-        console.error("[verify:refactor]   npx playwright install-deps chromium");
+        console.error(
+          "[verify:refactor] smoke hint: ensure browser binary and Linux deps are installed:",
+        );
+        console.error(
+          "[verify:refactor]   npx playwright install chromium chromium-headless-shell",
+        );
+        console.error(
+          "[verify:refactor]   npx playwright install-deps chromium",
+        );
       }
       break;
     }
     const logPath = toProjectRelativePath(result.logPath) || "<none>";
     console.log(
-      `[verify:refactor] ${result.name} passed in ${formatDuration(result.durationMs)} (log: ${logPath})`
+      `[verify:refactor] ${result.name} passed in ${formatDuration(result.durationMs)} (log: ${logPath})`,
     );
   }
 
@@ -557,18 +669,24 @@ async function main() {
     totalMs,
     smokeScriptName: smokeScript,
     logMode,
-    outputTailLines
+    outputTailLines,
   });
   const summaryArtifacts = writeSummaryArtifacts(summary);
 
   console.log("[verify:refactor] summary");
   for (const result of results) {
     const status = result.ok ? "PASS" : "FAIL";
-    console.log(`  - ${status} ${result.name} (${formatDuration(result.durationMs)})`);
+    console.log(
+      `  - ${status} ${result.name} (${formatDuration(result.durationMs)})`,
+    );
   }
   console.log(`  - TOTAL ${formatDuration(totalMs)}`);
-  console.log(`[verify:refactor] summary json: ${summaryArtifacts.jsonRelativePath}`);
-  console.log(`[verify:refactor] summary md: ${summaryArtifacts.markdownRelativePath}`);
+  console.log(
+    `[verify:refactor] summary json: ${summaryArtifacts.jsonRelativePath}`,
+  );
+  console.log(
+    `[verify:refactor] summary md: ${summaryArtifacts.markdownRelativePath}`,
+  );
 
   if (failed) {
     printFailureTriageHint(failed.name);
@@ -579,7 +697,9 @@ async function main() {
 }
 
 function isDirectCliExecution() {
-  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+  return Boolean(
+    process.argv[1] && path.resolve(process.argv[1]) === __filename,
+  );
 }
 
 if (isDirectCliExecution()) {
@@ -611,6 +731,7 @@ export {
   resolveLogMode,
   resolveStepOutputTailLines,
   resolveStepTimeoutMs,
+  runStep,
   sanitizeStepLogFileName,
-  validateChromiumExecutable
+  validateChromiumExecutable,
 };

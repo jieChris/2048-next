@@ -57,10 +57,12 @@ jobs:
     uses: ./.github/workflows/smoke.yml
 
   build:
-    name: Build Release Package
+    name: Package Verified Release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     needs: smoke
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
     outputs:
       release_id: ${{ steps.meta.outputs.release_id }}
       artifact_name: ${{ steps.meta.outputs.artifact_name }}
@@ -70,23 +72,19 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Verify packaged commit
+        run: |
+          set -euo pipefail
+          test "${GITHUB_SHA}" = "${EXPECTED_SHA}" || {
+            echo "Package commit ${GITHUB_SHA} does not match expected_sha ${EXPECTED_SHA}." >&2
+            exit 1
+          }
+
+      - name: Download deterministic fresh dist
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install smoke browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Verify release
-        run: npm run verify:release
-
-      - name: Build dist
-        run: npm run build
+          name: deterministic-dist
+          path: dist
 
       - name: Prepare release metadata
         id: meta

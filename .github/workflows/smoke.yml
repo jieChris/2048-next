@@ -1,7 +1,7 @@
 name: Smoke
 
 on:
-  workflow_call:
+  workflow_call: {}
   push:
     branches:
       - main
@@ -22,12 +22,28 @@ jobs:
       REFACTOR_GATE_TIMEOUT_UNIT_MS: "420000"
       REFACTOR_GATE_TIMEOUT_SMOKE_MS: "420000"
       REFACTOR_GATE_TIMEOUT_BUILD_MS: "240000"
+      REFACTOR_GATE_TIMEOUT_CORE_PERFORMANCE_MS: "900000"
       REFACTOR_GATE_OUTPUT_TAIL_LINES: "80"
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Select core performance baseline
+        id: core-performance-baseline
+        shell: bash
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          baseline_ref="$(node scripts/architecture-budget/select-baseline-ref.mjs)"
+          echo "Core performance baseline ref: ${baseline_ref}"
+          echo "baseline_ref=${baseline_ref}" >> "$GITHUB_OUTPUT"
+          echo "Core performance baseline ref: \`${baseline_ref}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -42,7 +58,17 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run refactor gate (CI profile)
+        env:
+          CORE_PERFORMANCE_BASELINE_REF: ${{ steps.core-performance-baseline.outputs.baseline_ref }}
         run: npm run verify:refactor:ci
+
+      - name: Upload deterministic fresh dist
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deterministic-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Upload refactor gate summary artifact
         if: always()
@@ -53,6 +79,7 @@ jobs:
             artifacts/refactor-gate-summary.json
             artifacts/refactor-gate-summary.md
             artifacts/refactor-gate/steps
+            artifacts/core-performance
           retention-days: 14
 
       - name: Publish refactor gate summary
@@ -70,18 +97,35 @@ jobs:
             echo "| Artifact | Value |";
             echo "| --- | --- |";
             echo "| Name | \`refactor-gate-summary\` |";
-            echo "| Files | \`artifacts/refactor-gate-summary.json\`, \`artifacts/refactor-gate-summary.md\`, \`artifacts/refactor-gate/steps\` |";
+            echo "| Files | \`artifacts/refactor-gate-summary.json\`, \`artifacts/refactor-gate-summary.md\`, \`artifacts/refactor-gate/steps\`, \`artifacts/core-performance/latest.json\` |";
           } >> "$GITHUB_STEP_SUMMARY"
 
   quality-audit-report:
     name: Quality Audit Report
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs:
+      - refactor-gate
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Select architecture budget baseline
+        id: architecture-baseline
+        shell: bash
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          baseline_ref="$(node scripts/architecture-budget/select-baseline-ref.mjs)"
+          echo "Architecture/core-load budget baseline ref: ${baseline_ref}"
+          echo "baseline_ref=${baseline_ref}" >> "$GITHUB_OUTPUT"
+          echo "Architecture/core-load budget baseline ref: \`${baseline_ref}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -92,7 +136,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download deterministic fresh dist
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: deterministic-dist
+          path: dist
+
       - name: Generate quality audit markdown report
+        env:
+          ARCHITECTURE_BUDGET_BASELINE_REF: ${{ steps.architecture-baseline.outputs.baseline_ref }}
+          CORE_LOAD_BUDGET_BASELINE_REF: ${{ steps.architecture-baseline.outputs.baseline_ref }}
         run: npm run audit:quality:report
 
       - name: Upload quality audit artifact

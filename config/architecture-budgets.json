@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "globalMaxLines": 800,
+  "roots": ["src", "js"],
+  "extensions": [".ts", ".tsx", ".js", ".mjs"],
+  "exclusions": [
+    {
+      "path": "src/services/generated-api/2048next-v1.ts",
+      "category": "generated",
+      "reason": "Generated from openapi/2048next.v1.yaml by npm run api:types."
+    }
+  ],
+  "hotspots": [
+    {
+      "path": "js/account_page.js",
+      "metrics": {
+        "lines": 1671,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/account_settings_page.js",
+      "metrics": {
+        "lines": 1122,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/admin_rescue_client_runtime.js",
+      "metrics": {
+        "lines": 910,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_base_helpers_runtime.js",
+      "metrics": {
+        "lines": 1399,
+        "imports": 0,
+        "topLevelSymbols": 149,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_mode_rules_helpers_runtime.js",
+      "metrics": {
+        "lines": 1198,
+        "imports": 0,
+        "topLevelSymbols": 139,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_move_input_helpers_runtime.js",
+      "metrics": {
+        "lines": 1975,
+        "imports": 0,
+        "topLevelSymbols": 204,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_panel_timer_helpers_runtime.js",
+      "metrics": {
+        "lines": 1836,
+        "imports": 0,
+        "topLevelSymbols": 145,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_replay_helpers_runtime.js",
+      "metrics": {
+        "lines": 4842,
+        "imports": 0,
+        "topLevelSymbols": 485,
+        "runtimeRegistrations": 1
+      }
+    },
+    {
+      "path": "js/core_game_manager_restart_setup_helpers_runtime.js",
+      "metrics": {
+        "lines": 1730,
+        "imports": 0,
+        "topLevelSymbols": 118,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_saved_state_helpers_runtime.js",
+      "metrics": {
+        "lines": 1470,
+        "imports": 0,
+        "topLevelSymbols": 117,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_saved_state_persistence_runtime.js",
+      "metrics": {
+        "lines": 869,
+        "imports": 0,
+        "topLevelSymbols": 54,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_manager_undo_stats_helpers_runtime.js",
+      "metrics": {
+        "lines": 1230,
+        "imports": 0,
+        "topLevelSymbols": 129,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_game_settings_storage_runtime.js",
+      "metrics": {
+        "lines": 964,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_i18n_runtime.js",
+      "metrics": {
+        "lines": 938,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/core_theme_settings_host_runtime.js",
+      "metrics": {
+        "lines": 846,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/history_page.js",
+      "metrics": {
+        "lines": 974,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/local_history_store.js",
+      "metrics": {
+        "lines": 1443,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 1
+      }
+    },
+    {
+      "path": "js/online_leaderboard_runtime.js",
+      "metrics": {
+        "lines": 5172,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/palette_page.js",
+      "metrics": {
+        "lines": 1653,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/relay_5x5_page.js",
+      "metrics": {
+        "lines": 2399,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "js/replay_ui.js",
+      "metrics": {
+        "lines": 2629,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 16
+      }
+    },
+    {
+      "path": "js/test_ui.js",
+      "metrics": {
+        "lines": 1702,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 6
+      }
+    },
+    {
+      "path": "js/theme_manager.js",
+      "metrics": {
+        "lines": 3241,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 1
+      }
+    },
+    {
+      "path": "js/user_profile_page.js",
+      "metrics": {
+        "lines": 3634,
+        "imports": 0,
+        "topLevelSymbols": 0,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/bootstrap/game-manager-replay-helpers-runtime.ts",
+      "metrics": {
+        "lines": 1861,
+        "imports": 3,
+        "topLevelSymbols": 141,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/bootstrap/ranked-session.ts",
+      "metrics": {
+        "lines": 1027,
+        "imports": 3,
+        "topLevelSymbols": 61,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/bootstrap/theme-settings-host.ts",
+      "metrics": {
+        "lines": 889,
+        "imports": 0,
+        "topLevelSymbols": 24,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/contracts/index.ts",
+      "metrics": {
+        "lines": 938,
+        "imports": 1,
+        "topLevelSymbols": 71,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/core/game-manager-base-helpers.ts",
+      "metrics": {
+        "lines": 2151,
+        "imports": 1,
+        "topLevelSymbols": 184,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/core/game-settings-storage.ts",
+      "metrics": {
+        "lines": 1045,
+        "imports": 2,
+        "topLevelSymbols": 45,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/core/replay-codec.ts",
+      "metrics": {
+        "lines": 811,
+        "imports": 0,
+        "topLevelSymbols": 56,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/entries/home-family-bootstrap.ts",
+      "metrics": {
+        "lines": 511,
+        "imports": 111,
+        "topLevelSymbols": 17,
+        "runtimeRegistrations": 98
+      }
+    },
+    {
+      "path": "src/features/contextual-guide/contextual-guide.ts",
+      "metrics": {
+        "lines": 829,
+        "imports": 1,
+        "topLevelSymbols": 40,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/features/palette/account-palette-outbox.ts",
+      "metrics": {
+        "lines": 926,
+        "imports": 0,
+        "topLevelSymbols": 31,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/features/palette/account-palette-page-sync.ts",
+      "metrics": {
+        "lines": 1545,
+        "imports": 3,
+        "topLevelSymbols": 27,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/pages/achievements-page.ts",
+      "metrics": {
+        "lines": 957,
+        "imports": 4,
+        "topLevelSymbols": 80,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/pages/admin-page.ts",
+      "metrics": {
+        "lines": 1507,
+        "imports": 5,
+        "topLevelSymbols": 87,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/pages/history-page-runtime.ts",
+      "metrics": {
+        "lines": 970,
+        "imports": 6,
+        "topLevelSymbols": 36,
+        "runtimeRegistrations": 0
+      }
+    },
+    {
+      "path": "src/pages/palette-page.ts",
+      "metrics": {
+        "lines": 1444,
+        "imports": 18,
+        "topLevelSymbols": 46,
+        "runtimeRegistrations": 4
+      }
+    },
+    {
+      "path": "src/pages/user-profile-page.ts",
+      "metrics": {
+        "lines": 1914,
+        "imports": 6,
+        "topLevelSymbols": 113,
+        "runtimeRegistrations": 1
+      }
+    }
+  ]
+}

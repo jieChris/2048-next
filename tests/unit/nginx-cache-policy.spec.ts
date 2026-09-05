@@ -72,7 +72,11 @@ describe("self-hosted nginx cache policy", () => {
     expect(workflow).toContain(
       'cp "${nginx_config_path}" "${deploy_root}/nginx.conf"',
     );
-    expect(workflow).toContain("npm run verify:release");
+    expect(workflow).toContain("uses: ./.github/workflows/smoke.yml");
+    expect(workflow).toContain("Download deterministic fresh dist");
+    expect(workflow).toContain("name: deterministic-dist");
+    expect(workflow).not.toContain("npm run verify:release");
+    expect(workflow).not.toContain("npm run build");
     expect(workflow).toContain("previous release restored");
   });
 

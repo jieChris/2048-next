@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "sampleCount": 5,
+  "distPath": "dist",
+  "profile": {
+    "browser": "chromium",
+    "viewport": {
+      "width": 1365,
+      "height": 768
+    },
+    "cpuThrottleRate": 4,
+    "network": {
+      "latencyMs": 80,
+      "downloadBytesPerSecond": 1600000,
+      "uploadBytesPerSecond": 750000
+    },
+    "locale": "zh-CN",
+    "timezoneId": "Asia/Shanghai",
+    "colorScheme": "light",
+    "reducedMotion": "reduce"
+  },
+  "policies": {
+    "readiness": "core-performance-readiness-v1",
+    "mockPolicy": "same-origin-api-deterministic-v1",
+    "errorsCollected": [
+      "pageerror",
+      "uncaught-console-error",
+      "failed-critical-request"
+    ],
+    "resourcesCollected": [
+      "request-count",
+      "cdp-encoded-data-length",
+      "performance-resource-decoded-body-size"
+    ]
+  },
+  "scenarios": {
+    "homeCold": {
+      "path": "/2048.html",
+      "cache": "cold",
+      "metrics": {
+        "ttfbMs": {
+          "baselineP75": 0.7000000476837158,
+          "relativeTolerance": 0.5,
+          "additiveTolerance": 25,
+          "absoluteMax": 800
+        },
+        "fcpMs": {
+          "baselineP75": 368,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 1800
+        },
+        "lcpMs": {
+          "baselineP75": 688,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 2500
+        },
+        "cls": {
+          "baselineP75": 0.0003110750792756287,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 0.005,
+          "absoluteMax": 0.1
+        },
+        "longTaskTotalMs": {
+          "baselineP75": 219,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 50,
+          "absoluteMax": 1500
+        },
+        "longTaskMaxMs": {
+          "baselineP75": 118,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 25,
+          "absoluteMax": 500
+        },
+        "readyMs": {
+          "baselineP75": 1158.5,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 3500
+        },
+        "requestCount": {
+          "baselineP75": 49,
+          "relativeTolerance": 0,
+          "additiveTolerance": 0,
+          "absoluteMax": 49
+        },
+        "transferBytes": {
+          "baselineP75": 831353,
+          "relativeTolerance": 0,
+          "additiveTolerance": 16384,
+          "absoluteMax": 847737
+        },
+        "decodedBodyBytes": {
+          "baselineP75": 2371434,
+          "relativeTolerance": 0,
+          "additiveTolerance": 32768,
+          "absoluteMax": 2404202
+        }
+      }
+    },
+    "playCold": {
+      "path": "/play.html?mode_key=standard_4x4_pow2_no_undo",
+      "cache": "cold",
+      "metrics": {
+        "ttfbMs": {
+          "baselineP75": 0.7000000476837158,
+          "relativeTolerance": 0.5,
+          "additiveTolerance": 25,
+          "absoluteMax": 800
+        },
+        "fcpMs": {
+          "baselineP75": 424,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 1800
+        },
+        "lcpMs": {
+          "baselineP75": 660,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 2500
+        },
+        "cls": {
+          "baselineP75": 0.0017090830415006238,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 0.005,
+          "absoluteMax": 0.1
+        },
+        "longTaskTotalMs": {
+          "baselineP75": 315,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 50,
+          "absoluteMax": 1500
+        },
+        "longTaskMaxMs": {
+          "baselineP75": 110,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 25,
+          "absoluteMax": 500
+        },
+        "readyMs": {
+          "baselineP75": 1724.5999999046326,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 4000
+        },
+        "requestCount": {
+          "baselineP75": 124,
+          "relativeTolerance": 0,
+          "additiveTolerance": 0,
+          "absoluteMax": 124
+        },
+        "transferBytes": {
+          "baselineP75": 914988,
+          "relativeTolerance": 0,
+          "additiveTolerance": 16384,
+          "absoluteMax": 931372
+        },
+        "decodedBodyBytes": {
+          "baselineP75": 2591371,
+          "relativeTolerance": 0,
+          "additiveTolerance": 32768,
+          "absoluteMax": 2624139
+        }
+      }
+    },
+    "moveInteraction": {
+      "path": "/play.html?mode_key=standard_4x4_pow2_no_undo",
+      "cache": "cold",
+      "metrics": {
+        "moveLatencyMs": {
+          "baselineP75": 14.300000190734863,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 10,
+          "absoluteMax": 200
+        }
+      }
+    },
+    "warmSaveRestore": {
+      "path": "/play.html?mode_key=standard_4x4_pow2_no_undo",
+      "cache": "warm",
+      "metrics": {
+        "ttfbMs": {
+          "baselineP75": 0.5999999046325684,
+          "relativeTolerance": 0.5,
+          "additiveTolerance": 25,
+          "absoluteMax": 800
+        },
+        "fcpMs": {
+          "baselineP75": 436,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 1800
+        },
+        "lcpMs": {
+          "baselineP75": 708,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 2500
+        },
+        "cls": {
+          "baselineP75": 0.0017090830415006238,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 0.005,
+          "absoluteMax": 0.1
+        },
+        "longTaskTotalMs": {
+          "baselineP75": 159,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 50,
+          "absoluteMax": 1500
+        },
+        "longTaskMaxMs": {
+          "baselineP75": 102,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 25,
+          "absoluteMax": 500
+        },
+        "requestCount": {
+          "baselineP75": 122,
+          "relativeTolerance": 0,
+          "additiveTolerance": 0,
+          "absoluteMax": 122
+        },
+        "transferBytes": {
+          "baselineP75": 914337,
+          "relativeTolerance": 0,
+          "additiveTolerance": 16384,
+          "absoluteMax": 930721
+        },
+        "decodedBodyBytes": {
+          "baselineP75": 2590852,
+          "relativeTolerance": 0,
+          "additiveTolerance": 32768,
+          "absoluteMax": 2623620
+        },
+        "restoreReadyLatencyMs": {
+          "baselineP75": 1713,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 3500
+        }
+      }
+    },
+    "replayColdImportStep": {
+      "path": "/replay.html",
+      "cache": "cold",
+      "metrics": {
+        "ttfbMs": {
+          "baselineP75": 0.5,
+          "relativeTolerance": 0.5,
+          "additiveTolerance": 25,
+          "absoluteMax": 800
+        },
+        "fcpMs": {
+          "baselineP75": 472,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 1800
+        },
+        "lcpMs": {
+          "baselineP75": 472,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 2500
+        },
+        "cls": {
+          "baselineP75": 0.00004473143424036281,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 0.005,
+          "absoluteMax": 0.1
+        },
+        "longTaskTotalMs": {
+          "baselineP75": 76,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 50,
+          "absoluteMax": 1500
+        },
+        "longTaskMaxMs": {
+          "baselineP75": 76,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 25,
+          "absoluteMax": 500
+        },
+        "readyMs": {
+          "baselineP75": 1179.6999998092651,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 100,
+          "absoluteMax": 3500
+        },
+        "requestCount": {
+          "baselineP75": 62,
+          "relativeTolerance": 0,
+          "additiveTolerance": 0,
+          "absoluteMax": 62
+        },
+        "transferBytes": {
+          "baselineP75": 418602,
+          "relativeTolerance": 0,
+          "additiveTolerance": 16384,
+          "absoluteMax": 434986
+        },
+        "decodedBodyBytes": {
+          "baselineP75": 1588094,
+          "relativeTolerance": 0,
+          "additiveTolerance": 32768,
+          "absoluteMax": 1620862
+        },
+        "replayImportLatencyMs": {
+          "baselineP75": 42.799999952316284,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 25,
+          "absoluteMax": 1500
+        },
+        "replayStepLatencyMs": {
+          "baselineP75": 9.5,
+          "relativeTolerance": 0.25,
+          "additiveTolerance": 10,
+          "absoluteMax": 500
+        }
+      }
+    }
+  }
+}

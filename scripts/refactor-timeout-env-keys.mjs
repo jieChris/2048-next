@@ -13,7 +13,8 @@ const STEP_TIMEOUT_ENV_KEY_BY_NAME = {
   "engine-audit": "REFACTOR_GATE_TIMEOUT_ENGINE_AUDIT_MS",
   unit: "REFACTOR_GATE_TIMEOUT_UNIT_MS",
   smoke: "REFACTOR_GATE_TIMEOUT_SMOKE_MS",
-  build: "REFACTOR_GATE_TIMEOUT_BUILD_MS"
+  build: "REFACTOR_GATE_TIMEOUT_BUILD_MS",
+  "core-performance": "REFACTOR_GATE_TIMEOUT_CORE_PERFORMANCE_MS",
 };
 
 function normalizeTimeoutSteps(stepsInput) {
@@ -30,7 +31,10 @@ function normalizeTimeoutSteps(stepsInput) {
     .filter((item) => item.length > 0);
 }
 
-function resolveTimeoutBudgetEnvKeys(stepsInput, { includeDefaultFallback = true } = {}) {
+function resolveTimeoutBudgetEnvKeys(
+  stepsInput,
+  { includeDefaultFallback = true } = {},
+) {
   const steps = normalizeTimeoutSteps(stepsInput);
   const keys = [];
   const seen = new Set();
@@ -64,7 +68,9 @@ function runCli(argv) {
 }
 
 function isDirectCliExecution() {
-  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === __filename);
+  return Boolean(
+    process.argv[1] && path.resolve(process.argv[1]) === __filename,
+  );
 }
 
 if (isDirectCliExecution()) {
@@ -78,5 +84,5 @@ export {
   normalizeTimeoutSteps,
   parseCliArgs,
   resolveTimeoutBudgetEnvKeys,
-  runCli
+  runCli,
 };

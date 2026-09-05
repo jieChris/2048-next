@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "distPath": "dist",
+  "compression": {
+    "preferred": "br",
+    "fallback": "gzip",
+    "requireBrotli": true
+  },
+  "graphPolicy": {
+    "staticImports": "included",
+    "dynamicImports": "deferred-separate",
+    "navigationHrefs": "excluded",
+    "cssDependencies": "transitive",
+    "dataAndFragmentUrls": "embedded-excluded",
+    "queryStrings": "request-identity"
+  },
+  "pages": {
+    "home": {
+      "html": "2048.html",
+      "criticalPreloads": [
+        "assets/contextual-guide-<hash>.js",
+        "assets/modulepreload-polyfill-<hash>.js",
+        "assets/preload-helper-<hash>.js",
+        "assets/storage-<hash>.js"
+      ],
+      "max": {
+        "htmlBytes": 3881,
+        "directResourceBytes": 363369,
+        "directResourceRequests": 10,
+        "directCriticalBytes": 367250,
+        "directCriticalRequests": 11,
+        "criticalLoadBytes": 641529,
+        "criticalLoadRequests": 23,
+        "startupStaticBytes": 8720,
+        "startupStaticRequests": 5,
+        "criticalCssDependencyBytes": 301599,
+        "criticalCssDependencyRequests": 14,
+        "deferredDynamicBytes": 115162,
+        "deferredDynamicRequests": 15,
+        "largestCriticalJsBytes": 6857,
+        "largestCriticalCssBytes": 25610,
+        "largestCriticalImageBytes": 324310,
+        "largestCriticalFontBytes": 28700,
+        "criticalPreloadCount": 4,
+        "discoveredMissingBrotliSidecars": 0,
+        "discoveredMissingGzipSidecars": 0
+      }
+    },
+    "play": {
+      "html": "play.html",
+      "criticalPreloads": [
+        "assets/contextual-guide-<hash>.js",
+        "assets/modulepreload-polyfill-<hash>.js",
+        "assets/preload-helper-<hash>.js",
+        "assets/storage-<hash>.js"
+      ],
+      "max": {
+        "htmlBytes": 2954,
+        "directResourceBytes": 363539,
+        "directResourceRequests": 10,
+        "directCriticalBytes": 366493,
+        "directCriticalRequests": 11,
+        "criticalLoadBytes": 640772,
+        "criticalLoadRequests": 23,
+        "startupStaticBytes": 8890,
+        "startupStaticRequests": 5,
+        "criticalCssDependencyBytes": 301599,
+        "criticalCssDependencyRequests": 14,
+        "deferredDynamicBytes": 115162,
+        "deferredDynamicRequests": 15,
+        "largestCriticalJsBytes": 6857,
+        "largestCriticalCssBytes": 25610,
+        "largestCriticalImageBytes": 324310,
+        "largestCriticalFontBytes": 28700,
+        "criticalPreloadCount": 4,
+        "discoveredMissingBrotliSidecars": 0,
+        "discoveredMissingGzipSidecars": 0
+      }
+    },
+    "replay": {
+      "html": "replay.html",
+      "criticalPreloads": [
+        "assets/contextual-guide-<hash>.js",
+        "assets/modulepreload-polyfill-<hash>.js",
+        "assets/preload-helper-<hash>.js",
+        "assets/storage-<hash>.js"
+      ],
+      "max": {
+        "htmlBytes": 1556,
+        "directResourceBytes": 41762,
+        "directResourceRequests": 10,
+        "directCriticalBytes": 43318,
+        "directCriticalRequests": 11,
+        "criticalLoadBytes": 317597,
+        "criticalLoadRequests": 23,
+        "startupStaticBytes": 8756,
+        "startupStaticRequests": 5,
+        "criticalCssDependencyBytes": 304266,
+        "criticalCssDependencyRequests": 15,
+        "deferredDynamicBytes": 115162,
+        "deferredDynamicRequests": 15,
+        "largestCriticalJsBytes": 6857,
+        "largestCriticalCssBytes": 25610,
+        "largestCriticalImageBytes": 0,
+        "largestCriticalFontBytes": 28700,
+        "criticalPreloadCount": 4,
+        "discoveredMissingBrotliSidecars": 0,
+        "discoveredMissingGzipSidecars": 0
+      }
+    }
+  },
+  "legacyBundles": {
+    "startup": {
+      "path": "js/home_standard_startup_bundle.js",
+      "max": {
+        "rawBytes": 823436,
+        "brotliBytes": 120175,
+        "gzipBytes": 152440
+      }
+    },
+    "deferred": {
+      "path": "js/home_standard_deferred_bundle.js",
+      "max": {
+        "rawBytes": 474115,
+        "brotliBytes": 66201,
+        "gzipBytes": 84173
+      }
+    }
+  }
+}
