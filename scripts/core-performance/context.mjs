@@ -1,5 +1,6 @@
 const ALLOWED_CONTEXT_KEYS = new Set([
   "stage",
+  "executionProfile",
   "profile",
   "policies",
   "candidateSha",

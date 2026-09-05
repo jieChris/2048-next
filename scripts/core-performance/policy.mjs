@@ -73,6 +73,29 @@ const FIXED_POLICIES = {
   ],
 };
 
+const REFERENCE_EXECUTION_PROFILE = "reference";
+const GITHUB_ACTIONS_LINUX_X64_EXECUTION_PROFILE = "github-actions-linux-x64";
+
+const REQUIRED_EXECUTION_BASELINE_METRICS = {
+  [GITHUB_ACTIONS_LINUX_X64_EXECUTION_PROFILE]: {
+    homeCold: ["longTaskTotalMs", "longTaskMaxMs", "readyMs"],
+    playCold: ["longTaskTotalMs", "longTaskMaxMs", "readyMs"],
+    moveInteraction: ["moveLatencyMs"],
+    warmSaveRestore: [
+      "longTaskTotalMs",
+      "longTaskMaxMs",
+      "restoreReadyLatencyMs",
+    ],
+    replayColdImportStep: [
+      "longTaskTotalMs",
+      "longTaskMaxMs",
+      "readyMs",
+      "replayImportLatencyMs",
+      "replayStepLatencyMs",
+    ],
+  },
+};
+
 const LOAD_METRIC_POLICIES = {
   ttfbMs: {
     absoluteCap: 800,
@@ -196,8 +219,11 @@ const IMMUTABLE_METRIC_POLICIES = {
 export {
   FIXED_POLICIES,
   FIXED_PROFILE,
+  GITHUB_ACTIONS_LINUX_X64_EXECUTION_PROFILE,
   IMMUTABLE_METRIC_POLICIES,
   LOAD_METRICS,
+  REFERENCE_EXECUTION_PROFILE,
+  REQUIRED_EXECUTION_BASELINE_METRICS,
   REQUIRED_SCENARIO_METRICS,
   REQUIRED_SCENARIO_POLICY,
 };

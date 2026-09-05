@@ -1,8 +1,14 @@
 import {
+  hasExecutionBaseline,
+  resolvePerformanceConfigForExecution,
+} from "./execution-profile.mjs";
+import {
   FIXED_POLICIES,
   FIXED_PROFILE,
   IMMUTABLE_METRIC_POLICIES,
   LOAD_METRICS,
+  REFERENCE_EXECUTION_PROFILE,
+  REQUIRED_EXECUTION_BASELINE_METRICS,
   REQUIRED_SCENARIO_METRICS,
   REQUIRED_SCENARIO_POLICY,
 } from "./policy.mjs";
@@ -45,9 +51,113 @@ function isMetricBudget(value) {
   );
 }
 
+function haveSameKeys(actual, required) {
+  const sortedRequired = [...required].sort();
+  return (
+    actual.length === sortedRequired.length &&
+    [...actual].sort().every((value, index) => value === sortedRequired[index])
+  );
+}
+
+function validateExecutionBaselines(config, configPath) {
+  const violations = [];
+  const baselines = config.executionBaselines;
+  if (!baselines || typeof baselines !== "object" || Array.isArray(baselines)) {
+    return [
+      createViolation(
+        "invalid-config",
+        "schemaVersion=2 requires fixed execution baselines",
+        { path: configPath },
+      ),
+    ];
+  }
+  const requiredProfiles = Object.keys(REQUIRED_EXECUTION_BASELINE_METRICS);
+  if (!haveSameKeys(Object.keys(baselines), requiredProfiles)) {
+    violations.push(
+      createViolation(
+        "invalid-config",
+        "execution baseline profiles are missing or unsupported",
+        { path: configPath },
+      ),
+    );
+  }
+  for (const [executionProfile, requiredScenarios] of Object.entries(
+    REQUIRED_EXECUTION_BASELINE_METRICS,
+  )) {
+    const profileBaselines = baselines[executionProfile];
+    if (
+      !profileBaselines ||
+      typeof profileBaselines !== "object" ||
+      Array.isArray(profileBaselines) ||
+      !haveSameKeys(
+        Object.keys(profileBaselines),
+        Object.keys(requiredScenarios),
+      )
+    ) {
+      violations.push(
+        createViolation(
+          "invalid-config",
+          "execution baseline scenarios are missing or unsupported",
+          { executionProfile, path: configPath },
+        ),
+      );
+      continue;
+    }
+    for (const [scenario, requiredMetrics] of Object.entries(
+      requiredScenarios,
+    )) {
+      const scenarioBaselines = profileBaselines[scenario];
+      if (
+        !scenarioBaselines ||
+        typeof scenarioBaselines !== "object" ||
+        Array.isArray(scenarioBaselines) ||
+        !haveSameKeys(Object.keys(scenarioBaselines), requiredMetrics)
+      ) {
+        violations.push(
+          createViolation(
+            "invalid-config",
+            "execution baseline metrics are missing or unsupported",
+            { executionProfile, scenario, path: configPath },
+          ),
+        );
+        continue;
+      }
+      for (const metric of requiredMetrics) {
+        const baselineP75 = scenarioBaselines[metric];
+        const baseBudget = config.scenarios?.[scenario]?.metrics?.[metric];
+        const immutablePolicy = IMMUTABLE_METRIC_POLICIES[scenario]?.[metric];
+        if (
+          !isFiniteNonNegativeNumber(baselineP75) ||
+          !isMetricBudget(baseBudget) ||
+          !immutablePolicy ||
+          baselineP75 > baseBudget.absoluteMax ||
+          baselineP75 > immutablePolicy.absoluteCap
+        ) {
+          violations.push(
+            createViolation(
+              "invalid-config",
+              "execution baseline exceeds the base or immutable metric cap",
+              {
+                executionProfile,
+                scenario,
+                metric,
+                baseline: immutablePolicy?.absoluteCap ?? null,
+                actual: baselineP75 ?? null,
+                path: configPath,
+              },
+            ),
+          );
+        }
+      }
+    }
+  }
+  return violations;
+}
+
 function validatePerformanceConfig(
   config,
   configPath = "config/core-performance-budgets.json",
+  { allowLegacySchema = false } = {},
 ) {
   const violations = [];
   if (!config || typeof config !== "object" || Array.isArray(config)) {
@@ -59,18 +169,20 @@ function validatePerformanceConfig(
       ),
     ];
   }
-  if (
-    config.schemaVersion !== 1 ||
-    config.sampleCount !== 5 ||
-    config.distPath !== "dist"
-  ) {
+  const validSchema =
+    config.schemaVersion === 2 ||
+    (allowLegacySchema && config.schemaVersion === 1);
+  if (!validSchema || config.sampleCount !== 5 || config.distPath !== "dist") {
     violations.push(
       createViolation(
         "invalid-config",
-        "schemaVersion=1, sampleCount=5, and distPath=dist are required",
+        "schemaVersion=2, sampleCount=5, and distPath=dist are required",
         { path: configPath },
       ),
     );
+  }
+  if (config.schemaVersion === 2) {
+    violations.push(...validateExecutionBaselines(config, configPath));
   }
   if (JSON.stringify(config.profile) !== JSON.stringify(FIXED_PROFILE)) {
     violations.push(
@@ -239,6 +351,62 @@ function compareRepositoryConfig(config, repositoryConfig, violations) {
       }
     }
   }
+  for (const [executionProfile, baselineScenarios] of Object.entries(
+    repositoryConfig.executionBaselines || {},
+  )) {
+    const candidateScenarios = config.executionBaselines?.[executionProfile];
+    if (!candidateScenarios) {
+      violations.push(
+        createViolation(
+          "performance-scope-narrowed",
+          "repository execution baseline profile was removed",
+          { executionProfile },
+        ),
+      );
+      continue;
+    }
+    for (const [scenario, baselineMetrics] of Object.entries(
+      baselineScenarios,
+    )) {
+      const candidateMetrics = candidateScenarios[scenario];
+      if (!candidateMetrics) {
+        violations.push(
+          createViolation(
+            "performance-scope-narrowed",
+            "repository execution baseline scenario was removed",
+            { executionProfile, scenario },
+          ),
+        );
+        continue;
+      }
+      for (const [metric, baselineP75] of Object.entries(baselineMetrics)) {
+        const candidateP75 = candidateMetrics[metric];
+        if (candidateP75 === undefined) {
+          violations.push(
+            createViolation(
+              "performance-scope-narrowed",
+              "repository execution baseline metric was removed",
+              { executionProfile, scenario, metric },
+            ),
+          );
+        } else if (candidateP75 > baselineP75) {
+          violations.push(
+            createViolation(
+              "performance-baseline-raised",
+              "execution profile baselineP75 cannot increase after bootstrap",
+              {
+                executionProfile,
+                scenario,
+                metric,
+                baseline: baselineP75,
+                actual: candidateP75,
+              },
+            ),
+          );
+        }
+      }
+    }
+  }
 }
 
 function validateExceptionTargets(exceptions, config, exceptionState) {
@@ -347,6 +515,7 @@ function evaluatePerformanceBudget({
   now = new Date(),
   enforceBudgets = true,
   bootstrapMode = enforceBudgets && repositoryConfig === null,
+  executionProfile = REFERENCE_EXECUTION_PROFILE,
 }) {
   const violations = validatePerformanceConfig(config);
   if (repositoryConfig) {
@@ -354,10 +523,33 @@ function evaluatePerformanceBudget({
       ...validatePerformanceConfig(
         repositoryConfig,
         "repository:config/core-performance-budgets.json",
+        { allowLegacySchema: true },
       ),
     );
   }
   compareRepositoryConfig(config || {}, repositoryConfig, violations);
+
+  let effectiveConfig = null;
+  let executionBaselineBootstrap = false;
+  try {
+    effectiveConfig = resolvePerformanceConfigForExecution(
+      config,
+      executionProfile,
+    );
+    executionBaselineBootstrap =
+      enforceBudgets &&
+      executionProfile !== REFERENCE_EXECUTION_PROFILE &&
+      repositoryConfig !== null &&
+      !hasExecutionBaseline(repositoryConfig, executionProfile);
+  } catch (error) {
+    violations.push(
+      createViolation(
+        "invalid-config",
+        error instanceof Error ? error.message : String(error),
+        { executionProfile, path: "config/core-performance-budgets.json" },
+      ),
+    );
+  }
 
   const exceptionState = validatePerformanceExceptions(exceptions, now);
   violations.push(...exceptionState.violations);
@@ -374,16 +566,20 @@ function evaluatePerformanceBudget({
   const appliedExceptions = [];
   const sampleSchemaValid = sampleState.violations.length === 0;
 
-  if (bootstrapMode && sampleSchemaValid) {
-    verifyBootstrapHeadroom(config, summaries, violations);
+  if (
+    (bootstrapMode || executionBaselineBootstrap) &&
+    sampleSchemaValid &&
+    effectiveConfig
+  ) {
+    verifyBootstrapHeadroom(effectiveConfig, summaries, violations);
   }
-  if (enforceBudgets && sampleSchemaValid) {
+  if (enforceBudgets && sampleSchemaValid && effectiveConfig) {
     for (const [scenario, requiredMetrics] of Object.entries(
       REQUIRED_SCENARIO_METRICS,
     )) {
       for (const metric of requiredMetrics) {
         const summary = summaries[scenario][metric];
-        const budget = config?.scenarios?.[scenario]?.metrics?.[metric];
+        const budget = effectiveConfig.scenarios?.[scenario]?.metrics?.[metric];
         if (!budget || typeof summary.p75 !== "number") continue;
         const threshold = computeEffectiveThreshold(budget);
         if (summary.p75 <= threshold.effectiveMax) continue;
@@ -391,7 +587,8 @@ function evaluatePerformanceBudget({
           targetState.activeExceptions,
           scenario,
           metric,
-          config?.scenarios?.[scenario]?.path?.replace(/^\//u, "") || "",
+          effectiveConfig.scenarios?.[scenario]?.path?.replace(/^\//u, "") ||
+            "",
           summary.p75,
         );
         if (exception.exception) {
@@ -430,6 +627,8 @@ export {
   FIXED_PROFILE,
   IMMUTABLE_METRIC_POLICIES,
   LOAD_METRICS,
+  REFERENCE_EXECUTION_PROFILE,
+  REQUIRED_EXECUTION_BASELINE_METRICS,
   REQUIRED_SCENARIO_METRICS,
   REQUIRED_SCENARIO_POLICY,
   computeEffectiveThreshold,

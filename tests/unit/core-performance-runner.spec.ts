@@ -12,6 +12,7 @@ import {
   installDeterministicContext,
   parseCorePerformanceCliOptions,
   readPerformanceRepositoryConfigFromRef,
+  resolveCorePerformanceExecutionProfile,
   runCorePerformanceCli,
   runCorePerformanceGate,
   validateEvidencePath,
@@ -93,6 +94,42 @@ describe("core performance deterministic browser fixtures", () => {
 });
 
 describe("core performance CLI and Git baseline", () => {
+  it("derives the execution profile from trusted runner identity only", () => {
+    expect(
+      resolveCorePerformanceExecutionProfile(
+        {},
+        { platform: "darwin", arch: "arm64" },
+      ),
+    ).toBe("reference");
+    expect(
+      parseCorePerformanceCliOptions(
+        ["--baseline-ref=HEAD"],
+        {
+          GITHUB_ACTIONS: "true",
+          RUNNER_OS: "Linux",
+          RUNNER_ARCH: "X64",
+        },
+        { platform: "linux", arch: "x64" },
+      ).executionProfile,
+    ).toBe("github-actions-linux-x64");
+    expect(() =>
+      resolveCorePerformanceExecutionProfile(
+        {
+          GITHUB_ACTIONS: "true",
+          RUNNER_OS: "Linux",
+          RUNNER_ARCH: "ARM64",
+        },
+        { platform: "linux", arch: "arm64" },
+      ),
+    ).toThrow(/unsupported GitHub Actions/u);
+    expect(() =>
+      parseCorePerformanceCliOptions(
+        ["--baseline-ref=HEAD", "--execution-profile=reference"],
+        {},
+      ),
+    ).toThrow(/unknown core performance option/u);
+  });
+
   it("rejects an empty baseline ref and emits a valid JSON failure", async () => {
     expect(() =>
       parseCorePerformanceCliOptions(["--json", "--baseline-ref="], {}),
@@ -106,10 +143,28 @@ describe("core performance CLI and Git baseline", () => {
 
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const originalExitCode = process.exitCode;
+    const failureEvidencePath = path.join(
+      await mkdtemp(path.join(tmpdir(), "core-performance-cli-failure-")),
+      "failure.json",
+    );
     try {
-      await runCorePerformanceCli(["--json", "--baseline-ref="], {});
+      await runCorePerformanceCli(
+        ["--json", "--baseline-ref="],
+        {},
+        {
+          failureEvidencePath,
+        },
+      );
       expect(log).toHaveBeenCalledOnce();
       expect(JSON.parse(String(log.mock.calls[0][0]))).toMatchObject({
+        status: "failed",
+        violations: [
+          expect.objectContaining({ code: "core-performance-error" }),
+        ],
+      });
+      expect(
+        JSON.parse(await readFile(failureEvidencePath, "utf8")),
+      ).toMatchObject({
         status: "failed",
         violations: [
           expect.objectContaining({ code: "core-performance-error" }),
@@ -427,6 +482,7 @@ describe("core performance injected orchestration", () => {
     expect(runBrowser).toHaveBeenCalledWith(
       expect.objectContaining({ sampleCount: 2 }),
     );
+    expect(payload.executionProfile).toBe("reference");
     expect(payload.samples).toHaveLength(2);
     expect(payload.status).toBe("failed");
     expect(payload.violations).toContainEqual(
@@ -493,6 +549,7 @@ describe("core performance injected orchestration", () => {
     ];
     const error = withCorePerformanceContext(new Error("play sample failed"), {
       stage: "browser-sampling",
+      executionProfile: "github-actions-linux-x64",
       profile: { viewport: { width: 1365, height: 768 } },
       policies: { percentile: "p75" },
       candidateSha: "candidate-sha",
@@ -514,6 +571,7 @@ describe("core performance injected orchestration", () => {
     expect(payload).toMatchObject({
       status: "failed",
       stage: "browser-sampling",
+      executionProfile: "github-actions-linux-x64",
       profile: { viewport: { width: 1365, height: 768 } },
       policies: { percentile: "p75" },
       candidateSha: "candidate-sha",

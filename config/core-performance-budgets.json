@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sampleCount": 5,
   "distPath": "dist",
   "profile": {
@@ -32,6 +32,35 @@
       "cdp-encoded-data-length",
       "performance-resource-decoded-body-size"
     ]
+  },
+  "executionBaselines": {
+    "github-actions-linux-x64": {
+      "homeCold": {
+        "longTaskTotalMs": 900,
+        "longTaskMaxMs": 411,
+        "readyMs": 1818.7999999999884
+      },
+      "playCold": {
+        "longTaskTotalMs": 958,
+        "longTaskMaxMs": 396,
+        "readyMs": 2158.2999999999884
+      },
+      "moveInteraction": {
+        "moveLatencyMs": 45.20000000001164
+      },
+      "warmSaveRestore": {
+        "longTaskTotalMs": 835,
+        "longTaskMaxMs": 390,
+        "restoreReadyLatencyMs": 2171
+      },
+      "replayColdImportStep": {
+        "longTaskTotalMs": 155,
+        "longTaskMaxMs": 48,
+        "readyMs": 1341.1999999999534,
+        "replayImportLatencyMs": 100.79999999998836,
+        "replayStepLatencyMs": 39.79999999998836
+      }
+    }
   },
   "scenarios": {
     "homeCold": {

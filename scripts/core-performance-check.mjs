@@ -23,9 +23,15 @@ function isDirectCliExecution() {
   );
 }
 
+/**
+ * @param {string[]} [argv]
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {{ failureEvidencePath?: string | null }} [options]
+ */
 async function runCorePerformanceCli(
   argv = process.argv.slice(2),
   env = process.env,
+  { failureEvidencePath = null } = {},
 ) {
   const jsonRequested = argv.includes("--json");
   const lifecycle = createCorePerformanceLifecycle();
@@ -39,6 +45,7 @@ async function runCorePerformanceCli(
   } catch (error) {
     const evidencePath =
       options?.evidencePath ||
+      failureEvidencePath ||
       path.join(PROJECT_ROOT, DEFAULT_EVIDENCE_RELATIVE_PATH);
     const payload = createCorePerformanceFailurePayload(error, {
       ...(options || {}),
@@ -76,6 +83,7 @@ if (isDirectCliExecution()) await runCorePerformanceCli();
 export * from "./core-performance/browser.mjs";
 export * from "./core-performance/context.mjs";
 export * from "./core-performance/evaluate.mjs";
+export * from "./core-performance/execution-profile.mjs";
 export * from "./core-performance/lifecycle.mjs";
 export * from "./core-performance/runner.mjs";
 export * from "./core-performance/shared.mjs";

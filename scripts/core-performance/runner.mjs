@@ -19,6 +19,10 @@ import { fileURLToPath } from "node:url";
 import { runBrowserMeasurements } from "./browser.mjs";
 import { fingerprintDistManifest } from "./dist-fingerprint.mjs";
 import {
+  resolveCorePerformanceExecutionProfile,
+  resolvePerformanceConfigForExecution,
+} from "./execution-profile.mjs";
+import {
   readCorePerformanceContext,
   withCorePerformanceContext,
 } from "./context.mjs";
@@ -28,6 +32,7 @@ import {
   terminateOwnedProcessTree,
 } from "../process-tree.mjs";
 import {
+  REFERENCE_EXECUTION_PROFILE,
   REQUIRED_SCENARIO_METRICS,
   computeEffectiveThreshold,
   evaluatePerformanceBudget,
@@ -233,7 +238,12 @@ async function validateEvidencePath(
   return resolvedEvidencePath;
 }
 
-function parseCorePerformanceCliOptions(argv, env = process.env) {
+function parseCorePerformanceCliOptions(
+  argv,
+  env = process.env,
+  system = { platform: process.platform, arch: process.arch },
+) {
+  const executionProfile = resolveCorePerformanceExecutionProfile(env, system);
   let projectRoot = PROJECT_ROOT;
   let configArgument = null;
   let exceptionsArgument = null;
@@ -300,6 +310,7 @@ function parseCorePerformanceCliOptions(argv, env = process.env) {
     ),
     evidencePath,
     baselineRef,
+    executionProfile,
     json,
     measureOnly,
   };
@@ -426,9 +437,13 @@ async function withPreviewServer(
   }
 }
 
-function createThresholds(config) {
+function createThresholds(config, executionProfile) {
+  const effectiveConfig = resolvePerformanceConfigForExecution(
+    config,
+    executionProfile,
+  );
   return Object.fromEntries(
-    Object.entries(config.scenarios || {}).map(([scenario, owner]) => [
+    Object.entries(effectiveConfig.scenarios || {}).map(([scenario, owner]) => [
       scenario,
       Object.fromEntries(
         Object.entries(owner.metrics || {}).map(([metric, budget]) => [
@@ -450,7 +465,7 @@ function printPayload(payload, json) {
   }
   const prefix = payload.status === "passed" ? "PASS" : "FAIL";
   console.log(
-    `[core-performance] ${prefix}: browser=${payload.browserVersion || "unavailable"} samples=${payload.samples.length} baseline=${payload.repositoryBaselineStatus} evidence=${payload.evidencePath}`,
+    `[core-performance] ${prefix}: execution=${payload.executionProfile || "unknown"} browser=${payload.browserVersion || "unavailable"} samples=${payload.samples.length} baseline=${payload.repositoryBaselineStatus} evidence=${payload.evidencePath}`,
   );
   for (const [scenario, metrics] of Object.entries(payload.summaries || {})) {
     const concise = Object.entries(metrics)
@@ -471,12 +486,12 @@ function printPayload(payload, json) {
 function isOwnedEvidence(value) {
   return Boolean(
     value &&
-      typeof value === "object" &&
-      value.schemaVersion === 1 &&
-      (value.evidenceKind === "core-performance" ||
-        (typeof value.mode === "string" &&
-          Array.isArray(value.samples) &&
-          Array.isArray(value.violations))),
+    typeof value === "object" &&
+    value.schemaVersion === 1 &&
+    (value.evidenceKind === "core-performance" ||
+      (typeof value.mode === "string" &&
+        Array.isArray(value.samples) &&
+        Array.isArray(value.violations))),
   );
 }
 
@@ -534,6 +549,7 @@ async function runCorePerformanceGate({
   exceptionsPath = null,
   evidencePath = null,
   baselineRef = null,
+  executionProfile = REFERENCE_EXECUTION_PROFILE,
   json = false,
   measureOnly = false,
   now = new Date(),
@@ -567,6 +583,7 @@ async function runCorePerformanceGate({
     );
     Object.assign(failureContext, {
       stage: "git-baseline",
+      executionProfile,
       profile: config.profile,
       policies: config.policies,
     });
@@ -650,6 +667,7 @@ async function runCorePerformanceGate({
       now,
       enforceBudgets: !measureOnly,
       bootstrapMode: !measureOnly && baselineState.status === "bootstrap",
+      executionProfile,
     });
     const violations = evaluation.violations;
     const payload = {
@@ -663,6 +681,7 @@ async function runCorePerformanceGate({
       stage: violations.length ? "evaluation" : "complete",
       generatedAt: now.toISOString(),
       mode: measureOnly ? "measure-only" : "enforce",
+      executionProfile,
       profile: config.profile,
       policies: config.policies,
       browserVersion: browserResult.browserVersion,
@@ -674,7 +693,7 @@ async function runCorePerformanceGate({
       sampleCount,
       samples: browserResult.samples,
       summaries: evaluation.summaries,
-      thresholds: createThresholds(config),
+      thresholds: createThresholds(config, executionProfile),
       activeExceptions: evaluation.activeExceptions,
       appliedExceptions: evaluation.appliedExceptions,
       violations,
@@ -705,6 +724,8 @@ function createCorePerformanceFailurePayload(error, options = {}) {
     generatedAt: new Date().toISOString(),
     stage: context.stage || "initialization",
     mode: options.measureOnly ? "measure-only" : "enforce",
+    executionProfile:
+      context.executionProfile ?? options.executionProfile ?? null,
     profile: context.profile ?? null,
     policies: context.policies ?? null,
     browserVersion: context.browserVersion ?? null,
