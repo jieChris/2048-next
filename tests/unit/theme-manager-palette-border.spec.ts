@@ -38,6 +38,134 @@ function tileGlowShadow(dom: JSDOM, value: number) {
 }
 
 describe("theme manager palette effects", () => {
+  it("reuses timer legend visuals until the theme changes", () => {
+    const dom = new JSDOM(
+      '<!doctype html><html><head></head><body><div class="timer-legend-32">32</div></body></html>',
+      {
+        runScripts: "outside-only",
+        url: "https://example.test/2048.html",
+      },
+    );
+    const originalGetComputedStyle = dom.window.getComputedStyle.bind(
+      dom.window,
+    );
+    let probeReads = 0;
+    dom.window.getComputedStyle = ((
+      element: Element,
+      pseudoElement?: string,
+    ) => {
+      if (
+        element.classList.contains("tile-inner") &&
+        element.parentElement?.parentElement?.id === "theme-timer-style-probe"
+      ) {
+        probeReads += 1;
+      }
+      return originalGetComputedStyle(element, pseudoElement);
+    }) as typeof dom.window.getComputedStyle;
+
+    dom.window.eval(THEME_MANAGER_SOURCE);
+    const manager = (dom.window as any).ThemeManager;
+    const initialReads = probeReads;
+    expect(initialReads).toBeGreaterThan(0);
+
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(initialReads);
+
+    dom.window.document.body.dataset.ruleset = "fibonacci";
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBeGreaterThan(initialReads);
+    const readsAfterRulesetChange = probeReads;
+
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(readsAfterRulesetChange);
+
+    dom.window.document.body.classList.add("board-low-perf");
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBeGreaterThan(readsAfterRulesetChange);
+    const readsAfterLowPerfEnabled = probeReads;
+
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(readsAfterLowPerfEnabled);
+
+    dom.window.document.body.dataset.ruleset = "pow2";
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBeGreaterThan(readsAfterLowPerfEnabled);
+    const readsAfterPow2LowPerf = probeReads;
+
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(readsAfterPow2LowPerf);
+
+    dom.window.document.body.classList.remove("board-low-perf");
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(readsAfterPow2LowPerf);
+
+    dom.window.document.body.classList.add("board-low-perf");
+    manager.applyTheme("classic");
+    expect(probeReads).toBeGreaterThan(readsAfterPow2LowPerf);
+    const readsAfterThemeChange = probeReads;
+
+    dom.window.document.body.classList.remove("board-low-perf");
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBeGreaterThan(readsAfterThemeChange);
+    const readsAfterReturningToFull = probeReads;
+
+    manager.syncTimerLegendStyles();
+    expect(probeReads).toBe(readsAfterReturningToFull);
+    dom.window.close();
+  });
+
+  it("reads every timer probe before writing legend styles", () => {
+    const dom = new JSDOM(
+      '<!doctype html><html><head></head><body><div class="timer-legend-32">32</div><div class="timer-legend-64">64</div></body></html>',
+      {
+        runScripts: "outside-only",
+        url: "https://example.test/2048.html",
+      },
+    );
+    const events: string[] = [];
+    const originalGetComputedStyle = dom.window.getComputedStyle.bind(
+      dom.window,
+    );
+    dom.window.getComputedStyle = ((
+      element: Element,
+      pseudoElement?: string,
+    ) => {
+      if (
+        element.classList.contains("tile-inner") &&
+        element.parentElement?.parentElement?.id === "theme-timer-style-probe"
+      ) {
+        events.push(`read:${element.textContent}`);
+      }
+      return originalGetComputedStyle(element, pseudoElement);
+    }) as typeof dom.window.getComputedStyle;
+    for (const legend of Array.from(
+      dom.window.document.querySelectorAll<HTMLElement>(
+        ".timer-legend-32,.timer-legend-64",
+      ),
+    )) {
+      let background = "";
+      Object.defineProperty(legend.style, "background", {
+        configurable: true,
+        get: () => background,
+        set: (value: string) => {
+          background = value;
+          events.push(`write:${legend.textContent}`);
+        },
+      });
+    }
+
+    dom.window.eval(THEME_MANAGER_SOURCE);
+    const firstWrite = events.findIndex((event) => event.startsWith("write:"));
+    const lastRead = events.findLastIndex((event) => event.startsWith("read:"));
+    expect(firstWrite).toBeGreaterThan(-1);
+    expect(lastRead).toBeLessThan(firstWrite);
+    expect(events.filter((event) => event.startsWith("write:"))).toEqual([
+      "write:32",
+      "write:64",
+    ]);
+    dom.window.close();
+  });
+
   it("persists a removed border and renders it without a border", () => {
     const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
       runScripts: "outside-only",

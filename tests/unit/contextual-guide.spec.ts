@@ -26,6 +26,7 @@ describe("contextual guide", () => {
       "records-and-leaderboards-v1",
     ]);
     expect(getContextualGuideDefinition("admin-console-v1")).toBeNull();
+    expect(getContextualGuideDefinition("game-basics-v1")?.autoOpen).not.toBe(true);
   });
 
   it("uses explicit guide requests while keeping the current mode parameters", () => {

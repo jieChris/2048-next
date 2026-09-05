@@ -212,7 +212,7 @@
     {
       "path": "js/theme_manager.js",
       "metrics": {
-        "lines": 3241,
+        "lines": 3235,
         "imports": 0,
         "topLevelSymbols": 0,
         "runtimeRegistrations": 1

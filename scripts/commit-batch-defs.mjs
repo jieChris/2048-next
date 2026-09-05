@@ -31,11 +31,17 @@ export const BATCH_DEFS = {
         "js/html_actuator.js",
         "js/index_ui.js",
         "js/local_score_manager.js",
+        "js/theme_manager.js",
         "js/replay_ui.js",
         "js/test_ui.js",
         "style/main.css",
         "style/main.scss",
+        "src/entries/index.ts",
+        "src/entries/play.ts",
+        "src/entries/replay.ts",
         "src/core/replay-execution.ts",
+        "tests/unit/theme-manager-palette-border.spec.ts",
+        "tests/unit/contextual-guide.spec.ts",
       ].includes(file) ||
       /^src\/bootstrap\/(index-ui-page-actions-host|index-ui-runtime-contract|settings-modal-host|settings-modal-page-host)\.ts$/u.test(
         file,

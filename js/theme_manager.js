@@ -27,7 +27,7 @@
   var tilePaletteDraftActiveId = null;
   var tilePaletteDraftDirty = false;
   var tilePaletteDraftDirtyIds = {};
-  var tilePaletteDraftBypass = false;
+  var tilePaletteDraftBypass = false, timerLegendVisualCache = {};
   var TILE_PALETTE_DIMENSION_SUFFIX = {
     background: "",
     text: "Text",
@@ -2462,13 +2462,6 @@
     }
 
     if (theme.horse_year) {
-        // --- Assets: User Provided Images ---
-        // Actually, let's play it safe and encodeURI component for Chinese chars in URL()
-        // But path is relative to the CSS/HTML? No, inline style on page, so relative to index.html.
-        // index.html is in root. images/ is in root.
-        // So: "images/horse/%E9%A9%AC.png"
-        
-        // Let's use exact filenames but URL encoded for safety in CSS string
         var bgCenterUrl = "images/horse/" + encodeURIComponent("马") + ".png";
         var bgHeadUrl = "images/horse/" + encodeURIComponent("马头") + ".png";
         var bgGallopUrl = "images/horse/" + encodeURIComponent("战马") + ".png";
@@ -2577,7 +2570,6 @@
   }
 
   function ensureTimerLegendProbe() {
-    if (typeof document === "undefined") return null;
     var probe = document.getElementById("theme-timer-style-probe");
     if (!probe) {
       probe = document.createElement("div");
@@ -2596,7 +2588,6 @@
   }
 
   function getComputedTileVisual(value) {
-    if (typeof window === "undefined" || typeof window.getComputedStyle !== "function") return null;
     var probe = ensureTimerLegendProbe();
     if (!probe || !probe.firstChild || !probe.firstChild.firstChild) return null;
     var tile = probe.firstChild;
@@ -2692,46 +2683,49 @@
   }
 
   function syncTimerLegendStyles() {
-    if (typeof document === "undefined") return;
-    var cache = {};
+    var body = document.body;
+    var cacheContext = (body.dataset.ruleset === "fibonacci" ? 1 : 0) + (body.classList.contains("board-low-perf") ? 2 : 0);
+    var cache = timerLegendVisualCache[cacheContext] || (timerLegendVisualCache[cacheContext] = {});
+    var updates = [];
     var timerValues = typeof GameManager !== "undefined" && Array.isArray(GameManager.TIMER_SLOT_IDS)
       ? GameManager.TIMER_SLOT_IDS
       : TIMER_VALUES;
     for (var i = 0; i < timerValues.length; i++) {
       var slot = timerValues[i];
-      var nodes = document.querySelectorAll(".timer-legend-" + String(slot));
+      var nodes = document.querySelectorAll(".timer-legend-" + slot);
       for (var j = 0; j < nodes.length; j++) {
         var node = nodes[j];
         var value = getTimerLegendTargetValue(node, slot);
-        var key = String(value);
-        if (!cache[key]) cache[key] = getComputedTileVisual(value);
-        var visual = cache[key];
-        if (!visual) continue;
-        node.style.background = visual.background;
-        node.style.backgroundImage = visual.backgroundImage;
-        node.style.backgroundSize = visual.backgroundSize;
-        node.style.backgroundPosition = visual.backgroundPosition;
-        node.style.backgroundRepeat = visual.backgroundRepeat;
-        node.style.color = visual.color;
-        node.style.boxShadow = buildTimerLegendBoxShadow(visual);
-        node.style.border = visual.border;
-        node.style.borderRadius = visual.borderRadius;
-        node.style.clipPath = visual.clipPath;
-        node.style.webkitClipPath = visual.clipPath;
-        node.style.textShadow = visual.textShadow;
-        node.style.fontFamily = visual.fontFamily;
-        node.style.fontWeight = visual.fontWeight;
-        // Keep timer layout stable.
-        node.style.transform = "none";
-        node.style.filter = "none";
+        if (!cache[value]) cache[value] = getComputedTileVisual(value);
+        if (cache[value]) updates.push(node, cache[value]);
       }
+    }
+    for (var updateIndex = 0; updateIndex < updates.length; updateIndex += 2) {
+      var style = updates[updateIndex].style;
+      var visual = updates[updateIndex + 1];
+      style.background = visual.background;
+      style.backgroundImage = visual.backgroundImage;
+      style.backgroundSize = visual.backgroundSize;
+      style.backgroundPosition = visual.backgroundPosition;
+      style.backgroundRepeat = visual.backgroundRepeat;
+      style.color = visual.color;
+      style.boxShadow = buildTimerLegendBoxShadow(visual);
+      style.border = visual.border;
+      style.borderRadius = visual.borderRadius;
+      style.clipPath = visual.clipPath;
+      style.webkitClipPath = visual.clipPath;
+      style.textShadow = visual.textShadow;
+      style.fontFamily = visual.fontFamily;
+      style.fontWeight = visual.fontWeight;
+      style.transform = "none";
+      style.filter = "none";
     }
   }
 
   var currentThemeId = DEFAULT_THEME;
 
   function applyTheme(themeId) {
-    var id = themes[themeId] ? themeId : DEFAULT_THEME;
+    var id = themes[themeId] ? themeId : DEFAULT_THEME; timerLegendVisualCache = {};
     var theme = themes[id];
     var style = ensureStyleTag();
     style.textContent = buildThemeCss(theme);
