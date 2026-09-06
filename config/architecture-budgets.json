@@ -311,7 +311,7 @@
     {
       "path": "src/features/palette/account-palette-outbox.ts",
       "metrics": {
-        "lines": 926,
+        "lines": 923,
         "imports": 0,
         "topLevelSymbols": 31,
         "runtimeRegistrations": 0

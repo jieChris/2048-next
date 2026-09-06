@@ -277,6 +277,7 @@ export function createAccountPaletteOutbox(
     options.windowLike || (typeof window === "undefined" ? null : window);
   const ownerId = String(options.ownerId || "palette-outbox-owner");
   const listeners = new Set<(change: PaletteOutboxChange) => void>();
+  const terminalStatuses = new Set<PaletteOutboxOperationStatus>(["saved", "merged", "unchanged", "conflict_copy", "duplicate_existing", "capacity_full", "base_revision_expired", "deleted", "expired_operation"]);
   let activeAccountId: number | null = null;
   let draining = false;
   let transition: Promise<void> = Promise.resolve();
@@ -356,17 +357,7 @@ export function createAccountPaletteOutbox(
   ): Promise<void> {
     const operations = await store.list(accountId);
     for (const operation of operations) {
-      if (
-        operation.status !== "saved" &&
-        operation.status !== "merged" &&
-        operation.status !== "unchanged" &&
-        operation.status !== "conflict_copy" &&
-        operation.status !== "duplicate_existing" &&
-        operation.status !== "capacity_full" &&
-        operation.status !== "base_revision_expired" &&
-        operation.status !== "deleted" &&
-        operation.status !== "expired_operation"
-      ) {
+      if (!terminalStatuses.has(operation.status)) {
         const paused = {
           ...operation,
           status: "paused_account" as const,
@@ -393,7 +384,25 @@ export function createAccountPaletteOutbox(
       emit("updated", resumed);
     }
   }
-
+  async function settleDrainAccountSwitch(accountId: number, operation: PaletteOutboxOperation): Promise<PaletteOutboxOperation> {
+    const terminal = terminalStatuses.has(operation.status);
+    if (activeAccountId === accountId && !terminal) return operation;
+    const queued = transition.then(async () => {
+      if (terminal) { await store.put(operation); emit("drained", operation); return operation; }
+      if (activeAccountId === accountId) return operation;
+      const paused = {
+        ...operation,
+        status: "paused_account" as const,
+        pauseReason: "account_switch",
+        updatedAt: now(),
+      };
+      await store.put(paused);
+      emit("paused", paused);
+      return paused;
+    });
+    transition = queued.then(() => undefined, () => undefined);
+    return queued;
+  }
   async function enqueue(
     input: PaletteOutboxOperation,
   ): Promise<PaletteOutboxOperation> {
@@ -593,23 +602,11 @@ export function createAccountPaletteOutbox(
       for (const operation of operations.sort(operationSort)) {
         if (activeAccountId !== accountId) break;
         if (!isDue(operation, now(), options.force === true)) {
-          if (
-            [
-              "saved",
-              "merged",
-              "unchanged",
-              "conflict_copy",
-              "duplicate_existing",
-              "capacity_full",
-              "base_revision_expired",
-              "deleted",
-              "expired_operation",
-            ].includes(operation.status)
-          )
-            continue;
+          if (terminalStatuses.has(operation.status)) continue;
           break;
         }
-        const result = await sendOne(operation, now());
+        let result = await sendOne(operation, now());
+        result = await settleDrainAccountSwitch(accountId, result);
         completed.push(cloneOperation(result));
         if (
           result.status === "retry_wait" ||

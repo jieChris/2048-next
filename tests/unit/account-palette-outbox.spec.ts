@@ -4,6 +4,7 @@ import {
   createInMemoryPaletteOutboxStore,
   type PaletteOutboxOperation,
   type PaletteOutboxSendResult,
+  type PaletteOutboxStore,
 } from "../../src/features/palette/account-palette-outbox";
 
 function operation(
@@ -161,6 +162,164 @@ describe("account palette outbox", () => {
     expect(await outbox.list(42)).toMatchObject([{ status: "pending" }]);
     await outbox.drain({ force: true });
     expect(await outbox.list(42)).toMatchObject([{ status: "saved" }]);
+  });
+
+  it("keeps an in-flight transient result paused after an account switch", async () => {
+    const backingStore = createInMemoryPaletteOutboxStore();
+    const events: string[] = [];
+    const store: PaletteOutboxStore = {
+      ...backingStore,
+      put: async (item) => {
+        await backingStore.put(item);
+        events.push(`put:${item.status}`);
+      },
+      releaseLease: async (...args) => {
+        await backingStore.releaseLease(...args);
+        events.push("release");
+      },
+    };
+    let finish: ((result: PaletteOutboxSendResult) => void) | undefined;
+    let markStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const outbox = createAccountPaletteOutbox({
+      store,
+      ownerId: "tab-a",
+      now: () => 10,
+      sender: async () =>
+        new Promise<PaletteOutboxSendResult>((resolve) => {
+          markStarted?.();
+          finish = resolve;
+        }),
+    });
+    outbox.setActiveAccount(42);
+    await outbox.enqueue(operation());
+
+    const draining = outbox.drain();
+    await started;
+    outbox.setActiveAccount(7);
+    expect(await outbox.list(42)).toMatchObject([
+      { status: "paused_account", pauseReason: "account_switch" },
+    ]);
+
+    finish?.({ status: "transient", code: "offline" });
+    await draining;
+    expect(await outbox.list(42)).toMatchObject([
+      { status: "paused_account", pauseReason: "account_switch" },
+    ]);
+    expect(await outbox.list(7)).toEqual([]);
+    expect(events.lastIndexOf("put:paused_account")).toBeLessThan(
+      events.lastIndexOf("release"),
+    );
+  });
+
+  it("lets a switch back to the draining account resume after the final pause", async () => {
+    const backingStore = createInMemoryPaletteOutboxStore();
+    let finish: ((result: PaletteOutboxSendResult) => void) | undefined;
+    let markStarted: (() => void) | undefined;
+    let releaseFinalPause: (() => void) | undefined;
+    let delayFinalPause = false;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const finalPauseStarted = new Promise<void>((resolve) => {
+      const originalPut = backingStore.put;
+      backingStore.put = async (item) => {
+        if (delayFinalPause && item.status === "paused_account") {
+          resolve();
+          await new Promise<void>((allow) => {
+            releaseFinalPause = allow;
+          });
+        }
+        await originalPut(item);
+      };
+    });
+    const outbox = createAccountPaletteOutbox({
+      store: backingStore,
+      ownerId: "tab-a",
+      now: () => 10,
+      sender: async () =>
+        new Promise<PaletteOutboxSendResult>((resolve) => {
+          markStarted?.();
+          finish = resolve;
+        }),
+    });
+    outbox.setActiveAccount(42);
+    await outbox.enqueue(operation());
+    const draining = outbox.drain();
+    await started;
+    outbox.setActiveAccount(7);
+    expect(await outbox.list(42)).toMatchObject([
+      { status: "paused_account" },
+    ]);
+
+    delayFinalPause = true;
+    finish?.({ status: "transient", code: "offline" });
+    await finalPauseStarted;
+    outbox.setActiveAccount(42);
+    releaseFinalPause?.();
+    await draining;
+    expect(await outbox.list(42)).toMatchObject([{ status: "pending" }]);
+  });
+
+  it("preserves a terminal send result after an account switch", async () => {
+    const store = createInMemoryPaletteOutboxStore();
+    const originalPut = store.put;
+    let releaseStalePause: (() => void) | undefined;
+    let markPauseStarted: (() => void) | undefined;
+    let markSavedWritten: (() => void) | undefined;
+    let delayAccountSwitchPause = false;
+    const pauseStarted = new Promise<void>((resolve) => {
+      markPauseStarted = resolve;
+    });
+    const savedWritten = new Promise<void>((resolve) => {
+      markSavedWritten = resolve;
+    });
+    store.put = async (item) => {
+      if (delayAccountSwitchPause && item.status === "paused_account") {
+        markPauseStarted?.();
+        await new Promise<void>((resolve) => {
+          releaseStalePause = resolve;
+        });
+      }
+      await originalPut(item);
+      if (item.status === "saved") markSavedWritten?.();
+    };
+    let finish: ((result: PaletteOutboxSendResult) => void) | undefined;
+    let markStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const changes: Array<{ type: string; status: string }> = [];
+    const outbox = createAccountPaletteOutbox({
+      store,
+      ownerId: "tab-a",
+      now: () => 10,
+      sender: async () =>
+        new Promise<PaletteOutboxSendResult>((resolve) => {
+          markStarted?.();
+          finish = resolve;
+        }),
+    });
+    outbox.subscribe((change) => {
+      changes.push({ type: change.type, status: change.operation.status });
+    });
+    outbox.setActiveAccount(42);
+    await outbox.enqueue(operation());
+    const draining = outbox.drain();
+    await started;
+    delayAccountSwitchPause = true;
+    outbox.setActiveAccount(7);
+    await pauseStarted;
+    finish?.({ status: "saved", revision: 4 });
+    await savedWritten;
+    releaseStalePause?.();
+    await draining;
+    expect(await outbox.list(42)).toMatchObject([
+      { status: "saved", pauseReason: null },
+    ]);
+    expect(changes.at(-1)).toEqual({ type: "drained", status: "saved" });
   });
 
   it("uses a lease so only one drainer sends an operation, then preserves terminal result status", async () => {

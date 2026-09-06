@@ -39,7 +39,9 @@ export const BATCH_DEFS = {
         "src/entries/index.ts",
         "src/entries/play.ts",
         "src/entries/replay.ts",
+        "src/features/palette/account-palette-outbox.ts",
         "src/core/replay-execution.ts",
+        "tests/unit/account-palette-outbox.spec.ts",
         "tests/unit/theme-manager-palette-border.spec.ts",
         "tests/unit/contextual-guide.spec.ts",
       ].includes(file) ||
